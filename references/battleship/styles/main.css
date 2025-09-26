@@ -1,0 +1,39 @@
+@import url("https://fonts.googleapis.com/css2?family=Bangers&family=Montserrat&display=swap");
+
+body {
+  margin: 0;
+  background-color: #f3f3f3;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  font-family: "Montserrat", sans-serif;
+  box-sizing: border-box;
+}
+
+.btn {
+  font-size: inherit;
+  background-color: hsl(30, 100%, 50%);
+  padding: 0.5em 1em;
+  outline: none;
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 0.2em;
+  color: #333;
+}
+
+.btn:hover,
+.btn:focus {
+  background-color: hsl(30, 100%, 40%);
+}
+
+.disabled-btn,
+.disabled-btn:hover,
+.disabled-btn:focus {
+  background-color: hsl(0, 0%, 69%);
+  cursor: not-allowed;
+  pointer-events: none;
+}

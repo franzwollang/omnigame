@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Conway's Game of Life</title>
+        <link rel="stylesheet" href="./src/style.css" />
+        <script type="module" src="./src/main.ts"></script>
+    </head>
+    <body>
+        <h2 class="text-center text-3xl">Conway's Game of Life</h2>
+        <div class="text-center" id="messages"></div>
+        <div
+            id="grid-wrapper"
+            class="flex flex-col justify-center items-center"
+        >
+            <div id="game-grid" class="grid bg-black mb-4"></div>
+            <div id="buttons">
+                <button id="button-start" class="button">Start</button>
+                <button id="button-reset" class="button">Reset</button>
+            </div>
+        </div>
+
+        <div id="options">
+            <h4>Board Settings</h4>
+            <div id="view-settings">None</div>
+            <div id="evolution-rules">
+                <h4>Evolution Rules</h4>
+
+                <div id="options-hood-radius">
+                    <label for="hood-radius">Neighborhood Radius:</label>
+                    <input type="number" name="hood-radius" />
+                </div>
+
+                <div id="options-adjacency">
+                    <label for="adjacency">Select Adjacency Mode:</label>
+                    <select name="adjacency">
+                        <option value="linear">Linear</option>
+                        <option value="non-linear">Non-Linear</option>
+                    </select>
+                </div>
+
+                <div id="linear-adjacency">
+                    <h5>Linear Adjacency</h5>
+                    <div id="option-adjacency-hor">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-hor"
+                            checked
+                        />
+                        <label for="option-adjacency-hor"
+                            >Horizontal Adjacency</label
+                        >
+                    </div>
+                    <div id="option-adjacency-vert">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-vert"
+                            checked
+                        />
+                        <label for="option-adjacency-vert"
+                            >Vertical Adjacency</label
+                        >
+                    </div>
+                    <div id="option-adjacency-backdia">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-backdia"
+                            checked
+                        />
+                        <label for="option-adjacency-backdia"
+                            >Backward Diagonal Adjacency</label
+                        >
+                    </div>
+                    <div id="option-adjacency-fordia">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-fordia"
+                            checked
+                        />
+                        <label for="option-adjacency-fordia"
+                            >Forward Diagonal Adjacency</label
+                        >
+                    </div>
+                </div>
+
+                <div id="non-linear-adjacency">
+                    <h5>Non-Linear Adjacency</h5>
+                    <div id="option-adjacency-hor">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-hor"
+                            checked
+                        />
+                        <label for="option-adjacency-hor"
+                            >Horizontal Adjacency</label
+                        >
+                    </div>
+                    <div id="option-adjacency-vert">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-vert"
+                            checked
+                        />
+                        <label for="option-adjacency-vert"
+                            >Vertical Adjacency</label
+                        >
+                    </div>
+                    <div id="option-adjacency-backdia">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-backdia"
+                            checked
+                        />
+                        <label for="option-adjacency-backdia"
+                            >Backward Diagonal Adjacency</label
+                        >
+                    </div>
+                    <div id="option-adjacency-fordia">
+                        <input
+                            type="checkbox"
+                            name="option-adjacency-fordia"
+                            checked
+                        />
+                        <label for="option-adjacency-fordia"
+                            >Forward Diagonal Adjacency</label
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

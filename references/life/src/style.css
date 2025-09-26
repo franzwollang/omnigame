@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+#game-grid {
+    width: calc(3px + var(--grid-square-size) * var(--cols) * 1px);
+    height: calc(3px + var(--grid-square-size) * var(--rows) * 1px);
+    grid-template-rows: repeat(var(--rows), 1fr);
+    grid-template-columns: repeat(var(--cols), 1fr);
+    border: 2px solid rgb(244, 8, 173);
+}
+
+.grid-square {
+    position: relative;
+    background-color: black;
+    box-sizing: border-box;
+    width: calc(var(--grid-square-size) * 1px);
+    height: calc(var(--grid-square-size) * 1px);
+}
+
+.live-cell {
+    background-color: chartreuse;
+    border: 1px solid rgb(110, 201, 20);
+}
+
+.hide {
+    display: none;
+}
+
+.button {
+    @apply py-2 px-3 border rounded-md hover:shadow-md;
+}

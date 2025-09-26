@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Document</title>
+		<link rel="stylesheet" href="./src/style.css" />
+	</head>
+	<body>
+		<div class="title">
+			<h2>Let's play Snake!</h2>
+			<h2 id="score">Score: <span></span>!</h2>
+		</div>
+
+		<div id="grid-wrapper">
+			<div id="snake-grid" class="game-grid"></div>
+			<audio id="music" controls>
+				<source
+					src="./assets/audio/humble-match.ogg"
+					type="audio/ogg"
+				/>
+				Your browser does not support the audio element.
+			</audio>
+			<div id="messages">
+				<div>Eat the apples to grow larger!</div>
+				<div>Use your arrow keys to move.</div>
+			</div>
+		</div>
+
+		<script type="module" src="./src/main.ts"></script>
+	</body>
+</html>

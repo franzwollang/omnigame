@@ -1,0 +1,31 @@
+.splash-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 66vh;
+}
+
+.splash-title {
+  font-family: "Bangers", cursive;
+  font-size: 10rem;
+}
+
+.splash-battleship-image {
+  position: absolute;
+  bottom: 5vh;
+  left: 20vw;
+  width: 100%;
+  transform: rotateY(180deg);
+  pointer-events: none;
+  opacity: 0.25;
+}
+
+.splash-btn {
+  font-size: 2rem;
+  margin-left: 2rem;
+}
+
+.splash-btn:first-child {
+  margin-left: 0;
+}

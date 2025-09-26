@@ -1,0 +1,112 @@
+
+#grid-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.game-grid {
+    display: grid;
+    width: 600px;
+    height: 600px;
+    background-color: black;
+    border: 3px solid #D3219B;
+    margin-bottom: 1rem;
+}
+
+.grid-square {
+    position: relative;
+    background-color: black;
+    box-sizing: border-box;
+}
+
+#buttons > button {
+}
+
+.title {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.title h2 {
+    display: block;
+}
+
+.text-center {
+    text-align: center;
+}
+
+#music {
+    margin-bottom: 1rem;
+}
+
+#buttons {
+    margin-bottom: 1rem;
+}
+
+#options {
+    width: 500px;
+}
+
+#board-settings {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-around;
+    width: 500px;
+}
+
+#options-adjacency {
+    padding-top: 1rem;
+}
+
+.hide {
+    display: none;
+}
+
+.inputs {
+    display: flex;
+    flex-direction: column;
+}
+
+#messages h3 {
+    color: red;
+}
+
+.x-marker {
+    position: absolute;
+    top: 18%;
+    left: 46%;
+}
+
+.x-left {
+    background-color: #41E1E1;
+    transform: skew(45deg);
+}
+
+.x-right {
+    background-color: #41E1E1;
+    transform: skew(-45deg);
+}
+
+.o-marker {
+    position: absolute;
+    top: 11%;
+    left: 15%;
+}
+
+.o-outer {
+    background-color: #E1414C;
+    border-radius: 50%;
+}
+
+.o-inner {
+    background-color: black;
+    z-index: 1;
+    top: 11%;
+    left: 11.5%;
+    border-radius: 50%;
+}
