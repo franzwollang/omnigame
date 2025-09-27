@@ -12,7 +12,7 @@ Live demo: [omnigame.vercel.app](https://omnigame.vercel.app/)
 
 ## Motivation
 
-OmniGame aims to show the power of functional and data-driven patterns in a highly visual, intuitive way. It lets people search for strange, hybrid interpolations of beloved classic games. The project also exposes the exponential asymptotics of the design space, demonstrating how strong code foundations let producers focus on design combinatorics with low development friction.
+OmniGame aims to show the power of functional and data-driven patterns in a highly visual, intuitive way. It lets people search for strange, hybrid interpolations of beloved classic games. The project also exposes the exponential asymptotics of the design space, demonstrating how strong code foundations let teams focus on design combinatorics with low development friction.
 
 ## Confirmed presets (constructive examples)
 
