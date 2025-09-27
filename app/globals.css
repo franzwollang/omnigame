@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Prism token colors - light/dark, scoped to .editor only */
+@layer base {
+	/* Light: GitHub-like */
+	:root {
+		--json-key: 212 100% 40%; /* blue #005cc5 */
+		--json-string: 134 47% 35%; /* green #22863a */
+		--json-number: 291 45% 45%; /* purple #6f42c1 */
+		--json-boolean: 0 65% 50%; /* red #d73a49 */
+		--json-null: 340 70% 50%; /* pinkish #d23682-ish */
+		--json-punctuation: 0 0% 45%; /* gray */
+	}
+	/* Dark: One Dark-like */
+	.dark {
+		--json-key: 207 82% 66%; /* blue #61afef */
+		--json-string: 96 38% 70%; /* green #98c379 */
+		--json-number: 29 54% 60%; /* orange #d19a66 */
+		--json-boolean: 355 65% 66%; /* red #e06c75 */
+		--json-null: 286 57% 65%; /* purple #c678dd */
+		--json-punctuation: 0 0% 65%; /* gray */
+	}
+}
+
+@layer components {
+	/* default code color in editor for non-token text */
+	.editor pre[class*="language-"],
+	.editor code[class*="language-"] {
+		color: hsl(var(--foreground));
+	}
+
+	/* ensure no token backgrounds (e.g., punctuation/colons) */
+	.editor .token.punctuation,
+	.editor .token.operator,
+	.editor .token.namespace {
+		background: transparent !important;
+	}
+
+	.editor .token.property {
+		color: hsl(var(--json-key));
+	}
+	.editor .token.string {
+		color: hsl(var(--json-string));
+	}
+	.editor .token.number {
+		color: hsl(var(--json-number));
+	}
+	.editor .token.boolean {
+		color: hsl(var(--json-boolean));
+	}
+	.editor .token.null {
+		color: hsl(var(--json-null));
+	}
+	.editor .token.punctuation {
+		color: hsl(var(--json-punctuation));
+	}
+}
