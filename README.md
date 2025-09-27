@@ -4,7 +4,7 @@
   <img src="./public/logo.png" alt="OmniGame Logo" width="160" height="160" />
 </p>
 
-Compose every grid game from data & pure functions.
+<p align="center"><strong>Compose every grid game from data &amp; pure functions</strong></p>
 
 OmniGame is a pure functional, data-driven engine for 2D grid-based games. Known games (Snake, Tic-Tac-Toe, Battleship, etc...) act as presets built from shared composable primitives. Most configurations are unplayable (akin to the [Library of Babel](https://libraryofbabel.info/) where most books and images are pure noise), which makes the playable ones interesting to discover.
 
