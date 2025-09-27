@@ -2,19 +2,17 @@
 
 Compose every grid game from data & pure functions.
 
-OmniGame is a pure functional, data-driven engine aimed at 2D grid-based games. Known games (Snake, Tic‑Tac‑Toe, Battleship, …) become presets over a shared set of composable primitives; most configurations are unplayable—akin to a Library of Babel—making the few playable ones interesting to explore. As grids grow, they approximate continuous space, and the approach can extend to 3D in the future.
+OmniGame is a pure functional, data-driven engine for 2D grid-based games. Known games (Snake, Tic-Tac-Toe, Battleship, etc...) act as presets built from shared composable primitives. Most configurations are unplayable (akin to the [Library of Babel](https://libraryofbabel.info/) where most books and images are pure noise), which makes the playable ones interesting to discover.
 
-- Live demo: [omnigame.vercel.app](https://omnigame.vercel.app/)
+Live demo: [omnigame.vercel.app](https://omnigame.vercel.app/)
 
-## Current status
+## Motivation
 
-- App shell with Next.js App Router, Tailwind, and shadcn/ui
-- Split sandbox view:
-  - Interactive canvas (Three.js) with board-like grid and clamped pan/zoom
-  - JSON editor (react-simple-code-editor + Prism) with JSON + Zod validation, formatter, and scroll preservation
-  - Form mode (react-hook-form + shadcn/ui) mirroring the JSON schema; two‑way sync JSON ⇄ form
-- Smooth scroll-snap landing → sandbox with URL replacement ("/" ⇄ "/sandbox")
-- Loading states (lazy editor/canvas) with centered spinners
+OmniGame aims to show the power of functional and data-driven patterns in a highly visual, intuitive way. It lets people search for strange, hybrid interpolations of beloved classic games. The project also exposes the exponential asymptotics of the design space, demonstrating how strong code foundations let producers focus on design combinatorics with low development friction.
+
+## Confirmed presets (constructive examples)
+
+None yet. This section will list known games that have been reproduced via concrete configuration, with links to the JSON and notes on any constraints.
 
 ## Tech stack
 
@@ -28,63 +26,28 @@ OmniGame is a pure functional, data-driven engine aimed at 2D grid-based games. 
 - Package manager: pnpm
 - FP runtime (planned): Effect (Effect.ts) for FP primitives in core and runtime at edges
 
-## Getting started
-
-```bash
-pnpm install
-pnpm dev
-```
-
-Then open http://localhost:3000 and click “Open the sandbox,” or go directly to /sandbox.
-
-### Available scripts
-
-- `pnpm dev` — start the Next.js development server
-- `pnpm build` — create a production build
-- `pnpm start` — run the production server locally
-- `pnpm lint` — run ESLint
-- `pnpm typecheck` — TypeScript in noEmit mode
-- `pnpm components:add` — sync shadcn/ui registry components
-
-## Project structure
-
-```
-app/                 # App Router routes (landing, sandbox)
-  sandbox/           # Canvas, JSON editor, form (split components)
-src/components/      # shadcn/ui components + shared UI primitives
-src/lib/             # Utilities (e.g., className helper)
-next.config.js       # Next.js configuration
-```
-
 ## Usage
 
-- Canvas
-  - Pan with mouse/touch (clamped to board). Zoom with wheel/pinch.
-  - `window.jumpPanTo(x, y)` is available for quick developer testing.
-- Editor
-  - Live JSON + Zod validation. Format via the “Format” button or ⌘/Ctrl+F.
-  - Colors/theme adapt to light/dark; editor scroll position is preserved on format.
-- Form (WIP)
-  - Fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`); updates sync two‑ways with the editor.
+The canvas supports panning with mouse/touch (clamped to board) and zooming with wheel/pinch. `window.jumpPanTo(x, y)` is available for quick developer testing.
+
+The editor provides live JSON + Zod validation. Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/dark mode (although no toggle added yet), and editor scroll position is preserved on format.
+
+The form fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`) with updates syncing two-ways with the editor.
 
 ## Architecture notes (directional)
 
-- Pure core: reducers (`State -> Event -> State`), scheduler, deterministic RNG
-- State transitions: XState statecharts to structure transitions and ensure compositions are algebraic (operations on entities always yield valid states)
-- Data-driven configuration: declarative JSON forms a control surface; dynamic form mirrors nested schema
-- Adapters at the edges: rendering (Three.js), input, persistence
-- Routing: App Router with scroll-snap landing and URL replacement to reflect the active view
-- Exploration: “infinite library” mode to sample/randomize configs and reveal how rare playable settings are
-- 3D: planned extension as an optional adapter layer once 2D is solid
+The core follows pure functional principles with reducers (`State -> Event -> State`), scheduler, and deterministic RNG. State transitions use XState statecharts to structure transitions and ensure compositions are algebraic (operations on entities always yield valid states).
+
+The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. Adapters at the edges handle rendering (Three.js), input, and persistence.
+
+Routing uses App Router with scroll-snap landing and URL replacement to reflect the active view. The planned “infinite library” mode will sample/randomize configs and reveal how rare playable settings are.
 
 ## Roadmap
 
-- Core engine slices (reduce, scheduler, rng) with Effect primitives
-- Presets for common games + generalized operators
-- Library explorer (randomize/filter presets; bookmark/sharing)
-- Camera/perspective modes, collision/interaction operators, multi-entity composition
-- Schema‑driven UI generation (richer controls, constraints)
-- 3D adapter (Three.js) once the 2D path is stable
+Core development focuses on engine slices (reduce, scheduler, rng) with Effect primitives, presets for common games plus generalized operators, and a library explorer for randomizing/filtering presets with bookmark/sharing capabilities.
+
+Future features include camera/perspective modes, collision/interaction operators, multi-entity composition, schema-driven UI generation (richer controls, constraints), and 3D functionality once the 2D path is stable. As grids increase in size, they approximate continuous space (within machine precision). The same approach may extend to 3D; a clear target is a simplified Minecraft-style sandbox as a demonstrator.
+Future features include camera/perspective modes, collision/interaction operators, multi-entity composition, schema-driven UI generation (richer controls, constraints), continuous space, and 3D support (e.g. a simplified Minecraft-style sandbox).
 
 ## Contributing
 
