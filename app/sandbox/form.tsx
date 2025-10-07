@@ -26,12 +26,12 @@ type Props<T extends FieldValues> = {
 
 export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	return (
-		<div className="flex-1 min-h-0 flex flex-col">
-			<ScrollArea className="rounded-md border h-full min-h-0">
+		<div className="flex flex-col flex-1 min-h-0">
+			<ScrollArea className="h-full min-h-0 rounded-md border">
 				<div className="p-2">
 					<Form {...form}>
 						<form
-							className="flex w-full flex-col gap-4"
+							className="flex flex-col gap-4 w-full"
 							onSubmit={(e) => e.preventDefault()}
 						>
 							<FormField
@@ -91,7 +91,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								control={form.control}
 								name="grid.wrap"
 								render={({ field }) => (
-									<FormItem className="flex flex-row items-center gap-2 space-y-0">
+									<FormItem className="flex flex-row gap-2 items-center space-y-0">
 										<FormControl>
 											<Checkbox
 												checked={field.value}
@@ -143,6 +143,118 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									</FormItem>
 								)}
 							/>
+							<FormField
+								control={form.control}
+								name="win.length"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Win length</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												value={field.value}
+												onChange={(e) => field.onChange(Number(e.target.value))}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<div className="space-y-2">
+								<p className="text-sm font-medium">Adjacency</p>
+								<FormField
+									control={form.control}
+									name="win.adjacency.mode"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Mode</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select mode" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="linear">linear</SelectItem>
+														<SelectItem value="composite">composite</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="win.adjacency.horizontal"
+									render={({ field }) => (
+										<FormItem className="flex flex-row gap-2 items-center space-y-0">
+											<FormControl>
+												<Checkbox
+													checked={field.value}
+													onCheckedChange={field.onChange}
+												/>
+											</FormControl>
+											<FormLabel className="text-xs font-normal">
+												Horizontal
+											</FormLabel>
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="win.adjacency.vertical"
+									render={({ field }) => (
+										<FormItem className="flex flex-row gap-2 items-center space-y-0">
+											<FormControl>
+												<Checkbox
+													checked={field.value}
+													onCheckedChange={field.onChange}
+												/>
+											</FormControl>
+											<FormLabel className="text-xs font-normal">
+												Vertical
+											</FormLabel>
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="win.adjacency.backDiagonal"
+									render={({ field }) => (
+										<FormItem className="flex flex-row gap-2 items-center space-y-0">
+											<FormControl>
+												<Checkbox
+													checked={field.value}
+													onCheckedChange={field.onChange}
+												/>
+											</FormControl>
+											<FormLabel className="text-xs font-normal">
+												Back diagonal
+											</FormLabel>
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="win.adjacency.forwardDiagonal"
+									render={({ field }) => (
+										<FormItem className="flex flex-row gap-2 items-center space-y-0">
+											<FormControl>
+												<Checkbox
+													checked={field.value}
+													onCheckedChange={field.onChange}
+												/>
+											</FormControl>
+											<FormLabel className="text-xs font-normal">
+												Forward diagonal
+											</FormLabel>
+										</FormItem>
+									)}
+								/>
+							</div>
 						</form>
 					</Form>
 				</div>

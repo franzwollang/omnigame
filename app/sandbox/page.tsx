@@ -13,11 +13,12 @@ import SandboxForm from "./form";
 import SandboxCanvas from "./canvas";
 import dynamic from "next/dynamic";
 import CenteredLoader from "@/components/loader";
+import { useGameEngine } from "@/engine/useGameEngine";
 
 const SandboxEditorLazy = dynamic(() => import("./editor"), {
 	ssr: false,
 	loading: () => (
-		<div className="min-h-0 flex flex-col flex-1">
+		<div className="flex flex-col flex-1 min-h-0">
 			<div className="flex-1 min-h-0 rounded-md border">
 				<CenteredLoader className="h-full" iconClassName="h-32 w-32" />
 			</div>
@@ -29,7 +30,7 @@ const SandboxCanvasLazy = dynamic(() => import("./canvas"), {
 	ssr: false,
 	loading: () => (
 		<CenteredLoader
-			className="relative flex h-full min-h-0 min-w-0 flex-1"
+			className="flex relative flex-1 min-w-0 h-full min-h-0"
 			iconClassName="h-32 w-32"
 		/>
 	)
@@ -42,12 +43,38 @@ export default function GamePage() {
 	const [jsonText, setJsonText] = useState("");
 	const [jsonError, setJsonError] = useState<string | null>(null);
 	const [schemaErrors, setSchemaErrors] = useState<string[]>([]);
+	const [currentConfig, setCurrentConfig] = useState<Config | null>(null);
+
+	// Initialize game engine from config
+	const engineConfig = {
+		gridWidth: currentConfig?.grid.width ?? 3,
+		gridHeight: currentConfig?.grid.height ?? 3,
+		winLength: currentConfig?.win.length ?? 3,
+		adjacency: currentConfig?.win.adjacency ?? {
+			mode: "linear" as const,
+			horizontal: true,
+			vertical: true,
+			backDiagonal: true,
+			forwardDiagonal: true
+		}
+	};
+	const { state: gameState, placeMove, reset } = useGameEngine(engineConfig);
 
 	const exampleJson = `{
-   "metadata": { "name": "My Game", "version": 1 },
-   "grid": { "width": 10, "height": 10, "topology": "rectangle", "wrap": false },
+   "metadata": { "name": "Tic-Tac-Toe", "version": 1 },
+   "grid": { "width": 3, "height": 3, "topology": "rectangle", "wrap": false },
    "turn": { "mode": "turn" },
-   "rng": { "seed": 42 }
+   "rng": { "seed": 42 },
+   "win": {
+     "length": 3,
+     "adjacency": {
+       "mode": "linear",
+       "horizontal": true,
+       "vertical": true,
+       "backDiagonal": true,
+       "forwardDiagonal": true
+     }
+   }
  }`;
 
 	useEffect(() => {
@@ -56,10 +83,20 @@ export default function GamePage() {
 
 	const form = useForm<Config>({
 		defaultValues: {
-			metadata: { name: "My Game", version: 1 },
-			grid: { width: 10, height: 10, topology: "rectangle", wrap: false },
+			metadata: { name: "Tic-Tac-Toe", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
 			turn: { mode: "turn" },
-			rng: { seed: 42 }
+			rng: { seed: 42 },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			}
 		}
 	});
 
@@ -85,12 +122,15 @@ export default function GamePage() {
 					(i) => `${i.path.join(".") || "root"}: ${i.message}`
 				);
 				setSchemaErrors(msgs);
+				setCurrentConfig(null);
 			} else {
 				setSchemaErrors([]);
+				setCurrentConfig(result.data);
 			}
 		} catch (e: any) {
 			setJsonError(e?.message ?? "Invalid JSON");
 			setSchemaErrors([]);
+			setCurrentConfig(null);
 		}
 	}, [jsonText]);
 
@@ -155,7 +195,7 @@ export default function GamePage() {
 		Prism.highlight(code, Prism.languages.json, "json");
 
 	return (
-		<div className="flex h-full w-full">
+		<div className="flex w-full h-full">
 			{/* Side panel (md+) with description and editor/form toggle */}
 			<aside className="relative hidden h-full w-[480px] shrink-0 border-r bg-background p-4 text-foreground md:flex md:flex-col">
 				<span className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
@@ -172,9 +212,9 @@ export default function GamePage() {
 
 				<Tabs
 					defaultValue="json"
-					className="mt-2 flex flex-col h-full overflow-hidden"
+					className="flex overflow-hidden flex-col mt-2 h-full"
 				>
-					<TabsList className="w-full justify-start">
+					<TabsList className="justify-start w-full">
 						<TabsTrigger value="form">Form</TabsTrigger>
 						<TabsTrigger value="json">JSON</TabsTrigger>
 					</TabsList>
@@ -203,7 +243,7 @@ export default function GamePage() {
 			</aside>
 
 			{/* Canvas area */}
-			<SandboxCanvasLazy />
+			<SandboxCanvasLazy gameState={gameState} onCellClick={placeMove} />
 		</div>
 	);
 }

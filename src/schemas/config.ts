@@ -12,7 +12,21 @@ export const zConfig = z
 			})
 			.strict(),
 		turn: z.object({ mode: z.enum(["turn", "realtime"]) }).strict(),
-		rng: z.object({ seed: z.number() }).strict()
+		rng: z.object({ seed: z.number() }).strict(),
+		win: z
+			.object({
+				length: z.number().int().min(3),
+				adjacency: z
+					.object({
+						mode: z.enum(["linear", "composite"]),
+						horizontal: z.boolean(),
+						vertical: z.boolean(),
+						backDiagonal: z.boolean(),
+						forwardDiagonal: z.boolean()
+					})
+					.strict()
+			})
+			.strict()
 	})
 	.strict();
 
