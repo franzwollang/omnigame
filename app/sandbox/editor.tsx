@@ -34,19 +34,19 @@ export default function SandboxEditor(props: Props) {
 		Prism.highlight(code, Prism.languages.json, "json");
 
 	return (
-		<div className="flex-1 min-h-0 flex flex-col">
-			<div className="mb-2 flex h-10 items-center justify-between gap-3">
+		<div className="flex flex-col h-full min-h-0">
+			<div className="flex gap-3 justify-between items-center mb-2 h-10">
 				<div>
 					{jsonError ? (
-						<div className="inline-block rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">
+						<div className="inline-block px-2 py-1 text-xs rounded-md border border-destructive/40 bg-destructive/10 text-destructive">
 							{jsonError}
 						</div>
 					) : schemaErrors.length ? (
-						<div className="inline-block rounded-md border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs text-amber-600">
+						<div className="inline-block px-2 py-1 text-xs text-amber-600 rounded-md border border-amber-400/40 bg-amber-400/10">
 							{schemaErrors[0]}
 						</div>
 					) : (
-						<div className="inline-block rounded-md border border-emerald-400/40 bg-emerald-400/10 px-2 py-1 text-xs text-emerald-600">
+						<div className="inline-block px-2 py-1 text-xs text-emerald-600 rounded-md border border-emerald-400/40 bg-emerald-400/10">
 							Config valid
 						</div>
 					)}
@@ -57,11 +57,11 @@ export default function SandboxEditor(props: Props) {
 			</div>
 			<ScrollArea
 				ref={scrollRootRef}
-				className="rounded-md border h-full min-h-0"
+				className="h-full min-h-0 rounded-md border"
 			>
 				<div
 					ref={editorWrapperRef}
-					className="editor h-full min-h-0"
+					className="h-full min-h-0 editor"
 					onKeyDown={onKeyDown}
 				>
 					<Editor
