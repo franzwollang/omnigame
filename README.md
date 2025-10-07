@@ -28,7 +28,7 @@ None yet. This section will list known games that have been reproduced via concr
 - Rendering: Three.js (board/camera), ResizeObserver
 - Editor: react-simple-code-editor + Prism.js
 - Package manager: pnpm
-- FP runtime: Effect (Effect.ts) for FP primitives in core and runtime at edges
+- FP runtime (planned): Effect (Effect.ts) for FP primitives in core and runtime at edges
 
 ## Usage
 

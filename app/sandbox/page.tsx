@@ -320,7 +320,7 @@ export default function GamePage() {
 				<SandboxCanvasLazy gameState={gameState} onCellClick={placeMove} />
 				{gameState.status !== "playing" && (
 					<div className="flex absolute inset-0 z-10 justify-center items-center p-4 pointer-events-none">
-						<div className="pointer-events-auto rounded-lg border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 shadow-lg p-4 max-w-sm w-full text-center text-black">
+						<div className="p-4 w-full max-w-sm text-center text-white rounded-lg border shadow-lg pointer-events-auto bg-black/90">
 							<p className="mb-1 text-sm">Game over</p>
 							<h3 className="mb-3 text-xl font-semibold">
 								{gameState.status === "won"
