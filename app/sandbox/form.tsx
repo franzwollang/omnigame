@@ -143,6 +143,135 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									</FormItem>
 								)}
 							/>
+
+							{/* Input / Placement (Connect 4, etc.) */}
+							<div className="space-y-2">
+								<p className="text-sm font-medium">Input</p>
+								<FormField
+									control={form.control}
+									name="input.mode"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Mode</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select mode" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="cell">cell</SelectItem>
+														<SelectItem value="column">column</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+
+							<div className="space-y-2">
+								<p className="text-sm font-medium">Placement</p>
+								<FormField
+									control={form.control}
+									name="placement.mode"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Mode</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select mode" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="direct">direct</SelectItem>
+														<SelectItem value="gravity">gravity</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="placement.gravity.direction"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Gravity direction</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select direction" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="down">down</SelectItem>
+														<SelectItem value="up">up</SelectItem>
+														<SelectItem value="left">left</SelectItem>
+														<SelectItem value="right">right</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="placement.gravity.wrap"
+									render={({ field }) => (
+										<FormItem className="flex flex-row gap-2 items-center space-y-0">
+											<FormControl>
+												<Checkbox
+													checked={field.value}
+													onCheckedChange={field.onChange}
+												/>
+											</FormControl>
+											<FormLabel className="text-xs font-normal">
+												Wrap (gravity)
+											</FormLabel>
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="placement.overflow"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Overflow behavior</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="Select behavior" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="reject">reject</SelectItem>
+														<SelectItem value="pop_out_bottom">
+															pop_out_bottom
+														</SelectItem>
+														<SelectItem value="pop_out_top">
+															pop_out_top
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
 							<FormField
 								control={form.control}
 								name="win.length"

@@ -26,11 +26,16 @@ export type PlaceMoveEvent = {
 	position: Position;
 };
 
+export type ActivateColumnEvent = {
+	type: "activateColumn";
+	col: number;
+};
+
 export type ResetEvent = {
 	type: "reset";
 };
 
-export type GameEvent = PlaceMoveEvent | ResetEvent;
+export type GameEvent = PlaceMoveEvent | ActivateColumnEvent | ResetEvent;
 
 // Helper to convert row/col to flat index
 export function toIndex(pos: Position, width: number): number {

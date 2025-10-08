@@ -9,9 +9,16 @@ import { getCell } from "@/engine/types";
 type Props = {
 	gameState: GameState;
 	onCellClick: (pos: Position) => void;
+	onActivateColumn?: (col: number) => void;
+	inputMode?: "cell" | "column";
 };
 
-export default function SandboxCanvas({ gameState, onCellClick }: Props) {
+export default function SandboxCanvas({
+	gameState,
+	onCellClick,
+	onActivateColumn,
+	inputMode = "cell"
+}: Props) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
 	const frameRef = useRef<number>();
@@ -19,11 +26,18 @@ export default function SandboxCanvas({ gameState, onCellClick }: Props) {
 	const cellMeshesRef = useRef<THREE.Mesh[]>([]);
 	const marksGroupRef = useRef<THREE.Group | null>(null);
 	const onCellClickRef = useRef(onCellClick);
+	const onActivateColumnRef = useRef<typeof onActivateColumn>(onActivateColumn);
+	const inputModeRef = useRef(inputMode);
 
 	// Keep click handler ref up to date
 	useEffect(() => {
 		onCellClickRef.current = onCellClick;
 	}, [onCellClick]);
+
+	useEffect(() => {
+		onActivateColumnRef.current = onActivateColumn;
+		inputModeRef.current = inputMode;
+	}, [onActivateColumn, inputMode]);
 
 	useEffect(() => {
 		const canvasEl = canvasRef.current;
@@ -69,16 +83,28 @@ export default function SandboxCanvas({ gameState, onCellClick }: Props) {
 		edgeLines.position.z = 0.0002;
 		scene.add(edgeLines);
 
-		// Grid lines
-		const gridHelper = new THREE.GridHelper(
-			planeWidth,
-			gridWidth,
-			0x94a3b8,
-			0xcbd5e1
-		);
-		gridHelper.rotation.x = Math.PI / 2;
-		gridHelper.position.z = 0.0001;
-		scene.add(gridHelper);
+		// Grid lines for rectangular grids (manual)
+		{
+			const lineMaterial = new THREE.LineBasicMaterial({ color: 0xcbd5e1 });
+			const positions: number[] = [];
+			// Vertical lines
+			for (let c = 0; c <= gridWidth; c++) {
+				const x = -planeWidth / 2 + c * totalCellSize;
+				positions.push(x, -planeHeight / 2, 0.0001, x, planeHeight / 2, 0.0001);
+			}
+			// Horizontal lines
+			for (let r = 0; r <= gridHeight; r++) {
+				const y = -planeHeight / 2 + r * totalCellSize;
+				positions.push(-planeWidth / 2, y, 0.0001, planeWidth / 2, y, 0.0001);
+			}
+			const geometry = new THREE.BufferGeometry();
+			geometry.setAttribute(
+				"position",
+				new THREE.Float32BufferAttribute(positions, 3)
+			);
+			const gridLines = new THREE.LineSegments(geometry, lineMaterial);
+			scene.add(gridLines);
+		}
 
 		// Render cells as clickable meshes
 		const cellMeshes: THREE.Mesh[] = [];
@@ -183,7 +209,11 @@ export default function SandboxCanvas({ gameState, onCellClick }: Props) {
 			const intersects = raycasterRef.current.intersectObjects(cellMeshes);
 			if (intersects.length > 0) {
 				const { row, col } = intersects[0].object.userData;
-				onCellClickRef.current({ row, col });
+				if (inputModeRef.current === "column" && onActivateColumnRef.current) {
+					onActivateColumnRef.current(col);
+				} else {
+					onCellClickRef.current({ row, col });
+				}
 			}
 		};
 		canvasEl.addEventListener("click", handleCanvasClick);

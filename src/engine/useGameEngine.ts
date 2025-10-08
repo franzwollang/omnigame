@@ -41,5 +41,12 @@ export function useGameEngine(config: GameConfig) {
 		dispatch({ type: "reset" });
 	}, [dispatch]);
 
-	return { state, dispatch, placeMove, reset };
+	const activateColumn = useCallback(
+		(col: number) => {
+			dispatch({ type: "activateColumn", col });
+		},
+		[dispatch]
+	);
+
+	return { state, dispatch, placeMove, activateColumn, reset };
 }

@@ -8,13 +8,16 @@ import type {
 	CellValue
 } from "./types";
 import { getCell, setCell, toIndex } from "./types";
-import { checkWinner, type AdjacencyConfig } from "./rules";
+import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 
 export type GameConfig = {
 	gridWidth: number;
 	gridHeight: number;
 	winLength: number;
 	adjacency: AdjacencyConfig;
+	inputMode?: "cell" | "column";
+	placementMode?: "direct" | "gravity";
+	gravityDirection?: "down" | "up" | "left" | "right";
 };
 
 // Create initial game state from config
@@ -41,6 +44,8 @@ export function reduce(
 	switch (event.type) {
 		case "place":
 			return handlePlace(state, event.position, config);
+		case "activateColumn":
+			return handleActivateColumn(state, event.col, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -111,4 +116,37 @@ function handlePlace(
 		currentPlayer: nextPlayer,
 		moveCount: newMoveCount
 	};
+}
+
+function handleActivateColumn(
+	state: GameState,
+	col: number,
+	config: GameConfig
+): GameState {
+	if (state.status !== "playing") return state;
+	const height = state.grid.height;
+	const width = state.grid.width;
+	if (col < 0 || col >= width) return state;
+
+	// Only supported gravity down for now
+	const direction = config.gravityDirection ?? "down";
+	if (direction !== "down") {
+		// Future directions can be added
+		return state;
+	}
+
+	// Find first empty from bottom row to top
+	let targetRow = -1;
+	for (let row = height - 1; row >= 0; row--) {
+		if (getCell(state.grid, { row, col }) === null) {
+			targetRow = row;
+			break;
+		}
+	}
+	if (targetRow === -1) {
+		// Column full
+		return state;
+	}
+
+	return handlePlace(state, { row: targetRow, col }, config);
 }

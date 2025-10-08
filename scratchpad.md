@@ -80,3 +80,69 @@
 3. Create Canvas/Three renderer adapter and React-based config panel (Tailwind + shadcn forms).
 4. Build engine runtime bridging UI (Effect layers) and pure core.
 5. Encode presets for Tic-Tac-Toe, Snake, Minesweeper, Life, Cell Dodger, Match & Memory, Battleship using schema and confirm behaviors via automated simulations/tests.
+
+## Abstractions for Connect 4 (generalizing beyond Tic‑Tac‑Toe)
+
+- InputTarget
+
+  - cell: click maps to a specific cell (Tic‑Tac‑Toe).
+  - column: click maps to a column (Connect 4).
+  - row (future): click maps to a row (for variants).
+
+- PlacementPolicy
+
+  - direct: place exactly at the target cell (Tic‑Tac‑Toe).
+  - gravity: resolve a target line (column/row) and place into the first available slot along a direction.
+
+- Gravity
+
+  - enabled: boolean
+  - direction: "down" | "up" | "left" | "right"
+  - scanOrder: "towardDirection" | "fromOpposite"
+  - wrap: boolean (rare, cylindrical variants)
+
+- Capacity/Occupancy
+
+  - capacity per line: implicit from grid or explicit overrides (holes/blocked cells).
+  - overflow: "reject" | "pop_out_bottom" | "pop_out_top" (support PopOut variants).
+
+- Activation→Placement mapping
+
+  - cell target: direct or project then resolve by gravity.
+  - column target: resolve column indices, place first empty by gravity.
+  - row target: mirror across rows.
+
+- Validity/Guards
+
+  - invalidMove: when no slot available (column full); action: "reject" | "skip" | "end_turn" (default reject).
+  - turnPolicy: same as current alternating turns.
+
+- WinCondition (reuse existing)
+
+  - win.length = 4
+  - adjacency: horizontal, vertical, both diagonals
+  - mode: "linear" (collinear runs)
+
+- Events
+
+  - PlaceAtCell {row,col}
+  - ActivateColumn {col}
+  - (future) ActivateRow {row}
+
+- Reducer flow (gravity)
+
+  - On ActivateColumn:
+    1. Determine gravityDirection (e.g., down)
+    2. Scan column in order to find first empty
+    3. If found: place, check win/draw, switch player; else reject
+
+- Schema additions (backward‑compatible)
+
+  - input: { mode: "cell" | "column" }
+  - placement: { mode: "direct" | "gravity", gravity?: { enabled: boolean, direction: "down" | "up" | "left" | "right", wrap: boolean }, overflow?: "reject" | "pop_out_bottom" | "pop_out_top" }
+
+- Connect 4 preset (concept)
+  - input.mode: "column"
+  - placement.mode: "gravity"
+  - placement.gravity: { enabled: true, direction: "down", wrap: false }
+  - win: { length: 4, adjacency: { mode: "linear", horizontal: true, vertical: true, backDiagonal: true, forwardDiagonal: true } }

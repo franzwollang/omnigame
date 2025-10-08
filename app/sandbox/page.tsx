@@ -71,9 +71,18 @@ export default function GamePage() {
 			vertical: true,
 			backDiagonal: true,
 			forwardDiagonal: true
-		}
+		},
+		inputMode: (currentConfig as any)?.input?.mode ?? "cell",
+		placementMode: (currentConfig as any)?.placement?.mode ?? "direct",
+		gravityDirection:
+			(currentConfig as any)?.placement?.gravity?.direction ?? "down"
 	};
-	const { state: gameState, placeMove, reset } = useGameEngine(engineConfig);
+	const {
+		state: gameState,
+		placeMove,
+		activateColumn,
+		reset
+	} = useGameEngine(engineConfig);
 
 	const initialJson = useMemo(
 		() =>
@@ -317,7 +326,12 @@ export default function GamePage() {
 
 			{/* Canvas area with results overlay */}
 			<div className="relative flex-1 min-w-0">
-				<SandboxCanvasLazy gameState={gameState} onCellClick={placeMove} />
+				<SandboxCanvasLazy
+					gameState={gameState}
+					onCellClick={placeMove}
+					onActivateColumn={activateColumn}
+					inputMode={(currentConfig as any)?.input?.mode ?? "cell"}
+				/>
 				{gameState.status !== "playing" && (
 					<div className="flex absolute inset-0 z-10 justify-center items-center p-4 pointer-events-none">
 						<div className="p-4 w-full max-w-sm text-center text-white rounded-lg border shadow-lg pointer-events-auto bg-black/90">

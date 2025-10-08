@@ -55,7 +55,7 @@ export function PresetsModal({
 										onOpenChange(false);
 										setQuery("");
 									}}
-									className="flex flex-col gap-2 items-start py-3"
+									className="flex flex-col gap-2 items-start py-3 border border-transparent hover:border-gray-400 data-[selected=true]:border-gray-400"
 								>
 									<div className="flex gap-2 items-center w-full">
 										<span className="font-medium">{preset.name}</span>

@@ -22,8 +22,38 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
 			win: {
 				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			}
+		}
+	},
+	"connect-4": {
+		id: "connect-4",
+		name: "Connect 4",
+		tags: ["classic", "7x6", "gravity", "column-activation"],
+		description: "Drop tokens into columns; first to connect four wins.",
+		config: {
+			metadata: { name: "Connect 4", version: 1 },
+			grid: { width: 7, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "column" },
+			placement: {
+				mode: "gravity",
+				gravity: { enabled: true, direction: "down", wrap: false },
+				overflow: "reject"
+			},
+			win: {
+				length: 4,
 				adjacency: {
 					mode: "linear",
 					horizontal: true,
