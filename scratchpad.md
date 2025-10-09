@@ -140,9 +140,28 @@
 
   - input: { mode: "cell" | "column" }
   - placement: { mode: "direct" | "gravity", gravity?: { enabled: boolean, direction: "down" | "up" | "left" | "right", wrap: boolean }, overflow?: "reject" | "pop_out_bottom" | "pop_out_top" }
-
-- Connect 4 preset (concept)
   - input.mode: "column"
   - placement.mode: "gravity"
   - placement.gravity: { enabled: true, direction: "down", wrap: false }
   - win: { length: 4, adjacency: { mode: "linear", horizontal: true, vertical: true, backDiagonal: true, forwardDiagonal: true } }
+
+## Recommended Near-Term Plan
+
+- Quick wins (presets)
+
+  - Gomoku (five-in-a-row): input=cell, placement=direct; win.length=5; board 15x15 or 19x19.
+  - Connect 4 PopOut: reuse gravity; add placement.overflow=pop_out_bottom; eject rule for column.
+  - Reversi/Othello (next): add CaptureRule slice (line scan sandwich; flip tokens) and validity guard.
+
+- State-machine scaffolding
+
+  - TurnMachine: idle -> input -> placement -> winCheck -> nextTurn/end.
+  - Slice services: InputTarget, PlacementPolicy, OverflowPolicy, WinCheck, CaptureRule.
+  - Factory: build chart from config; parse-time validation of incompatible combos.
+  - Keep reducer pure; machine orchestrates calls to reducers/slices; property tests for invariants.
+
+- Execution order
+  1. Add Gomoku preset now (validates n-in-a-row scaling).
+  2. Scaffold TurnMachine stub to route phases (no deep refactor yet).
+  3. Implement Reversi using CaptureRule to prove composability.
+  4. Add PopOut variant via OverflowPolicy without core changes.

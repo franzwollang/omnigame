@@ -3,15 +3,24 @@
 import { useState, useCallback, useEffect } from "react";
 import type { GameState, GameEvent, Position } from "./types";
 import { reduce, createInitialState, type GameConfig } from "./reducer";
+import {
+	createInitialTurnContext,
+	nextPhase,
+	type TurnContext
+} from "@/engine/turnMachine";
 
 export function useGameEngine(config: GameConfig) {
 	const [state, setState] = useState<GameState>(() =>
 		createInitialState(config)
 	);
+	const [turnContext, setTurnContext] = useState<TurnContext>(() =>
+		createInitialTurnContext()
+	);
 
 	// Reinit when config changes
 	useEffect(() => {
 		setState(createInitialState(config));
+		setTurnContext(createInitialTurnContext());
 	}, [
 		config.gridWidth,
 		config.gridHeight,
@@ -25,6 +34,8 @@ export function useGameEngine(config: GameConfig) {
 
 	const dispatch = useCallback(
 		(event: GameEvent) => {
+			// Advance turn machine first (non-blocking for now)
+			setTurnContext((prevCtx) => nextPhase(prevCtx, { type: event.type }));
 			setState((prev) => reduce(prev, event, config));
 		},
 		[config]
@@ -48,5 +59,5 @@ export function useGameEngine(config: GameConfig) {
 		[dispatch]
 	);
 
-	return { state, dispatch, placeMove, activateColumn, reset };
+	return { state, turnContext, dispatch, placeMove, activateColumn, reset };
 }

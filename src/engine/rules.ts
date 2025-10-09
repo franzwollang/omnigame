@@ -1,6 +1,7 @@
 // Win detection with decomposed adjacency
 
 import type { Grid, Player, Position } from "./types";
+import { getEnabledDirections } from "@/engine/adjacency";
 import { getCell } from "./types";
 
 export type AdjacencyConfig = {
@@ -14,33 +15,13 @@ export type AdjacencyConfig = {
 type AdjFunc = (pos: Position) => Position[];
 
 // Adjacency functions (return neighbors in given direction)
-const horAdj: AdjFunc = ({ row, col }) => [
-	{ row, col: col - 1 },
-	{ row, col: col + 1 }
-];
-
-const vertAdj: AdjFunc = ({ row, col }) => [
-	{ row: row - 1, col },
-	{ row: row + 1, col }
-];
-
-const backDiaAdj: AdjFunc = ({ row, col }) => [
-	{ row: row - 1, col: col - 1 },
-	{ row: row + 1, col: col + 1 }
-];
-
-const forDiaAdj: AdjFunc = ({ row, col }) => [
-	{ row: row - 1, col: col + 1 },
-	{ row: row + 1, col: col - 1 }
-];
+const dirToAdjFunc =
+	(d: Position): AdjFunc =>
+	({ row, col }) =>
+		[{ row: row + d.row, col: col + d.col }];
 
 function getActiveAdjFuncs(config: AdjacencyConfig): AdjFunc[] {
-	const funcs: AdjFunc[] = [];
-	if (config.horizontal) funcs.push(horAdj);
-	if (config.vertical) funcs.push(vertAdj);
-	if (config.backDiagonal) funcs.push(backDiaAdj);
-	if (config.forwardDiagonal) funcs.push(forDiaAdj);
-	return funcs;
+	return getEnabledDirections(config).map(dirToAdjFunc);
 }
 
 function isInBounds(pos: Position, grid: Grid): boolean {

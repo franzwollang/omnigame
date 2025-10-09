@@ -75,7 +75,11 @@ export default function GamePage() {
 		inputMode: (currentConfig as any)?.input?.mode ?? "cell",
 		placementMode: (currentConfig as any)?.placement?.mode ?? "direct",
 		gravityDirection:
-			(currentConfig as any)?.placement?.gravity?.direction ?? "down"
+			(currentConfig as any)?.placement?.gravity?.direction ?? "down",
+		captureEnabled: Boolean(
+			(currentConfig as any)?.placement?.capture?.enabled
+		),
+		initial: (currentConfig as any)?.initial ?? []
 	};
 	const {
 		state: gameState,

@@ -33,7 +33,8 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					backDiagonal: true,
 					forwardDiagonal: true
 				}
-			}
+			},
+			initial: []
 		}
 	},
 	"connect-4": {
@@ -61,7 +62,68 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					backDiagonal: true,
 					forwardDiagonal: true
 				}
-			}
+			},
+			initial: []
+		}
+	},
+	gomoku: {
+		id: "gomoku",
+		name: "Gomoku",
+		tags: ["classic", "15x15", "n-in-a-row", "direct"],
+		description: "Place stones on a 15x15 board; first to five in a row wins.",
+		config: {
+			metadata: { name: "Gomoku", version: 1 },
+			grid: { width: 15, height: 15, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			win: {
+				length: 5,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			initial: []
+		}
+	},
+	reversi: {
+		id: "reversi",
+		name: "Reversi / Othello",
+		tags: ["classic", "capture", "8x8"],
+		description:
+			"Sandwich opponent stones to flip them; valid move must capture at least one line.",
+		config: {
+			metadata: { name: "Reversi", version: 1 },
+			grid: { width: 8, height: 8, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				overflow: "reject",
+				capture: { enabled: true }
+			},
+			win: {
+				length: 5,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			initial: [
+				{ row: 3, col: 3, player: "O" },
+				{ row: 3, col: 4, player: "X" },
+				{ row: 4, col: 3, player: "X" },
+				{ row: 4, col: 4, player: "O" }
+			]
 		}
 	}
 	// Add more presets here as we create them

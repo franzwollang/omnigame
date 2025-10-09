@@ -29,6 +29,7 @@ export const zConfig = z
 						wrap: z.boolean().default(false)
 					})
 					.optional(),
+				capture: z.object({ enabled: z.boolean().default(false) }).optional(),
 				overflow: z
 					.enum(["reject", "pop_out_bottom", "pop_out_top"])
 					.default("reject")
@@ -48,7 +49,18 @@ export const zConfig = z
 					})
 					.strict()
 			})
-			.strict()
+			.strict(),
+		initial: z
+			.array(
+				z
+					.object({
+						row: z.number().int().nonnegative(),
+						col: z.number().int().nonnegative(),
+						player: z.enum(["X", "O"])
+					})
+					.strict()
+			)
+			.default([])
 	})
 	.strict();
 

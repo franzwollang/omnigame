@@ -9,6 +9,7 @@ import type {
 } from "./types";
 import { getCell, setCell, toIndex } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
+import { applyCaptureIfAny } from "@/engine/capture";
 
 export type GameConfig = {
 	gridWidth: number;
@@ -18,11 +19,13 @@ export type GameConfig = {
 	inputMode?: "cell" | "column";
 	placementMode?: "direct" | "gravity";
 	gravityDirection?: "down" | "up" | "left" | "right";
+	captureEnabled?: boolean;
+	initial?: { row: number; col: number; player: Player }[];
 };
 
 // Create initial game state from config
 export function createInitialState(config: GameConfig): GameState {
-	return {
+	const base: GameState = {
 		grid: {
 			width: config.gridWidth,
 			height: config.gridHeight,
@@ -33,6 +36,26 @@ export function createInitialState(config: GameConfig): GameState {
 		winner: null,
 		moveCount: 0
 	};
+	// Seed initial placements if provided (e.g., Reversi starting position)
+	if (config.initial && config.initial.length > 0) {
+		let cells = base.grid.cells;
+		for (const p of config.initial) {
+			if (
+				p.row >= 0 &&
+				p.row < base.grid.height &&
+				p.col >= 0 &&
+				p.col < base.grid.width
+			) {
+				cells = setCell(
+					{ ...base.grid, cells },
+					{ row: p.row, col: p.col },
+					p.player
+				);
+			}
+		}
+		base.grid = { ...base.grid, cells };
+	}
+	return base;
 }
 
 // Pure reducer
@@ -73,9 +96,33 @@ function handlePlace(
 
 	// Guard: cell must be empty
 	if (getCell(state.grid, pos) !== null) return state;
+	// Guard: if capture required (Reversi style), ensure move captures at least one line
+	if (config.captureEnabled) {
+		// simulate capture
+		const placedCells = setCell(state.grid, pos, state.currentPlayer);
+		const after = applyCaptureIfAny(
+			{ ...state.grid, cells: placedCells },
+			pos,
+			state.currentPlayer,
+			config.adjacency
+		);
+		if (after === placedCells) {
+			// no capture occurred; invalid
+			return state;
+		}
+	}
 
 	// Effect: place current player's mark
-	const newCells = setCell(state.grid, pos, state.currentPlayer);
+	let newCells = setCell(state.grid, pos, state.currentPlayer);
+	// Optional capture (Reversi-style)
+	if (config.captureEnabled) {
+		newCells = applyCaptureIfAny(
+			{ ...state.grid, cells: newCells },
+			pos,
+			state.currentPlayer,
+			config.adjacency
+		);
+	}
 	const newMoveCount = state.moveCount + 1;
 
 	// Check win condition using config
