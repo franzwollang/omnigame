@@ -35,6 +35,7 @@ export default function SandboxCanvas({
 	const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
 	const cellMeshesRef = useRef<THREE.Mesh[]>([]);
 	const marksGroupRef = useRef<THREE.Group | null>(null);
+	const textureCacheRef = useRef<Map<string, THREE.Texture>>(new Map());
 	const onCellClickRef = useRef(onCellClick);
 	const onActivateColumnRef = useRef<typeof onActivateColumn>(onActivateColumn);
 	const inputModeRef = useRef(inputMode);
@@ -287,13 +288,17 @@ export default function SandboxCanvas({
 		const marksGroup = marksGroupRef.current;
 		if (!marksGroup) return;
 
-		// Clear previous marks
+		// Clear previous marks (don't touch cached textures)
 		while (marksGroup.children.length > 0) {
-			const child = marksGroup.children[0];
+			const child = marksGroup.children[0] as THREE.Object3D;
 			marksGroup.remove(child);
 			if (child instanceof THREE.Mesh) {
 				child.geometry.dispose();
+				const mat = child.material as THREE.Material;
+				mat.dispose();
+			} else if (child instanceof THREE.Line) {
 				(child.material as THREE.Material).dispose();
+				child.geometry.dispose();
 			}
 		}
 
@@ -320,7 +325,11 @@ export default function SandboxCanvas({
 			// If a token is assigned to this player, render its image/label
 			const token = tokenForPlayer(value);
 			if (token && token.asset?.type === "image") {
-				const tex = loader.load(token.asset.url);
+				let tex = textureCacheRef.current.get(token.asset.url);
+				if (!tex) {
+					tex = loader.load(token.asset.url);
+					textureCacheRef.current.set(token.asset.url, tex);
+				}
 				const mat = new THREE.MeshBasicMaterial({
 					map: tex,
 					transparent: true
@@ -405,7 +414,11 @@ export default function SandboxCanvas({
 			const x = (p.col - (gridWidth - 1) / 2) * totalCellSize;
 			const y = -(p.row - (gridHeight - 1) / 2) * totalCellSize;
 			if (token.asset?.type === "image") {
-				const tex = loader.load(token.asset.url);
+				let tex = textureCacheRef.current.get(token.asset.url);
+				if (!tex) {
+					tex = loader.load(token.asset.url);
+					textureCacheRef.current.set(token.asset.url, tex);
+				}
 				const mat = new THREE.MeshBasicMaterial({
 					map: tex,
 					transparent: true
