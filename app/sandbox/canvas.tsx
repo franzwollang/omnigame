@@ -11,13 +11,23 @@ type Props = {
 	onCellClick: (pos: Position) => void;
 	onActivateColumn?: (col: number) => void;
 	inputMode?: "cell" | "column";
+	// token rendering
+	tokens?: {
+		id: string;
+		label?: string;
+		players: ("X" | "O")[];
+		asset?: { type: "image"; url: string };
+	}[];
+	placements?: { row: number; col: number; tokenId: string }[];
 };
 
 export default function SandboxCanvas({
 	gameState,
 	onCellClick,
 	onActivateColumn,
-	inputMode = "cell"
+	inputMode = "cell",
+	tokens = [],
+	placements = []
 }: Props) {
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -128,7 +138,7 @@ export default function SandboxCanvas({
 		}
 		cellMeshesRef.current = cellMeshes;
 
-		// Marks group
+		// Marks/tokens group
 		const marksGroup = new THREE.Group();
 		scene.add(marksGroup);
 		marksGroupRef.current = marksGroup;
@@ -272,7 +282,7 @@ export default function SandboxCanvas({
 		};
 	}, [gameState.grid.width, gameState.grid.height]);
 
-	// Render X/O marks based on game state
+	// Render X/O marks and token placements
 	useEffect(() => {
 		const marksGroup = marksGroupRef.current;
 		if (!marksGroup) return;
@@ -292,12 +302,55 @@ export default function SandboxCanvas({
 		const spacing = 0.1;
 		const totalCellSize = cellSize + spacing;
 
+		// Token lookup and shared texture loader
+		const tokenById = new Map(tokens.map((t) => [t.id, t] as const));
+		const loader = new THREE.TextureLoader();
+		loader.setCrossOrigin("anonymous");
+
 		cells.forEach((value, index) => {
 			if (!value) return;
 			const row = Math.floor(index / gridWidth);
 			const col = index % gridWidth;
 			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
 			const y = -(row - (gridHeight - 1) / 2) * totalCellSize;
+
+			// If a token matches the cell value (e.g., id "X" or "O"), render its image/label
+			const token = tokenById.get(value);
+			if (token && token.asset?.type === "image") {
+				const tex = loader.load(token.asset.url);
+				const mat = new THREE.MeshBasicMaterial({
+					map: tex,
+					transparent: true
+				});
+				const geo = new THREE.PlaneGeometry(cellSize * 0.8, cellSize * 0.8);
+				const sprite = new THREE.Mesh(geo, mat);
+				sprite.position.set(x, y, 0.001);
+				marksGroup.add(sprite);
+				return;
+			}
+			if (token && token.label && !token.asset) {
+				const canvas = document.createElement("canvas");
+				canvas.width = 128;
+				canvas.height = 128;
+				const ctx = canvas.getContext("2d");
+				if (ctx) {
+					ctx.fillStyle = "#000";
+					ctx.font = "64px sans-serif";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.fillText(token.label, 64, 64);
+					const tex = new THREE.CanvasTexture(canvas);
+					const mat = new THREE.MeshBasicMaterial({
+						map: tex,
+						transparent: true
+					});
+					const geo = new THREE.PlaneGeometry(cellSize * 0.7, cellSize * 0.7);
+					const mesh = new THREE.Mesh(geo, mat);
+					mesh.position.set(x, y, 0.001);
+					marksGroup.add(mesh);
+				}
+				return;
+			}
 
 			if (value === "X") {
 				// X: two crossing lines
@@ -341,7 +394,53 @@ export default function SandboxCanvas({
 				marksGroup.add(circle);
 			}
 		});
-	}, [gameState.grid.cells, gameState.grid.width, gameState.grid.height]);
+
+		// Draw token placements (images if provided)
+		placements.forEach((p) => {
+			const token = tokenById.get(p.tokenId);
+			if (!token) return;
+			const x = (p.col - (gridWidth - 1) / 2) * totalCellSize;
+			const y = -(p.row - (gridHeight - 1) / 2) * totalCellSize;
+			if (token.asset?.type === "image") {
+				const tex = loader.load(token.asset.url);
+				const mat = new THREE.MeshBasicMaterial({
+					map: tex,
+					transparent: true
+				});
+				const geo = new THREE.PlaneGeometry(cellSize * 0.8, cellSize * 0.8);
+				const sprite = new THREE.Mesh(geo, mat);
+				sprite.position.set(x, y, 0.0015);
+				marksGroup.add(sprite);
+			} else if (token.label) {
+				const canvas = document.createElement("canvas");
+				canvas.width = 128;
+				canvas.height = 128;
+				const ctx = canvas.getContext("2d");
+				if (ctx) {
+					ctx.fillStyle = "#000";
+					ctx.font = "64px sans-serif";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.fillText(token.label, 64, 64);
+					const tex = new THREE.CanvasTexture(canvas);
+					const mat = new THREE.MeshBasicMaterial({
+						map: tex,
+						transparent: true
+					});
+					const geo = new THREE.PlaneGeometry(cellSize * 0.7, cellSize * 0.7);
+					const mesh = new THREE.Mesh(geo, mat);
+					mesh.position.set(x, y, 0.0015);
+					marksGroup.add(mesh);
+				}
+			}
+		});
+	}, [
+		gameState.grid.cells,
+		gameState.grid.width,
+		gameState.grid.height,
+		tokens,
+		placements
+	]);
 
 	return (
 		<div ref={containerRef} className="flex relative flex-1 min-w-0 h-full">

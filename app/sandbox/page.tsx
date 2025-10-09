@@ -88,52 +88,17 @@ export default function GamePage() {
 		reset
 	} = useGameEngine(engineConfig);
 
-	const initialJson = useMemo(
-		() =>
-			JSON.stringify(
-				{
-					metadata: { name: "Tic-Tac-Toe", version: 1 },
-					grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
-					turn: { mode: "turn" },
-					rng: { seed: 42 },
-					win: {
-						length: 3,
-						adjacency: {
-							mode: "linear",
-							horizontal: true,
-							vertical: true,
-							backDiagonal: true,
-							forwardDiagonal: true
-						}
-					}
-				},
-				null,
-				2
-			),
-		[]
-	);
+	const initialJson = useMemo(() => {
+		const preset = examplePresets["tic-tac-toe"];
+		return JSON.stringify(preset.config, null, 2);
+	}, []);
 
 	useEffect(() => {
 		setJsonText(initialJson);
 	}, [initialJson]);
 
 	const form = useForm<Config>({
-		defaultValues: {
-			metadata: { name: "Tic-Tac-Toe", version: 1 },
-			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
-			turn: { mode: "turn" },
-			rng: { seed: 42 },
-			win: {
-				length: 3,
-				adjacency: {
-					mode: "linear",
-					horizontal: true,
-					vertical: true,
-					backDiagonal: true,
-					forwardDiagonal: true
-				}
-			}
-		}
+		defaultValues: examplePresets["tic-tac-toe"].config
 	});
 
 	useEffect(() => {
@@ -235,6 +200,9 @@ export default function GamePage() {
 		const newJson = JSON.stringify(preset.config, null, 2);
 		setJsonText(newJson);
 		form.reset(preset.config);
+		// reset engine state explicitly; config change will also reinit
+		reset();
+		setPresetsModalOpen(false);
 	};
 
 	const highlight = (code: string) =>
@@ -335,6 +303,9 @@ export default function GamePage() {
 					onCellClick={placeMove}
 					onActivateColumn={activateColumn}
 					inputMode={(currentConfig as any)?.input?.mode ?? "cell"}
+					// pass tokens/placements for rendering
+					tokens={(currentConfig as any)?.tokens ?? []}
+					placements={(currentConfig as any)?.placements ?? []}
 				/>
 				{gameState.status !== "playing" && (
 					<div className="flex absolute inset-0 z-10 justify-center items-center p-4 pointer-events-none">

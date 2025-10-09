@@ -22,6 +22,20 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
 			input: { mode: "cell" },
 			placement: { mode: "direct", overflow: "reject" },
 			win: {
@@ -34,6 +48,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					forwardDiagonal: true
 				}
 			},
+			placements: [],
 			initial: []
 		}
 	},
@@ -48,6 +63,20 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
 			input: { mode: "column" },
+			tokens: [
+				{
+					id: "disc-red",
+					label: "R",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disc-red.png" }
+				},
+				{
+					id: "disc-yellow",
+					label: "Y",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disc-yellow.png" }
+				}
+			],
 			placement: {
 				mode: "gravity",
 				gravity: { enabled: true, direction: "down", wrap: false },
@@ -63,6 +92,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					forwardDiagonal: true
 				}
 			},
+			placements: [],
 			initial: []
 		}
 	},
@@ -77,6 +107,20 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
 			input: { mode: "cell" },
+			tokens: [
+				{
+					id: "stone-black",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/stone-black.png" }
+				},
+				{
+					id: "stone-white",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/stone-white.png" }
+				}
+			],
 			placement: { mode: "direct", overflow: "reject" },
 			win: {
 				length: 5,
@@ -88,6 +132,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					forwardDiagonal: true
 				}
 			},
+			placements: [],
 			initial: []
 		}
 	},
@@ -103,6 +148,20 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
 			input: { mode: "cell" },
+			tokens: [
+				{
+					id: "disk-black",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disk-black.png" }
+				},
+				{
+					id: "disk-white",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disk-white.png" }
+				}
+			],
 			placement: {
 				mode: "direct",
 				overflow: "reject",
@@ -118,6 +177,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					forwardDiagonal: true
 				}
 			},
+			placements: [],
 			initial: [
 				{ row: 3, col: 3, player: "O" },
 				{ row: 3, col: 4, player: "X" },
@@ -138,6 +198,20 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
 			input: { mode: "column" },
+			tokens: [
+				{
+					id: "disc-red",
+					label: "R",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disc-red.png" }
+				},
+				{
+					id: "disc-yellow",
+					label: "Y",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disc-yellow.png" }
+				}
+			],
 			placement: {
 				mode: "gravity",
 				gravity: { enabled: true, direction: "down", wrap: false },
@@ -153,6 +227,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					forwardDiagonal: true
 				}
 			},
+			placements: [],
 			initial: []
 		}
 	}

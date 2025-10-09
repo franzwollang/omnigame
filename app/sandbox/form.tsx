@@ -87,6 +87,59 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									)}
 								/>
 							</div>
+
+							{/* Tokens */}
+							<div className="space-y-2">
+								<p className="text-sm font-medium">Tokens</p>
+								<div className="space-y-3">
+									{/* Simple inline editors for first few tokens */}
+									{[0, 1, 2].map((idx) => (
+										<div key={idx} className="grid grid-cols-3 gap-2">
+											<FormField
+												control={form.control}
+												name={`tokens.${idx}.id`}
+												render={({ field }) => (
+													<FormItem>
+														<FormLabel>Token {idx + 1} id</FormLabel>
+														<FormControl>
+															<Input {...field} />
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+
+											<FormField
+												control={form.control}
+												name={`tokens.${idx}.label`}
+												render={({ field }) => (
+													<FormItem>
+														<FormLabel>Label</FormLabel>
+														<FormControl>
+															<Input {...field} />
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+
+											<FormField
+												control={form.control}
+												name={`tokens.${idx}.asset.url`}
+												render={({ field }) => (
+													<FormItem>
+														<FormLabel>Image URL</FormLabel>
+														<FormControl>
+															<Input {...field} />
+														</FormControl>
+														<FormMessage />
+													</FormItem>
+												)}
+											/>
+										</div>
+									))}
+								</div>
+							</div>
 							<FormField
 								control={form.control}
 								name="grid.wrap"

@@ -60,7 +60,7 @@ export const zConfig = z
 						asset: z
 							.object({
 								type: z.literal("image"),
-								url: z.string().url()
+								url: z.string().url().or(z.string().startsWith("/"))
 							})
 							.strict()
 							.optional()

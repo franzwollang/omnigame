@@ -29,7 +29,12 @@ export function useGameEngine(config: GameConfig) {
 		config.adjacency.horizontal,
 		config.adjacency.vertical,
 		config.adjacency.backDiagonal,
-		config.adjacency.forwardDiagonal
+		config.adjacency.forwardDiagonal,
+		config.inputMode,
+		config.placementMode,
+		config.gravityDirection,
+		config.captureEnabled,
+		config.initial ? config.initial.length : 0
 	]);
 
 	const dispatch = useCallback(
