@@ -311,19 +311,6 @@ export default function GamePage() {
 					<div className="flex absolute inset-0 z-10 justify-center items-center p-6 pointer-events-none">
 						<div className="overflow-hidden w-full max-w-sm rounded-xl border shadow-2xl backdrop-blur pointer-events-auto border-zinc-700/60 bg-zinc-900/90 text-zinc-100">
 							<div className="flex gap-3 items-center px-5 pt-5">
-								<div
-									className={`h-10 w-10 flex items-center justify-center rounded-full ${
-										gameState.status === "won"
-											? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30"
-											: "bg-sky-500/15 text-sky-300 ring-1 ring-sky-400/30"
-									}`}
-								>
-									{gameState.status === "won" ? (
-										<span className="text-lg">✓</span>
-									) : (
-										<span className="text-lg">≡</span>
-									)}
-								</div>
 								<div className="flex-1">
 									<p className="text-xs tracking-widest uppercase text-zinc-400">
 										Game Over
