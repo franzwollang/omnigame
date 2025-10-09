@@ -167,6 +167,9 @@ dependencies:
   xstate:
     specifier: ^5.22.0
     version: 5.22.0
+  z3-solver:
+    specifier: ^4.15.3
+    version: 4.15.3
   zod:
     specifier: ^3.25.76
     version: 3.25.76
@@ -2273,6 +2276,12 @@ packages:
     resolution: {integrity: sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA==}
     engines: {node: '>= 0.4'}
     dev: true
+
+  /async-mutex@0.3.2:
+    resolution: {integrity: sha512-HuTK7E7MT7jZEh1P9GtRW9+aTWiDWWi9InbZ5hjxrnRa39KS4BW04+xLBhYNS2aXhHUIKZSw3gj4Pn1pj+qGAA==}
+    dependencies:
+      tslib: 2.8.1
+    dev: false
 
   /attr-accept@2.2.5:
     resolution: {integrity: sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==}
@@ -5229,6 +5238,13 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
     dev: true
+
+  /z3-solver@4.15.3:
+    resolution: {integrity: sha512-Bdqs80qnXVc8vNmL7WcO998o+/EPwM+4j5uJAapbWG1ag/ozGACW3aQCS4SYjAr4RdebJZVUFkIO0/3xxjc+Gg==}
+    engines: {node: '>=16'}
+    dependencies:
+      async-mutex: 0.3.2
+    dev: false
 
   /zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}

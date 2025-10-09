@@ -3,5 +3,6 @@ node_modules
 .next
 out
 .env*
-scratchpad.md
 .DS_Store
+
+**/scratchpad.md

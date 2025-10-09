@@ -65,6 +65,7 @@
 		"ts-essentials": "^10.1.1",
 		"vaul": "^1.1.2",
 		"xstate": "^5.22.0",
+		"z3-solver": "^4.15.3",
 		"zod": "^3.25.76"
 	},
 	"devDependencies": {
