@@ -85,6 +85,8 @@ export default function GamePage() {
 		state: gameState,
 		placeMove,
 		activateColumn,
+		// @ts-ignore pop out supported by engine hook
+		popOutColumn,
 		reset
 	} = useGameEngine(engineConfig);
 
@@ -302,6 +304,14 @@ export default function GamePage() {
 					gameState={gameState}
 					onCellClick={placeMove}
 					onActivateColumn={activateColumn}
+					enablePopOutButtons={
+						(currentConfig as any)?.placement?.overflow === "pop_out_bottom"
+					}
+					onPopOutColumn={
+						(currentConfig as any)?.placement?.overflow === "pop_out_bottom"
+							? (popOutColumn as any)
+							: undefined
+					}
 					inputMode={(currentConfig as any)?.input?.mode ?? "cell"}
 					// pass tokens/placements for rendering
 					tokens={(currentConfig as any)?.tokens ?? []}

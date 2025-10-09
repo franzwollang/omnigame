@@ -3,6 +3,10 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import {
+	CSS2DRenderer,
+	CSS2DObject
+} from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { GameState, Position } from "@/engine/types";
 import { getCell } from "@/engine/types";
 
@@ -10,7 +14,9 @@ type Props = {
 	gameState: GameState;
 	onCellClick: (pos: Position) => void;
 	onActivateColumn?: (col: number) => void;
+	onPopOutColumn?: (col: number) => void;
 	inputMode?: "cell" | "column";
+	enablePopOutButtons?: boolean;
 	// token rendering
 	tokens?: {
 		id: string;
@@ -25,7 +31,9 @@ export default function SandboxCanvas({
 	gameState,
 	onCellClick,
 	onActivateColumn,
+	onPopOutColumn,
 	inputMode = "cell",
+	enablePopOutButtons = false,
 	tokens = [],
 	placements = []
 }: Props) {
@@ -38,7 +46,11 @@ export default function SandboxCanvas({
 	const textureCacheRef = useRef<Map<string, THREE.Texture>>(new Map());
 	const onCellClickRef = useRef(onCellClick);
 	const onActivateColumnRef = useRef<typeof onActivateColumn>(onActivateColumn);
+	const onPopOutColumnRef = useRef<typeof onPopOutColumn>(onPopOutColumn);
 	const inputModeRef = useRef(inputMode);
+	const popButtonsGroupRef = useRef<THREE.Group | null>(null);
+	const labelRendererRef = useRef<CSS2DRenderer | null>(null);
+	const popLabelGroupRef = useRef<THREE.Group | null>(null);
 
 	// Keep click handler ref up to date
 	useEffect(() => {
@@ -47,8 +59,9 @@ export default function SandboxCanvas({
 
 	useEffect(() => {
 		onActivateColumnRef.current = onActivateColumn;
+		onPopOutColumnRef.current = onPopOutColumn;
 		inputModeRef.current = inputMode;
-	}, [onActivateColumn, inputMode]);
+	}, [onActivateColumn, onPopOutColumn, inputMode]);
 
 	useEffect(() => {
 		const canvasEl = canvasRef.current;
@@ -60,6 +73,17 @@ export default function SandboxCanvas({
 			antialias: true
 		});
 		renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+		// CSS2D renderer for DOM overlays
+		const labelRenderer = new CSS2DRenderer();
+		labelRenderer.setSize(containerEl.clientWidth, containerEl.clientHeight);
+		labelRenderer.domElement.style.position = "absolute";
+		labelRenderer.domElement.style.top = "0";
+		labelRenderer.domElement.style.left = "0";
+		labelRenderer.domElement.style.pointerEvents = "none"; // allow individual elements to opt-in
+		labelRenderer.domElement.style.zIndex = "2";
+		containerEl.appendChild(labelRenderer.domElement);
+		labelRendererRef.current = labelRenderer;
 
 		const scene = new THREE.Scene();
 		scene.background = new THREE.Color("#f1f5f9");
@@ -143,6 +167,16 @@ export default function SandboxCanvas({
 		const marksGroup = new THREE.Group();
 		scene.add(marksGroup);
 		marksGroupRef.current = marksGroup;
+
+		// Pop-out buttons group (three meshes; kept for raycasting if needed)
+		const popButtonsGroup = new THREE.Group();
+		scene.add(popButtonsGroup);
+		popButtonsGroupRef.current = popButtonsGroup;
+
+		// Group to host CSS2DObjects for pop-out buttons
+		const popLabelGroup = new THREE.Group();
+		scene.add(popLabelGroup);
+		popLabelGroupRef.current = popLabelGroup;
 
 		// Lighting
 		const light = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -230,6 +264,26 @@ export default function SandboxCanvas({
 				-((e.clientY - rect.top) / rect.height) * 2 + 1
 			);
 			raycasterRef.current.setFromCamera(mouse, camera);
+			// Check pop-out buttons first if enabled
+			if (
+				enablePopOutButtons &&
+				onPopOutColumnRef.current &&
+				popButtonsGroupRef.current
+			) {
+				const popIntersects = raycasterRef.current.intersectObjects(
+					popButtonsGroupRef.current.children,
+					true
+				);
+				if (popIntersects.length > 0) {
+					const { col } = (popIntersects[0].object.userData || {}) as {
+						col: number;
+					};
+					if (typeof col === "number") {
+						onPopOutColumnRef.current(col);
+						return;
+					}
+				}
+			}
 			const intersects = raycasterRef.current.intersectObjects(cellMeshes);
 			if (intersects.length > 0) {
 				const { row, col } = intersects[0].object.userData;
@@ -247,6 +301,7 @@ export default function SandboxCanvas({
 			const height = containerEl.clientHeight;
 			if (width === 0 || height === 0) return;
 			renderer.setSize(width, height, false);
+			labelRenderer.setSize(width, height);
 			camera.aspect = width / height;
 			camera.updateProjectionMatrix();
 			updateZoomBounds();
@@ -260,6 +315,9 @@ export default function SandboxCanvas({
 
 		const tick = () => {
 			renderer.render(scene, camera);
+			if (labelRendererRef.current) {
+				labelRendererRef.current.render(scene, camera);
+			}
 			clampPanAndZoom();
 			frameRef.current = requestAnimationFrame(tick);
 		};
@@ -271,6 +329,13 @@ export default function SandboxCanvas({
 			if (frameRef.current) cancelAnimationFrame(frameRef.current);
 			canvasEl.removeEventListener("click", handleCanvasClick);
 			renderer.dispose();
+			if (labelRendererRef.current) {
+				const el = labelRendererRef.current.domElement;
+				if (el && el.parentElement === containerEl) {
+					containerEl.removeChild(el);
+				}
+				labelRendererRef.current = null;
+			}
 			planeGeometry.dispose();
 			planeMaterial.dispose();
 			edges.dispose();
@@ -283,9 +348,10 @@ export default function SandboxCanvas({
 		};
 	}, [gameState.grid.width, gameState.grid.height]);
 
-	// Render X/O marks and token placements
+	// Render X/O marks and token placements, plus optional pop-out buttons
 	useEffect(() => {
 		const marksGroup = marksGroupRef.current;
+		const popGroup = popButtonsGroupRef.current;
 		if (!marksGroup) return;
 
 		// Clear previous marks (don't touch cached textures)
@@ -450,13 +516,47 @@ export default function SandboxCanvas({
 				}
 			}
 		});
+
+		// Mesh pop-out buttons removed; DOM overlay will render instead
 	}, [
 		gameState.grid.cells,
 		gameState.grid.width,
 		gameState.grid.height,
 		tokens,
-		placements
+		placements,
+		enablePopOutButtons
 	]);
+
+	// CSS2D DOM pop-out buttons
+	useEffect(() => {
+		const group = popLabelGroupRef.current;
+		if (!group) return;
+		// Clear previous DOM labels
+		while (group.children.length > 0) {
+			group.remove(group.children[0]);
+		}
+		if (!enablePopOutButtons) return;
+		const { width: gridWidth, height: gridHeight } = gameState.grid;
+		const cellSize = 0.9;
+		const spacing = 0.1;
+		const totalCellSize = cellSize + spacing;
+		const planeHeight = gridHeight * totalCellSize;
+		const y = planeHeight / 2 + spacing * 0.5; // slightly above top edge
+		for (let col = 0; col < gridWidth; col++) {
+			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
+			const btn = document.createElement("button");
+			btn.className =
+				"rounded-full px-2 py-1 text-xs bg-zinc-800/90 text-zinc-100 border border-zinc-600 shadow pointer-events-auto hover:bg-zinc-700";
+			btn.textContent = "Pop";
+			btn.onclick = (e) => {
+				e.stopPropagation();
+				if (onPopOutColumnRef.current) onPopOutColumnRef.current(col);
+			};
+			const obj = new CSS2DObject(btn);
+			obj.position.set(x, y, 0);
+			group.add(obj);
+		}
+	}, [enablePopOutButtons, gameState.grid.width, gameState.grid.height]);
 
 	return (
 		<div ref={containerRef} className="flex relative flex-1 min-w-0 h-full">
