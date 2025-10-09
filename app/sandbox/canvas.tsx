@@ -448,16 +448,6 @@ export default function SandboxCanvas({
 	return (
 		<div ref={containerRef} className="flex relative flex-1 min-w-0 h-full">
 			<canvas ref={canvasRef} className="block w-full h-full" />
-			{gameState.status !== "playing" && (
-				<div className="flex absolute inset-0 justify-center items-center pointer-events-none">
-					<div className="px-6 py-4 text-center rounded-lg border shadow-lg backdrop-blur-sm border-border bg-background/90">
-						<p className="text-xl font-semibold text-black">
-							{gameState.status === "won" && `${gameState.winner} wins!`}
-							{gameState.status === "draw" && "Draw!"}
-						</p>
-					</div>
-				</div>
-			)}
 		</div>
 	);
 }
