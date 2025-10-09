@@ -163,11 +163,24 @@ export default function SandboxCanvas({
 			const distToFitHeight = planeHeight / (2 * Math.tan(fovRad / 2));
 			const distToFitWidth =
 				planeWidth / (2 * Math.tan(fovRad / 2) * camera.aspect);
+			const fitDist =
+				Math.max(distToFitHeight, distToFitWidth) * boardMarginFactor;
 			controls.minDistance = 0.3;
-			controls.maxDistance = Math.max(
-				0.5,
-				Math.max(distToFitHeight, distToFitWidth) * boardMarginFactor
-			);
+			controls.maxDistance = Math.max(0.5, fitDist);
+		};
+
+		const setCameraToFitBoard = () => {
+			// Center on board and set distance to show full board
+			(controls.target as THREE.Vector3).set(0, 0, 0);
+			const fovRad = (camera.fov * Math.PI) / 180;
+			const distToFitHeight = planeHeight / (2 * Math.tan(fovRad / 2));
+			const distToFitWidth =
+				planeWidth / (2 * Math.tan(fovRad / 2) * camera.aspect);
+			const fitDist =
+				Math.max(distToFitHeight, distToFitWidth) * boardMarginFactor;
+			camera.position.set(0, 0, fitDist);
+			camera.updateProjectionMatrix();
+			controls.update();
 		};
 
 		const clampPanAndZoom = () => {
@@ -230,6 +243,7 @@ export default function SandboxCanvas({
 		};
 
 		resizeToContainer();
+		setCameraToFitBoard();
 		const ro = new ResizeObserver(resizeToContainer);
 		ro.observe(containerEl);
 

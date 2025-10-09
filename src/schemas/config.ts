@@ -50,6 +50,35 @@ export const zConfig = z
 					.strict()
 			})
 			.strict(),
+		tokens: z
+			.array(
+				z
+					.object({
+						id: z.string(),
+						label: z.string().optional(),
+						players: z.array(z.enum(["X", "O"])).min(1),
+						asset: z
+							.object({
+								type: z.literal("image"),
+								url: z.string().url()
+							})
+							.strict()
+							.optional()
+					})
+					.strict()
+			)
+			.default([]),
+		placements: z
+			.array(
+				z
+					.object({
+						row: z.number().int().nonnegative(),
+						col: z.number().int().nonnegative(),
+						tokenId: z.string()
+					})
+					.strict()
+			)
+			.default([]),
 		initial: z
 			.array(
 				z
@@ -135,6 +164,31 @@ export const zConfig = z
 				});
 			} else {
 				seen.add(key);
+			}
+		}
+
+		// token placements within bounds and refer to declared tokens
+		const tokenIds = new Set(cfg.tokens.map((t) => t.id));
+		for (let i = 0; i < cfg.placements.length; i++) {
+			const p = cfg.placements[i];
+			if (
+				p.row < 0 ||
+				p.col < 0 ||
+				p.row >= cfg.grid.height ||
+				p.col >= cfg.grid.width
+			) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placements", i],
+					message: "token placement out of grid bounds"
+				});
+			}
+			if (!tokenIds.has(p.tokenId)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placements", i, "tokenId"],
+					message: "tokenId not declared in tokens"
+				});
 			}
 		}
 	});
