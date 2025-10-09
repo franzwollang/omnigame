@@ -31,11 +31,20 @@ export type ActivateColumnEvent = {
 	col: number;
 };
 
+export type PopOutColumnEvent = {
+	type: "popOutColumn";
+	col: number;
+};
+
 export type ResetEvent = {
 	type: "reset";
 };
 
-export type GameEvent = PlaceMoveEvent | ActivateColumnEvent | ResetEvent;
+export type GameEvent =
+	| PlaceMoveEvent
+	| ActivateColumnEvent
+	| PopOutColumnEvent
+	| ResetEvent;
 
 // Helper to convert row/col to flat index
 export function toIndex(pos: Position, width: number): number {

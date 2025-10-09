@@ -59,5 +59,20 @@ export function useGameEngine(config: GameConfig) {
 		[dispatch]
 	);
 
-	return { state, turnContext, dispatch, placeMove, activateColumn, reset };
+	const popOutColumn = useCallback(
+		(col: number) => {
+			dispatch({ type: "popOutColumn", col } as any);
+		},
+		[dispatch]
+	);
+
+	return {
+		state,
+		turnContext,
+		dispatch,
+		placeMove,
+		activateColumn,
+		popOutColumn,
+		reset
+	};
 }

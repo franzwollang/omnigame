@@ -125,6 +125,36 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 4, col: 4, player: "O" }
 			]
 		}
+	},
+	"connect-4-popout": {
+		id: "connect-4-popout",
+		name: "Connect 4 (Pop Out)",
+		tags: ["classic", "7x6", "gravity", "pop-out"],
+		description:
+			"Connect Four with Pop Out: eject your bottom token to shift the column.",
+		config: {
+			metadata: { name: "Connect 4 Pop Out", version: 1 },
+			grid: { width: 7, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "column" },
+			placement: {
+				mode: "gravity",
+				gravity: { enabled: true, direction: "down", wrap: false },
+				overflow: "pop_out_bottom"
+			},
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			initial: []
+		}
 	}
 	// Add more presets here as we create them
 };

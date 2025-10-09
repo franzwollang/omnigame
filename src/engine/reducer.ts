@@ -69,6 +69,8 @@ export function reduce(
 			return handlePlace(state, event.position, config);
 		case "activateColumn":
 			return handleActivateColumn(state, event.col, config);
+		case "popOutColumn":
+			return handlePopOutColumn(state, event.col, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -196,4 +198,72 @@ function handleActivateColumn(
 	}
 
 	return handlePlace(state, { row: targetRow, col }, config);
+}
+
+function handlePopOutColumn(
+	state: GameState,
+	col: number,
+	config: GameConfig
+): GameState {
+	if (state.status !== "playing") return state;
+	const height = state.grid.height;
+	const width = state.grid.width;
+	if (col < 0 || col >= width) return state;
+
+	// Only support pop-out from bottom with gravity down
+	const direction = config.gravityDirection ?? "down";
+	if (direction !== "down") return state;
+
+	const bottomVal = getCell(state.grid, { row: height - 1, col });
+	if (bottomVal === null) return state; // nothing to pop
+	// Optional strict rule: must pop own token; relax by removing this if desired
+	if (bottomVal !== state.currentPlayer) return state;
+
+	// Shift column down: remove bottom, pull from above
+	let newCells = [...state.grid.cells];
+	for (let row = height - 1; row > 0; row--) {
+		const from = { row: row - 1, col };
+		const to = { row, col };
+		newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+	}
+	// Top becomes empty
+	newCells[toIndex({ row: 0, col }, state.grid.width)] = null;
+
+	const newGrid = { ...state.grid, cells: newCells };
+	const newMoveCount = state.moveCount + 1;
+
+	// Check win conditions after pop (some variants may differ)
+	const winner = checkWinner(
+		newGrid,
+		state.currentPlayer,
+		config.winLength,
+		config.adjacency
+	);
+	if (winner) {
+		return {
+			...state,
+			grid: newGrid,
+			status: "won",
+			winner: state.currentPlayer,
+			moveCount: newMoveCount
+		};
+	}
+
+	const isFull = newCells.every((c) => c !== null);
+	if (isFull) {
+		return {
+			...state,
+			grid: newGrid,
+			status: "draw",
+			moveCount: newMoveCount
+		};
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...state,
+		grid: newGrid,
+		currentPlayer: nextPlayer,
+		moveCount: newMoveCount
+	};
 }
