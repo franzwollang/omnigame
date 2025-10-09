@@ -304,6 +304,9 @@ export default function SandboxCanvas({
 
 		// Token lookup and shared texture loader
 		const tokenById = new Map(tokens.map((t) => [t.id, t] as const));
+		// For grid cell values, choose token by player membership (e.g., Connect 4)
+		const tokenForPlayer = (p: "X" | "O") =>
+			tokens.find((t) => t.players.includes(p));
 		const loader = new THREE.TextureLoader();
 		loader.setCrossOrigin("anonymous");
 
@@ -314,8 +317,8 @@ export default function SandboxCanvas({
 			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
 			const y = -(row - (gridHeight - 1) / 2) * totalCellSize;
 
-			// If a token matches the cell value (e.g., id "X" or "O"), render its image/label
-			const token = tokenById.get(value);
+			// If a token is assigned to this player, render its image/label
+			const token = tokenForPlayer(value);
 			if (token && token.asset?.type === "image") {
 				const tex = loader.load(token.asset.url);
 				const mat = new THREE.MeshBasicMaterial({
