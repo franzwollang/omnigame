@@ -10,7 +10,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
 	title: "OmniGame",
-	description: "OmniGame UI shell"
+	description:
+		"Compose grid games from functional primitives: rules as data, interpreted by a deterministic engine."
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

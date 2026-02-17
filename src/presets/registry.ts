@@ -153,13 +153,13 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					id: "disk-black",
 					label: "●",
 					players: ["X"],
-					asset: { type: "image", url: "/assets/tokens/disk-black.png" }
+					asset: { type: "image", url: "/assets/tokens/stone-black.png" }
 				},
 				{
 					id: "disk-white",
 					label: "○",
 					players: ["O"],
-					asset: { type: "image", url: "/assets/tokens/disk-white.png" }
+					asset: { type: "image", url: "/assets/tokens/stone-white.png" }
 				}
 			],
 			placement: {
