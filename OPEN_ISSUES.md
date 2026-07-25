@@ -4,23 +4,23 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ---
 
-## Immediate (M7)
+## Immediate (post-M7)
 
-### library-explorer
+### topology-beyond-rectangle
 
-Config sampling UI to explore playable vs unplayable space (M7). Needs playability
-heuristics on top of GameKernel + agents from M6.
+Hex foothold landed (`hex_offset`). Remaining: **general graph boards** while
+keeping grid ergonomics (arbitrary adjacency / irregular maps).
 
-**Acceptance:** See `PLANNING.md` M7 exit criteria.
+**Acceptance:**
+
+- [ ] Schema + topology helpers for a graph (or adjacency-list) board mode
+- [ ] At least one small preset that is not expressible as rectangle/hex_offset
+- [ ] Kernel legalActions / win/capture paths honor graph neighbors
+- [ ] Transcript or simulation tests for the graph mechanism
 
 ---
 
 ## Later
-
-### topology-beyond-rectangle
-
-Hex foothold landed (`hex_offset`). Remaining: general graph boards while keeping
-grid ergonomics.
 
 ### observation-partial-info
 
@@ -36,3 +36,8 @@ Further ports only when a **new** missing mechanism appears — not a backlog.
 
 M6 landed random / greedy / tiny flat MCTS. Optional later: UCT tree search,
 partial-info agents for hit/miss games.
+
+### library-explorer-depth
+
+M7 foothold landed (sample + classify + load). Optional later: larger search
+UI, playability scoring beyond random playout, saved finds / share links.

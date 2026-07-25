@@ -57,7 +57,7 @@ In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 - FP runtime: Effect (Effect.ts) — seeded RNG + GameKernel stepping; GameIR replay foothold landed
 - Rendering: Three.js (board/camera), ResizeObserver
 - Editor: react-simple-code-editor + Prism.js
-- Tests: Vitest (engine transcript + GameIR replay tests)
+- Tests: Vitest (engine transcript + GameIR replay + library explore tests)
 - Package manager: pnpm
 - Optional SMT: z3-solver (experimental server helper — **not** wired into sandbox UI;
   use `app/actions/validate-config.ts` from scripts/CI when needed)
@@ -85,7 +85,7 @@ The core follows pure functional principles with reducers (`State -> Event -> St
 
 The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. Specs go through `src/compiler/` (`validate → expand macros → normalize → GameKernel`); the sandbox calls `compileToGameConfig` rather than owning the adapter. Macros today: `gravity.enabled` → gravity placement primitives; token `placements` → `initial` seeds. `validateConfig` builds feature contracts for the selected input/placement/overflow/capture/end features (live in the sandbox editor). Z3 SMT remains an optional server-side experiment. Adapters at the edges handle rendering (Three.js), input, and persistence.
 
-Routing uses App Router with scroll-snap landing and URL replacement to reflect the active view. The planned “infinite library” mode will sample/randomize configs and reveal how rare playable settings are.
+Routing uses App Router with scroll-snap landing and URL replacement to reflect the active view. The library explorer (`src/library/` + sandbox **Library** modal) samples/randomizes configs and classifies playable vs noise (Library of Babel framing).
 
 ## Current implementation status (today)
 
@@ -106,8 +106,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/tiny MCTS)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 - **Agents**: `src/agents/` — kernel-only baseline bots (`legalActions` + `stepSync`)
+- **Library explorer**: `src/library/` samples configs, scores playability (compile → opening legality → random playout), sandbox Library modal loads playable finds
 
-What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), general graph topology, ko/full Go rules, library explorer, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), general graph topology, ko/full Go rules, deeper library search UX, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -323,7 +324,7 @@ For formal composition semantics and invariants, see `docs/semantics.md`.
 
 ## Roadmap
 
-Core development focuses on turning the current sandbox into a compiler-like pipeline (spec → kernel + IR), plus a library explorer for navigating the configuration space.
+Core development focuses on turning the current sandbox into a compiler-like pipeline (spec → kernel + IR). Library explorer foothold landed (`src/library/` + sandbox Library modal).
 
 Near-term milestones:
 
@@ -335,6 +336,7 @@ Near-term milestones:
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
 - **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
 - **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed (no ko)
+- **Library explorer foothold**: sample/classify playable vs noise; load finds into sandbox
 - **Anchor games**: mechanism-first ports only — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
 - **Baseline agents**: random/greedy/tiny MCTS to prove bot play with clean interfaces

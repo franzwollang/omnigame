@@ -14,10 +14,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M4 | Observation primitive + Battleship-lite | `done` |
 | M5 | Anchor / reference-game ports | `done` |
 | M6 | Debug tooling + baseline agents | `done` |
-| M7 | Infinite library / config explorer | `not started` |
+| M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** M6 debug overlays + kernel agents landed. Hand off
-to M7 library explorer (config sampling / playability).
+**Optimizing for this phase:** M7 library explorer foothold landed. Hand off to
+post-roadmap gaps (general graph topology, richer agents, fog observation).
 
 ## Decisions (locked)
 
@@ -25,7 +25,7 @@ to M7 library explorer (config sampling / playability).
 |---|---|
 | FP runtime | **Effect.ts** — core + edge services; keep Zod at the JSON/UI boundary until Effect Schema migration is deliberate |
 | M0 vs Kernel | **Hybrid:** short honesty pass (narrow/label), then Kernel+Effect — do **not** expand the plain reducer for every unused knob first |
-| Product surface (near-term) | **Sandbox composer** (edit one config, play it). Library explorer is later (M7) |
+| Product surface (near-term) | **Sandbox composer** + **Library explorer** foothold (sample/classify; load playable finds). Richer explorer UX is iterative. |
 
 ### Why this sequencing
 
@@ -46,8 +46,7 @@ Two different UIs, same engine:
 | **Sandbox (composer)** | “Can I author *this* game and play it?” | You edit JSON/form for one config; board updates; browse presets |
 | **Library explorer** | “What’s out there in config-space?” | System samples/randomizes many configs; most are junk; you hunt for rare playable hybrids |
 
-Near-term focus = sandbox. Library explorer needs a solid kernel + playability heuristics first
-(that’s why it’s M7).
+Near-term focus = sandbox composer + library sampling foothold.
 
 ## What exists today
 
@@ -73,9 +72,10 @@ Working sandbox slice (see README “Current implementation status”):
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS on kernel only
+- Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: general graph topology, library explorer,
-placement-phase / multi-ship Battleship, ko/full Go rules, UCT/partial-info agents.
+Not yet: general graph topology, richer UCT/partial-info agents,
+placement-phase / multi-ship Battleship, ko/full Go rules, fog radius.
 
 ## Milestone exit criteria
 
@@ -141,6 +141,10 @@ Hand off to M7.
 ### M7 — Library explorer
 
 - Sample/randomize configs; surface playable vs noise (Library of Babel framing).
+
+**Done:** `src/library/` (`sample` / `assessPlayability` / `exploreLibrary`) +
+sandbox Library modal (load playable finds). Heuristics: compile → opening
+legality → short random playout. Hand off to post-M7 gaps (graph topology, etc.).
 
 ## Sequencing notes
 

@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T04:05-05:00",
-  "turn": 14,
+  "updated_at": "2026-07-25T04:25-05:00",
+  "turn": 15,
   "focus": {
-    "milestone": "M7",
-    "issue": "library-explorer",
-    "goal": "Config sampling / playability foothold"
+    "milestone": "post-M7",
+    "issue": "topology-beyond-rectangle",
+    "goal": "Graph board topology foothold"
   },
   "recent": [
-    "Synced ccf0 (M0–M5) onto 9ee8",
-    "M6: explainAction, legal overlay, event trace, agents"
+    "Synced 9ee8 (M0–M6) onto b13a",
+    "M7: src/library sample+playability+sandbox Library modal"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "Ignored steps now carry structured IllegalReason codes"
+    "CoherentFraction~0.35 keeps Babel framing while surfacing playables"
   ],
   "open_threads": [
-    "M7 next: library explorer; graph topology / richer MCTS later"
+    "Next: graph topology; then richer MCTS / fog observation"
   ],
-  "next_step": "M7: sample/randomize configs; surface playable vs noise",
+  "next_step": "Graph adjacency board mode + small irregular preset + tests",
   "blockers": []
 }
