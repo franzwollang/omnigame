@@ -66,6 +66,7 @@ These are built from the same shared schema and operators.
 - **Double-Place Simultaneous TTT** (`actionsPerTurn = 2` under simultaneous rounds)
 - **Double-Place Simultaneous Hex / Graph** (multi-action simultaneous on hex_offset / graph)
 - **Delayed TTT** (`placement.delayTurns = 1` queued place; pending cells reserved)
+- **Delayed Connect 4** (delayed gravity: column intents settle at resolve time)
 - **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
 - **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
 
@@ -124,7 +125,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
   - overflow: `reject` | `pop_out_bottom` | `pop_out_top` | `pop_out_left` |
     `pop_out_right` (paired with gravity direction; horizontal uses `popOutRow`)
-  - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT)
+  - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT cell
+    reserve, or Delayed Connect 4 gravity settle-on-resolve)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite); `turn.resolveOrder = x_first | o_first` ordered same-cell priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite) or place→fire (Place & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
@@ -136,9 +138,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, richer phase
-sequences (e.g. place→move→attack), hidden simultaneous on hex/graph (if a new
-observe/legal seam), and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, place→move→fire
+triple phases (dual-objective), simultaneous move, richer piece tables, and a
+larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

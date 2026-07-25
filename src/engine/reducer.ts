@@ -1207,9 +1207,14 @@ function handlePlace(
  * Cell intents reserve that intersection. Column/row intents reserve a slot and
  * settle via gravity on the board at resolve time.
  */
+type DelayedIntent =
+	| { kind: "cell"; position: Position }
+	| { kind: "column"; col: number }
+	| { kind: "row"; row: number };
+
 function handleDelayedIntent(
 	state: GameState,
-	intent: Omit<PendingPlace, "player" | "resolveAt">,
+	intent: DelayedIntent,
 	config: GameConfig,
 	delayTurns: number
 ): GameState {
@@ -1242,14 +1247,28 @@ function handleDelayedIntent(
 	const topology = config.topology ?? "rectangle";
 	const direction = config.gravityDirection ?? "down";
 	const newMoveCount = state.moveCount + 1;
-	let pending: PendingPlace[] = [
-		...(state.pendingPlaces ?? []),
-		{
-			player: state.currentPlayer,
-			resolveAt: newMoveCount + delayTurns,
-			...intent
-		} as PendingPlace
-	];
+	const queued: PendingPlace =
+		intent.kind === "cell"
+			? {
+					player: state.currentPlayer,
+					resolveAt: newMoveCount + delayTurns,
+					kind: "cell",
+					position: intent.position
+				}
+			: intent.kind === "column"
+				? {
+						player: state.currentPlayer,
+						resolveAt: newMoveCount + delayTurns,
+						kind: "column",
+						col: intent.col
+					}
+				: {
+						player: state.currentPlayer,
+						resolveAt: newMoveCount + delayTurns,
+						kind: "row",
+						row: intent.row
+					};
+	let pending: PendingPlace[] = [...(state.pendingPlaces ?? []), queued];
 	let cells = [...state.grid.cells];
 	const resolvedOrder: Player[] = [];
 

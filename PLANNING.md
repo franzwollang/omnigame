@@ -16,9 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** In-turn `turn.phases` place→fire landed
-(Place & Fire Lite). Hand off to the next **missing mechanism** (see
-`OPEN_ISSUES.md`).
+**Optimizing for this phase:** Delayed gravity landed (Delayed Connect 4).
+Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -65,7 +64,8 @@ Working sandbox slice (see README “Current implementation status”):
   Simultaneous TTT, Ordered Simultaneous TTT, Hidden Simultaneous TTT,
   Double-Place Simultaneous TTT, Double-Place Simultaneous Hex,
   Double-Place Simultaneous Graph, Double Move TTT, Double Move Hex,
-  Double Move Graph, Delayed TTT, Place & Move Lite, Place & Fire Lite
+  Double Move Graph, Delayed TTT, Delayed Connect 4, Place & Move Lite,
+  Place & Fire Lite
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -107,13 +107,14 @@ Working sandbox slice (see README “Current implementation status”):
   rectangle | hex_offset | graph; N places per seat per round; indexed-pair
   resolve; Double-Place Simultaneous TTT / Hex / Graph
 - **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
-  intent queues then materializes after intervening places; Delayed TTT preset
+  cell intents reserve an intersection (Delayed TTT); column/row gravity
+  intents settle landing at resolve time (Delayed Connect 4)
 - **In-turn phases:** `turn.phases` (`["place","move"]` or `["place","fire"]`) +
   `GameState.turnPhaseIndex`; phase-routed legality; Place & Move Lite /
   Place & Fire Lite presets
 
-Not yet: full Go rules; place→move→fire triple phases or hex/graph lift; hidden
-simultaneous on hex/graph (if a new observe/legal seam appears).
+Not yet: full Go rules; place→move→fire triple phases (dual-objective); phases
+hex/graph lift; simultaneous move; richer piece tables.
 
 ## Milestone exit criteria
 

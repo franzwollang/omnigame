@@ -8,18 +8,19 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**In-turn place→fire** landed — `turn.phases: ["place","fire"]` + public
-spotters under hit_miss + Place & Fire Lite preset + tests. Distinct from
-fleet game-long placement→combat and from place→move. Pick the **next
-smallest** unlock the engine still lacks — not another recombination of
-covered primitives (see project-structure selection principle).
+**Delayed gravity** landed — `placement.delayTurns` + gravity column/row
+intents (`PendingPlace.kind = column|row`) settle at resolve time + Delayed
+Connect 4 preset + tests. Distinct from Delayed TTT (fixed-cell queue). Pick
+the **next smallest** unlock the engine still lacks — not another
+recombination of covered primitives (see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- `turn.phases` place→move→fire (triple) or hex/graph lift (only if new seam)
-- delayed + gravity composition (only if a new seam appears)
-- hidden simultaneous on hex/graph (composition only if a new observe/legal seam)
+- `turn.phases` place→move→fire (triple) — needs dual-objective routing
+- phases hex/graph lift (only if a new seam appears; kernel already topology-aware)
+- simultaneous move (joint move resolve; place-only today)
 - richer multi-phase game machines beyond fleet + in-turn phases
+- diagonal movement / richer piece tables
 
 **Acceptance:**
 
@@ -53,8 +54,8 @@ M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties,
 graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
 simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
 hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
-`actionsPerTurn` (rectangle + hex + graph), delayed `delayTurns`, hidden
-simultaneous `commitReveal`, ordered simultaneous `resolveOrder`, multi-action
-simultaneous (rectangle + hex + graph), in-turn `turn.phases` place→move, and
-place→fire also landed. Further ports only when a **new** missing mechanism
-appears — not a backlog.
+`actionsPerTurn` (rectangle + hex + graph), delayed `delayTurns` (direct cell +
+delayed gravity), hidden simultaneous `commitReveal`, ordered simultaneous
+`resolveOrder`, multi-action simultaneous (rectangle + hex + graph), in-turn
+`turn.phases` place→move, and place→fire also landed. Further ports only when a
+**new** missing mechanism appears — not a backlog.

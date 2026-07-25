@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T13:25-05:00",
-  "turn": 21,
+  "updated_at": "2026-07-25T13:50-05:00",
+  "turn": 22,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after turn.phases place→fire"
+    "goal": "Hand off after delayed gravity"
   },
   "recent": [
-    "Synced progression-ef83 onto 609c",
-    "Landed turn.phases place→fire + Place & Fire Lite",
-    "237 tests green"
+    "Synced bb71 onto 609c tip",
+    "Landed delayed gravity + Delayed Connect 4",
+    "247 tests green; typecheck clean"
   ],
   "discoveries": [
-    "place→fire ≠ fleet placement→combat; public spotters + in-turn fire",
-    "Rejected place→move→fire triple and delayed+gravity as recombinations"
+    "Delayed gravity = deferred settle, not fixed-cell queue",
+    "Rejected phases hex/graph + place→move→fire as larger/recombo"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick place→move→fire, phases hex/graph, or next true seam",
+  "next_step": "Cloud agent: pick simultaneous-move, place→move→fire, or next true seam",
   "blockers": []
 }
