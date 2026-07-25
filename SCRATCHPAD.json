@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T12:25-05:00",
-  "turn": 18,
+  "updated_at": "2026-07-25T12:45-05:00",
+  "turn": 19,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after hex/graph multi-action simultaneous"
+    "goal": "Hand off after hex/graph alternating multi-step"
   },
   "recent": [
-    "Synced progression-1020 onto ec3e",
-    "Lifted simultaneous actionsPerTurn>1 for hex/graph",
-    "Double-Place Simultaneous Hex/Graph + tests"
+    "Synced progression-ec3e onto a5b2",
+    "Lifted alternating actionsPerTurn>1 for hex/graph",
+    "Double Move Hex/Graph presets + tests + library sample"
   ],
   "discoveries": [
-    "Alternating multi-step stays rectangle-only",
-    "Kernel indexed-pair resolve already topology-aware"
+    "Kernel multi-step budget already topology-aware",
+    "Same schema gate pattern as hex/graph simultaneous lift"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick alternating multi-step hex/graph or next true new seam",
+  "next_step": "Cloud agent: pick delayed+gravity, hidden simultaneous hex/graph, or next true new seam",
   "blockers": []
 }

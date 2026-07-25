@@ -16,9 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Hex/graph multi-action simultaneous landed
-(Double-Place Simultaneous Hex / Graph). Hand off to the next **missing
-mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Alternating multi-step on hex/graph landed
+(Double Move Hex / Graph). Hand off to the next **missing mechanism** (see
+`OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -64,7 +64,8 @@ Working sandbox slice (see README “Current implementation status”):
   Life Lite (manual tick + B3/S23), Toroidal TTT, Toroidal Hex Connect Lite,
   Simultaneous TTT, Ordered Simultaneous TTT, Hidden Simultaneous TTT,
   Double-Place Simultaneous TTT, Double-Place Simultaneous Hex,
-  Double-Place Simultaneous Graph, Double Move TTT, Delayed TTT
+  Double-Place Simultaneous Graph, Double Move TTT, Double Move Hex,
+  Double Move Graph, Delayed TTT
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -100,14 +101,16 @@ Working sandbox slice (see README “Current implementation status”):
   `GameState.committedPlacements`; opponent commit hidden until reveal;
   Hidden Simultaneous TTT preset
 - **Multi-step turns:** `turn.actionsPerTurn` + `GameState.actionsRemaining`;
-  handoff after budget; Double Move TTT preset
+  handoff after budget; rectangle | hex_offset | graph; Double Move TTT / Hex /
+  Graph presets
 - **Multi-action simultaneous:** `actionsPerTurn > 1` under simultaneous on
   rectangle | hex_offset | graph; N places per seat per round; indexed-pair
   resolve; Double-Place Simultaneous TTT / Hex / Graph
 - **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
   intent queues then materializes after intervening places; Delayed TTT preset
 
-Not yet: full Go rules; alternating multi-step on hex/graph; phases beyond fleet.
+Not yet: full Go rules; phases beyond fleet; hidden simultaneous on hex/graph
+(if a new observe/legal seam appears).
 
 ## Milestone exit criteria
 
