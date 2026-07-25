@@ -347,8 +347,40 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 						turnPhases[stateRef.current.turnPhaseIndex ?? 0] ?? "place";
 					if (phase === "place") {
 						applyAction({ type: "place", position: pos });
-					} else if (phase === "fire") {
+						selectedFromRef.current = null;
+						setSelectedFrom(null);
+						return;
+					}
+					if (phase === "fire") {
 						applyAction({ type: "fire", position: pos });
+						selectedFromRef.current = null;
+						setSelectedFrom(null);
+						return;
+					}
+					if (phase === "move") {
+						const selected = selectedFromRef.current;
+						const occupant = getCell(stateRef.current.grid, pos);
+						if (!selected) {
+							if (occupant === stateRef.current.currentPlayer) {
+								selectedFromRef.current = pos;
+								setSelectedFrom(pos);
+							}
+							return;
+						}
+						if (selected.row === pos.row && selected.col === pos.col) {
+							selectedFromRef.current = null;
+							setSelectedFrom(null);
+							return;
+						}
+						if (occupant === stateRef.current.currentPlayer) {
+							selectedFromRef.current = pos;
+							setSelectedFrom(pos);
+							return;
+						}
+						applyAction({ type: "move", from: selected, to: pos });
+						selectedFromRef.current = null;
+						setSelectedFrom(null);
+						return;
 					}
 					return;
 				}

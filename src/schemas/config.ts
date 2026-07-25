@@ -80,7 +80,7 @@ export const zConfig = z
 					.optional(),
 				/**
 				 * Ordered in-turn action types before handoff
-				 * (place → move, or place → fire). Distinct from
+				 * (place→move, place→fire, or place→move→fire). Distinct from
 				 * actionsPerTurn (N copies of one action type).
 				 */
 				phases: z
@@ -210,6 +210,7 @@ export const zConfig = z
 					.enum([
 						"n_in_a_row",
 						"destroy_hidden",
+						"connect_or_destroy",
 						"reach_row",
 						"area_control",
 						"none"
@@ -226,7 +227,7 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row; unused for destroy_hidden / reach_row / area_control / none
+		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / none
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -293,6 +294,7 @@ export const zConfig = z
 		const hitMiss = cfg.observation.mode === "hit_miss";
 		const fog = cfg.observation.mode === "fog";
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
+		const connectOrDestroy = cfg.objective.mode === "connect_or_destroy";
 		const reachRow = cfg.objective.mode === "reach_row";
 		const areaControl = cfg.objective.mode === "area_control";
 		const moveInput = cfg.input.mode === "move";
@@ -305,6 +307,7 @@ export const zConfig = z
 		const inTurnPhases = (cfg.turn.phases?.length ?? 0) > 0;
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
+		const needsHitMiss = destroyHidden || connectOrDestroy;
 		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
 		if (
 			cfg.grid.wrap &&
@@ -893,11 +896,16 @@ export const zConfig = z
 			}
 		}
 
-		// In-turn phase sequence (place→move or place→fire) — distinct from actionsPerTurn
+		// In-turn phase sequence (place→move / place→fire / place→move→fire)
 		if (inTurnPhases) {
 			const phases = cfg.turn.phases!;
 			const hasMove = phases.includes("move");
 			const hasFire = phases.includes("fire");
+			const isTriple =
+				phases.length === 3 &&
+				phases[0] === "place" &&
+				phases[1] === "move" &&
+				phases[2] === "fire";
 			if (cfg.turn.schedule !== "alternating") {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -941,40 +949,96 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
 					message:
-						"turn.phases must include 'move' or 'fire' after place (e.g. ['place','move'] or ['place','fire'])"
+						"turn.phases must include 'move' or 'fire' after place (e.g. ['place','move'], ['place','fire'], or ['place','move','fire'])"
 				});
 			}
-			if (hasMove && hasFire) {
+			if (hasMove && hasFire && !isTriple) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
 					message:
-						"turn.phases place→move→fire is deferred; use ['place','move'] or ['place','fire']"
+						"turn.phases with both move and fire must be exactly ['place','move','fire']"
 				});
 			}
-			if (hasMove && cfg.objective.mode !== "n_in_a_row") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message:
-						"turn.phases with 'move' requires objective.mode = 'n_in_a_row'"
-				});
-			}
-			if (hasFire && !hitMiss) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["observation", "mode"],
-					message:
-						"turn.phases with 'fire' requires observation.mode = 'hit_miss'"
-				});
-			}
-			if (hasFire && cfg.objective.mode !== "destroy_hidden") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message:
-						"turn.phases with 'fire' requires objective.mode = 'destroy_hidden'"
-				});
+			if (isTriple) {
+				if (!connectOrDestroy) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"turn.phases place→move→fire requires objective.mode = 'connect_or_destroy' (dual end: n-in-a-row or sink fleet)"
+					});
+				}
+				if (!hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"turn.phases place→move→fire requires observation.mode = 'hit_miss'"
+					});
+				}
+				if (!cfg.movement) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement"],
+						message: "turn.phases place→move→fire requires a movement block"
+					});
+				}
+				if (!cfg.win) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["win"],
+						message:
+							"turn.phases place→move→fire requires a win block (connect leg)"
+					});
+				}
+			} else {
+				if (hasMove && cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"turn.phases with 'move' requires objective.mode = 'n_in_a_row'"
+					});
+				}
+				if (hasFire && !hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"turn.phases with 'fire' requires observation.mode = 'hit_miss'"
+					});
+				}
+				if (hasFire && cfg.objective.mode !== "destroy_hidden") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"turn.phases with 'fire' requires objective.mode = 'destroy_hidden'"
+					});
+				}
+				if (hasMove && !cfg.movement) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement"],
+						message: "turn.phases with 'move' requires a movement block"
+					});
+				}
+				if (hasFire && cfg.movement) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement"],
+						message: "turn.phases place→fire does not use a movement block"
+					});
+				}
+				if (hasMove && hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"turn.phases place→move is incompatible with hit_miss observation"
+					});
+				}
 			}
 			if (cfg.input.mode !== "cell") {
 				ctx.addIssue({
@@ -984,34 +1048,12 @@ export const zConfig = z
 						"turn.phases requires input.mode = 'cell' (place/fire phases); move phase uses movement"
 				});
 			}
-			if (hasMove && !cfg.movement) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["movement"],
-					message: "turn.phases with 'move' requires a movement block"
-				});
-			}
-			if (hasFire && cfg.movement) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["movement"],
-					message: "turn.phases place→fire does not use a movement block"
-				});
-			}
 			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],
 					message:
 						"turn.phases requires direct placement without capture/gravity"
-				});
-			}
-			if (hasMove && hitMiss) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["observation", "mode"],
-					message:
-						"turn.phases place→move is incompatible with hit_miss observation"
 				});
 			}
 			if (fog) {
@@ -1026,7 +1068,7 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["fleet"],
 					message:
-						"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire)"
+						"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire / place→move→fire)"
 				});
 			}
 			if (hexBoard || graphBoard) {
@@ -1219,12 +1261,21 @@ export const zConfig = z
 			});
 		}
 
-		if (hitMiss !== destroyHidden) {
+		if (hitMiss !== needsHitMiss) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: hitMiss ? ["objective", "mode"] : ["observation", "mode"],
 				message:
-					"observation.mode 'hit_miss' and objective.mode 'destroy_hidden' must be used together"
+					"observation.mode 'hit_miss' must pair with objective.mode 'destroy_hidden' or 'connect_or_destroy'"
+			});
+		}
+
+		if (connectOrDestroy && !inTurnPhases) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["turn", "phases"],
+				message:
+					"objective.mode 'connect_or_destroy' requires turn.phases ['place','move','fire']"
 			});
 		}
 
@@ -1298,12 +1349,16 @@ export const zConfig = z
 			});
 		}
 
-		if (cfg.objective.mode === "n_in_a_row") {
+		if (
+			cfg.objective.mode === "n_in_a_row" ||
+			cfg.objective.mode === "connect_or_destroy"
+		) {
 			if (!cfg.win) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["win"],
-					message: "win is required when objective.mode = 'n_in_a_row'"
+					message:
+						"win is required when objective.mode = 'n_in_a_row' or 'connect_or_destroy'"
 				});
 			} else {
 				// adjacency must have at least one direction enabled (lattice only)

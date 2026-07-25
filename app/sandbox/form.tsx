@@ -202,8 +202,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								joint move, commitReveal for hidden simultaneous,
 								resolveOrder for ordered same-cell priority,
 								actionsPerTurn for multi-step, delayTurns for queued
-								places, or phases for place→move / place→fire within a
-								turn.
+								places, or phases for place→move / place→fire /
+								place→move→fire within a turn.
 							</p>
 							<FormField
 								control={form.control}
@@ -589,6 +589,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="destroy_hidden">
 															destroy_hidden
 														</SelectItem>
+														<SelectItem value="connect_or_destroy">
+															connect_or_destroy
+														</SelectItem>
 														<SelectItem value="reach_row">
 															reach_row
 														</SelectItem>
@@ -600,7 +603,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												destroy_hidden↔hit_miss; reach_row↔move;
+												destroy_hidden↔hit_miss; connect_or_destroy↔
+												place→move→fire + hit_miss; reach_row↔move;
 												area_control↔liberties; none↔tick.
 											</p>
 											<FormMessage />

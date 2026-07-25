@@ -28,7 +28,7 @@ describe("schema: turn.phases place→fire", () => {
 		expect(zConfig.safeParse(placeFireBase()).success).toBe(true);
 	});
 
-	it("rejects place→fire without hit_miss or with fleet / move / triple", () => {
+	it("rejects place→fire without hit_miss, with fleet, or with movement alone", () => {
 		expect(
 			zConfig.safeParse({
 				...placeFireBase(),
@@ -61,7 +61,9 @@ describe("schema: turn.phases place→fire", () => {
 				movement: { adjacency: "orthogonal", range: 1 }
 			}).success
 		).toBe(false);
+	});
 
+	it("rejects bare place→move→fire without connect_or_destroy + win", () => {
 		expect(
 			zConfig.safeParse({
 				...placeFireBase(),

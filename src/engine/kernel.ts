@@ -562,7 +562,7 @@ function collectLegalActions(
 			}
 			return actions;
 		}
-		// In-turn place→fire: legal actions follow turnPhases[turnPhaseIndex]
+		// In-turn place→fire / place→move→fire: legal actions follow turnPhases
 		const turnPhases = config.turnPhases;
 		if (turnPhases && turnPhases.length > 0) {
 			const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
@@ -574,6 +574,26 @@ function collectLegalActions(
 				)) {
 					if (canPlaceCell(state, position, config)) {
 						actions.push({ type: "place", position });
+					}
+				}
+				return actions;
+			}
+			if (phase === "move") {
+				const movement = config.movement;
+				if (!movement) return actions;
+				const board = movementBoardFrom(config);
+				for (const from of allActivePositions(
+					state.grid,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (getCell(state.grid, from) !== state.currentPlayer) continue;
+					for (const to of legalDestinations(state.grid, from, movement, board)) {
+						if (
+							canMove(state.grid, from, to, state.currentPlayer, movement, board)
+						) {
+							actions.push({ type: "move", from, to });
+						}
 					}
 				}
 				return actions;

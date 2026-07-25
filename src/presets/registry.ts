@@ -1358,6 +1358,68 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"place-move-fire-lite": definePreset({
+		id: "place-move-fire-lite",
+		name: "Place, Move & Fire Lite",
+		tags: [
+			"phases",
+			"place",
+			"move",
+			"fire",
+			"hit-miss",
+			"connect-or-destroy",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Each turn: place a public stone, move one of yours, then fire. Win by n-in-a-row or by sinking the hidden fleet. Unlocks place→move→fire + connect_or_destroy dual-objective routing.",
+		config: {
+			metadata: { name: "Place, Move & Fire Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "alternating",
+				phases: ["place", "move", "fire"]
+			},
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			objective: { mode: "connect_or_destroy" },
+			tokens: [
+				{
+					id: "x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: false,
+					forwardDiagonal: false
+				}
+			},
+			placements: [],
+			initial: [
+				{ row: 0, col: 0, player: "X", visibility: "owner" },
+				{ row: 0, col: 1, player: "X", visibility: "owner" },
+				{ row: 4, col: 3, player: "O", visibility: "owner" },
+				{ row: 4, col: 4, player: "O", visibility: "owner" }
+			]
+		}
+	}),
 	"step-race": definePreset({
 		id: "step-race",
 		name: "Step Race",

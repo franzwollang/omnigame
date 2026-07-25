@@ -20,6 +20,7 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 
 	const needsAdjacency =
 		cfg.objective.mode === "n_in_a_row" ||
+		cfg.objective.mode === "connect_or_destroy" ||
 		(Boolean(cfg.placement.capture?.enabled) &&
 			(cfg.placement.capture?.mode ?? "flip") === "flip");
 	if (needsAdjacency) features.push(Contracts.AdjacencyProvided());
@@ -85,6 +86,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	}
 	if (cfg.objective.mode === "destroy_hidden") {
 		features.push(Contracts.DestroyHidden());
+	} else if (cfg.objective.mode === "connect_or_destroy") {
+		features.push(Contracts.ConnectOrDestroy());
 	} else if (cfg.objective.mode === "reach_row") {
 		features.push(Contracts.ReachRow());
 	} else if (cfg.objective.mode === "area_control") {

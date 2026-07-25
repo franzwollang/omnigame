@@ -101,6 +101,7 @@ export type GameConfig = {
 	objectiveMode?:
 		| "n_in_a_row"
 		| "destroy_hidden"
+		| "connect_or_destroy"
 		| "reach_row"
 		| "area_control"
 		| "none";
@@ -128,8 +129,9 @@ export type GameConfig = {
 	 */
 	resolveOrder?: "joint" | "x_first" | "o_first";
 	/**
-	 * Ordered in-turn action types (e.g. place then move, or place then fire)
-	 * before handoff. When set, GameState.turnPhaseIndex tracks the active phase.
+	 * Ordered in-turn action types (place→move, place→fire, or
+	 * place→move→fire) before handoff. When set, GameState.turnPhaseIndex
+	 * tracks the active phase.
 	 */
 	turnPhases?: Array<"place" | "move" | "fire">;
 	scheduler?: SchedulerConfig;
@@ -165,6 +167,18 @@ function resolveActionsPerTurn(config: GameConfig): number {
 function resolveDelayTurns(config: GameConfig): number {
 	const n = config.delayTurns ?? 0;
 	return n < 0 ? 0 : n;
+}
+
+/** Place/move connect wins for n_in_a_row and dual connect_or_destroy. */
+function checksConnectWin(config: GameConfig): boolean {
+	const mode = config.objectiveMode ?? "n_in_a_row";
+	return mode === "n_in_a_row" || mode === "connect_or_destroy";
+}
+
+/** Fire sink wins for destroy_hidden and dual connect_or_destroy. */
+function checksDestroyWin(config: GameConfig): boolean {
+	const mode = config.objectiveMode ?? "n_in_a_row";
+	return mode === "destroy_hidden" || mode === "connect_or_destroy";
 }
 
 function isPendingReserved(
@@ -994,7 +1008,7 @@ function handleMove(
 		}
 	}
 
-	if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
+	if (checksConnectWin(config)) {
 		const wrap = config.gridWrap === true;
 		const winner = checkWinner(
 			newGrid,
@@ -1071,7 +1085,7 @@ function handleFire(
 		moveCount: newMoveCount
 	};
 
-	if ((config.objectiveMode ?? "n_in_a_row") === "destroy_hidden") {
+	if (checksDestroyWin(config)) {
 		const opponent: Player = state.currentPlayer === "X" ? "O" : "X";
 		if (fleetDestroyed(next, opponent)) {
 			return {
@@ -1300,7 +1314,8 @@ function handlePlace(
 		};
 	}
 
-	// Place→fire (destroy_hidden): place only advances in-turn phase; win on fire
+	// Place→fire (destroy_hidden only): place advances phase; win on fire.
+	// connect_or_destroy falls through to n-in-a-row checks after place.
 	if ((config.objectiveMode ?? "n_in_a_row") === "destroy_hidden") {
 		const turn = withPhaseOrTurnAdvanced(state, config);
 		return {
@@ -1315,7 +1330,7 @@ function handlePlace(
 		};
 	}
 
-	// Check win condition using config
+	// Check win condition using config (n_in_a_row + connect_or_destroy)
 	const winner = checkWinner(
 		newGrid,
 		state.currentPlayer,

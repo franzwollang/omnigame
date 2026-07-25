@@ -11,7 +11,13 @@ export type Slot =
 	| { type: "PlacementPolicy"; value: "direct" | "gravity" | "move" }
 	| {
 			type: "EndCondition";
-			value: "nInARow" | "destroyHidden" | "reachRow" | "areaControl" | "none";
+			value:
+				| "nInARow"
+				| "destroyHidden"
+				| "connectOrDestroy"
+				| "reachRow"
+				| "areaControl"
+				| "none";
 	  }
 	| { type: "Schedule"; value: "alternating" | "manualTick" | "simultaneous" };
 
@@ -247,6 +253,18 @@ export const Contracts = {
 		hooks: ["checkEnd"],
 		invariants: []
 	}),
+	/**
+	 * Dual end for place→move→fire: n-in-a-row after place/move, or sink
+	 * opponent fleet after fire. Single EndCondition slot (not two providers).
+	 */
+	ConnectOrDestroy: (): FeatureContract => ({
+		id: "ConnectOrDestroy",
+		requires: ["Adjacency", "CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "connectOrDestroy" }],
+		hooks: ["checkEnd"],
+		invariants: ["phaseRoutesConnectOrDestroy"]
+	}),
 	ReachRow: (): FeatureContract => ({
 		id: "ReachRow",
 		requires: ["ResolvedCell"],
@@ -379,8 +397,9 @@ export const Contracts = {
 		]
 	}),
 	/**
-	 * Ordered in-turn phase sequence (e.g. place→move or place→fire before handoff).
-	 * Distinct from ScheduleMultiStep (N copies of one action type).
+	 * Ordered in-turn phase sequence (place→move, place→fire, or
+	 * place→move→fire before handoff). Distinct from ScheduleMultiStep
+	 * (N copies of one action type).
 	 */
 	ScheduleInTurnPhases: (): FeatureContract => ({
 		id: "ScheduleInTurnPhases",
