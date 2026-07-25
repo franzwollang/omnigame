@@ -497,7 +497,12 @@ function sampleNoise(rng: SamplerRng, seed: number): unknown {
 		raw.scheduler = { rules: "life_b3s23", neighborhood: "moore" };
 	}
 	if (inputMode === "move" && rng() > 0.5) {
-		raw.movement = { adjacency: "orthogonal", range: 1 };
+		const adjacency = pick(rng, [
+			"orthogonal",
+			"diagonal",
+			"king"
+		] as const);
+		raw.movement = { adjacency, range: 1 };
 		raw.objective = {
 			mode: "reach_row",
 			targetRows: { X: 0, O: height - 1 }

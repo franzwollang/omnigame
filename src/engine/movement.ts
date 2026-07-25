@@ -1,12 +1,12 @@
 /**
- * Pure movement legality helpers (M5 Move foothold).
- * Orthogonal step of range 1 — enough for Step Race; richer piece tables later.
+ * Pure movement legality helpers (M5 Move foothold + piece-table adjacency).
+ * Range-1 steps: orthogonal | diagonal | king (both). Richer ranges later.
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell } from "@/engine/types";
 import { inBounds, step } from "@/engine/adjacency";
 
-export type MovementAdjacency = "orthogonal";
+export type MovementAdjacency = "orthogonal" | "diagonal" | "king";
 
 export type MovementConfig = {
 	adjacency: MovementAdjacency;
@@ -20,7 +20,23 @@ const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
 	[0, 1]
 ];
 
-/** Toroidal or clipped orthogonal adjacency of range 1. */
+const DIAGONAL: ReadonlyArray<readonly [number, number]> = [
+	[-1, -1],
+	[-1, 1],
+	[1, -1],
+	[1, 1]
+];
+
+/** Deltas for a movement adjacency at range 1. */
+export function adjacencyDeltas(
+	adjacency: MovementAdjacency
+): ReadonlyArray<readonly [number, number]> {
+	if (adjacency === "orthogonal") return ORTHOGONAL;
+	if (adjacency === "diagonal") return DIAGONAL;
+	return [...ORTHOGONAL, ...DIAGONAL];
+}
+
+/** Toroidal or clipped adjacency of range 1. */
 export function isWithinRange(
 	from: Position,
 	to: Position,
@@ -28,17 +44,17 @@ export function isWithinRange(
 	grid?: Grid,
 	wrap: boolean = false
 ): boolean {
-	if (config.adjacency !== "orthogonal") return false;
+	const deltas = adjacencyDeltas(config.adjacency);
 	if (wrap && grid) {
-		for (const [dr, dc] of ORTHOGONAL) {
+		for (const [dr, dc] of deltas) {
 			const n = step(grid, from, { row: dr, col: dc }, true);
 			if (n && n.row === to.row && n.col === to.col) return true;
 		}
 		return false;
 	}
-	const dr = Math.abs(to.row - from.row);
-	const dc = Math.abs(to.col - from.col);
-	return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
+	const dr = to.row - from.row;
+	const dc = to.col - from.col;
+	return deltas.some(([r, c]) => r === dr && c === dc);
 }
 
 /** Empty destinations a piece at `from` may step to. */
@@ -52,8 +68,8 @@ export function legalDestinations(
 	if (getCell(grid, from) === null) return [];
 
 	const out: Position[] = [];
-	if (config.adjacency === "orthogonal" && config.range === 1) {
-		for (const [dr, dc] of ORTHOGONAL) {
+	if (config.range === 1) {
+		for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
 			const to = step(grid, from, { row: dr, col: dc }, wrap);
 			if (!to) continue;
 			if (getCell(grid, to) !== null) continue;

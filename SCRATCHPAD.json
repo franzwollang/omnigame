@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T14:15-05:00",
-  "turn": 23,
+  "updated_at": "2026-07-25T14:25-05:00",
+  "turn": 24,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after simultaneous move"
+    "goal": "Hand off after diagonal/king movement"
   },
   "recent": [
-    "Synced bb71 onto 3678 tip",
-    "Landed simultaneous move + Simultaneous Step Race",
-    "260 tests green; typecheck clean"
+    "Synced 3678 onto 72e7 tip",
+    "Landed diagonal|king adjacency + Diagonal Step Race",
+    "movement.test.ts green; typecheck clean"
   ],
   "discoveries": [
-    "Joint move: pre-round canMove; same-dest conflict; no swap needed",
-    "Rejected place→move→fire as larger; deferred hex/graph joint move"
+    "Orthogonal-only could not express diagonal; king = ortho∪diag at range 1",
+    "Deferred place→move→fire (dual-objective) and hex/graph joint move"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick place→move→fire, diagonal/piece tables, or next true seam",
+  "next_step": "Cloud agent: pick place→move→fire, hex/graph simultaneous move, or longer-range pieces",
   "blockers": []
 }

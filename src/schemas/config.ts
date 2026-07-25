@@ -108,10 +108,15 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "cell" as const }),
-		/** Orthogonal step movement; required when input.mode = "move". */
+		/**
+		 * Range-1 piece movement; required when input.mode = "move".
+		 * orthogonal | diagonal | king (both) — richer ranges deferred.
+		 */
 		movement: z
 			.object({
-				adjacency: z.literal("orthogonal").default("orthogonal"),
+				adjacency: z
+					.enum(["orthogonal", "diagonal", "king"])
+					.default("orthogonal"),
 				range: z.literal(1).default(1)
 			})
 			.strict()
