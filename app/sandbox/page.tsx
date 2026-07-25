@@ -372,6 +372,7 @@ export default function GamePage() {
 							<option value="random">random</option>
 							<option value="greedy">greedy</option>
 							<option value="mcts">mcts</option>
+							<option value="uct">uct</option>
 						</select>
 						<Button
 							variant="outline"

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { compileConfig } from "@/compiler";
-import { createAgent, createGreedyAgent, createRandomAgent } from "@/agents";
+import {
+	createAgent,
+	createGreedyAgent,
+	createRandomAgent,
+	createUctAgent
+} from "@/agents";
 import { examplePresets } from "@/presets/registry";
 import type { KernelAction } from "@/engine/kernel";
 
@@ -53,6 +58,7 @@ describe("kernel agents (M6)", () => {
 		expect(createAgent("random").kind).toBe("random");
 		expect(createAgent("greedy").kind).toBe("greedy");
 		expect(createAgent("mcts").kind).toBe("mcts");
+		expect(createAgent("uct").kind).toBe("uct");
 	});
 
 	it("tiny mcts takes an immediate winning place on TTT", () => {
@@ -69,6 +75,61 @@ describe("kernel agents (M6)", () => {
 		}
 		const agent = createAgent("mcts", 3);
 		const pick = agent.act(kernel, state, 0);
+		expect(pick).toEqual({ type: "place", position: { row: 0, col: 2 } });
+	});
+
+	it("uct takes an immediate winning place on TTT", () => {
+		const { kernel } = compileConfig(examplePresets["tic-tac-toe"].config);
+		let state = kernel.initialState();
+		const script: KernelAction[] = [
+			{ type: "place", position: { row: 0, col: 0 } },
+			{ type: "place", position: { row: 1, col: 0 } },
+			{ type: "place", position: { row: 0, col: 1 } },
+			{ type: "place", position: { row: 1, col: 1 } }
+		];
+		for (const action of script) {
+			state = kernel.stepSync(state, action).nextState;
+		}
+		const agent = createUctAgent(3, { simulations: 40 });
+		const pick = agent.act(kernel, state, 0);
+		expect(pick).toEqual({ type: "place", position: { row: 0, col: 2 } });
+	});
+
+	it("uct completes a short TTT playout against random", () => {
+		const { kernel } = compileConfig(examplePresets["tic-tac-toe"].config);
+		let state = kernel.initialState(11);
+		const uct = createUctAgent(11, { simulations: 48, reuseTree: true });
+		const random = createRandomAgent(99);
+		let guard = 0;
+		while (state.status === "playing" && guard < 20) {
+			const player = kernel.currentPlayer(state);
+			const agent = player === 0 ? uct : random;
+			const action = agent.act(kernel, state, player);
+			expect(action).not.toBeNull();
+			state = kernel.stepSync(state, action!).nextState;
+			guard += 1;
+		}
+		expect(state.status === "won" || state.status === "draw").toBe(true);
+	});
+
+	it("uct blocks an immediate opponent threat on TTT", () => {
+		const { kernel } = compileConfig(examplePresets["tic-tac-toe"].config);
+		let state = kernel.initialState();
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 0 }
+		}).nextState;
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 1, col: 1 }
+		}).nextState;
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 1 }
+		}).nextState;
+		// O to move; X threatens (0,2)
+		const agent = createUctAgent(5, { simulations: 64 });
+		const pick = agent.act(kernel, state, 1);
 		expect(pick).toEqual({ type: "place", position: { row: 0, col: 2 } });
 	});
 
