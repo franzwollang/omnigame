@@ -16,8 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** M7 library explorer foothold landed. Hand off to
-post-roadmap gaps (general graph topology, richer agents, fog observation).
+**Optimizing for this phase:** Graph topology foothold landed (`grid.topology =
+"graph"` + Graph Connect Lite). Hand off to remaining post-roadmap gaps (richer
+agents, fog observation, library depth).
 
 ## Decisions (locked)
 
@@ -69,13 +70,14 @@ Working sandbox slice (see README “Current implementation status”):
 - Move foothold (`src/engine/movement.ts`): orthogonal step + `reach_row`; Step Race preset
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
+- Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: general graph topology, richer UCT/partial-info agents,
-placement-phase / multi-ship Battleship, ko/full Go rules, fog radius.
+Not yet: richer UCT/partial-info agents, placement-phase / multi-ship Battleship,
+ko/full Go rules, fog radius, deeper library explorer UX.
 
 ## Milestone exit criteria
 
@@ -126,9 +128,9 @@ tests. Full placement-phase / multi-ship Battleship deferred.
 - Each port has transcript/simulation tests for the mechanism it claims to prove.
 
 **Done:** Step Race (Move), Life Lite (tick), Hex Connect Lite
-(`hex_offset`), Go Lite (liberties + area_control). Planned M5
-mechanism slots covered; optional later anchors still allowed by selection
-principle.
+(`hex_offset`), Go Lite (liberties + area_control), Graph Connect Lite
+(`graph`). Planned M5 mechanism slots covered; optional later anchors still
+allowed by selection principle.
 
 ### M6 — Debug tooling + agents
 
@@ -144,7 +146,8 @@ Hand off to M7.
 
 **Done:** `src/library/` (`sample` / `assessPlayability` / `exploreLibrary`) +
 sandbox Library modal (load playable finds). Heuristics: compile → opening
-legality → short random playout. Hand off to post-M7 gaps (graph topology, etc.).
+legality → short random playout. Post-M7: graph topology landed; hand off to
+richer agents / fog observation / library depth.
 
 ## Sequencing notes
 

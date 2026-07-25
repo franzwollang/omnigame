@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T04:25-05:00",
-  "turn": 15,
+  "updated_at": "2026-07-25T04:50-05:00",
+  "turn": 16,
   "focus": {
     "milestone": "post-M7",
-    "issue": "topology-beyond-rectangle",
-    "goal": "Graph board topology foothold"
+    "issue": "richer-mcts-agents",
+    "goal": "UCT or hit/miss-aware kernel agent"
   },
   "recent": [
-    "Synced 9ee8 (M0–M6) onto b13a",
-    "M7: src/library sample+playability+sandbox Library modal"
+    "Synced b13a (M0–M7) onto 3263",
+    "Graph topology: schema nodes/edges + Graph Connect Lite"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "CoherentFraction~0.35 keeps Babel framing while surfacing playables"
+    "Graph wins use composite path walk over neighborsOf"
   ],
   "open_threads": [
-    "Next: graph topology; then richer MCTS / fog observation"
+    "Next: richer MCTS/UCT or fog observation"
   ],
-  "next_step": "Graph adjacency board mode + small irregular preset + tests",
+  "next_step": "Implement UCT tree-search agent or hit/miss-aware baseline + tests",
   "blockers": []
 }
