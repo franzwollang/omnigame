@@ -1,21 +1,21 @@
 {
-  "updated_at": "2026-07-25T00:45-05:00",
-  "turn": 5,
+  "updated_at": "2026-07-25T01:25-05:00",
+  "turn": 6,
   "focus": {
-    "milestone": "M1",
-    "issue": "game-kernel-abi",
-    "goal": "Wire sandbox play through GameKernel"
+    "milestone": "M2",
+    "issue": "server-validation-unwired",
+    "goal": "Decide wire vs document server/Z3 validate"
   },
   "recent": [
-    "Resolved sandbox-type-looseness via toGameConfig",
-    "Scaffolded GameKernel (legalActions/step) + tests"
+    "Wired sandbox through GameKernel.step + event log",
+    "Closed contract-validation-coverage + marked M1 done"
   ],
   "discoveries": [
     "Effect.gen needs downlevelIteration; prefer pipe/flatMap/sync"
   ],
   "open_threads": [
-    "Residual: contract-validation; server-validation-unwired"
+    "server-validation-unwired; then game-ir-replay from eventLog"
   ],
-  "next_step": "Thin useGameEngine to call kernel.step; surface events in sandbox",
+  "next_step": "Wire validate-config server action into sandbox Format/Validate, or demote docs to optional tool",
   "blockers": []
 }

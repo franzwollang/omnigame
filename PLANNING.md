@@ -8,7 +8,7 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | ID | Milestone | Status |
 |---|---|---|
 | M0 | Honesty pass + Effect foothold | `done` |
-| M1 | GameKernel ABI + Effect core + event transcripts | `in progress` |
+| M1 | GameKernel ABI + Effect core + event transcripts | `done` |
 | M2 | GameIR + deterministic replay | `not started` |
 | M3 | Compiler / normalize / macro expansion | `not started` |
 | M4 | Observation primitive + Battleship-lite | `not started` |
@@ -16,9 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** wire sandbox through the `GameKernel` scaffold
-(`src/engine/kernel.ts`) and finish residual validation honesty so play and
-checks share one ABI.
+**Optimizing for this phase:** residual honesty on server/Z3 validation, then M2
+GameIR — promote the sandbox kernel `eventLog` into a serializable transcript with
+deterministic replay from seed.
 
 ## Decisions (locked)
 
@@ -60,10 +60,11 @@ Working sandbox slice (see README “Current implementation status”):
 - Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
-- Vitest transcript tests (TTT / Connect 4 / capture)
+- Vitest transcript + kernel + validateConfig tests
+- Sandbox play through `GameKernel` (`useGameEngine` → `stepSync` + event log)
 
-Not yet: sandbox-on-kernel wiring, `GameIR`, compiler, observation, hex/graph, seeded play
-stepping, wired XState (removed), library explorer. Kernel scaffold: `src/engine/kernel.ts`.
+Not yet: `GameIR` / seeded replay, compiler, observation, hex/graph, library explorer.
+Server Z3 validate action still unwired (see `server-validation-unwired`).
 
 ## Milestone exit criteria
 

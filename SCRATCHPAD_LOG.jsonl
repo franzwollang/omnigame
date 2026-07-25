@@ -3,3 +3,4 @@
 {"ts":"2026-07-24T23:50-05:00","focus":"reference selection","summary":"Rules: pick anchors only when they add a new mechanism; references/ is corpus not backlog","next":"continue clarifying Qs or start M0"}
 {"ts":"2026-07-25T00:25-05:00","focus":"M0 complete → M1","summary":"Schema honesty, Effect RNG, Vitest transcripts, Reversi relabel, docs/xstate cleanup","next":"typed adapter then GameKernel scaffold"}
 {"ts":"2026-07-25T00:45-05:00","focus":"M1 game-kernel-abi","summary":"toGameConfig + kernel scaffold; closed sandbox-type-looseness","next":"wire useGameEngine through kernel.step"}
+{"ts":"2026-07-25T01:25-05:00","focus":"M1→M2 handoff","summary":"Kernel sandbox wiring + contract coverage; M1 marked done","next":"server-validation-unwired then GameIR replay"}

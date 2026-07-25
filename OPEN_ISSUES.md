@@ -4,34 +4,14 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ---
 
-## Immediate (M1 in progress)
-
-### game-kernel-abi
-
-Scaffold exists (`src/engine/kernel.ts`: `initialState` / `legalActions` / `step` +
-`stepSync`). Remaining work to close M1:
-
-- Wire sandbox play through the kernel (thin `useGameEngine` to consume `step` events)
-- Prefer Effect composition at edges; keep reducer pure until features migrate
-- Deferred knobs (wrap, non-down gravity, etc.) implement behind this ABI—not the old path
-
-**Acceptance:** See `PLANNING.md` M1 exit criteria.
-
-### contract-validation-coverage
-
-**Problem:** `src/engine/contracts.ts` defines input/overflow-related contracts, but
-`buildFeatureContracts()` in `src/engine/validateConfig.ts` only wires placement mode,
-capture, and n-in-a-row—so composition checks under-claim.
-
-**Acceptance:**
-
-- [ ] Validation builds contracts for the features actually selected by a config (input mode, overflow, etc.)
-- [ ] Invalid compositions surface clear errors via `validateConfig` / Zod refine
+## Immediate (M1 residual → M2)
 
 ### server-validation-unwired
 
 **Problem:** `app/actions/validate-config.ts` (Zod + contracts + Z3) is not imported by the
-sandbox UI; client only runs `zConfig.safeParse`.
+sandbox UI; client only runs `zConfig.safeParse`. Contract composition via
+`validateConfig` is now covered client-side, but the server action / Z3 path is still
+orphaned.
 
 **Acceptance:**
 
@@ -44,7 +24,8 @@ sandbox UI; client only runs `zConfig.safeParse`.
 
 ### game-ir-replay
 
-Serializable IR / action log + deterministic replay from seed.
+Serializable IR / action log + deterministic replay from seed. Sandbox already accumulates
+kernel `eventLog`; promote that into a stable GameIR transcript and `seed + actions → same state`.
 
 **Acceptance:** See `PLANNING.md` M2 exit criteria.
 
