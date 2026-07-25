@@ -7,3 +7,4 @@
 {"ts":"2026-07-25T01:50-05:00","focus":"M2 GameIR + validation honesty","summary":"Wired client contracts; demoted Z3; shipped GameIR replay foothold; M2 done","next":"scaffold src/compiler normalize for M3"}
 {"ts":"2026-07-25T02:10-05:00","focus":"M3 compiler-normalize","summary":"Scaffolded src/compiler; presets/sandbox on normalize path; marked M3 done","next":"start M4 observation-partial-info"}
 {"ts":"2026-07-25T02:30-05:00","focus":"M4 observation","summary":"Landed hit/miss + Battleship-lite; marked M4 done; next is M5 mechanism port","next":"Choose next missing mechanism for reference-game-ports"}
+{"ts":"2026-07-25T02:50-05:00","focus":"M5 Move + Step Race","summary":"orthogonal move + reach_row objective; Step Race preset through compiler→kernel","next":"pick tick or hex/liberties for next M5 port"}

@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-07-25T02:30-05:00",
-  "turn": 9,
+  "updated_at": "2026-07-25T02:50-05:00",
+  "turn": 10,
   "focus": {
     "milestone": "M5",
     "issue": "reference-game-ports",
-    "goal": "Pick next mechanism-first anchor (not observation)"
+    "goal": "Next mechanism after Move (tick / liberties / hex)"
   },
   "recent": [
-    "Synced onto 6127 (M0–M3) before M4",
-    "M4: hit/miss observation + Battleship-lite + tests"
+    "Synced 0181 (M0–M4) onto 4ffa",
+    "M5 foothold: Move + reach_row + Step Race preset/tests"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main"
   ],
   "open_threads": [
-    "M5: choose mechanism (tick/Move/liberties/hex) for next preset"
+    "M5 next: tick (Life Lite) vs liberties vs hex topology"
   ],
-  "next_step": "Pick smallest anchor that unlocks a missing mechanism; implement via compiler→kernel",
+  "next_step": "Pick tick/scheduler or hex/liberties; implement via compiler→kernel",
   "blockers": []
 }

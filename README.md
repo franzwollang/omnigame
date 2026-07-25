@@ -40,6 +40,8 @@ These are built from the same shared schema and operators.
 - **Connect 4 (Pop Out)**
 - **Gomoku (5‑in‑a‑row)**
 - **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
+- **Battleship Lite** (hit/miss observation + destroy_hidden)
+- **Step Race** (orthogonal `Move` + reach_row objective)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -86,20 +88,21 @@ Routing uses App Router with scroll-snap landing and URL replacement to reflect 
 
 OmniGame is actively evolving toward the “spec → compiler → kernel + IR” shape described below. The current sandbox already supports a useful (but intentionally small) slice of the primitive space:
 
-- **Topology**: rectangular grid only (`grid.topology = "rectangle"`); wrap is schema-locked to `false` until M1+
-- **Inputs**: cell-click and column-activation (`input.mode = "cell" | "column"`)
+- **Topology**: rectangular grid only (`grid.topology = "rectangle"`); wrap is schema-locked to `false` until later
+- **Inputs**: cell-click, column-activation, and piece move (`input.mode = "cell" | "column" | "move"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
   - gravity placement **down only** (`placement.mode = "gravity"`, `gravity.direction = "down"`)
   - overflow: `reject` | `pop_out_bottom` (bottom pop-out column action)
+- **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
 - **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row win detection with configurable adjacency + length; `destroy_hidden` sink objective for hit/miss
+- **Objectives**: n-in-a-row; `destroy_hidden` (hit/miss); `reach_row` (Step Race)
 - **Observation**: `full` (identity) or `hit_miss` (own fleet + public shots); Battleship-lite preset
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations) and shows recent kernel events + Replay
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 
-What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), richer macro library (e.g. piece-move sugar), hex/graph topology, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), tick/scheduler, liberties/territory, hex/graph topology, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -323,7 +326,8 @@ Near-term milestones:
 - **Compiler stages**: validate/normalize specs and expand macros into primitive operators + constraints
 - **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
 - **Observation support**: hit/miss + Battleship-lite landed; fog radius / placement phase still open
-- **Anchor games**: implement the 2–3 “stress test” games above to validate primitive completeness
+- **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
+- **Anchor games**: mechanism-first ports (tick, liberties, hex, …) — not exhaust `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
 - **Baseline agents**: random/greedy/tiny MCTS to prove bot play with clean interfaces
 

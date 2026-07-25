@@ -9,9 +9,11 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 ### reference-game-ports
 
 Select anchors by **missing mechanism**, not by exhausting `references/` (see
-project-structure rule). Candidates only earn a slot when they unlock something
-new (e.g. tick/scheduler, Move constraints, liberties/territory, hex/graph).
-Observation/hit-miss is covered by Battleship-lite (M4).
+project-structure rule). Observation (Battleship-lite) and Move/reach_row
+(Step Race) are covered.
+
+**Next candidates** (pick one per turn): tick/scheduler, liberties/territory,
+hex/graph (`topology-beyond-rectangle`).
 
 **Acceptance:**
 

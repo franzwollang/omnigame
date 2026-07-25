@@ -12,13 +12,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M2 | GameIR + deterministic replay | `done` |
 | M3 | Compiler / normalize / macro expansion | `done` |
 | M4 | Observation primitive + Battleship-lite | `done` |
-| M5 | Anchor / reference-game ports | `not started` |
+| M5 | Anchor / reference-game ports | `in progress` |
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** M5 — pick the next mechanism-first anchor (not
-exhausting `references/`); candidates unlock something new (tick, Move,
-liberties, hex, …).
+**Optimizing for this phase:** M5 — mechanism-first anchors. Move + reach_row
+(Step Race) landed; next pick unlocks something new (tick, liberties, hex, …).
 
 ## Decisions (locked)
 
@@ -58,7 +57,7 @@ Working sandbox slice (see README “Current implementation status”):
 - Direct + gravity placement (schema/engine: gravity **down** only)
 - Capture (flip demo); n-in-a-row wins
 - Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo,
-  Battleship Lite (hit/miss observation)
+  Battleship Lite (hit/miss observation), Step Race (Move + reach_row)
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -67,8 +66,10 @@ Working sandbox slice (see README “Current implementation status”):
 - Client Zod + contract validation in sandbox; Z3 server action optional/experimental
 - Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
 - Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
+- Move foothold (`src/engine/movement.ts`): orthogonal step + `reach_row`; Step Race preset
 
-Not yet: hex/graph topology, library explorer, placement-phase / multi-ship Battleship, agents.
+Not yet: hex/graph topology, tick/scheduler, liberties/territory, library explorer,
+placement-phase / multi-ship Battleship, agents.
 
 ## Milestone exit criteria
 
@@ -117,6 +118,9 @@ tests. Full placement-phase / multi-ship Battleship deferred.
 - Port or invent anchors **only when each unlocks a new mechanism** (see selection
   principle in `.cursor/rules/project-structure.mdc`). Not “finish `references/`.”
 - Each port has transcript/simulation tests for the mechanism it claims to prove.
+
+**In progress:** Step Race unlocked `Move` + `reach_row` (orthogonal step).
+Remaining mechanism slots: tick/scheduler, liberties/territory, hex/graph.
 
 ### M6 — Debug tooling + agents
 
