@@ -91,8 +91,8 @@ export type GameConfig = {
 		| "reach_row"
 		| "area_control"
 		| "none";
-	/** Classic alternating turns vs discrete global tick (Life Lite). */
-	turnSchedule?: "alternating" | "manual_tick";
+	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
+	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -233,6 +233,8 @@ export function reduce(
 			return handleTick(state, config);
 		case "pass":
 			return handlePass(state, config);
+		case "simultaneousPlace":
+			return handleSimultaneousPlace(state, event.placements, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -286,6 +288,123 @@ function handleTick(state: GameState, config: GameConfig): GameState {
 		grid: newGrid,
 		moveCount: state.moveCount + 1
 		// Tick is a neutral global step — do not flip currentPlayer
+	};
+}
+
+/**
+ * Simultaneous schedule: both players submit a place; resolve in one step.
+ * Same-cell conflict → neither stone is placed (round still advances).
+ * If both complete a winning line in the same round → draw.
+ */
+function handleSimultaneousPlace(
+	state: GameState,
+	placements: { X: Position; O: Position },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") === "move") return state;
+	if ((config.observationMode ?? "full") === "hit_miss") return state;
+
+	const topology = config.topology ?? "rectangle";
+	const wrap = config.gridWrap === true;
+
+	const validPos = (pos: Position): boolean => {
+		if (
+			pos.row < 0 ||
+			pos.row >= state.grid.height ||
+			pos.col < 0 ||
+			pos.col >= state.grid.width
+		) {
+			return false;
+		}
+		if (!isActivePosition(pos, topology, config.graph)) return false;
+		if (getCell(state.grid, pos) !== null) return false;
+		return true;
+	};
+
+	if (!validPos(placements.X) || !validPos(placements.O)) return state;
+
+	const conflict =
+		placements.X.row === placements.O.row &&
+		placements.X.col === placements.O.col;
+
+	let newGrid = state.grid;
+	if (!conflict) {
+		let cells = setCell(state.grid, placements.X, "X");
+		cells = setCell({ ...state.grid, cells }, placements.O, "O");
+		newGrid = { ...state.grid, cells };
+	}
+
+	const newMoveCount = state.moveCount + 1;
+
+	if (!conflict) {
+		const xWins = Boolean(
+			checkWinner(
+				newGrid,
+				"X",
+				config.winLength,
+				config.adjacency,
+				topology,
+				config.graph,
+				wrap
+			)
+		);
+		const oWins = Boolean(
+			checkWinner(
+				newGrid,
+				"O",
+				config.winLength,
+				config.adjacency,
+				topology,
+				config.graph,
+				wrap
+			)
+		);
+		if (xWins && oWins) {
+			return {
+				...state,
+				grid: newGrid,
+				status: "draw",
+				winner: null,
+				moveCount: newMoveCount
+			};
+		}
+		if (xWins) {
+			return {
+				...state,
+				grid: newGrid,
+				status: "won",
+				winner: "X",
+				moveCount: newMoveCount
+			};
+		}
+		if (oWins) {
+			return {
+				...state,
+				grid: newGrid,
+				status: "won",
+				winner: "O",
+				moveCount: newMoveCount
+			};
+		}
+	}
+
+	if (isBoardFull(newGrid, config)) {
+		return {
+			...state,
+			grid: newGrid,
+			status: "draw",
+			winner: null,
+			moveCount: newMoveCount
+		};
+	}
+
+	return {
+		...state,
+		grid: newGrid,
+		moveCount: newMoveCount
+		// Simultaneous rounds do not flip currentPlayer
 	};
 }
 
@@ -454,6 +573,8 @@ function handlePlace(
 	pos: Position,
 	config: GameConfig
 ): GameState {
+	// Simultaneous games must use simultaneousPlace (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
 	// Hit/miss with fleet: place onto hidden during placement phase
 	if ((config.observationMode ?? "full") === "hit_miss") {
 		return handleFleetPlace(state, pos, config);

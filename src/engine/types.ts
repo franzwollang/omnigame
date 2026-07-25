@@ -101,6 +101,11 @@ export type PassEvent = {
 	type: "pass";
 };
 
+export type SimultaneousPlaceEvent = {
+	type: "simultaneousPlace";
+	placements: { X: Position; O: Position };
+};
+
 export type ResetEvent = {
 	type: "reset";
 };
@@ -115,6 +120,7 @@ export type GameEvent =
 	| PopOutRowEvent
 	| TickEvent
 	| PassEvent
+	| SimultaneousPlaceEvent
 	| ResetEvent;
 
 // Helper to convert row/col to flat index

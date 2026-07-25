@@ -98,6 +98,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.turn.schedule === "manual_tick") {
 		features.push(Contracts.SchedulerManualTick());
 	}
+	if (cfg.turn.schedule === "simultaneous") {
+		features.push(Contracts.ScheduleSimultaneous());
+	}
 
 	return features;
 }

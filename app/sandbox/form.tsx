@@ -199,7 +199,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 							</div>
 							<p className="text-xs text-muted-foreground">
 								Wrap edges and realtime turns are deferred. Use
-								manual_tick + Life Lite for discrete generations.
+								manual_tick + Life Lite, or simultaneous joint place.
 							</p>
 							<FormField
 								control={form.control}
@@ -242,11 +242,15 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<SelectItem value="manual_tick">
 														manual_tick
 													</SelectItem>
+													<SelectItem value="simultaneous">
+														simultaneous
+													</SelectItem>
 												</SelectContent>
 											</Select>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
-											manual_tick requires scheduler + objective none.
+											manual_tick needs scheduler + objective none;
+											simultaneous needs cell + n-in-a-row (joint place).
 										</p>
 										<FormMessage />
 									</FormItem>

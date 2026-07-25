@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Hex wrap landed (Toroidal Hex Connect Lite). Hand
-off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Simultaneous schedule landed (Simultaneous TTT).
+Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -87,8 +87,10 @@ Working sandbox slice (see README “Current implementation status”):
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
+- **Simultaneous schedule:** `turn.schedule = "simultaneous"` + `simultaneousPlace` /
+  `stepJoint`; same-cell conflict places neither; Simultaneous TTT preset
 
-Not yet: full Go rules, simultaneous/delayed actions.
+Not yet: full Go rules, delayed/multi-step turns, hex/graph simultaneous.
 
 ## Milestone exit criteria
 

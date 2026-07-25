@@ -56,6 +56,7 @@ These are built from the same shared schema and operators.
 - **Go Lite Situational Superko** (situational superko — forbids repeating a prior board+side-to-move)
 - **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
 - **Toroidal TTT** (`grid.wrap` rectangle)
+- **Simultaneous TTT** (`turn.schedule = simultaneous` joint place; same-cell conflict)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -123,8 +124,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, simultaneous/delayed
-actions, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, delayed/multi-step
+actions, hex/graph simultaneous, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

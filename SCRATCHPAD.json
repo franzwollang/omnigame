@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T09:50-05:00",
-  "turn": 10,
+  "updated_at": "2026-07-25T10:20-05:00",
+  "turn": 11,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after hex wrap"
+    "goal": "Hand off after simultaneous schedule"
   },
   "recent": [
-    "Merged acf9 (horizontal pop-out) onto d7b9",
-    "Landed hex wrap + Toroidal Hex Connect Lite",
-    "Graph wrap deferred as explicit edges (N/A)"
+    "Synced d7b9 hex wrap onto d670",
+    "Landed simultaneous schedule + Simultaneous TTT",
+    "stepJoint / simultaneousPlace + same-cell conflict"
   ],
   "discoveries": [
-    "hex wrap = stepHex cube-step then modular offset normalizePos",
-    "graph wrap is N/A — authors add cross-seam edges"
+    "Single place is noop under simultaneous; joint only",
+    "UCT/MCTS tree deferred for joint — random seat pick"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick simultaneous or delayed-actions mechanism",
+  "next_step": "Cloud agent: pick delayed-actions or hidden simultaneous",
   "blockers": []
 }

@@ -46,13 +46,17 @@ export const zConfig = z
 					.optional()
 			})
 			.strict(),
-		// realtime deferred; manual_tick unlocks discrete Life-style generations
+		// realtime deferred; manual_tick = Life generations; simultaneous = joint place
 		turn: z
 			.object({
 				mode: z.literal("turn"),
-				/** alternating = classic turns; manual_tick = global scheduler step. */
+				/**
+				 * alternating = classic turns;
+				 * manual_tick = global scheduler step;
+				 * simultaneous = both players submit a place per round (joint resolve).
+				 */
 				schedule: z
-					.enum(["alternating", "manual_tick"])
+					.enum(["alternating", "manual_tick", "simultaneous"])
 					.default("alternating")
 			})
 			.strict()
@@ -250,6 +254,7 @@ export const zConfig = z
 		const areaControl = cfg.objective.mode === "area_control";
 		const moveInput = cfg.input.mode === "move";
 		const manualTick = cfg.turn.schedule === "manual_tick";
+		const simultaneous = cfg.turn.schedule === "simultaneous";
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
 		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
@@ -328,6 +333,13 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "schedule"],
 					message: "area_control is incompatible with manual_tick"
+				});
+			}
+			if (simultaneous) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "area_control is incompatible with simultaneous"
 				});
 			}
 			if (moveInput) {
@@ -558,6 +570,68 @@ export const zConfig = z
 				path: ["scheduler"],
 				message: "scheduler requires turn.schedule = 'manual_tick'"
 			});
+		}
+
+		// Simultaneous joint-place foothold (both players place each round)
+		if (simultaneous) {
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message: "simultaneous requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "simultaneous requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"simultaneous requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "simultaneous is incompatible with hit_miss observation"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "simultaneous is incompatible with fog observation"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "simultaneous is incompatible with move input"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "simultaneous is incompatible with fleet placement"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"simultaneous foothold requires topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
 		}
 
 		// column / row input require gravity placement (mode or enabled sugar)

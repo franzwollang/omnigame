@@ -44,7 +44,11 @@ export type KernelAction =
 	| { type: "popOutColumn"; col: number }
 	| { type: "popOutRow"; row: number }
 	| { type: "tick" }
-	| { type: "pass" };
+	| { type: "pass" }
+	| {
+			type: "simultaneousPlace";
+			placements: { X: Position; O: Position };
+	  };
 
 /** Structured legality failure codes for debug UI / agents. */
 export type IllegalReason =
@@ -71,7 +75,11 @@ export type ExplainResult =
 	| { legal: false; reason: IllegalReason; detail: string };
 
 export type KernelEvent =
-	| { type: "actionApplied"; action: KernelAction; player: Player }
+	| {
+			type: "actionApplied";
+			action: KernelAction;
+			player: Player | "simultaneous";
+	  }
 	| {
 			type: "shotResult";
 			position: Position;
@@ -100,7 +108,8 @@ export type StepResult = {
 export type GameKernel = {
 	readonly config: GameConfig;
 	initialState(seed?: Seed): GameState;
-	currentPlayer(state: GameState): PlayerId;
+	/** Side to move, or `"simultaneous"` when both players act each round. */
+	currentPlayer(state: GameState): PlayerId | "simultaneous";
 	legalActions(state: GameState, player: PlayerId): KernelAction[];
 	/** Why an action is illegal for `player` (reuses legality probes). */
 	explainAction(
@@ -116,6 +125,20 @@ export type GameKernel = {
 		seed?: Seed
 	): Effect.Effect<StepResult>;
 	stepSync(state: GameState, action: KernelAction, seed?: Seed): StepResult;
+	/**
+	 * Simultaneous schedule: build a joint place from per-player place actions
+	 * and step once (README jointAction foothold).
+	 */
+	stepJoint(
+		state: GameState,
+		joint: { 0: KernelAction; 1: KernelAction },
+		seed?: Seed
+	): Effect.Effect<StepResult>;
+	stepJointSync(
+		state: GameState,
+		joint: { 0: KernelAction; 1: KernelAction },
+		seed?: Seed
+	): StepResult;
 };
 
 export function playerIdOf(player: Player): PlayerId {
@@ -146,6 +169,8 @@ function formatAction(action: KernelAction): string {
 			return "tick";
 		case "pass":
 			return "pass";
+		case "simultaneousPlace":
+			return `joint place X(${action.placements.X.row},${action.placements.X.col}) O(${action.placements.O.row},${action.placements.O.col})`;
 	}
 }
 
@@ -203,10 +228,14 @@ function applyStep(
 ): StepResult {
 	const nextState = reduce(state, action, config);
 	if (isNoop(state, nextState)) {
+		const probePlayer =
+			(config.turnSchedule ?? "alternating") === "simultaneous"
+				? 0
+				: playerIdOf(state.currentPlayer);
 		const explained = explainKernelAction(
 			config,
 			state,
-			playerIdOf(state.currentPlayer),
+			probePlayer,
 			action
 		);
 		const reason: IllegalReason =
@@ -220,8 +249,12 @@ function applyStep(
 		};
 	}
 
+	const actor: Player | "simultaneous" =
+		action.type === "simultaneousPlace"
+			? "simultaneous"
+			: state.currentPlayer;
 	const events: KernelEvent[] = [
-		{ type: "actionApplied", action, player: state.currentPlayer }
+		{ type: "actionApplied", action, player: actor }
 	];
 
 	let lastShot: { position: Position; result: ShotResult } | undefined;
@@ -295,7 +328,8 @@ function rowHasSpace(
 function canPlaceCell(
 	state: GameState,
 	pos: Position,
-	config: GameConfig
+	config: GameConfig,
+	player: Player = state.currentPlayer
 ): boolean {
 	const topology = config.topology ?? "rectangle";
 	if (!isActivePosition(pos, topology, config.graph)) return false;
@@ -304,17 +338,17 @@ function canPlaceCell(
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
-		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
+		return isLegalLibertyPlace(state.grid, pos, player, wrap, {
 			koRule: resolveKoRule(config),
 			koPoint: state.koPoint,
 			positionHistory: state.positionHistory
 		});
 	}
-	const placedCells = setCell(state.grid, pos, state.currentPlayer);
+	const placedCells = setCell(state.grid, pos, player);
 	const after = applyCaptureIfAny(
 		{ ...state.grid, cells: placedCells },
 		pos,
-		state.currentPlayer,
+		player,
 		config.adjacency,
 		wrap
 	);
@@ -339,13 +373,31 @@ function collectLegalActions(
 	player: PlayerId
 ): KernelAction[] {
 	if (state.status !== "playing") return [];
-	if (playerIdOf(state.currentPlayer) !== player) return [];
+
+	const simultaneous =
+		(config.turnSchedule ?? "alternating") === "simultaneous";
+	if (!simultaneous && playerIdOf(state.currentPlayer) !== player) return [];
 
 	const actions: KernelAction[] = [];
 	const inputMode = config.inputMode ?? "cell";
 	const overflow = config.overflow ?? "reject";
 	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
 	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
+	const actingPlayer = simultaneous ? playerOf(player) : state.currentPlayer;
+
+	if (simultaneous) {
+		// Per-player place choices; UI/agents compose simultaneousPlace via stepJoint.
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (canPlaceCell(state, position, config, actingPlayer)) {
+				actions.push({ type: "place", position });
+			}
+		}
+		return actions;
+	}
 
 	if (manualTick) {
 		actions.push({ type: "tick" });
@@ -590,12 +642,35 @@ export function explainKernelAction(
 			detail: detailFor("game_over", action)
 		};
 	}
-	if (playerIdOf(state.currentPlayer) !== player) {
+	const simultaneous =
+		(config.turnSchedule ?? "alternating") === "simultaneous";
+	if (!simultaneous && playerIdOf(state.currentPlayer) !== player) {
 		return {
 			legal: false,
 			reason: "wrong_player",
 			detail: detailFor("wrong_player", action)
 		};
+	}
+
+	// Joint action: both constituent places must be individually legal
+	if (action.type === "simultaneousPlace") {
+		if (!simultaneous) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const xOk = canPlaceCell(state, action.placements.X, config, "X");
+		const oOk = canPlaceCell(state, action.placements.O, config, "O");
+		if (xOk && oOk) return { legal: true };
+		if (!xOk || !oOk) {
+			return {
+				legal: false,
+				reason: "cell_occupied",
+				detail: detailFor("cell_occupied", action)
+			};
+		}
 	}
 
 	const legal = collectLegalActions(config, state, player);
@@ -608,6 +683,13 @@ export function explainKernelAction(
 	const overflow = config.overflow ?? "reject";
 
 	switch (action.type) {
+		case "simultaneousPlace": {
+			return {
+				legal: false,
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
+			};
+		}
 		case "tick": {
 			if (!manualTick) {
 				return {
@@ -892,7 +974,27 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "tick":
 		case "pass":
 			return true;
+		case "simultaneousPlace":
+			return (
+				b.type === "simultaneousPlace" &&
+				a.placements.X.row === b.placements.X.row &&
+				a.placements.X.col === b.placements.X.col &&
+				a.placements.O.row === b.placements.O.row &&
+				a.placements.O.col === b.placements.O.col
+			);
 	}
+}
+
+/** Build a joint place action from two per-player place actions. */
+export function jointPlaceFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "place" || action1.type !== "place") return null;
+	return {
+		type: "simultaneousPlace",
+		placements: { X: action0.position, O: action1.position }
+	};
 }
 
 /**
@@ -1001,12 +1103,39 @@ export function createGameKernel(config: GameConfig): GameKernel {
 	): Effect.Effect<StepResult> =>
 		Effect.sync(() => applyStep(config, state, action));
 
+	const stepJoint = (
+		state: GameState,
+		joint: { 0: KernelAction; 1: KernelAction },
+		seed?: Seed
+	): Effect.Effect<StepResult> => {
+		const built = jointPlaceFromActions(joint[0], joint[1]);
+		if (!built) {
+			return Effect.sync(() => ({
+				nextState: state,
+				events: [
+					{
+						type: "ignored" as const,
+						action: joint[0],
+						reason: "mode_mismatch" as const
+					}
+				],
+				terminal: state.status !== "playing",
+				outcome: outcomeOf(state),
+				observations: observationsFor(config, state)
+			}));
+		}
+		return step(state, built, seed);
+	};
+
 	return {
 		config,
 		initialState(_seed?: Seed) {
 			return createInitialState(config);
 		},
 		currentPlayer(state) {
+			if ((config.turnSchedule ?? "alternating") === "simultaneous") {
+				return "simultaneous";
+			}
 			return playerIdOf(state.currentPlayer);
 		},
 		legalActions(state, player) {
@@ -1021,6 +1150,33 @@ export function createGameKernel(config: GameConfig): GameKernel {
 		step,
 		stepSync(state, action, seed) {
 			return Effect.runSync(step(state, action, seed));
+		},
+		stepJoint,
+		stepJointSync(state, joint, seed) {
+			return Effect.runSync(stepJoint(state, joint, seed));
 		}
 	};
+}
+
+/**
+ * Advance one decision ply: alternating single action, or simultaneous joint
+ * place when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
+ * `legalActions` for the given player (called once, or twice when joint).
+ */
+export function stepPly(
+	kernel: GameKernel,
+	state: GameState,
+	pickFor: (player: PlayerId, legal: KernelAction[]) => KernelAction | null,
+	seed?: Seed
+): StepResult | null {
+	const side = kernel.currentPlayer(state);
+	if (side === "simultaneous") {
+		const a0 = pickFor(0, kernel.legalActions(state, 0));
+		const a1 = pickFor(1, kernel.legalActions(state, 1));
+		if (!a0 || !a1) return null;
+		return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
+	}
+	const action = pickFor(side, kernel.legalActions(state, side));
+	if (!action) return null;
+	return kernel.stepSync(state, action, seed);
 }

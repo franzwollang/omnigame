@@ -16,7 +16,8 @@ import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
 import {
 	formatKernelEvent,
-	highlightCellsForActions
+	highlightCellsForActions,
+	jointPlaceFromActions
 } from "@/engine/kernel";
 import { compileToGameConfig } from "@/compiler";
 import { validateConfig } from "@/engine/validateConfig";
@@ -92,6 +93,8 @@ export default function GamePage() {
 		eventLog,
 		actionLog,
 		selectedFrom,
+		pendingPlacements,
+		simultaneousSeat,
 		lastIllegal,
 		legalActionsList,
 		kernel,
@@ -121,6 +124,8 @@ export default function GamePage() {
 					? "right"
 					: "bottom";
 	const enableTick = currentConfig?.turn.schedule === "manual_tick";
+	const enableSimultaneous =
+		currentConfig?.turn.schedule === "simultaneous";
 	const enablePass = currentConfig?.objective.mode === "area_control";
 	const eventLines = useMemo(
 		() => eventLog.map(formatKernelEvent),
@@ -141,8 +146,16 @@ export default function GamePage() {
 
 	const stepAgent = () => {
 		if (gameState.status !== "playing") return;
-		const player = kernel.currentPlayer(gameState);
-		const action = agentRef.current.act(kernel, gameState, player);
+		const side = kernel.currentPlayer(gameState);
+		if (side === "simultaneous") {
+			const a0 = agentRef.current.act(kernel, gameState, 0);
+			const a1 = agentRef.current.act(kernel, gameState, 1);
+			if (!a0 || !a1) return;
+			const joint = jointPlaceFromActions(a0, a1);
+			if (joint) dispatchAction(joint);
+			return;
+		}
+		const action = agentRef.current.act(kernel, gameState, side);
 		if (action) dispatchAction(action);
 	};
 
@@ -364,7 +377,9 @@ export default function GamePage() {
 						<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
 							Kernel events
 							{gameState.status === "playing"
-								? ` · ${gameState.currentPlayer} to move`
+								? enableSimultaneous
+									? ` · simultaneous${simultaneousSeat ? ` · ${simultaneousSeat} choosing` : ""}`
+									: ` · ${gameState.currentPlayer} to move`
 								: ""}
 						</p>
 						<div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
@@ -461,6 +476,19 @@ export default function GamePage() {
 					{enableTick && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Life Lite: place cells, then Tick for B3/S23 step
+						</p>
+					)}
+					{enableSimultaneous && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							Simultaneous: click a cell for{" "}
+							{simultaneousSeat ?? "X"}
+							{pendingPlacements.X
+								? ` (X@${pendingPlacements.X.row},${pendingPlacements.X.col})`
+								: ""}
+							{pendingPlacements.O
+								? ` (O@${pendingPlacements.O.row},${pendingPlacements.O.col})`
+								: ""}
+							; same cell → neither places
 						</p>
 					)}
 					{enablePass && (

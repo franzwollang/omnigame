@@ -279,6 +279,14 @@ export const Contracts = {
 		hooks: ["applyEffects"],
 		invariants: ["globalSynchronousUpdate"]
 	}),
+	ScheduleSimultaneous: (): FeatureContract => ({
+		id: "ScheduleSimultaneous",
+		requires: ["CellsWritable", "InputTargetCell"],
+		provides: [],
+		slots: [{ type: "Schedule", value: "simultaneous" }],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: ["jointPlacePerRound", "sameCellConflictNeitherPlaces"]
+	}),
 	TopologyHex: (): FeatureContract => ({
 		id: "TopologyHex",
 		requires: ["CellsWritable"],

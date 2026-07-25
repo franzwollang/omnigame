@@ -8,16 +8,17 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-Hex **wrap** landed — `grid.wrap` on `hex_offset` via `stepHex` (cube-step +
-modular offset normalize) + Toroidal Hex Connect Lite preset + tests. Graph
-wrap stays N/A (explicit edges). Pick the **next smallest** unlock the engine
-still lacks — not another recombination of covered primitives (see
-project-structure selection principle).
+**Simultaneous** schedule landed — `turn.schedule = "simultaneous"` +
+`simultaneousPlace` / `stepJoint` + same-cell conflict (neither places) +
+Simultaneous TTT preset + tests. Alternating/`manual_tick` unchanged. Pick the
+**next smallest** unlock the engine still lacks — not another recombination of
+covered primitives (see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- simultaneous / hidden simultaneous actions
 - delayed actions / multi-step turns
+- hidden simultaneous (commit then reveal)
+- hex/graph simultaneous (extend beyond rectangle foothold)
 
 **Acceptance:**
 
@@ -50,5 +51,5 @@ or be closed after the next agent green run on cloud.
 M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties,
 graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
 simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
-and hex wrap also landed. Further ports only when a **new** missing mechanism
-appears — not a backlog.
+hex wrap, and simultaneous schedule also landed. Further ports only when a **new**
+missing mechanism appears — not a backlog.

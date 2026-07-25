@@ -10,7 +10,7 @@ import type {
 	PlayerId,
 	Seed
 } from "@/engine/kernel";
-import { playerOf } from "@/engine/kernel";
+import { playerOf, stepPly } from "@/engine/kernel";
 import { mulberry32 } from "@/engine/rng";
 import type { Agent } from "@/agents/types";
 import { createHuntAgent } from "@/agents/hunt";
@@ -39,6 +39,8 @@ export function actionKey(action: KernelAction): string {
 			return "tick";
 		case "pass":
 			return "pass";
+		case "simultaneousPlace":
+			return `joint:${action.placements.X.row},${action.placements.X.col}|${action.placements.O.row},${action.placements.O.col}`;
 	}
 }
 
@@ -84,11 +86,12 @@ function rolloutValue(
 	let s = state;
 	let depth = 0;
 	while (s.status === "playing" && depth < depthLimit) {
-		const pid = kernel.currentPlayer(s);
-		const legal = kernel.legalActions(s, pid);
-		if (legal.length === 0) break;
-		const pick = legal[Math.floor(next() * legal.length)]!;
-		s = kernel.stepSync(s, pick).nextState;
+		const result = stepPly(kernel, s, (_player, legal) => {
+			if (legal.length === 0) return null;
+			return legal[Math.floor(next() * legal.length)]!;
+		});
+		if (!result) break;
+		s = result.nextState;
 		depth += 1;
 	}
 	return terminalValue(s, rootPlayer);
@@ -113,9 +116,11 @@ function makeNode(
 	actionFromParent: KernelAction | null,
 	parent: UctNode | null
 ): UctNode {
-	const pid = kernel.currentPlayer(state);
+	const side = kernel.currentPlayer(state);
 	const untried =
-		state.status === "playing" ? [...kernel.legalActions(state, pid)] : [];
+		state.status === "playing" && side !== "simultaneous"
+			? [...kernel.legalActions(state, side)]
+			: [];
 	return {
 		state,
 		actionFromParent,
@@ -139,7 +144,7 @@ function selectChild(
 	exploration: number
 ): UctNode {
 	const toMove = kernel.currentPlayer(node.state);
-	const maximize = toMove === rootPlayer;
+	const maximize = toMove === rootPlayer || toMove === "simultaneous";
 	let best: UctNode | null = null;
 	let bestScore = Number.NEGATIVE_INFINITY;
 	for (const child of Array.from(node.children.values())) {
@@ -255,6 +260,11 @@ export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 			if ((kernel.config.observationMode ?? "full") === "hit_miss") {
 				const pick = hunt.act(kernel, state, player);
 				return pick ? cloneAction(pick) : null;
+			}
+
+			// Joint action space is not in the UCT tree yet — random legal for this seat.
+			if ((kernel.config.turnSchedule ?? "alternating") === "simultaneous") {
+				return cloneAction(legal[Math.floor(next() * legal.length)]!);
 			}
 
 			// One-move win: take immediately (same as greedy / flat MCTS).

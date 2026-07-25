@@ -85,12 +85,16 @@ export function createGreedyAgent(_seed: Seed = 0): Agent {
 			if (legal.length === 0) return null;
 
 			const me = playerOf(player);
+			const simultaneous =
+				(kernel.config.turnSchedule ?? "alternating") === "simultaneous";
 
-			// Immediate win
-			for (const action of legal) {
-				const next = kernel.stepSync(state, action).nextState;
-				if (next.status === "won" && next.winner === me) {
-					return action;
+			// Immediate win (alternating only — single place is a no-op when joint)
+			if (!simultaneous) {
+				for (const action of legal) {
+					const next = kernel.stepSync(state, action).nextState;
+					if (next.status === "won" && next.winner === me) {
+						return action;
+					}
 				}
 			}
 
@@ -98,12 +102,20 @@ export function createGreedyAgent(_seed: Seed = 0): Agent {
 			// opponent best immediate win after our move and avoid those when possible.
 			const safe: KernelAction[] = [];
 			for (const action of legal) {
+				if (simultaneous) {
+					safe.push(action);
+					continue;
+				}
 				const after = kernel.stepSync(state, action).nextState;
 				if (after.status !== "playing") {
 					safe.push(action);
 					continue;
 				}
 				const opp = kernel.currentPlayer(after);
+				if (opp === "simultaneous") {
+					safe.push(action);
+					continue;
+				}
 				const oppLegal = kernel.legalActions(after, opp);
 				const oppCanWin = oppLegal.some((oa) => {
 					const terminal = kernel.stepSync(after, oa).nextState;
