@@ -38,15 +38,17 @@ describe("schema: turn.actionsPerTurn multi-step", () => {
 		expect(withGravity.success).toBe(false);
 	});
 
-	it("rejects hex/graph and hit_miss under multi-step", () => {
-		const base = examplePresets["tic-tac-toe"].config;
-		const hex = zConfig.safeParse({
-			...base,
-			grid: { ...base.grid, topology: "hex_offset" },
-			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 }
-		});
-		expect(hex.success).toBe(false);
+	it("accepts alternating multi-step on hex and graph", () => {
+		const hex = zConfig.safeParse(examplePresets["double-move-hex"].config);
+		expect(hex.success).toBe(true);
 
+		const graph = zConfig.safeParse(
+			examplePresets["double-move-graph"].config
+		);
+		expect(graph.success).toBe(true);
+	});
+
+	it("rejects hit_miss under multi-step", () => {
 		const hit = zConfig.safeParse({
 			...examplePresets["battleship-lite"].config,
 			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 }
@@ -184,8 +186,147 @@ describe("transcript: Double Move TTT", () => {
 });
 
 describe("validateConfig: multi-step contract", () => {
-	it("accepts Double Move TTT preset", () => {
-		const result = validateConfig(examplePresets["double-move-ttt"].config);
-		expect(result.ok).toBe(true);
+	it("accepts Double Move TTT / Hex / Graph presets", () => {
+		expect(validateConfig(examplePresets["double-move-ttt"].config).ok).toBe(
+			true
+		);
+		expect(validateConfig(examplePresets["double-move-hex"].config).ok).toBe(
+			true
+		);
+		expect(
+			validateConfig(examplePresets["double-move-graph"].config).ok
+		).toBe(true);
+	});
+});
+
+describe("kernel: multi-step on hex/graph", () => {
+	it("hex: budget handoff + hex-line win mid-turn", () => {
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["double-move-hex"].config
+		);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.actionsPerTurn).toBe(2);
+
+		let state = kernel.initialState();
+		expect(state.actionsRemaining).toBe(2);
+		expect(kernel.currentPlayer(state)).toBe(0);
+
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 0 }
+		}).nextState;
+		expect(state.currentPlayer).toBe("X");
+		expect(state.actionsRemaining).toBe(1);
+
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 1 }
+		}).nextState;
+		expect(state.currentPlayer).toBe("O");
+		expect(state.actionsRemaining).toBe(2);
+
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 2, col: 0 }
+		}).nextState;
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 1, col: 1 }
+		}).nextState;
+		expect(state.currentPlayer).toBe("X");
+
+		const win = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 2 }
+		});
+		state = win.nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 1 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+	});
+
+	it("graph: multi-step on active nodes; inactive illegal; composite win", () => {
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["double-move-graph"].config
+		);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.actionsPerTurn).toBe(2);
+
+		let state = kernel.initialState();
+		const inactive = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 1, col: 0 }
+		});
+		expect(inactive.events[0]?.type).toBe("ignored");
+		expect(inactive.nextState.actionsRemaining).toBe(2);
+
+		// Path 0,0 — 0,1 — 0,2 is a composite line of length 3
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 0 }
+		}).nextState;
+		expect(state.actionsRemaining).toBe(1);
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 1 }
+		}).nextState;
+		expect(state.currentPlayer).toBe("O");
+
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 2, col: 0 }
+		}).nextState;
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 2, col: 2 }
+		}).nextState;
+		expect(state.currentPlayer).toBe("X");
+
+		const win = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 2 }
+		});
+		state = win.nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(state.moveCount).toBe(5);
+	});
+});
+
+describe("transcript: Double Move Hex / Graph", () => {
+	it("replays hex multi-step to a row win", () => {
+		const config = compileToGameConfig(
+			examplePresets["double-move-hex"].config
+		).gameConfig;
+		const actions: KernelAction[] = [
+			{ type: "place", position: { row: 0, col: 0 } },
+			{ type: "place", position: { row: 0, col: 1 } },
+			{ type: "place", position: { row: 2, col: 0 } },
+			{ type: "place", position: { row: 1, col: 1 } },
+			{ type: "place", position: { row: 0, col: 2 } }
+		];
+		const replay = replayActions(config, actions, 0);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+	});
+
+	it("replays graph multi-step composite-path win", () => {
+		const config = compileToGameConfig(
+			examplePresets["double-move-graph"].config
+		).gameConfig;
+		const actions: KernelAction[] = [
+			{ type: "place", position: { row: 0, col: 0 } },
+			{ type: "place", position: { row: 0, col: 1 } },
+			{ type: "place", position: { row: 2, col: 0 } },
+			{ type: "place", position: { row: 2, col: 2 } },
+			{ type: "place", position: { row: 0, col: 2 } }
+		];
+		const replay = replayActions(config, actions, 0);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
 	});
 });

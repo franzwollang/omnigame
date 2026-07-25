@@ -664,7 +664,7 @@ export const zConfig = z
 			}
 			// Multi-action simultaneous (actionsPerTurn > 1) is allowed on
 			// rectangle | hex_offset | graph — same topologies as single-action
-			// simultaneous. Alternating multi-step stays rectangle-only below.
+			// simultaneous. Alternating multi-step uses the same topologies.
 		} else if (cfg.turn.commitReveal === true) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
@@ -747,19 +747,9 @@ export const zConfig = z
 					message: "actionsPerTurn > 1 is incompatible with fleet placement"
 				});
 			}
-			// Alternating multi-step stays rectangle-only; simultaneous multi-action
-			// already cleared hex/graph above via the simultaneous block.
-			if (
-				(hexBoard || graphBoard) &&
-				cfg.turn.schedule === "alternating"
-			) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["grid", "topology"],
-					message:
-						"actionsPerTurn > 1 under alternating requires topology = 'rectangle' (hex/graph multi-step deferred)"
-				});
-			}
+			// Alternating multi-step and simultaneous multi-action both allow
+			// rectangle | hex_offset | graph (same topologies as single-action
+			// place / simultaneous). Other topology gates stay above.
 			if (delayedPlace) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,

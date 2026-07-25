@@ -76,20 +76,29 @@ function sampleNInARow(rng: SamplerRng, seed: number): ConfigInput {
 		}
 	};
 	// Occasionally compose with simultaneous (optionally ordered / multi-action)
+	// or alternating multi-step.
 	if (rng() > 0.72) {
-		const resolveOrder =
-			rng() > 0.55
-				? ("joint" as const)
-				: rng() > 0.5
-					? ("x_first" as const)
-					: ("o_first" as const);
-		const multiAction = rng() > 0.75;
-		cfg.turn = {
-			mode: "turn",
-			schedule: "simultaneous",
-			...(resolveOrder !== "joint" ? { resolveOrder } : {}),
-			...(multiAction ? { actionsPerTurn: 2 } : {})
-		};
+		if (rng() > 0.45) {
+			const resolveOrder =
+				rng() > 0.55
+					? ("joint" as const)
+					: rng() > 0.5
+						? ("x_first" as const)
+						: ("o_first" as const);
+			const multiAction = rng() > 0.75;
+			cfg.turn = {
+				mode: "turn",
+				schedule: "simultaneous",
+				...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+				...(multiAction ? { actionsPerTurn: 2 } : {})
+			};
+		} else if (rng() > 0.55) {
+			cfg.turn = {
+				mode: "turn",
+				schedule: "alternating",
+				actionsPerTurn: 2
+			};
+		}
 	}
 	return cfg;
 }
@@ -162,20 +171,29 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 		}
 	};
 	// Occasionally compose with simultaneous (optionally ordered / multi-action)
+	// or alternating multi-step on hex.
 	if (rng() > 0.7) {
-		const resolveOrder =
-			rng() > 0.6
-				? ("joint" as const)
-				: rng() > 0.5
-					? ("x_first" as const)
-					: ("o_first" as const);
-		const multiAction = rng() > 0.75;
-		cfg.turn = {
-			mode: "turn",
-			schedule: "simultaneous",
-			...(resolveOrder !== "joint" ? { resolveOrder } : {}),
-			...(multiAction ? { actionsPerTurn: 2 } : {})
-		};
+		if (rng() > 0.45) {
+			const resolveOrder =
+				rng() > 0.6
+					? ("joint" as const)
+					: rng() > 0.5
+						? ("x_first" as const)
+						: ("o_first" as const);
+			const multiAction = rng() > 0.75;
+			cfg.turn = {
+				mode: "turn",
+				schedule: "simultaneous",
+				...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+				...(multiAction ? { actionsPerTurn: 2 } : {})
+			};
+		} else if (rng() > 0.55) {
+			cfg.turn = {
+				mode: "turn",
+				schedule: "alternating",
+				actionsPerTurn: 2
+			};
+		}
 	}
 	return cfg;
 }
@@ -333,20 +351,29 @@ function sampleGraph(rng: SamplerRng, seed: number): ConfigInput {
 		}
 	};
 	// Occasionally compose with simultaneous (active-node joint / multi-action)
+	// or alternating multi-step on graph.
 	if (rng() > 0.7) {
-		const resolveOrder =
-			rng() > 0.6
-				? ("joint" as const)
-				: rng() > 0.5
-					? ("x_first" as const)
-					: ("o_first" as const);
-		const multiAction = rng() > 0.75;
-		cfg.turn = {
-			mode: "turn",
-			schedule: "simultaneous",
-			...(resolveOrder !== "joint" ? { resolveOrder } : {}),
-			...(multiAction ? { actionsPerTurn: 2 } : {})
-		};
+		if (rng() > 0.45) {
+			const resolveOrder =
+				rng() > 0.6
+					? ("joint" as const)
+					: rng() > 0.5
+						? ("x_first" as const)
+						: ("o_first" as const);
+			const multiAction = rng() > 0.75;
+			cfg.turn = {
+				mode: "turn",
+				schedule: "simultaneous",
+				...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+				...(multiAction ? { actionsPerTurn: 2 } : {})
+			};
+		} else if (rng() > 0.55) {
+			cfg.turn = {
+				mode: "turn",
+				schedule: "alternating",
+				actionsPerTurn: 2
+			};
+		}
 	}
 	return cfg;
 }

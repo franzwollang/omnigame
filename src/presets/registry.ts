@@ -546,6 +546,127 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"double-move-hex": definePreset({
+		id: "double-move-hex",
+		name: "Double Move Hex",
+		tags: [
+			"multi-step",
+			"actionsPerTurn",
+			"hex",
+			"topology",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Each player places two stones per turn on odd-r hex before handoff; wins use hex adjacency. Unlocks actionsPerTurn > 1 under alternating on hex_offset.",
+		config: {
+			metadata: { name: "Double Move Hex", version: 1 },
+			grid: { width: 3, height: 3, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			tokens: [
+				{
+					id: "dmhex-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "dmhex-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"double-move-graph": definePreset({
+		id: "double-move-graph",
+		name: "Double Move Graph",
+		tags: [
+			"multi-step",
+			"actionsPerTurn",
+			"graph",
+			"topology",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Each player places two stones per turn on an irregular graph before handoff; wins follow composite edges. Unlocks actionsPerTurn > 1 under alternating on graph.",
+		config: {
+			metadata: { name: "Double Move Graph", version: 1 },
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 0, col: 2, x: 2, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 0, x: 0.25, y: 2 },
+					{ row: 2, col: 2, x: 1.75, y: 2 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,1", "0,2"],
+					["0,1", "1,1"],
+					["1,1", "2,0"],
+					["1,1", "2,2"],
+					["2,0", "2,2"]
+				]
+			},
+			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "composite",
+					horizontal: false,
+					vertical: false,
+					backDiagonal: false,
+					forwardDiagonal: false
+				}
+			},
+			tokens: [
+				{
+					id: "dmgraph-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "dmgraph-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"delayed-ttt": definePreset({
 		id: "delayed-ttt",
 		name: "Delayed TTT",

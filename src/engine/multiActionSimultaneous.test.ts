@@ -33,13 +33,9 @@ describe("schema: multi-action simultaneous (actionsPerTurn > 1)", () => {
 		expect(graph.success).toBe(true);
 	});
 
-	it("still rejects alternating multi-step on hex", () => {
-		const base = examplePresets["hex-connect-lite"].config;
-		const bad = zConfig.safeParse({
-			...base,
-			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 }
-		});
-		expect(bad.success).toBe(false);
+	it("accepts alternating multi-step on hex (shared actionsPerTurn knob)", () => {
+		const ok = zConfig.safeParse(examplePresets["double-move-hex"].config);
+		expect(ok.success).toBe(true);
 	});
 
 	it("wires ScheduleMultiActionSimultaneous on the preset", () => {
