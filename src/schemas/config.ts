@@ -96,7 +96,12 @@ export const zConfig = z
 					.object({
 						enabled: z.boolean().default(false),
 						/** flip = Reversi sandwich; liberties = Go-lite group removal. */
-						mode: z.enum(["flip", "liberties"]).default("flip")
+						mode: z.enum(["flip", "liberties"]).default("flip"),
+						/**
+						 * Simple (point) ko: forbid immediate recapture of a single
+						 * stone just captured. Only meaningful with mode = liberties.
+						 */
+						ko: z.boolean().default(false)
 					})
 					.strict()
 					.optional(),
@@ -236,6 +241,15 @@ export const zConfig = z
 		const captureEnabled = Boolean(cfg.placement.capture?.enabled);
 		const captureMode = cfg.placement.capture?.mode ?? "flip";
 		const libertyCapture = captureEnabled && captureMode === "liberties";
+		const koEnabled = cfg.placement.capture?.ko === true;
+
+		if (koEnabled && !libertyCapture) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "capture", "ko"],
+				message: "capture.ko requires capture.mode = 'liberties'"
+			});
+		}
 
 		// Liberties / area_control (Go-lite) must be paired
 		if (libertyCapture !== areaControl) {

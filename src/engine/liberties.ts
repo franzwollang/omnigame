@@ -1,7 +1,7 @@
 /**
  * Liberty / group-capture helpers (M5 Go-lite foothold).
  * Orthogonal connectivity only — enough for group capture + area scoring.
- * No ko; suicide is illegal after resolving opponent captures.
+ * Optional simple (point) ko; suicide is illegal after resolving opponent captures.
  */
 import type { CellValue, Grid, Player, Position } from "@/engine/types";
 import { getCell, setCell, toIndex } from "@/engine/types";
@@ -92,6 +92,12 @@ function removePositions(grid: Grid, positions: Position[]): CellValue[] {
 	return cells;
 }
 
+export type LibertyCaptureResult = {
+	cells: CellValue[];
+	/** Positions of stones removed this capture. */
+	removed: Position[];
+};
+
 /**
  * After a stone is placed at `placed`, remove any opponent groups with
  * zero liberties. Does not check suicide of the placer's group.
@@ -101,38 +107,61 @@ export function applyLibertyCapture(
 	placed: Position,
 	currentPlayer: Player,
 	wrap: boolean = false
-): CellValue[] {
+): LibertyCaptureResult {
 	const opponent: Player = currentPlayer === "X" ? "O" : "X";
 	let cells = grid.cells;
 	const working: Grid = { ...grid, cells };
-	const removed = new Set<string>();
+	const removedKeys = new Set<string>();
+	const removed: Position[] = [];
 
 	for (const n of orthogonalNeighbors(working, placed, wrap)) {
 		if (getCell(working, n) !== opponent) continue;
 		const k = keyOf(n);
-		if (removed.has(k)) continue;
+		if (removedKeys.has(k)) continue;
 		const group = findGroup({ ...working, cells }, n, wrap);
 		if (group.length === 0) continue;
 		if (countLiberties({ ...working, cells }, group, wrap) === 0) {
 			cells = removePositions({ ...working, cells }, group);
-			for (const p of group) removed.add(keyOf(p));
+			for (const p of group) {
+				const pk = keyOf(p);
+				if (removedKeys.has(pk)) continue;
+				removedKeys.add(pk);
+				removed.push(p);
+			}
 		}
 	}
-	return cells;
+	return { cells, removed };
+}
+
+/** Simple point-ko: when exactly one stone is captured, that intersection is forbidden next. */
+export function koPointFromCapture(removed: Position[]): Position | null {
+	return removed.length === 1 ? removed[0]! : null;
+}
+
+function samePoint(a: Position, b: Position): boolean {
+	return a.row === b.row && a.col === b.col;
 }
 
 /**
- * Legal Go-lite placement: empty cell, and after place + opponent capture
- * the placer's group still has ≥1 liberty (no suicide).
+ * Legal Go-lite placement: empty cell, not the active ko point (when enabled),
+ * and after place + opponent capture the placer's group still has ≥1 liberty.
  */
 export function isLegalLibertyPlace(
 	grid: Grid,
 	pos: Position,
 	player: Player,
-	wrap: boolean = false
+	wrap: boolean = false,
+	opts?: { koEnabled?: boolean; koPoint?: Position | null }
 ): boolean {
 	if (!inBounds(grid, pos)) return false;
 	if (getCell(grid, pos) !== null) return false;
+	if (
+		opts?.koEnabled &&
+		opts.koPoint != null &&
+		samePoint(pos, opts.koPoint)
+	) {
+		return false;
+	}
 
 	const placedCells = setCell(grid, pos, player);
 	const afterCapture = applyLibertyCapture(
@@ -141,7 +170,7 @@ export function isLegalLibertyPlace(
 		player,
 		wrap
 	);
-	const afterGrid: Grid = { ...grid, cells: afterCapture };
+	const afterGrid: Grid = { ...grid, cells: afterCapture.cells };
 	const ownGroup = findGroup(afterGrid, pos, wrap);
 	return countLiberties(afterGrid, ownGroup, wrap) > 0;
 }

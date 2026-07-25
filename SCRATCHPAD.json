@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T07:25-05:00",
-  "turn": 24,
+  "updated_at": "2026-07-25T07:45-05:00",
+  "turn": 25,
   "focus": {
     "milestone": "post-M7",
     "issue": "next-missing-mechanism",
-    "goal": "Pick next unlock: ko, simultaneous, delayed, hex-wrap, or pop_out"
+    "goal": "Pick next unlock: superko, simultaneous, delayed, hex-wrap, or pop_out"
   },
   "recent": [
-    "Synced 36bb onto b3e1",
-    "Landed gravity-row (left/right) + Connect 4 (Right) + tests",
-    "Closed gravity-row slice of next-missing-mechanism"
+    "Synced b3e1 onto 4dc4",
+    "Landed simple (point) ko + Go Lite ko + tests",
+    "Closed ko slice of next-missing-mechanism"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "Gravity-row: column↔down|up, row↔left|right; entry-side + settle invert"
+    "Point ko: capture.ko + koPoint; single-stone capture sets; pass keeps"
   ],
   "open_threads": [
-    "Next: ko / simultaneous / delayed / hex-wrap / pop_out_top"
+    "Next: superko / simultaneous / delayed / hex-wrap / pop_out_top"
   ],
   "next_step": "Choose next missing mechanism; implement schema+kernel+preset+tests",
   "blockers": []

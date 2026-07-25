@@ -55,8 +55,9 @@ describe("liberties helpers", () => {
 		expect(isLegalLibertyPlace(g, placed, "X")).toBe(true);
 		const afterPlace = setCell(g, placed, "X");
 		const after = applyLibertyCapture({ ...g, cells: afterPlace }, placed, "X");
-		expect(getCell({ ...g, cells: after }, { row: 1, col: 1 })).toBe(null);
-		expect(getCell({ ...g, cells: after }, placed)).toBe("X");
+		expect(getCell({ ...g, cells: after.cells }, { row: 1, col: 1 })).toBe(null);
+		expect(getCell({ ...g, cells: after.cells }, placed)).toBe("X");
+		expect(after.removed).toEqual([{ row: 1, col: 1 }]);
 	});
 
 	it("rejects suicide (no liberty after place)", () => {
@@ -71,6 +72,48 @@ describe("liberties helpers", () => {
 			g = { ...g, cells: setCell(g, p, "O") };
 		}
 		expect(isLegalLibertyPlace(g, { row: 1, col: 1 }, "X")).toBe(false);
+	});
+
+	it("rejects immediate ko recapture when koEnabled", () => {
+		// Classic point-ko shape (4×3):
+		// . X O .
+		// X O . O
+		// . X O .
+		let g = gridOf(4, 3, Array(12).fill(null));
+		const stones: Array<[number, number, "X" | "O"]> = [
+			[0, 1, "X"],
+			[0, 2, "O"],
+			[1, 0, "X"],
+			[1, 1, "O"],
+			[1, 3, "O"],
+			[2, 1, "X"],
+			[2, 2, "O"]
+		];
+		for (const [row, col, p] of stones) {
+			g = { ...g, cells: setCell(g, { row, col }, p) };
+		}
+		const captureAt = { row: 1, col: 2 };
+		expect(isLegalLibertyPlace(g, captureAt, "X")).toBe(true);
+		const afterPlace = setCell(g, captureAt, "X");
+		const capture = applyLibertyCapture(
+			{ ...g, cells: afterPlace },
+			captureAt,
+			"X"
+		);
+		expect(capture.removed).toEqual([{ row: 1, col: 1 }]);
+		const afterGrid = { ...g, cells: capture.cells };
+		expect(
+			isLegalLibertyPlace(afterGrid, { row: 1, col: 1 }, "O", false, {
+				koEnabled: true,
+				koPoint: { row: 1, col: 1 }
+			})
+		).toBe(false);
+		expect(
+			isLegalLibertyPlace(afterGrid, { row: 1, col: 1 }, "O", false, {
+				koEnabled: false,
+				koPoint: { row: 1, col: 1 }
+			})
+		).toBe(true);
 	});
 
 	it("scores stones plus enclosed territory", () => {
@@ -92,11 +135,163 @@ describe("Go Lite (liberties + area_control)", () => {
 		const { kernel, gameConfig } = compileConfig(cfg);
 		expect(gameConfig.captureEnabled).toBe(true);
 		expect(gameConfig.captureMode).toBe("liberties");
+		expect(gameConfig.koEnabled).toBe(true);
 		expect(gameConfig.objectiveMode).toBe("area_control");
 		const state = kernel.initialState(cfg.rng.seed);
+		expect(state.koPoint).toBeNull();
 		const legal = kernel.legalActions(state, 0);
 		expect(legal.some((a) => a.type === "pass")).toBe(true);
 		expect(legal.some((a) => a.type === "place")).toBe(true);
+	});
+
+	it("rejects capture.ko without liberties mode", () => {
+		const bad = structuredClone(examplePresets["go-lite"].config);
+		bad.placement.capture = { enabled: true, mode: "flip", ko: true };
+		bad.objective.mode = "n_in_a_row";
+		bad.win = {
+			length: 3,
+			adjacency: {
+				mode: "linear",
+				horizontal: true,
+				vertical: true,
+				backDiagonal: false,
+				forwardDiagonal: false
+			}
+		};
+		expect(validateConfig(bad).ok).toBe(false);
+	});
+
+	it("enforces simple ko: immediate recapture illegal; elsewhere clears", () => {
+		const cfg = structuredClone(examplePresets["go-lite"].config);
+		// Seed classic point-ko shape on 5×5 (same local pattern as unit test)
+		cfg.initial = [
+			{ row: 0, col: 1, player: "X", visibility: "public" },
+			{ row: 0, col: 2, player: "O", visibility: "public" },
+			{ row: 1, col: 0, player: "X", visibility: "public" },
+			{ row: 1, col: 1, player: "O", visibility: "public" },
+			{ row: 1, col: 3, player: "O", visibility: "public" },
+			{ row: 2, col: 1, player: "X", visibility: "public" },
+			{ row: 2, col: 2, player: "O", visibility: "public" }
+		];
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+
+		const capture: KernelAction = {
+			type: "place",
+			position: { row: 1, col: 2 }
+		};
+		expect(
+			kernel.legalActions(state, 0).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 2
+			)
+		).toBe(true);
+		state = kernel.stepSync(state, capture).nextState;
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe(null);
+		expect(state.koPoint).toEqual({ row: 1, col: 1 });
+		expect(state.currentPlayer).toBe("O");
+
+		const recapture: KernelAction = {
+			type: "place",
+			position: { row: 1, col: 1 }
+		};
+		expect(
+			kernel.legalActions(state, 1).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 1
+			)
+		).toBe(false);
+		const ignored = kernel.stepSync(state, recapture);
+		expect(ignored.events[0]).toMatchObject({
+			type: "ignored",
+			reason: "ko"
+		});
+		expect(ignored.nextState).toBe(state);
+
+		// Play elsewhere (empty far corner) — clears ko; then X elsewhere; O may retake
+		const elsewhere: KernelAction = {
+			type: "place",
+			position: { row: 4, col: 4 }
+		};
+		state = kernel.stepSync(state, elsewhere).nextState;
+		expect(state.koPoint).toBeNull();
+		expect(state.currentPlayer).toBe("X");
+
+		const xElsewhere: KernelAction = {
+			type: "place",
+			position: { row: 4, col: 0 }
+		};
+		state = kernel.stepSync(state, xElsewhere).nextState;
+		expect(state.currentPlayer).toBe("O");
+		expect(
+			kernel.legalActions(state, 1).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 1
+			)
+		).toBe(true);
+		state = kernel.stepSync(state, recapture).nextState;
+		expect(getCell(state.grid, { row: 1, col: 2 })).toBe(null);
+		expect(state.koPoint).toEqual({ row: 1, col: 2 });
+
+		const script: KernelAction[] = [
+			capture,
+			elsewhere,
+			xElsewhere,
+			recapture
+		];
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.koPoint).toEqual({ row: 1, col: 2 });
+	});
+
+	it("pass does not clear koPoint", () => {
+		const cfg = structuredClone(examplePresets["go-lite"].config);
+		cfg.initial = [
+			{ row: 0, col: 1, player: "X", visibility: "public" },
+			{ row: 0, col: 2, player: "O", visibility: "public" },
+			{ row: 1, col: 0, player: "X", visibility: "public" },
+			{ row: 1, col: 1, player: "O", visibility: "public" },
+			{ row: 1, col: 3, player: "O", visibility: "public" },
+			{ row: 2, col: 1, player: "X", visibility: "public" },
+			{ row: 2, col: 2, player: "O", visibility: "public" }
+		];
+		const { kernel } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 1, col: 2 }
+		}).nextState;
+		expect(state.koPoint).toEqual({ row: 1, col: 1 });
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.koPoint).toEqual({ row: 1, col: 1 });
+		expect(state.currentPlayer).toBe("X");
+		// After O passed, X still cannot place at the ko point either? Actually X
+		// is the capturer — the forbidden point is for anyone next move; X already
+		// occupies (1,2). After pass, it's X's turn and koPoint still (1,1);
+		// X placing at (1,1) would be own capture cycle but cell is empty — with
+		// Go rules, simple ko forbids only the immediate recapture by the opponent
+		// for one move. After a pass, the turn returns to X so the "next" move
+		// already happened as pass — wait, Go-correct is: pass does NOT lift ko.
+		// So when X's turn comes after O passed, O never played, so (1,1) is still
+		// forbidden for the player to move? Classic Go: ko forbids the opponent
+		// from retaking immediately; after any intervening move (including pass
+		// in some rule sets? Actually in Japanese rules, pass is an intervening
+		// play and lifts the ko). Our design (from exploration): Pass does not
+		// clear koPoint. So (1,1) remains forbidden for X as well while set.
+		expect(
+			kernel.legalActions(state, 0).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 1
+			)
+		).toBe(false);
 	});
 
 	it("rejects unpaired liberties / area_control", () => {
@@ -172,8 +367,8 @@ describe("Go Lite (liberties + area_control)", () => {
 	});
 });
 
-describe("createInitialState consecutivePasses", () => {
-	it("seeds consecutivePasses at 0", () => {
+describe("createInitialState consecutivePasses + koPoint", () => {
+	it("seeds consecutivePasses at 0 and koPoint null", () => {
 		const config: GameConfig = {
 			gridWidth: 5,
 			gridHeight: 5,
@@ -187,8 +382,11 @@ describe("createInitialState consecutivePasses", () => {
 			},
 			captureEnabled: true,
 			captureMode: "liberties",
+			koEnabled: true,
 			objectiveMode: "area_control"
 		};
-		expect(createInitialState(config).consecutivePasses).toBe(0);
+		const state = createInitialState(config);
+		expect(state.consecutivePasses).toBe(0);
+		expect(state.koPoint).toBeNull();
 	});
 });

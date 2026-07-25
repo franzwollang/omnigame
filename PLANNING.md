@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Gravity `left|right` + row input landed
-(Connect 4 Right). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Simple (point) ko landed on liberties games
+(Go Lite). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -74,11 +74,12 @@ Working sandbox slice (see README “Current implementation status”):
 - Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
 - **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle); Toroidal TTT preset
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
+- **Simple (point) ko:** `placement.capture.ko` + `GameState.koPoint`; illegal reason `"ko"`
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: ko/full Go rules, hex/graph wrap, simultaneous/delayed actions,
+Not yet: superko/full Go rules, hex/graph wrap, simultaneous/delayed actions,
 `pop_out_top` / horizontal pop-out.
 
 ## Milestone exit criteria
@@ -130,7 +131,7 @@ tests. Fleet placement phase (`fleet.ships` + Battleship Place) landed post-M7.
 - Each port has transcript/simulation tests for the mechanism it claims to prove.
 
 **Done:** Step Race (Move), Life Lite (tick), Hex Connect Lite
-(`hex_offset`), Go Lite (liberties + area_control), Graph Connect Lite
+(`hex_offset`), Go Lite (liberties + area_control + simple ko), Graph Connect Lite
 (`graph`). Planned M5 mechanism slots covered; optional later anchors still
 allowed by selection principle.
 

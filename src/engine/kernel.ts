@@ -52,6 +52,7 @@ export type IllegalReason =
 	| "cell_occupied"
 	| "must_flip"
 	| "suicide"
+	| "ko"
 	| "own_ship"
 	| "column_full"
 	| "row_full"
@@ -294,7 +295,10 @@ function canPlaceCell(
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
-		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap);
+		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
+			koEnabled: config.koEnabled === true,
+			koPoint: state.koPoint
+		});
 	}
 	const placedCells = setCell(state.grid, pos, state.currentPlayer);
 	const after = applyCaptureIfAny(
@@ -459,7 +463,18 @@ function placeFailureReason(
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
-		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap)
+		if (
+			config.koEnabled === true &&
+			state.koPoint != null &&
+			state.koPoint.row === pos.row &&
+			state.koPoint.col === pos.col
+		) {
+			return "ko";
+		}
+		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
+			koEnabled: config.koEnabled === true,
+			koPoint: state.koPoint
+		})
 			? null
 			: "suicide";
 	}
@@ -486,6 +501,8 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 			return "Placement must flip at least one opponent disc";
 		case "suicide":
 			return "Placement would leave a group with no liberties";
+		case "ko":
+			return "Immediate recapture of the last captured stone is forbidden";
 		case "own_ship":
 			return "Cannot fire on your own ship";
 		case "column_full":

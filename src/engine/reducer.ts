@@ -14,7 +14,8 @@ import { applyCaptureIfAny } from "@/engine/capture";
 import {
 	applyLibertyCapture,
 	areaOutcome,
-	isLegalLibertyPlace
+	isLegalLibertyPlace,
+	koPointFromCapture
 } from "@/engine/liberties";
 import { fleetDestroyed } from "@/engine/observation";
 import {
@@ -64,6 +65,8 @@ export type GameConfig = {
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
 	captureMode?: "flip" | "liberties";
+	/** Simple point-ko when captureMode = liberties. */
+	koEnabled?: boolean;
 	observationMode?: "full" | "hit_miss" | "fog";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
 	fogRadius?: number;
@@ -114,6 +117,7 @@ export function createInitialState(config: GameConfig): GameState {
 		winner: null,
 		moveCount: 0,
 		consecutivePasses: 0,
+		koPoint: null,
 		phase: placement ? "placement" : "combat",
 		fleetProgress: placement ? initialFleetProgressMap() : undefined
 	};
@@ -444,9 +448,14 @@ function handlePlace(
 
 	const wrap = config.gridWrap === true;
 
-	// Go-lite: empty + no suicide after opponent group capture
+	// Go-lite: empty + no suicide after opponent group capture (+ optional ko)
 	if (libertyMode) {
-		if (!isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap)) {
+		if (
+			!isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
+				koEnabled: config.koEnabled === true,
+				koPoint: state.koPoint
+			})
+		) {
 			return state;
 		}
 	} else if (config.captureEnabled) {
@@ -466,13 +475,19 @@ function handlePlace(
 
 	// Effect: place current player's mark
 	let newCells = setCell(state.grid, pos, state.currentPlayer);
+	let nextKoPoint: Position | null = null;
 	if (libertyMode) {
-		newCells = applyLibertyCapture(
+		const capture = applyLibertyCapture(
 			{ ...state.grid, cells: newCells },
 			pos,
 			state.currentPlayer,
 			wrap
 		);
+		newCells = capture.cells;
+		nextKoPoint =
+			config.koEnabled === true
+				? koPointFromCapture(capture.removed)
+				: null;
 	} else if (config.captureEnabled) {
 		newCells = applyCaptureIfAny(
 			{ ...state.grid, cells: newCells },
@@ -490,7 +505,8 @@ function handlePlace(
 		return {
 			...state,
 			grid: newGrid,
-			moveCount: newMoveCount
+			moveCount: newMoveCount,
+			koPoint: nextKoPoint
 		};
 	}
 
@@ -502,7 +518,8 @@ function handlePlace(
 			grid: newGrid,
 			currentPlayer: nextPlayer,
 			moveCount: newMoveCount,
-			consecutivePasses: 0
+			consecutivePasses: 0,
+			koPoint: nextKoPoint
 		};
 	}
 
@@ -522,7 +539,8 @@ function handlePlace(
 			grid: newGrid,
 			status: "won",
 			winner: state.currentPlayer,
-			moveCount: newMoveCount
+			moveCount: newMoveCount,
+			koPoint: nextKoPoint
 		};
 	}
 
@@ -533,7 +551,8 @@ function handlePlace(
 			...state,
 			grid: newGrid,
 			status: "draw",
-			moveCount: newMoveCount
+			moveCount: newMoveCount,
+			koPoint: nextKoPoint
 		};
 	}
 
@@ -544,7 +563,8 @@ function handlePlace(
 		...state,
 		grid: newGrid,
 		currentPlayer: nextPlayer,
-		moveCount: newMoveCount
+		moveCount: newMoveCount,
+		koPoint: nextKoPoint
 	};
 }
 

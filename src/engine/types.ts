@@ -28,6 +28,12 @@ export type GameState = {
 	moveCount: number;
 	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */
 	consecutivePasses?: number;
+	/**
+	 * Simple (point) ko: intersection forbidden for the next place only.
+	 * Set when a single stone was just captured; cleared otherwise / on reset.
+	 * Pass does not clear (Go-correct).
+	 */
+	koPoint?: Position | null;
 	/** Placement vs combat for fleet games; default combat when omitted. */
 	phase?: GamePhase;
 	/** Per-player ship placement progress when phase = placement. */

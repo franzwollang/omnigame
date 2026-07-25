@@ -168,7 +168,11 @@ export const Contracts = {
 		provides: [],
 		slots: [],
 		hooks: ["applyEffects"],
-		invariants: ["removesZeroLibertyOpponentGroups", "noSuicide"]
+		invariants: [
+			"removesZeroLibertyOpponentGroups",
+			"noSuicide",
+			"noImmediateKoRecapture"
+		]
 	}),
 	// Placeholder adapter: project gravity line selection to a resolved cell before capture
 	GravityToCellAdapter: (): FeatureContract => ({

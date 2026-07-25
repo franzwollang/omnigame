@@ -654,9 +654,9 @@ export const examplePresets: Record<string, ExamplePreset> = {
 	"go-lite": definePreset({
 		id: "go-lite",
 		name: "Go Lite",
-		tags: ["liberties", "territory", "area-control", "mechanism"],
+		tags: ["liberties", "territory", "area-control", "ko", "mechanism"],
 		description:
-			"Orthogonal group capture by liberties + pass-to-score area control. Unlocks liberties/territory — not full Go (no ko, simplified scoring).",
+			"Orthogonal group capture by liberties + simple (point) ko + pass-to-score area control. Unlocks liberties/territory/ko — not full Go (no superko; simplified scoring).",
 		config: {
 			metadata: { name: "Go Lite", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -665,7 +665,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			input: { mode: "cell" },
 			placement: {
 				mode: "direct",
-				capture: { enabled: true, mode: "liberties" },
+				capture: { enabled: true, mode: "liberties", ko: true },
 				overflow: "reject"
 			},
 			observation: { mode: "full" },
