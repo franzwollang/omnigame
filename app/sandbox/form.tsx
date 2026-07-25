@@ -326,12 +326,16 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="reach_row">
 															reach_row
 														</SelectItem>
+														<SelectItem value="area_control">
+															area_control
+														</SelectItem>
 														<SelectItem value="none">none</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												destroy_hidden↔hit_miss; reach_row↔move; none↔tick.
+												destroy_hidden↔hit_miss; reach_row↔move;
+												area_control↔liberties; none↔tick.
 											</p>
 											<FormMessage />
 										</FormItem>

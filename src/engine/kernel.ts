@@ -13,6 +13,7 @@ import {
 	type GameConfig
 } from "@/engine/reducer";
 import { applyCaptureIfAny } from "@/engine/capture";
+import { isLegalLibertyPlace } from "@/engine/liberties";
 import { setCell } from "@/engine/types";
 import {
 	observe,
@@ -32,7 +33,8 @@ export type KernelAction =
 	| { type: "fire"; position: Position }
 	| { type: "activateColumn"; col: number }
 	| { type: "popOutColumn"; col: number }
-	| { type: "tick" };
+	| { type: "tick" }
+	| { type: "pass" };
 
 export type KernelEvent =
 	| { type: "actionApplied"; action: KernelAction; player: Player }
@@ -97,6 +99,8 @@ function formatAction(action: KernelAction): string {
 			return `pop-out ${action.col}`;
 		case "tick":
 			return "tick";
+		case "pass":
+			return "pass";
 	}
 }
 
@@ -209,6 +213,10 @@ function canPlaceCell(
 ): boolean {
 	if (getCell(state.grid, pos) !== null) return false;
 	if (!config.captureEnabled) return true;
+	const captureMode = config.captureMode ?? "flip";
+	if (captureMode === "liberties") {
+		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer);
+	}
 	const placedCells = setCell(state.grid, pos, state.currentPlayer);
 	const after = applyCaptureIfAny(
 		{ ...state.grid, cells: placedCells },
@@ -302,6 +310,10 @@ function collectLegalActions(
 				}
 			}
 		}
+	}
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "area_control") {
+		actions.push({ type: "pass" });
 	}
 
 	if (overflow === "pop_out_bottom") {

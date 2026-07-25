@@ -380,6 +380,43 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
+	}),
+	"go-lite": definePreset({
+		id: "go-lite",
+		name: "Go Lite",
+		tags: ["liberties", "territory", "area-control", "mechanism"],
+		description:
+			"Orthogonal group capture by liberties + pass-to-score area control. Unlocks liberties/territory — not full Go (no ko, simplified scoring).",
+		config: {
+			metadata: { name: "Go Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties" },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control" },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
 	})
 };
 

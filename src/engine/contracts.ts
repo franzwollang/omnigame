@@ -11,7 +11,7 @@ export type Slot =
 	| { type: "PlacementPolicy"; value: "direct" | "gravity" | "move" }
 	| {
 			type: "EndCondition";
-			value: "nInARow" | "destroyHidden" | "reachRow" | "none";
+			value: "nInARow" | "destroyHidden" | "reachRow" | "areaControl" | "none";
 	  }
 	| { type: "Schedule"; value: "alternating" | "manualTick" };
 
@@ -154,6 +154,14 @@ export const Contracts = {
 		hooks: ["applyEffects"],
 		invariants: ["flipsOnlyOpponent"]
 	}),
+	LibertyCapture: (): FeatureContract => ({
+		id: "LibertyCapture",
+		requires: ["ResolvedCell", "CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: ["removesZeroLibertyOpponentGroups", "noSuicide"]
+	}),
 	// Placeholder adapter: project gravity line selection to a resolved cell before capture
 	GravityToCellAdapter: (): FeatureContract => ({
 		id: "GravityToCellAdapter",
@@ -202,6 +210,14 @@ export const Contracts = {
 		slots: [{ type: "EndCondition", value: "reachRow" }],
 		hooks: ["checkEnd"],
 		invariants: ["winsOnTargetRow"]
+	}),
+	AreaControl: (): FeatureContract => ({
+		id: "AreaControl",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "areaControl" }],
+		hooks: ["checkEnd"],
+		invariants: ["twoPassesEndGame", "scoreStonesPlusTerritory"]
 	}),
 	OpenEnded: (): FeatureContract => ({
 		id: "OpenEnded",

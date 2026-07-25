@@ -11,6 +11,11 @@ import type {
 import { getCell, setCell, toIndex } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
+import {
+	applyLibertyCapture,
+	areaOutcome,
+	isLegalLibertyPlace
+} from "@/engine/liberties";
 import { fleetDestroyed } from "@/engine/observation";
 import { canMove, type MovementConfig } from "@/engine/movement";
 import {
@@ -40,8 +45,15 @@ export type GameConfig = {
 	/** Bottom pop-out (Connect 4 Pop Out). `pop_out_top` deferred. */
 	overflow?: "reject" | "pop_out_bottom";
 	captureEnabled?: boolean;
+	/** flip = Reversi; liberties = Go-lite group removal. */
+	captureMode?: "flip" | "liberties";
 	observationMode?: "full" | "hit_miss";
-	objectiveMode?: "n_in_a_row" | "destroy_hidden" | "reach_row" | "none";
+	objectiveMode?:
+		| "n_in_a_row"
+		| "destroy_hidden"
+		| "reach_row"
+		| "area_control"
+		| "none";
 	/** Classic alternating turns vs discrete global tick (Life Lite). */
 	turnSchedule?: "alternating" | "manual_tick";
 	scheduler?: SchedulerConfig;
@@ -66,7 +78,8 @@ export function createInitialState(config: GameConfig): GameState {
 		currentPlayer: "X",
 		status: "playing",
 		winner: null,
-		moveCount: 0
+		moveCount: 0,
+		consecutivePasses: 0
 	};
 
 	const seeds = config.initial ?? [];
@@ -135,11 +148,40 @@ export function reduce(
 			return handlePopOutColumn(state, event.col, config);
 		case "tick":
 			return handleTick(state, config);
+		case "pass":
+			return handlePass(state, config);
 		case "reset":
 			return createInitialState(config);
 		default:
 			return state;
 	}
+}
+
+function handlePass(state: GameState, config: GameConfig): GameState {
+	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
+	if (state.status !== "playing") return state;
+
+	const passes = (state.consecutivePasses ?? 0) + 1;
+	const newMoveCount = state.moveCount + 1;
+
+	if (passes >= 2) {
+		const { status, winner } = areaOutcome(state.grid);
+		return {
+			...state,
+			status,
+			winner,
+			moveCount: newMoveCount,
+			consecutivePasses: passes
+		};
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...state,
+		currentPlayer: nextPlayer,
+		moveCount: newMoveCount,
+		consecutivePasses: passes
+	};
 }
 
 function handleTick(state: GameState, config: GameConfig): GameState {
@@ -276,9 +318,18 @@ function handlePlace(
 
 	// Guard: cell must be empty
 	if (getCell(state.grid, pos) !== null) return state;
-	// Guard: if capture required (Reversi style), ensure move captures at least one line
-	if (config.captureEnabled) {
-		// simulate capture
+
+	const captureMode = config.captureMode ?? "flip";
+	const libertyMode =
+		Boolean(config.captureEnabled) && captureMode === "liberties";
+
+	// Go-lite: empty + no suicide after opponent group capture
+	if (libertyMode) {
+		if (!isLegalLibertyPlace(state.grid, pos, state.currentPlayer)) {
+			return state;
+		}
+	} else if (config.captureEnabled) {
+		// Reversi: must flip at least one line
 		const placedCells = setCell(state.grid, pos, state.currentPlayer);
 		const after = applyCaptureIfAny(
 			{ ...state.grid, cells: placedCells },
@@ -287,15 +338,19 @@ function handlePlace(
 			config.adjacency
 		);
 		if (after === placedCells) {
-			// no capture occurred; invalid
 			return state;
 		}
 	}
 
 	// Effect: place current player's mark
 	let newCells = setCell(state.grid, pos, state.currentPlayer);
-	// Optional capture (Reversi-style)
-	if (config.captureEnabled) {
+	if (libertyMode) {
+		newCells = applyLibertyCapture(
+			{ ...state.grid, cells: newCells },
+			pos,
+			state.currentPlayer
+		);
+	} else if (config.captureEnabled) {
 		newCells = applyCaptureIfAny(
 			{ ...state.grid, cells: newCells },
 			pos,
@@ -312,6 +367,18 @@ function handlePlace(
 			...state,
 			grid: newGrid,
 			moveCount: newMoveCount
+		};
+	}
+
+	// Area control (Go-lite): play continues until two passes; no mid-game n-in-a-row
+	if ((config.objectiveMode ?? "n_in_a_row") === "area_control") {
+		const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+		return {
+			...state,
+			grid: newGrid,
+			currentPlayer: nextPlayer,
+			moveCount: newMoveCount,
+			consecutivePasses: 0
 		};
 	}
 

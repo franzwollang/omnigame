@@ -79,6 +79,22 @@ describe("buildFeatureContracts", () => {
 		expect(capture.map((c) => c.id)).toEqual(
 			expect.arrayContaining(["Capture", "PlacementDirect", "InputTargetCell"])
 		);
+
+		const go = buildFeatureContracts(examplePresets["go-lite"].config);
+		expect(go.map((c) => c.id).sort()).toEqual(
+			[
+				"AreaControl",
+				"BoardWritable",
+				"InputTargetCell",
+				"LibertyCapture",
+				"OverflowReject",
+				"PlacementDirect"
+			].sort()
+		);
+		expect(go.map((c) => c.id)).not.toContain("Capture");
+		expect(go.map((c) => c.id)).not.toContain("NInARow");
+		expect(go.map((c) => c.id)).not.toContain("AdjacencyProvided");
+		expect(checkContracts(go)).toEqual([]);
 	});
 
 	it("satisfies capability graph for every example preset", () => {

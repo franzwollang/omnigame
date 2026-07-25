@@ -20,7 +20,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 
 	const needsAdjacency =
 		cfg.objective.mode === "n_in_a_row" ||
-		Boolean(cfg.placement.capture?.enabled);
+		(Boolean(cfg.placement.capture?.enabled) &&
+			(cfg.placement.capture?.mode ?? "flip") === "flip");
 	if (needsAdjacency) features.push(Contracts.AdjacencyProvided());
 	if (cfg.grid.topology === "hex_offset") {
 		features.push(Contracts.TopologyHex());
@@ -54,7 +55,13 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	}
 
 	// Capture
-	if (cfg.placement.capture?.enabled) features.push(Contracts.Capture());
+	if (cfg.placement.capture?.enabled) {
+		if ((cfg.placement.capture.mode ?? "flip") === "liberties") {
+			features.push(Contracts.LibertyCapture());
+		} else {
+			features.push(Contracts.Capture());
+		}
+	}
 
 	// Observation + objective
 	if (cfg.observation.mode === "hit_miss") {
@@ -64,6 +71,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.DestroyHidden());
 	} else if (cfg.objective.mode === "reach_row") {
 		features.push(Contracts.ReachRow());
+	} else if (cfg.objective.mode === "area_control") {
+		features.push(Contracts.AreaControl());
 	} else if (cfg.objective.mode === "none") {
 		features.push(Contracts.OpenEnded());
 	} else {

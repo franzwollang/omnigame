@@ -79,12 +79,14 @@ export default function GamePage() {
 		activateColumn,
 		popOutColumn,
 		tick,
+		pass,
 		reset,
 		replayFromTranscript
 	} = useGameEngine(engineConfig, playSeed);
 	const enablePopOut =
 		currentConfig?.placement.overflow === "pop_out_bottom";
 	const enableTick = currentConfig?.turn.schedule === "manual_tick";
+	const enablePass = currentConfig?.objective.mode === "area_control";
 	const recentEventLines = useMemo(
 		() => eventLog.slice(-8).map(formatKernelEvent),
 		[eventLog]
@@ -273,6 +275,18 @@ export default function GamePage() {
 									Tick
 								</Button>
 							)}
+							{enablePass && (
+								<Button
+									variant="outline"
+									size="sm"
+									className="h-7 px-2 text-xs"
+									disabled={gameState.status !== "playing"}
+									onClick={() => pass()}
+									title="Pass turn (two consecutive passes end Go Lite)"
+								>
+									Pass
+								</Button>
+							)}
 						</div>
 					</div>
 					{recentEventLines.length === 0 ? (
@@ -289,6 +303,11 @@ export default function GamePage() {
 					{enableTick && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Life Lite: place cells, then Tick for B3/S23 step
+						</p>
+					)}
+					{enablePass && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							Go Lite: place stones (liberties capture); Pass twice to score
 						</p>
 					)}
 					{currentConfig?.input.mode === "move" && (

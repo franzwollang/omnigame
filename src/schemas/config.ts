@@ -60,7 +60,14 @@ export const zConfig = z
 						wrap: z.literal(false).default(false)
 					})
 					.optional(),
-				capture: z.object({ enabled: z.boolean().default(false) }).optional(),
+				capture: z
+					.object({
+						enabled: z.boolean().default(false),
+						/** flip = Reversi sandwich; liberties = Go-lite group removal. */
+						mode: z.enum(["flip", "liberties"]).default("flip")
+					})
+					.strict()
+					.optional(),
 				// pop_out_top deferred to M1+
 				overflow: z.enum(["reject", "pop_out_bottom"]).default("reject")
 			})
@@ -75,7 +82,13 @@ export const zConfig = z
 		objective: z
 			.object({
 				mode: z
-					.enum(["n_in_a_row", "destroy_hidden", "reach_row", "none"])
+					.enum([
+						"n_in_a_row",
+						"destroy_hidden",
+						"reach_row",
+						"area_control",
+						"none"
+					])
 					.default("n_in_a_row"),
 				/** Target home rows for reach_row (e.g. X→0, O→height-1). */
 				targetRows: z
@@ -88,7 +101,7 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row; unused for destroy_hidden / reach_row / none
+		// Required for n_in_a_row; unused for destroy_hidden / reach_row / area_control / none
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -155,9 +168,69 @@ export const zConfig = z
 		const hitMiss = cfg.observation.mode === "hit_miss";
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
 		const reachRow = cfg.objective.mode === "reach_row";
+		const areaControl = cfg.objective.mode === "area_control";
 		const moveInput = cfg.input.mode === "move";
 		const manualTick = cfg.turn.schedule === "manual_tick";
 		const hexBoard = cfg.grid.topology === "hex_offset";
+		const captureEnabled = Boolean(cfg.placement.capture?.enabled);
+		const captureMode = cfg.placement.capture?.mode ?? "flip";
+		const libertyCapture = captureEnabled && captureMode === "liberties";
+
+		// Liberties / area_control (Go-lite) must be paired
+		if (libertyCapture !== areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: libertyCapture
+					? ["objective", "mode"]
+					: ["placement", "capture", "mode"],
+				message:
+					"capture.mode 'liberties' and objective.mode 'area_control' must be used together"
+			});
+		}
+		if (areaControl) {
+			if (!captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "capture"],
+					message: "area_control requires placement.capture.enabled"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "area_control requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message: "area_control requires direct placement (no gravity)"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "area_control is incompatible with hit_miss observation"
+				});
+			}
+			if (manualTick) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "area_control is incompatible with manual_tick"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "area_control is incompatible with move input"
+				});
+			}
+		}
 
 		// Hex foothold: direct cell placement + n-in-a-row only (no gravity/column/move/tick/capture)
 		if (hexBoard) {
@@ -175,7 +248,7 @@ export const zConfig = z
 					message: "hex_offset requires input.mode = 'cell'"
 				});
 			}
-			if (gravityImplied || cfg.placement.capture?.enabled) {
+			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],
@@ -229,7 +302,7 @@ export const zConfig = z
 					message: "manual_tick requires input.mode = 'cell'"
 				});
 			}
-			if (gravityImplied || cfg.placement.capture?.enabled) {
+			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],
@@ -286,7 +359,7 @@ export const zConfig = z
 					message: "input.mode = 'move' requires a movement block"
 				});
 			}
-			if (gravityImplied || cfg.placement.capture?.enabled) {
+			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],
@@ -365,7 +438,7 @@ export const zConfig = z
 					message: "hit_miss observation requires input.mode = 'cell'"
 				});
 			}
-			if (gravityImplied || cfg.placement.capture?.enabled) {
+			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],

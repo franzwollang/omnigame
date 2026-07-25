@@ -23,6 +23,8 @@ export type GameState = {
 	status: GameStatus;
 	winner: Player | null;
 	moveCount: number;
+	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */
+	consecutivePasses?: number;
 };
 
 export type PlaceMoveEvent = {
@@ -55,6 +57,10 @@ export type TickEvent = {
 	type: "tick";
 };
 
+export type PassEvent = {
+	type: "pass";
+};
+
 export type ResetEvent = {
 	type: "reset";
 };
@@ -66,6 +72,7 @@ export type GameEvent =
 	| ActivateColumnEvent
 	| PopOutColumnEvent
 	| TickEvent
+	| PassEvent
 	| ResetEvent;
 
 // Helper to convert row/col to flat index
