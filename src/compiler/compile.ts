@@ -3,9 +3,11 @@
  */
 import { zConfig, type Config } from "@/schemas/config";
 import {
+	buildFeatureContracts,
 	validateConfig,
 	type ValidationResult
 } from "@/engine/validateConfig";
+import { checkContracts } from "@/engine/contracts";
 import {
 	createGameKernel,
 	type GameKernel
@@ -43,6 +45,7 @@ export type CompileResult = CompileSuccess | CompileFailure;
 
 /**
  * Full pipeline from unknown JSON/spec → validated, normalized GameKernel.
+ * Order: Zod+contracts on input → expand macros → re-check contracts → kernel.
  */
 export function compile(input: unknown): CompileResult {
 	const structural: ValidationResult = validateConfig(input);
@@ -62,6 +65,12 @@ export function compile(input: unknown): CompileResult {
 	if (!normalized) {
 		return { ok: false, errors: ["normalize produced no config"] };
 	}
+
+	const postMacroErrors = checkContracts(buildFeatureContracts(normalized));
+	if (postMacroErrors.length > 0) {
+		return { ok: false, errors: postMacroErrors };
+	}
+
 	const kernel = createGameKernel(gameConfig);
 
 	return {

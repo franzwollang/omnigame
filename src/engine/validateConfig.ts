@@ -24,11 +24,15 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.input.mode === "cell") features.push(Contracts.InputTargetCell());
 	if (cfg.input.mode === "column") features.push(Contracts.InputTargetColumn());
 
-	// Placement policy
-	if (cfg.placement.mode === "direct") {
+	// Placement policy (mode or gravity.enabled sugar — macros expand the latter)
+	const gravityImplied =
+		cfg.placement.mode === "gravity" ||
+		cfg.placement.gravity?.enabled === true;
+
+	if (cfg.placement.mode === "direct" && !gravityImplied) {
 		features.push(Contracts.PlacementDirect());
 	}
-	if (cfg.placement.mode === "gravity") {
+	if (gravityImplied) {
 		features.push(Contracts.GravityAxis());
 		features.push(Contracts.PlacementGravity());
 	}

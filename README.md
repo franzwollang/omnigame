@@ -78,7 +78,7 @@ The form fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`) with 
 
 The core follows pure functional principles with reducers (`State -> Event -> State`). Deterministic RNG is available via Effect (`src/engine/rng.ts`). Sandbox play goes through a `GameKernel` (`src/engine/kernel.ts`: `initialState` / `legalActions` / Effect-backed `step`) via `useGameEngine`, which surfaces a kernel event log and a GameIR action transcript (`src/ir/gameIr.ts`) with a sidebar Replay control. Turn phases use a small hand-rolled scaffold (`turnMachine.ts`).
 
-The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. A typed `toGameConfig` adapter maps Zod `Config` into the flat engine shape. `validateConfig` builds feature contracts for the selected input/placement/overflow/capture/end features (live in the sandbox editor). Z3 SMT remains an optional server-side experiment. Adapters at the edges handle rendering (Three.js), input, and persistence.
+The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. Specs go through `src/compiler/` (`validate → expand macros → normalize → GameKernel`); the sandbox calls `compileToGameConfig` rather than owning the adapter. Macros today: `gravity.enabled` → gravity placement primitives; token `placements` → `initial` seeds. `validateConfig` builds feature contracts for the selected input/placement/overflow/capture/end features (live in the sandbox editor). Z3 SMT remains an optional server-side experiment. Adapters at the edges handle rendering (Three.js), input, and persistence.
 
 Routing uses App Router with scroll-snap landing and URL replacement to reflect the active view. The planned “infinite library” mode will sample/randomize configs and reveal how rare playable settings are.
 
@@ -96,8 +96,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Objectives**: n-in-a-row win detection with configurable adjacency + length
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` and shows recent kernel events + Replay
+- **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 
-What’s **roadmap**, not fully realized yet: compiler/normalize stage, first-class observation models for partial information, and a larger library of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: first-class observation models for partial information, richer macro library (e.g. piece-move sugar), and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

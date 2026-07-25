@@ -96,23 +96,26 @@ export const zConfig = z
 	})
 	.strict()
 	.superRefine((cfg, ctx) => {
-		// column input requires gravity placement
-		if (cfg.input.mode === "column" && cfg.placement.mode !== "gravity") {
+		const gravityImplied =
+			cfg.placement.mode === "gravity" ||
+			cfg.placement.gravity?.enabled === true;
+
+		// column input requires gravity placement (mode or enabled sugar)
+		if (cfg.input.mode === "column" && !gravityImplied) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["input", "mode"],
-				message: "input.mode = 'column' requires placement.mode = 'gravity'"
+				message:
+					"input.mode = 'column' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
 		}
 		// overflow only valid under gravity
-		if (
-			cfg.placement.mode !== "gravity" &&
-			cfg.placement.overflow !== "reject"
-		) {
+		if (cfg.placement.overflow !== "reject" && !gravityImplied) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["placement", "overflow"],
-				message: "overflow !== 'reject' requires placement.mode = 'gravity'"
+				message:
+					"overflow !== 'reject' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
 		}
 		// adjacency must have at least one direction enabled

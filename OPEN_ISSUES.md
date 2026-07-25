@@ -4,31 +4,24 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ---
 
-## Immediate (M3+)
-
-### compiler-normalize
-
-**Problem:** Specs still go Zod → flat `toGameConfig` → kernel with no normalize /
-macro-expansion stage. README targets `validate → normalize → kernel builder`.
-
-**Pointers:** `src/engine/validateConfig.ts`, `src/engine/toGameConfig.ts`,
-`src/schemas/config.ts`, `PLANNING.md` M3
-
-**Acceptance:**
-
-- [ ] A `src/compiler/` (or equivalent) stage validates + normalizes a `Config` into
-      kernel-ready input without sandbox-specific adapters owning that logic
-- [ ] At least one “macro” or sugar field expands into named primitives (or documented
-      non-goal if deferred)
-- [ ] Presets still play through the normalized path
-
----
-
-## Near-term (M4–M5)
+## Immediate (M4+)
 
 ### observation-partial-info
 
-First-class observation models (fog, hit/miss) enabling Battleship-lite.
+**Problem:** No first-class observation / fog / hit-miss model. Battleship-lite and
+other partial-info games cannot be expressed as config.
+
+**Pointers:** `PLANNING.md` M4, `README.md` observation primitive, `docs/semantics.md`
+
+**Acceptance:**
+
+- [ ] Observation primitive (at least hit/miss + hidden placement) in schema + kernel path
+- [ ] Battleship-lite (or smaller) preset that unlocks the mechanism
+- [ ] Transcript / simulation tests for the observation behavior
+
+---
+
+## Near-term (M5+)
 
 ### topology-beyond-rectangle
 

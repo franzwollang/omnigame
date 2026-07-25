@@ -10,15 +10,14 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M0 | Honesty pass + Effect foothold | `done` |
 | M1 | GameKernel ABI + Effect core + event transcripts | `done` |
 | M2 | GameIR + deterministic replay | `done` |
-| M3 | Compiler / normalize / macro expansion | `not started` |
+| M3 | Compiler / normalize / macro expansion | `done` |
 | M4 | Observation primitive + Battleship-lite | `not started` |
 | M5 | Anchor / reference-game ports | `not started` |
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** M3 — move Zod/`toGameConfig` into a real
-validate→normalize→kernel-builder path so new mechanics don’t keep growing the
-sandbox adapter.
+**Optimizing for this phase:** M4 — first-class observation (hit/miss, hidden
+placement) so partial-info games compile through the same kernel path.
 
 ## Decisions (locked)
 
@@ -64,8 +63,9 @@ Working sandbox slice (see README “Current implementation status”):
 - Sandbox play through `GameKernel` (`useGameEngine` → `stepSync` + event log)
 - GameIR v0 (`src/ir/gameIr.ts`): `seed + actions` transcript + sandbox Replay
 - Client Zod + contract validation in sandbox; Z3 server action optional/experimental
+- Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
 
-Not yet: compiler/normalize stage, observation, hex/graph, library explorer.
+Not yet: observation / partial info, hex/graph, library explorer.
 
 ## Milestone exit criteria
 
@@ -97,6 +97,9 @@ Related: Immediate issues in `OPEN_ISSUES.md`.
 ### M3 — Compiler / normalize
 
 - Validate → normalize → kernel builder; macros → named primitives only.
+
+**Done:** `src/compiler/` (`compile` / macros / `normalizeConfig`); sandbox +
+presets play through it; `gravity.enabled` and `placements→initial` macros.
 
 ### M4 — Observation + Battleship-lite
 

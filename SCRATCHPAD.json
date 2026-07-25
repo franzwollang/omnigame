@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-07-25T01:50-05:00",
-  "turn": 7,
+  "updated_at": "2026-07-25T02:10-05:00",
+  "turn": 8,
   "focus": {
-    "milestone": "M3",
-    "issue": "compiler-normalize",
-    "goal": "Scaffold validate→normalize→kernel builder"
+    "milestone": "M4",
+    "issue": "observation-partial-info",
+    "goal": "Add hit/miss observation + Battleship-lite preset"
   },
   "recent": [
-    "Closed server-validation-unwired: contracts in sandbox; Z3 optional",
-    "GameIR v0 + Replay button; marked M2 done"
+    "Based on b7c8 (M0–M2); started M3 compiler-normalize",
+    "src/compiler: validate→macros→normalize→kernel; sandbox wired"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main"
   ],
   "open_threads": [
-    "M3: lift toGameConfig into compiler/normalize path"
+    "M4: observation schema + kernel path; smallest Battleship-lite"
   ],
-  "next_step": "Add src/compiler normalize that owns Config→GameConfig; keep presets on that path",
+  "next_step": "Design observation primitive (hit/miss + hidden) behind compiler→kernel",
   "blockers": []
 }

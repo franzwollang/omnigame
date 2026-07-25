@@ -99,6 +99,23 @@ describe("normalizeConfig / compile", () => {
 		expect(result.errors.length).toBeGreaterThan(0);
 	});
 
+	it("expands gravity.enabled sugar so column+enabled compiles", () => {
+		const raw = structuredClone(examplePresets["connect-4"].config);
+		raw.placement = {
+			mode: "direct",
+			overflow: "reject",
+			gravity: { enabled: true, direction: "down", wrap: false }
+		};
+		const result = compile(raw);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.normalized.placement.mode).toBe("gravity");
+		expect(result.gameConfig.placementMode).toBe("gravity");
+		expect(result.expansions.map((e) => e.id)).toContain(
+			"gravity.enabled→placement.mode"
+		);
+	});
+
 	it("placements macro seeds the kernel board", () => {
 		const cfg = structuredClone(examplePresets["tic-tac-toe"].config);
 		cfg.placements = [{ row: 1, col: 1, tokenId: "X" }];
@@ -106,7 +123,6 @@ describe("normalizeConfig / compile", () => {
 		const { kernel, expansions } = compileConfig(cfg);
 		expect(expansions.map((e) => e.id)).toContain("placements→initial");
 		const state = kernel.initialState();
-		// center cell should be X from expanded placement
 		const idx = 1 * state.grid.width + 1;
 		expect(state.grid.cells[idx]).toBe("X");
 	});

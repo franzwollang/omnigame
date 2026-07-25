@@ -5,3 +5,4 @@
 {"ts":"2026-07-25T00:45-05:00","focus":"M1 game-kernel-abi","summary":"toGameConfig + kernel scaffold; closed sandbox-type-looseness","next":"wire useGameEngine through kernel.step"}
 {"ts":"2026-07-25T01:25-05:00","focus":"M1→M2 handoff","summary":"Kernel sandbox wiring + contract coverage; M1 marked done","next":"server-validation-unwired then GameIR replay"}
 {"ts":"2026-07-25T01:50-05:00","focus":"M2 GameIR + validation honesty","summary":"Wired client contracts; demoted Z3; shipped GameIR replay foothold; M2 done","next":"scaffold src/compiler normalize for M3"}
+{"ts":"2026-07-25T02:10-05:00","focus":"M3 compiler-normalize","summary":"Scaffolded src/compiler; presets/sandbox on normalize path; marked M3 done","next":"start M4 observation-partial-info"}
