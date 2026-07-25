@@ -60,6 +60,9 @@ export function flattenToGameConfig(config: Config): GameConfig {
 				}
 			: undefined,
 		targetRows: config.objective.targetRows,
+		fleet: config.fleet
+			? { ships: [...config.fleet.ships] }
+			: undefined,
 		initial: config.initial
 	};
 }

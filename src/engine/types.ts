@@ -14,6 +14,9 @@ export type Grid = {
 
 export type GameStatus = "playing" | "won" | "draw";
 
+/** hit_miss: placement = lay fleet; combat = fire. Other modes omit / combat. */
+export type GamePhase = "placement" | "combat";
+
 export type GameState = {
 	/** Public board (placements or shot results). */
 	grid: Grid;
@@ -25,6 +28,21 @@ export type GameState = {
 	moveCount: number;
 	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */
 	consecutivePasses?: number;
+	/** Placement vs combat for fleet games; default combat when omitted. */
+	phase?: GamePhase;
+	/** Per-player ship placement progress when phase = placement. */
+	fleetProgress?: {
+		X: {
+			shipIndex: number;
+			cells: Array<{ row: number; col: number }>;
+			done: boolean;
+		};
+		O: {
+			shipIndex: number;
+			cells: Array<{ row: number; col: number }>;
+			done: boolean;
+		};
+	};
 };
 
 export type PlaceMoveEvent = {

@@ -17,6 +17,14 @@ import {
 	isLegalLibertyPlace
 } from "@/engine/liberties";
 import { fleetDestroyed } from "@/engine/observation";
+import {
+	advanceFleetProgress,
+	bothFleetsPlaced,
+	canPlaceFleetCell,
+	initialFleetProgressMap,
+	usesPlacementPhase,
+	type FleetConfig
+} from "@/engine/fleet";
 import { canMove, type MovementConfig } from "@/engine/movement";
 import {
 	applyLifeStep,
@@ -70,6 +78,11 @@ export type GameConfig = {
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
 	targetRows?: { X: number; O: number };
+	/**
+	 * Multi-ship placement phase for hit_miss. When set, game starts in
+	 * placement (place onto hidden) then transitions to combat (fire).
+	 */
+	fleet?: FleetConfig;
 	initial?: InitialSeed[];
 };
 
@@ -91,18 +104,21 @@ function isBoardFull(grid: Grid, config: GameConfig): boolean {
 
 // Create initial game state from config
 export function createInitialState(config: GameConfig): GameState {
+	const placement = usesPlacementPhase(config.fleet);
 	const base: GameState = {
 		grid: emptyGrid(config.gridWidth, config.gridHeight),
 		currentPlayer: "X",
 		status: "playing",
 		winner: null,
 		moveCount: 0,
-		consecutivePasses: 0
+		consecutivePasses: 0,
+		phase: placement ? "placement" : "combat",
+		fleetProgress: placement ? initialFleetProgressMap() : undefined
 	};
 
 	const seeds = config.initial ?? [];
 	const hasOwner = seeds.some((p) => (p.visibility ?? "public") === "owner");
-	if (hasOwner || config.observationMode === "hit_miss") {
+	if (hasOwner || config.observationMode === "hit_miss" || placement) {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
 	}
 
@@ -266,6 +282,8 @@ function handleFire(
 ): GameState {
 	if ((config.observationMode ?? "full") !== "hit_miss") return state;
 	if (state.status !== "playing") return state;
+	// Placement phase: only place actions are legal
+	if ((state.phase ?? "combat") === "placement") return state;
 	if (
 		pos.row < 0 ||
 		pos.row >= state.grid.height ||
@@ -311,13 +329,70 @@ function handleFire(
 	};
 }
 
+function handleFleetPlace(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): GameState {
+	const fleet = config.fleet;
+	if (!fleet || !usesPlacementPhase(fleet)) return state;
+	if (!canPlaceFleetCell(state, pos, state.currentPlayer, fleet)) {
+		return state;
+	}
+	if (!state.hidden || !state.fleetProgress) return state;
+
+	const hiddenCells = setCell(state.hidden, pos, state.currentPlayer);
+	const playerProgress = advanceFleetProgress(
+		state.fleetProgress[state.currentPlayer],
+		pos,
+		fleet
+	);
+	const fleetProgress = {
+		...state.fleetProgress,
+		[state.currentPlayer]: playerProgress
+	};
+	const newMoveCount = state.moveCount + 1;
+
+	if (bothFleetsPlaced(fleetProgress)) {
+		return {
+			...state,
+			hidden: { ...state.hidden, cells: hiddenCells },
+			fleetProgress,
+			phase: "combat",
+			currentPlayer: "X",
+			moveCount: newMoveCount
+		};
+	}
+
+	// Current player keeps placing until their fleet is done; then hand off.
+	if (playerProgress.done) {
+		const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+		return {
+			...state,
+			hidden: { ...state.hidden, cells: hiddenCells },
+			fleetProgress,
+			currentPlayer: nextPlayer,
+			moveCount: newMoveCount
+		};
+	}
+
+	return {
+		...state,
+		hidden: { ...state.hidden, cells: hiddenCells },
+		fleetProgress,
+		moveCount: newMoveCount
+	};
+}
+
 function handlePlace(
 	state: GameState,
 	pos: Position,
 	config: GameConfig
 ): GameState {
-	// Hit/miss games use fire, not place
-	if ((config.observationMode ?? "full") === "hit_miss") return state;
+	// Hit/miss with fleet: place onto hidden during placement phase
+	if ((config.observationMode ?? "full") === "hit_miss") {
+		return handleFleetPlace(state, pos, config);
+	}
 	// Move games relocate existing pieces
 	if ((config.inputMode ?? "cell") === "move") return state;
 

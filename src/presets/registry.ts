@@ -265,6 +265,37 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"battleship-place": definePreset({
+		id: "battleship-place",
+		name: "Battleship Place",
+		tags: [
+			"observation",
+			"hit-miss",
+			"placement-phase",
+			"multi-ship",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Place contiguous ships (lengths 2+3) onto the hidden layer, then fire. Unlocks fleet placement phase — still not full Battleship.",
+		config: {
+			metadata: { name: "Battleship Place", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			fleet: { ships: [2, 3] },
+			objective: { mode: "destroy_hidden" },
+			tokens: [
+				{ id: "fleet-x", label: "X", players: ["X"] },
+				{ id: "fleet-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"fog-connect-lite": definePreset({
 		id: "fog-connect-lite",
 		name: "Fog Connect Lite",

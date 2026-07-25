@@ -400,6 +400,20 @@ export default function GamePage() {
 							Go Lite: place stones (liberties capture); Pass twice to score
 						</p>
 					)}
+					{currentConfig?.observation.mode === "hit_miss" &&
+						(gameState.phase ?? "combat") === "placement" && (
+							<p className="mt-1 font-mono text-xs text-muted-foreground">
+								Placement: lay ships{" "}
+								{currentConfig.fleet?.ships?.join("+") ?? "?"} as contiguous
+								lines ({gameState.currentPlayer}&apos;s turn)
+							</p>
+						)}
+					{currentConfig?.observation.mode === "hit_miss" &&
+						(gameState.phase ?? "combat") === "combat" && (
+							<p className="mt-1 font-mono text-xs text-muted-foreground">
+								Combat: click a cell to fire (hit/miss)
+							</p>
+						)}
 					{currentConfig?.input.mode === "move" && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							{selectedFrom

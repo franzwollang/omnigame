@@ -45,7 +45,12 @@ function stateFingerprint(state: GameState): string {
 		state.moveCount,
 		state.winner ?? "",
 		state.consecutivePasses ?? "",
-		state.grid.cells.join(",")
+		state.phase ?? "combat",
+		state.fleetProgress
+			? `X:${state.fleetProgress.X.shipIndex}:${state.fleetProgress.X.done}:${state.fleetProgress.X.cells.map((c) => `${c.row},${c.col}`).join(";")}|O:${state.fleetProgress.O.shipIndex}:${state.fleetProgress.O.done}:${state.fleetProgress.O.cells.map((c) => `${c.row},${c.col}`).join(";")}`
+			: "",
+		state.grid.cells.join(","),
+		state.hidden?.cells.join(",") ?? ""
 	].join("|");
 }
 

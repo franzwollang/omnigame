@@ -117,6 +117,17 @@ export const zConfig = z
 				radius: 1,
 				metric: "chebyshev" as const
 			}),
+		/**
+		 * Multi-ship placement phase for hit_miss games.
+		 * Each player places contiguous orthogonal ships of these lengths onto
+		 * the hidden layer before combat (fire) begins.
+		 */
+		fleet: z
+			.object({
+				ships: z.array(z.number().int().min(1).max(10)).min(1).max(8)
+			})
+			.strict()
+			.optional(),
 		objective: z
 			.object({
 				mode: z
@@ -625,14 +636,40 @@ export const zConfig = z
 				});
 			}
 			const owners = cfg.initial.filter((p) => p.visibility === "owner");
-			if (owners.length === 0) {
+			const hasFleet = Boolean(cfg.fleet && cfg.fleet.ships.length > 0);
+			if (!hasFleet && owners.length === 0) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["initial"],
 					message:
-						"hit_miss requires at least one initial seed with visibility = 'owner'"
+						"hit_miss requires fleet.ships (placement phase) or at least one initial seed with visibility = 'owner'"
 				});
 			}
+			if (hasFleet && owners.length > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message:
+						"fleet.ships (placement phase) cannot be combined with owner initial seeds — use one or the other"
+				});
+			}
+			if (hasFleet) {
+				const cellsNeeded = cfg.fleet!.ships.reduce((a, b) => a + b, 0);
+				const capacity = cfg.grid.width * cfg.grid.height;
+				if (cellsNeeded * 2 > capacity) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["fleet", "ships"],
+						message: `fleet.ships need ${cellsNeeded} cells per player but board only has ${capacity}`
+					});
+				}
+			}
+		} else if (cfg.fleet) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["fleet"],
+				message: "fleet is only valid with observation.mode = 'hit_miss'"
+			});
 		}
 
 		if (cfg.objective.mode === "n_in_a_row") {

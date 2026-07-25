@@ -123,7 +123,12 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const placeMove = useCallback(
 		(pos: Position) => {
 			if ((config.observationMode ?? "full") === "hit_miss") {
-				applyAction({ type: "fire", position: pos });
+				const phase = stateRef.current.phase ?? "combat";
+				if (phase === "placement") {
+					applyAction({ type: "place", position: pos });
+				} else {
+					applyAction({ type: "fire", position: pos });
+				}
 				return;
 			}
 			if ((config.inputMode ?? "cell") === "move") {

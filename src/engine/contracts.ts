@@ -195,6 +195,14 @@ export const Contracts = {
 		hooks: ["validateInput"],
 		invariants: ["hidesOpponentFleet"]
 	}),
+	FleetPlacement: (): FeatureContract => ({
+		id: "FleetPlacement",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyPlacement"],
+		invariants: ["placesContiguousShipsThenCombat"]
+	}),
 	ObservationFog: (): FeatureContract => ({
 		id: "ObservationFog",
 		requires: [],

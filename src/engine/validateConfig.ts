@@ -69,6 +69,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	// Observation + objective
 	if (cfg.observation.mode === "hit_miss") {
 		features.push(Contracts.ObservationHitMiss());
+		if (cfg.fleet && cfg.fleet.ships.length > 0) {
+			features.push(Contracts.FleetPlacement());
+		}
 	}
 	if (cfg.observation.mode === "fog") {
 		features.push(Contracts.ObservationFog());

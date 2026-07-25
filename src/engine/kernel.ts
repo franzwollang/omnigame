@@ -20,6 +20,10 @@ import {
 	type PlayerObservation,
 	type ShotResult
 } from "@/engine/observation";
+import {
+	canPlaceFleetCell,
+	usesPlacementPhase
+} from "@/engine/fleet";
 import { canMove, legalDestinations } from "@/engine/movement";
 import {
 	allActivePositions,
@@ -53,7 +57,9 @@ export type IllegalReason =
 	| "invalid_destination"
 	| "mode_mismatch"
 	| "not_applicable"
-	| "illegal_or_noop";
+	| "illegal_or_noop"
+	| "ship_shape"
+	| "wrong_phase";
 
 export type ExplainResult =
 	| { legal: true }
@@ -67,6 +73,7 @@ export type KernelEvent =
 			result: ShotResult;
 			player: Player;
 	  }
+	| { type: "phaseChanged"; phase: "placement" | "combat" }
 	| { type: "tickApplied"; generation: number }
 	| { type: "ignored"; action: KernelAction; reason: IllegalReason }
 	| { type: "terminal"; status: GameState["status"]; winner: Player | null };
@@ -140,6 +147,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: ${formatAction(event.action)}`;
 		case "shotResult":
 			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
+		case "phaseChanged":
+			return `phase → ${event.phase}`;
 		case "tickApplied":
 			return `tick → generation ${event.generation}`;
 		case "ignored":
@@ -156,7 +165,9 @@ function isNoop(before: GameState, after: GameState): boolean {
 		before.moveCount === after.moveCount &&
 		before.currentPlayer === after.currentPlayer &&
 		before.status === after.status &&
-		before.grid.cells === after.grid.cells
+		(before.phase ?? "combat") === (after.phase ?? "combat") &&
+		before.grid.cells === after.grid.cells &&
+		before.hidden?.cells === after.hidden?.cells
 	);
 }
 
@@ -220,6 +231,12 @@ function applyStep(
 
 	if (action.type === "tick") {
 		events.push({ type: "tickApplied", generation: nextState.moveCount });
+	}
+
+	const prevPhase = state.phase ?? "combat";
+	const nextPhase = nextState.phase ?? "combat";
+	if (prevPhase !== nextPhase) {
+		events.push({ type: "phaseChanged", phase: nextPhase });
 	}
 
 	const terminal = nextState.status !== "playing";
@@ -307,6 +324,22 @@ function collectLegalActions(
 	}
 
 	if (hitMiss) {
+		const inPlacement =
+			usesPlacementPhase(config.fleet) &&
+			(state.phase ?? "combat") === "placement";
+		if (inPlacement) {
+			const fleet = config.fleet!;
+			for (const position of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (canPlaceFleetCell(state, position, state.currentPlayer, fleet)) {
+					actions.push({ type: "place", position });
+				}
+			}
+			return actions;
+		}
 		for (const position of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
@@ -423,6 +456,10 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 			return "Action is not available for this ruleset";
 		case "illegal_or_noop":
 			return "Action had no effect";
+		case "ship_shape":
+			return "Ship cells must form a contiguous orthogonal line";
+		case "wrong_phase":
+			return "Action is not valid in the current game phase";
 	}
 }
 
@@ -486,6 +523,13 @@ export function explainKernelAction(
 					detail: detailFor("mode_mismatch", action)
 				};
 			}
+			if ((state.phase ?? "combat") === "placement") {
+				return {
+					legal: false,
+					reason: "wrong_phase",
+					detail: detailFor("wrong_phase", action)
+				};
+			}
 			if (getCell(state.grid, action.position) !== null) {
 				return {
 					legal: false,
@@ -506,11 +550,45 @@ export function explainKernelAction(
 		}
 		case "place": {
 			if (hitMiss) {
-				return {
-					legal: false,
-					reason: "mode_mismatch",
-					detail: detailFor("mode_mismatch", action)
-				};
+				if (!usesPlacementPhase(config.fleet)) {
+					return {
+						legal: false,
+						reason: "mode_mismatch",
+						detail: detailFor("mode_mismatch", action)
+					};
+				}
+				if ((state.phase ?? "combat") !== "placement") {
+					return {
+						legal: false,
+						reason: "wrong_phase",
+						detail: detailFor("wrong_phase", action)
+					};
+				}
+				if (
+					state.hidden != null &&
+					getCell(state.hidden, action.position) !== null
+				) {
+					return {
+						legal: false,
+						reason: "cell_occupied",
+						detail: detailFor("cell_occupied", action)
+					};
+				}
+				if (
+					!canPlaceFleetCell(
+						state,
+						action.position,
+						state.currentPlayer,
+						config.fleet!
+					)
+				) {
+					return {
+						legal: false,
+						reason: "ship_shape",
+						detail: detailFor("ship_shape", action)
+					};
+				}
+				break;
 			}
 			if (
 				!manualTick &&

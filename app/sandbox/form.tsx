@@ -309,6 +309,55 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								/>
 								<FormField
 									control={form.control}
+									name="fleet.ships"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Fleet ships (placement phase)</FormLabel>
+											<FormControl>
+												<Input
+													placeholder="e.g. 2,3"
+													value={
+														Array.isArray(field.value)
+															? field.value.join(",")
+															: ""
+													}
+													onChange={(e) => {
+														const raw = e.target.value.trim();
+														if (!raw) {
+															form.setValue("fleet", undefined, {
+																shouldDirty: true
+															});
+															return;
+														}
+														const parts = raw
+															.split(/[,\s]+/)
+															.map((s) => Number(s))
+															.filter((n) => Number.isFinite(n) && n >= 1);
+														if (parts.length === 0) {
+															form.setValue("fleet", undefined, {
+																shouldDirty: true
+															});
+															return;
+														}
+														form.setValue(
+															"fleet",
+															{ ships: parts },
+															{ shouldDirty: true }
+														);
+													}}
+												/>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												hit_miss only: contiguous ship lengths each player
+												places before combat. Clear to use fixed owner
+												initial seeds instead.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
 									name="observation.radius"
 									render={({ field }) => (
 										<FormItem>
