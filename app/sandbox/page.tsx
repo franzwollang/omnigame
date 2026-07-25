@@ -14,9 +14,13 @@ import SandboxCanvas from "./canvas";
 import dynamic from "next/dynamic";
 import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
-import { formatKernelEvent } from "@/engine/kernel";
+import {
+	formatKernelEvent,
+	highlightCellsForActions
+} from "@/engine/kernel";
 import { compileToGameConfig } from "@/compiler";
 import { validateConfig } from "@/engine/validateConfig";
+import { createAgent, type AgentKind } from "@/agents";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -62,6 +66,9 @@ export default function GamePage() {
 		null
 	);
 	const [activeTab, setActiveTab] = useState<"form" | "json">("json");
+	const [showLegalOverlay, setShowLegalOverlay] = useState(true);
+	const [agentKind, setAgentKind] = useState<AgentKind>("random");
+	const agentRef = useRef(createAgent("random", 0));
 
 	// Compiler owns Config→GameConfig (macros + flatten); sandbox does not.
 	const engineConfig = useMemo(
@@ -75,6 +82,10 @@ export default function GamePage() {
 		eventLog,
 		actionLog,
 		selectedFrom,
+		lastIllegal,
+		legalActionsList,
+		kernel,
+		dispatchAction,
 		placeMove,
 		activateColumn,
 		popOutColumn,
@@ -87,10 +98,28 @@ export default function GamePage() {
 		currentConfig?.placement.overflow === "pop_out_bottom";
 	const enableTick = currentConfig?.turn.schedule === "manual_tick";
 	const enablePass = currentConfig?.objective.mode === "area_control";
-	const recentEventLines = useMemo(
-		() => eventLog.slice(-8).map(formatKernelEvent),
+	const eventLines = useMemo(
+		() => eventLog.map(formatKernelEvent),
 		[eventLog]
 	);
+	const highlightCells = useMemo(
+		() =>
+			highlightCellsForActions(gameState, legalActionsList, {
+				selectedFrom
+			}),
+		[gameState, legalActionsList, selectedFrom]
+	);
+
+	useEffect(() => {
+		agentRef.current = createAgent(agentKind, playSeed);
+	}, [agentKind, playSeed]);
+
+	const stepAgent = () => {
+		if (gameState.status !== "playing") return;
+		const player = kernel.currentPlayer(gameState);
+		const action = agentRef.current.act(kernel, gameState, player);
+		if (action) dispatchAction(action);
+	};
 
 	const initialJson = useMemo(() => {
 		const preset = examplePresets["tic-tac-toe"];
@@ -252,7 +281,7 @@ export default function GamePage() {
 								? ` · ${gameState.currentPlayer} to move`
 								: ""}
 						</p>
-						<div className="flex shrink-0 items-center gap-1">
+						<div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
 							<Button
 								variant="outline"
 								size="sm"
@@ -289,17 +318,58 @@ export default function GamePage() {
 							)}
 						</div>
 					</div>
-					{recentEventLines.length === 0 ? (
+					{eventLines.length === 0 ? (
 						<p className="font-mono text-xs text-muted-foreground">
 							No steps yet — play from the board.
 						</p>
 					) : (
-						<ul className="max-h-28 space-y-0.5 overflow-y-auto font-mono text-xs text-muted-foreground">
-							{recentEventLines.map((line, i) => (
+						<ul className="max-h-40 space-y-0.5 overflow-y-auto font-mono text-xs text-muted-foreground">
+							{eventLines.map((line, i) => (
 								<li key={`${i}-${line}`}>{line}</li>
 							))}
 						</ul>
 					)}
+					{lastIllegal && (
+						<p className="mt-1 font-mono text-xs text-amber-700 dark:text-amber-400">
+							Why illegal: {lastIllegal.reason} — {lastIllegal.detail}
+						</p>
+					)}
+					<div className="mt-2 flex flex-wrap items-center gap-2">
+						<label className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+							<input
+								type="checkbox"
+								checked={showLegalOverlay}
+								onChange={(e) => setShowLegalOverlay(e.target.checked)}
+								className="rounded border-muted-foreground"
+							/>
+							Legal overlay ({highlightCells.length})
+						</label>
+						<select
+							className="h-7 rounded border bg-background px-1 font-mono text-xs"
+							value={agentKind}
+							onChange={(e) =>
+								setAgentKind(e.target.value as AgentKind)
+							}
+							aria-label="Agent kind"
+						>
+							<option value="random">random</option>
+							<option value="greedy">greedy</option>
+							<option value="mcts">mcts</option>
+						</select>
+						<Button
+							variant="outline"
+							size="sm"
+							className="h-7 px-2 text-xs"
+							disabled={
+								gameState.status !== "playing" ||
+								legalActionsList.length === 0
+							}
+							onClick={stepAgent}
+							title="Play one kernel legal action from the selected agent"
+						>
+							Agent step
+						</Button>
+					</div>
 					{enableTick && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Life Lite: place cells, then Tick for B3/S23 step
@@ -392,6 +462,9 @@ export default function GamePage() {
 					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
 					inputMode={currentConfig?.input.mode ?? "cell"}
 					topology={currentConfig?.grid.topology ?? "rectangle"}
+					highlightCells={highlightCells}
+					selectedCell={selectedFrom}
+					showLegalOverlay={showLegalOverlay}
 					tokens={currentConfig?.tokens ?? []}
 					placements={currentConfig?.placements ?? []}
 				/>

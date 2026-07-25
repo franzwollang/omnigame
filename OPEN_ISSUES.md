@@ -4,23 +4,18 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ---
 
-## Immediate (M6)
-
-### debug-and-agents
-
-Legal-move overlays, “why illegal,” event trace; random/greedy/(tiny) MCTS agents on kernel only.
-
-**Acceptance:** See `PLANNING.md` M6 exit criteria. Prefer kernel-only agents;
-surface why-illegal from existing legality probes where possible.
+## Immediate (M7)
 
 ### library-explorer
 
-Config sampling UI to explore playable vs unplayable space (M7; listed early so
-it is not forgotten).
+Config sampling UI to explore playable vs unplayable space (M7). Needs playability
+heuristics on top of GameKernel + agents from M6.
+
+**Acceptance:** See `PLANNING.md` M7 exit criteria.
 
 ---
 
-## Later (M3+)
+## Later
 
 ### topology-beyond-rectangle
 
@@ -36,3 +31,8 @@ multi-ship Battleship if still desired.
 
 M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties).
 Further ports only when a **new** missing mechanism appears — not a backlog.
+
+### richer-mcts-agents
+
+M6 landed random / greedy / tiny flat MCTS. Optional later: UCT tree search,
+partial-info agents for hit/miss games.

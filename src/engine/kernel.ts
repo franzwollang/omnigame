@@ -36,6 +36,25 @@ export type KernelAction =
 	| { type: "tick" }
 	| { type: "pass" };
 
+/** Structured legality failure codes for debug UI / agents. */
+export type IllegalReason =
+	| "game_over"
+	| "wrong_player"
+	| "cell_occupied"
+	| "must_flip"
+	| "suicide"
+	| "own_ship"
+	| "column_full"
+	| "no_own_piece"
+	| "invalid_destination"
+	| "mode_mismatch"
+	| "not_applicable"
+	| "illegal_or_noop";
+
+export type ExplainResult =
+	| { legal: true }
+	| { legal: false; reason: IllegalReason; detail: string };
+
 export type KernelEvent =
 	| { type: "actionApplied"; action: KernelAction; player: Player }
 	| {
@@ -45,7 +64,7 @@ export type KernelEvent =
 			player: Player;
 	  }
 	| { type: "tickApplied"; generation: number }
-	| { type: "ignored"; action: KernelAction; reason: "illegal_or_noop" }
+	| { type: "ignored"; action: KernelAction; reason: IllegalReason }
 	| { type: "terminal"; status: GameState["status"]; winner: Player | null };
 
 export type GameOutcome = {
@@ -67,6 +86,12 @@ export type GameKernel = {
 	initialState(seed?: Seed): GameState;
 	currentPlayer(state: GameState): PlayerId;
 	legalActions(state: GameState, player: PlayerId): KernelAction[];
+	/** Why an action is illegal for `player` (reuses legality probes). */
+	explainAction(
+		state: GameState,
+		player: PlayerId,
+		action: KernelAction
+	): ExplainResult;
 	observe(state: GameState, player: PlayerId): PlayerObservation;
 	/** Effect-backed step; sync helper available as `stepSync`. */
 	step(
@@ -154,9 +179,17 @@ function applyStep(
 ): StepResult {
 	const nextState = reduce(state, action, config);
 	if (isNoop(state, nextState)) {
+		const explained = explainKernelAction(
+			config,
+			state,
+			playerIdOf(state.currentPlayer),
+			action
+		);
+		const reason: IllegalReason =
+			explained.legal === false ? explained.reason : "illegal_or_noop";
 		return {
 			nextState: state,
-			events: [{ type: "ignored", action, reason: "illegal_or_noop" }],
+			events: [{ type: "ignored", action, reason }],
 			terminal: state.status !== "playing",
 			outcome: outcomeOf(state),
 			observations: observationsFor(config, state)
@@ -329,6 +362,327 @@ function collectLegalActions(
 	return actions;
 }
 
+function placeFailureReason(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): IllegalReason | null {
+	if (getCell(state.grid, pos) !== null) return "cell_occupied";
+	if (!config.captureEnabled) return null;
+	const captureMode = config.captureMode ?? "flip";
+	if (captureMode === "liberties") {
+		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer)
+			? null
+			: "suicide";
+	}
+	const placedCells = setCell(state.grid, pos, state.currentPlayer);
+	const after = applyCaptureIfAny(
+		{ ...state.grid, cells: placedCells },
+		pos,
+		state.currentPlayer,
+		config.adjacency
+	);
+	return after !== placedCells ? null : "must_flip";
+}
+
+function detailFor(reason: IllegalReason, action: KernelAction): string {
+	switch (reason) {
+		case "game_over":
+			return "Game is over";
+		case "wrong_player":
+			return "Not this player's turn";
+		case "cell_occupied":
+			return "Cell is occupied";
+		case "must_flip":
+			return "Placement must flip at least one opponent disc";
+		case "suicide":
+			return "Placement would leave a group with no liberties";
+		case "own_ship":
+			return "Cannot fire on your own ship";
+		case "column_full":
+			return "Column has no empty space";
+		case "no_own_piece":
+			return "No owned piece at source / column bottom";
+		case "invalid_destination":
+			return "Destination is not a legal move target";
+		case "mode_mismatch":
+			return `Action ${action.type} is not valid in this config mode`;
+		case "not_applicable":
+			return "Action is not available for this ruleset";
+		case "illegal_or_noop":
+			return "Action had no effect";
+	}
+}
+
+/** Explain legality for a prospective action (shared by kernel + ignored events). */
+export function explainKernelAction(
+	config: GameConfig,
+	state: GameState,
+	player: PlayerId,
+	action: KernelAction
+): ExplainResult {
+	if (state.status !== "playing") {
+		return {
+			legal: false,
+			reason: "game_over",
+			detail: detailFor("game_over", action)
+		};
+	}
+	if (playerIdOf(state.currentPlayer) !== player) {
+		return {
+			legal: false,
+			reason: "wrong_player",
+			detail: detailFor("wrong_player", action)
+		};
+	}
+
+	const legal = collectLegalActions(config, state, player);
+	const isLegal = legal.some((a) => actionsEqual(a, action));
+	if (isLegal) return { legal: true };
+
+	const inputMode = config.inputMode ?? "cell";
+	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
+	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
+	const overflow = config.overflow ?? "reject";
+
+	switch (action.type) {
+		case "tick": {
+			if (!manualTick) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			break;
+		}
+		case "pass": {
+			if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") {
+				return {
+					legal: false,
+					reason: "not_applicable",
+					detail: detailFor("not_applicable", action)
+				};
+			}
+			break;
+		}
+		case "fire": {
+			if (!hitMiss) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (getCell(state.grid, action.position) !== null) {
+				return {
+					legal: false,
+					reason: "cell_occupied",
+					detail: detailFor("cell_occupied", action)
+				};
+			}
+			const occupant =
+				state.hidden != null ? getCell(state.hidden, action.position) : null;
+			if (occupant === state.currentPlayer) {
+				return {
+					legal: false,
+					reason: "own_ship",
+					detail: detailFor("own_ship", action)
+				};
+			}
+			break;
+		}
+		case "place": {
+			if (hitMiss) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (
+				!manualTick &&
+				(inputMode === "column" || inputMode === "move")
+			) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const placeReason = placeFailureReason(state, action.position, config);
+			if (placeReason) {
+				return {
+					legal: false,
+					reason: placeReason,
+					detail: detailFor(placeReason, action)
+				};
+			}
+			break;
+		}
+		case "activateColumn": {
+			if (inputMode !== "column") {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (!columnHasSpace(state, action.col)) {
+				return {
+					legal: false,
+					reason: "column_full",
+					detail: detailFor("column_full", action)
+				};
+			}
+			break;
+		}
+		case "popOutColumn": {
+			if (overflow !== "pop_out_bottom") {
+				return {
+					legal: false,
+					reason: "not_applicable",
+					detail: detailFor("not_applicable", action)
+				};
+			}
+			const bottom = getCell(state.grid, {
+				row: state.grid.height - 1,
+				col: action.col
+			});
+			if (bottom !== state.currentPlayer) {
+				return {
+					legal: false,
+					reason: "no_own_piece",
+					detail: detailFor("no_own_piece", action)
+				};
+			}
+			break;
+		}
+		case "move": {
+			if (inputMode !== "move" || !config.movement) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (getCell(state.grid, action.from) !== state.currentPlayer) {
+				return {
+					legal: false,
+					reason: "no_own_piece",
+					detail: detailFor("no_own_piece", action)
+				};
+			}
+			if (
+				!canMove(
+					state.grid,
+					action.from,
+					action.to,
+					state.currentPlayer,
+					config.movement
+				)
+			) {
+				return {
+					legal: false,
+					reason: "invalid_destination",
+					detail: detailFor("invalid_destination", action)
+				};
+			}
+			break;
+		}
+	}
+
+	return {
+		legal: false,
+		reason: "illegal_or_noop",
+		detail: detailFor("illegal_or_noop", action)
+	};
+}
+
+function actionsEqual(a: KernelAction, b: KernelAction): boolean {
+	if (a.type !== b.type) return false;
+	switch (a.type) {
+		case "place":
+		case "fire":
+			return (
+				b.type === a.type &&
+				a.position.row === b.position.row &&
+				a.position.col === b.position.col
+			);
+		case "move":
+			return (
+				b.type === "move" &&
+				a.from.row === b.from.row &&
+				a.from.col === b.from.col &&
+				a.to.row === b.to.row &&
+				a.to.col === b.to.col
+			);
+		case "activateColumn":
+		case "popOutColumn":
+			return b.type === a.type && a.col === b.col;
+		case "tick":
+		case "pass":
+			return true;
+	}
+}
+
+/**
+ * Board cells to highlight for a legal-action set (overlay / heatmap).
+ * Column actions highlight the landing / bottom cell.
+ */
+export function highlightCellsForActions(
+	state: GameState,
+	actions: readonly KernelAction[],
+	opts?: { selectedFrom?: Position | null }
+): Position[] {
+	const selected = opts?.selectedFrom ?? null;
+	const out: Position[] = [];
+	const seen = new Set<string>();
+	const push = (p: Position) => {
+		const key = `${p.row},${p.col}`;
+		if (seen.has(key)) return;
+		seen.add(key);
+		out.push(p);
+	};
+
+	for (const action of actions) {
+		switch (action.type) {
+			case "place":
+			case "fire":
+				push(action.position);
+				break;
+			case "move":
+				if (selected) {
+					if (
+						action.from.row === selected.row &&
+						action.from.col === selected.col
+					) {
+						push(action.to);
+					}
+				} else {
+					push(action.from);
+				}
+				break;
+			case "activateColumn": {
+				// Highlight top-most empty cell in column (drop entry).
+				for (let row = 0; row < state.grid.height; row++) {
+					if (getCell(state.grid, { row, col: action.col }) === null) {
+						push({ row, col: action.col });
+						break;
+					}
+				}
+				break;
+			}
+			case "popOutColumn":
+				push({ row: state.grid.height - 1, col: action.col });
+				break;
+			default:
+				break;
+		}
+	}
+	return out;
+}
+
 /** Build a GameKernel over a flat engine config. */
 export function createGameKernel(config: GameConfig): GameKernel {
 	const step = (
@@ -348,6 +702,9 @@ export function createGameKernel(config: GameConfig): GameKernel {
 		},
 		legalActions(state, player) {
 			return collectLegalActions(config, state, player);
+		},
+		explainAction(state, player, action) {
+			return explainKernelAction(config, state, player, action);
 		},
 		observe(state, player) {
 			return observe(config, state, playerOf(player));

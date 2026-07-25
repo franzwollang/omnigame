@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T03:45-05:00",
-  "turn": 13,
+  "updated_at": "2026-07-25T04:05-05:00",
+  "turn": 14,
   "focus": {
-    "milestone": "M6",
-    "issue": "debug-and-agents",
-    "goal": "Legal-move / why-illegal / event trace foothold"
+    "milestone": "M7",
+    "issue": "library-explorer",
+    "goal": "Config sampling / playability foothold"
   },
   "recent": [
-    "Synced 0db6 (M0–M5 hex) onto ccf0",
-    "M5 liberties + Go Lite preset + tests; M5→M6 handoff"
+    "Synced ccf0 (M0–M5) onto 9ee8",
+    "M6: explainAction, legal overlay, event trace, agents"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "capture.mode flip|liberties keeps Reversi intact"
+    "Ignored steps now carry structured IllegalReason codes"
   ],
   "open_threads": [
-    "M6 next: debug overlays + kernel agents; graph topology still later"
+    "M7 next: library explorer; graph topology / richer MCTS later"
   ],
-  "next_step": "M6: legal-move overlay / why-illegal from kernel.legalActions",
+  "next_step": "M7: sample/randomize configs; surface playable vs noise",
   "blockers": []
 }

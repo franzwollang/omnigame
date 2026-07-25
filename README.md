@@ -103,10 +103,11 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity) or `hit_miss` (own fleet + public shots); Battleship-lite preset
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
-- **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations) and shows recent kernel events + Replay
+- **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/tiny MCTS)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
+- **Agents**: `src/agents/` — kernel-only baseline bots (`legalActions` + `stepSync`)
 
-What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), general graph topology, ko/full Go rules, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), general graph topology, ko/full Go rules, library explorer, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

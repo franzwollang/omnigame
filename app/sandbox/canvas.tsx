@@ -23,6 +23,11 @@ type Props = {
 	inputMode?: "cell" | "column" | "move";
 	enablePopOutButtons?: boolean;
 	topology?: GridTopology;
+	/** Legal-move overlay cells (M6). */
+	highlightCells?: Position[];
+	/** Selected piece for move-mode (M6). */
+	selectedCell?: Position | null;
+	showLegalOverlay?: boolean;
 	// token rendering
 	tokens?: {
 		id: string;
@@ -80,6 +85,9 @@ export default function SandboxCanvas({
 	inputMode = "cell",
 	enablePopOutButtons = false,
 	topology = "rectangle",
+	highlightCells = [],
+	selectedCell = null,
+	showLegalOverlay = true,
 	tokens = [],
 	placements = []
 }: Props) {
@@ -97,6 +105,8 @@ export default function SandboxCanvas({
 	const popButtonsGroupRef = useRef<THREE.Group | null>(null);
 	const labelRendererRef = useRef<CSS2DRenderer | null>(null);
 	const popLabelGroupRef = useRef<THREE.Group | null>(null);
+	const isHexRef = useRef(topology === "hex_offset");
+	isHexRef.current = topology === "hex_offset";
 
 	// Keep click handler ref up to date
 	useEffect(() => {
@@ -696,6 +706,41 @@ export default function SandboxCanvas({
 			group.add(obj);
 		}
 	}, [enablePopOutButtons, gameState.grid.width, gameState.grid.height]);
+
+	// Legal-move / selection overlay (tint cell hit meshes)
+	useEffect(() => {
+		const meshes = cellMeshesRef.current;
+		if (!meshes.length) return;
+		const legalKeys = new Set(
+			showLegalOverlay
+				? highlightCells.map((p) => `${p.row},${p.col}`)
+				: []
+		);
+		const selectedKey =
+			selectedCell != null
+				? `${selectedCell.row},${selectedCell.col}`
+				: null;
+		const isHex = isHexRef.current;
+		for (const mesh of meshes) {
+			const { row, col } = mesh.userData as { row: number; col: number };
+			const key = `${row},${col}`;
+			const mat = mesh.material as THREE.MeshBasicMaterial;
+			if (selectedKey === key) {
+				mat.color.setHex(0xfbbf24);
+				mat.opacity = 0.45;
+				mat.transparent = true;
+			} else if (legalKeys.has(key)) {
+				mat.color.setHex(0x22c55e);
+				mat.opacity = isHex ? 0.55 : 0.28;
+				mat.transparent = true;
+			} else {
+				mat.color.setHex(isHex ? 0xe2e8f0 : 0xf8fafc);
+				mat.opacity = isHex ? 0.85 : 0.01;
+				mat.transparent = true;
+			}
+			mat.needsUpdate = true;
+		}
+	}, [highlightCells, selectedCell, showLegalOverlay, gameState.grid.cells]);
 
 	return (
 		<div ref={containerRef} className="flex relative flex-1 min-w-0 h-full">

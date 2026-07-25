@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compileConfig, compileToGameConfig } from "@/compiler";
 import {
 	formatKernelEvent,
+	highlightCellsForActions,
 	playerIdOf,
 	type KernelAction
 } from "@/engine/kernel";
@@ -87,9 +88,52 @@ describe("GameKernel scaffold", () => {
 		expect(again.events[0]).toEqual({
 			type: "ignored",
 			action: { type: "place", position: { row: 0, col: 0 } },
-			reason: "illegal_or_noop"
+			reason: "cell_occupied"
 		});
 		expect(again.nextState).toBe(first.nextState);
+	});
+
+	it("explainAction reports cell_occupied and game_over", () => {
+		const { kernel } = compileConfig(examplePresets["tic-tac-toe"].config);
+		let state = kernel.initialState();
+		state = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 0 }
+		}).nextState;
+		const occupied = kernel.explainAction(state, 1, {
+			type: "place",
+			position: { row: 0, col: 0 }
+		});
+		expect(occupied.legal).toBe(false);
+		if (!occupied.legal) {
+			expect(occupied.reason).toBe("cell_occupied");
+		}
+
+		const script: KernelAction[] = [
+			{ type: "place", position: { row: 1, col: 0 } },
+			{ type: "place", position: { row: 0, col: 1 } },
+			{ type: "place", position: { row: 1, col: 1 } },
+			{ type: "place", position: { row: 0, col: 2 } }
+		];
+		for (const action of script) {
+			state = kernel.stepSync(state, action).nextState;
+		}
+		expect(state.status).toBe("won");
+		const over = kernel.explainAction(state, 0, {
+			type: "place",
+			position: { row: 2, col: 2 }
+		});
+		expect(over.legal).toBe(false);
+		if (!over.legal) expect(over.reason).toBe("game_over");
+	});
+
+	it("highlightCellsForActions maps place and column drops", () => {
+		const { kernel } = compileConfig(examplePresets["connect-4"].config);
+		const state = kernel.initialState();
+		const legal = kernel.legalActions(state, 0);
+		const cells = highlightCellsForActions(state, legal);
+		expect(cells).toHaveLength(7);
+		expect(cells.every((c) => c.row === 0)).toBe(true);
 	});
 
 	it("emits a terminal event on win and formats event lines", () => {

@@ -13,11 +13,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M3 | Compiler / normalize / macro expansion | `done` |
 | M4 | Observation primitive + Battleship-lite | `done` |
 | M5 | Anchor / reference-game ports | `done` |
-| M6 | Debug tooling + baseline agents | `not started` |
+| M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** M5 mechanism ports for observation, Move, tick,
-hex, and liberties/territory landed. Hand off to M6 debug tooling + agents.
+**Optimizing for this phase:** M6 debug overlays + kernel agents landed. Hand off
+to M7 library explorer (config sampling / playability).
 
 ## Decisions (locked)
 
@@ -71,9 +71,11 @@ Working sandbox slice (see README “Current implementation status”):
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
+- Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
+  `src/agents/` random / greedy / tiny MCTS on kernel only
 
 Not yet: general graph topology, library explorer,
-placement-phase / multi-ship Battleship, agents, ko/full Go rules.
+placement-phase / multi-ship Battleship, ko/full Go rules, UCT/partial-info agents.
 
 ## Milestone exit criteria
 
@@ -123,14 +125,18 @@ tests. Full placement-phase / multi-ship Battleship deferred.
   principle in `.cursor/rules/project-structure.mdc`). Not “finish `references/`.”
 - Each port has transcript/simulation tests for the mechanism it claims to prove.
 
-**In progress:** Step Race (Move), Life Lite (tick), Hex Connect Lite
-(`hex_offset`), Go Lite (liberties + area_control) landed. Planned M5
+**Done:** Step Race (Move), Life Lite (tick), Hex Connect Lite
+(`hex_offset`), Go Lite (liberties + area_control). Planned M5
 mechanism slots covered; optional later anchors still allowed by selection
-principle. Hand off to M6.
+principle.
 
 ### M6 — Debug tooling + agents
 
 - Legal-move / “why illegal” / event trace; random/greedy/(tiny) MCTS on kernel only.
+
+**Done:** `explainAction` + `highlightCellsForActions`; sandbox legal overlay +
+why-illegal + full event log; `src/agents/` random/greedy/tiny MCTS + Agent step.
+Hand off to M7.
 
 ### M7 — Library explorer
 

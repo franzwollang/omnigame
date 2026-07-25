@@ -8,6 +8,7 @@ import {
 	createGameKernel,
 	formatKernelEvent,
 	type GameKernel,
+	type IllegalReason,
 	type KernelAction,
 	type KernelEvent,
 	type Seed
@@ -45,6 +46,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const [eventLog, setEventLog] = useState<KernelEvent[]>([]);
 	const [actionLog, setActionLog] = useState<KernelAction[]>([]);
 	const [selectedFrom, setSelectedFrom] = useState<Position | null>(null);
+	const [lastIllegal, setLastIllegal] = useState<{
+		reason: IllegalReason;
+		detail: string;
+	} | null>(null);
 	const [turnContext, setTurnContext] = useState<TurnContext>(() =>
 		createInitialTurnContext()
 	);
@@ -72,11 +77,26 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		setActionLog([]);
 		selectedFromRef.current = null;
 		setSelectedFrom(null);
+		setLastIllegal(null);
 		setTurnContext(turnContextFor(next));
 	}, [kernel, seed]);
 
 	const applyAction = useCallback(
 		(action: KernelAction) => {
+			const player = kernel.currentPlayer(stateRef.current);
+			const explained = kernel.explainAction(
+				stateRef.current,
+				player,
+				action
+			);
+			if (!explained.legal) {
+				setLastIllegal({
+					reason: explained.reason,
+					detail: explained.detail
+				});
+			} else {
+				setLastIllegal(null);
+			}
 			const result = kernel.stepSync(
 				stateRef.current,
 				action,
@@ -95,6 +115,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				);
 			}
 			setTurnContext(turnContextFor(result.nextState));
+			return result;
 		},
 		[kernel]
 	);
@@ -168,6 +189,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		setActionLog([]);
 		selectedFromRef.current = null;
 		setSelectedFrom(null);
+		setLastIllegal(null);
 		setTurnContext(turnContextFor(next));
 	}, [kernel]);
 
@@ -184,15 +206,20 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 			setActionLog(result.appliedActions.slice(-ACTION_LOG_CAP));
 			selectedFromRef.current = null;
 			setSelectedFrom(null);
+			setLastIllegal(null);
 			setTurnContext(turnContextFor(result.finalState));
 			return result;
 		},
 		[kernel]
 	);
 
-	const legalActions = useCallback(() => {
+	const legalActionsList = useMemo(() => {
 		return kernel.legalActions(state, kernel.currentPlayer(state));
 	}, [kernel, state]);
+
+	const legalActions = useCallback(() => {
+		return legalActionsList;
+	}, [legalActionsList]);
 
 	/** Current player's observation (full grid or projected hit/miss view). */
 	const observation = useMemo(
@@ -217,11 +244,14 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		seed,
 		turnContext,
 		lastEvents,
+		lastIllegal,
 		eventLog,
 		actionLog,
 		transcript,
 		selectedFrom,
 		legalActions,
+		legalActionsList,
+		dispatchAction: applyAction,
 		placeMove,
 		activateColumn,
 		popOutColumn,
