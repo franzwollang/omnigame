@@ -51,6 +51,7 @@ These are built from the same shared schema and operators.
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
+- **Go Lite Situational Superko** (situational superko — forbids repeating a prior board+side-to-move)
 - **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
 - **Toroidal TTT** (`grid.wrap` rectangle)
 
@@ -349,7 +350,7 @@ Near-term milestones:
 - **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
 - **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
-- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"` + `positionHistory`)
+- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"`) + **situational superko** (`ko: "situational"` + `board|side` history)
 - **Library explorer foothold**: sample/classify playable vs noise; load finds into sandbox
 - **Anchor games**: mechanism-first ports only — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations

@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T08:45-05:00",
-  "turn": 7,
+  "updated_at": "2026-07-25T09:05-05:00",
+  "turn": 8,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after pop_out_top"
+    "goal": "Hand off after situational superko"
   },
   "recent": [
-    "Pushed pnpm 10.5.2 lockfile + engines Node 20.19+",
     "PLANNING/OPEN_ISSUES honest on superko; sandbox ko hint fixed",
-    "Landed pop_out_top + Connect 4 Up Pop Out"
+    "Landed pop_out_top + Connect 4 Up Pop Out",
+    "Landed situational superko + Go Lite Situational Superko"
   ],
   "discoveries": [
-    "CVE bump had rewritten lockfile with pnpm 9 vs packageManager 10.5.2",
-    "pop_out_top mirrors bottom via exit-row shift; OverflowPopOutTop already stubbed"
+    "pop_out_top mirrors bottom via exit-row shift; OverflowPopOutTop already stubbed",
+    "situational history = board|side; same stones different side legal vs positional"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick next-missing-mechanism (situational superko / hex wrap / horizontal pop-out / simultaneous)",
+  "next_step": "Cloud agent: pick next-missing-mechanism (hex wrap / horizontal pop-out / simultaneous / delayed)",
   "blockers": []
 }
