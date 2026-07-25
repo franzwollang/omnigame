@@ -199,7 +199,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 							</div>
 							<p className="text-xs text-muted-foreground">
 								manual_tick + Life Lite, simultaneous joint place,
-								commitReveal for hidden simultaneous, actionsPerTurn for
+								commitReveal for hidden simultaneous, resolveOrder for
+								ordered same-cell priority, actionsPerTurn for
 								multi-step, or delayTurns for queued places.
 							</p>
 							<FormField

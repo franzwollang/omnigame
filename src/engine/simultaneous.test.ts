@@ -498,9 +498,9 @@ describe("kernel: ordered simultaneous resolve", () => {
 	});
 
 	it("replays ordered simultaneousPlace faithfully", () => {
-		const { kernel } = compileConfig(
+		const config = compileToGameConfig(
 			examplePresets["ordered-simultaneous-ttt"].config
-		);
+		).gameConfig;
 		const actions: KernelAction[] = [
 			{
 				type: "simultaneousPlace",
@@ -517,12 +517,10 @@ describe("kernel: ordered simultaneous resolve", () => {
 				}
 			}
 		];
-		const live = actions.reduce(
-			(s, a) => kernel.stepSync(s, a).nextState,
-			kernel.initialState()
-		);
-		const replayed = replayActions(kernel, actions);
-		expect(replayed.grid.cells).toEqual(live.grid.cells);
-		expect(getCell(replayed.grid, { row: 1, col: 1 })).toBe("X");
+		const replay = replayActions(config, actions, 0);
+		expect(replay.faithful).toBe(true);
+		expect(getCell(replay.finalState.grid, { row: 1, col: 1 })).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 2, col: 2 })).toBe("O");
 	});
 });
