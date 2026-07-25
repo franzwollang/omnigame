@@ -341,9 +341,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											/>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
-											&gt;1 = multi-step under alternating, or multi-action
-											rounds under simultaneous (rectangle + cell +
-											n-in-a-row).
+											&gt;1 = multi-step under alternating (rectangle), or
+											multi-action rounds under simultaneous (rectangle |
+											hex_offset | graph + cell + n-in-a-row).
 										</p>
 										<FormMessage />
 									</FormItem>

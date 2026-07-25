@@ -8,18 +8,18 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Multi-action simultaneous rounds** landed — `turn.actionsPerTurn > 1` under
-`schedule = simultaneous`; each seat submits N cells; indexed pairs resolve
-jointly (win-check per sub-step). `committedPlacements` is now `Position[]`
-per seat; Double-Place Simultaneous TTT + `multiActionSimultaneous.test.ts`;
-library n-in-a-row may sample `actionsPerTurn: 2` with simultaneous. Pick the
-**next smallest** unlock the engine still lacks — not another recombination of
-covered primitives (see project-structure selection principle).
+**Hex/graph multi-action simultaneous** landed — `actionsPerTurn > 1` under
+`schedule = simultaneous` on `hex_offset` and `graph` (same topologies as
+single-action simultaneous). Double-Place Simultaneous Hex / Graph presets +
+tests; library hex/graph families may sample `actionsPerTurn: 2`. Alternating
+multi-step stays rectangle-only. Pick the **next smallest** unlock the engine
+still lacks — not another recombination of covered primitives (see
+project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- hex/graph multi-action simultaneous (topology lift of the rectangle foothold)
-- delayed + gravity / multi-step composition (only if a new seam appears)
+- alternating multi-step on hex/graph (topology lift of Double Move)
+- delayed + gravity composition (only if a new seam appears)
 - hidden simultaneous on hex/graph (composition only if a new observe/legal seam)
 - phases beyond fleet placement / combat
 
@@ -56,6 +56,6 @@ graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
 simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
 hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
 `actionsPerTurn`, delayed `delayTurns`, hidden simultaneous `commitReveal`,
-ordered simultaneous `resolveOrder`, and multi-action simultaneous rounds also
-landed. Further ports only when a **new** missing mechanism appears — not a
-backlog.
+ordered simultaneous `resolveOrder`, multi-action simultaneous (rectangle), and
+hex/graph multi-action simultaneous also landed. Further ports only when a
+**new** missing mechanism appears — not a backlog.

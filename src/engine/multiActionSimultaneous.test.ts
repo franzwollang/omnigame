@@ -21,11 +21,23 @@ describe("schema: multi-action simultaneous (actionsPerTurn > 1)", () => {
 		expect(ok.success).toBe(true);
 	});
 
-	it("rejects simultaneous + actionsPerTurn > 1 on hex", () => {
+	it("accepts simultaneous + actionsPerTurn > 1 on hex and graph", () => {
+		const hex = zConfig.safeParse(
+			examplePresets["double-place-simultaneous-hex"].config
+		);
+		expect(hex.success).toBe(true);
+
+		const graph = zConfig.safeParse(
+			examplePresets["double-place-simultaneous-graph"].config
+		);
+		expect(graph.success).toBe(true);
+	});
+
+	it("still rejects alternating multi-step on hex", () => {
 		const base = examplePresets["hex-connect-lite"].config;
 		const bad = zConfig.safeParse({
 			...base,
-			turn: { mode: "turn", schedule: "simultaneous", actionsPerTurn: 2 }
+			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 }
 		});
 		expect(bad.success).toBe(false);
 	});
@@ -284,5 +296,205 @@ describe("kernel: multi-action simultaneous rounds", () => {
 		expect(replay.faithful).toBe(true);
 		expect(getCell(replay.finalState.grid, { row: 0, col: 0 })).toBe("X");
 		expect(getCell(replay.finalState.grid, { row: 1, col: 2 })).toBe("O");
+	});
+});
+
+describe("kernel: multi-action simultaneous on hex/graph", () => {
+	it("hex: two-per-seat round + hex-line win + mid-round stop", () => {
+		const seeded = {
+			...examplePresets["double-place-simultaneous-hex"].config,
+			initial: [
+				{
+					row: 0,
+					col: 0,
+					player: "X" as const,
+					visibility: "public" as const
+				}
+			]
+		};
+		const { kernel, gameConfig } = compileConfig(seeded);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.actionsPerTurn).toBe(2);
+		expect(gameConfig.turnSchedule).toBe("simultaneous");
+
+		let state = kernel.initialState();
+		const result = kernel.stepSync(state, {
+			type: "simultaneousPlace",
+			placements: {
+				X: [
+					{ row: 0, col: 1 },
+					{ row: 0, col: 2 }
+				],
+				O: [
+					{ row: 2, col: 0 },
+					{ row: 2, col: 1 }
+				]
+			}
+		});
+		state = result.nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 1 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		// Win after index 1 completes the line; O's index-1 cell still applied
+		// only if checked after each pair — both of O's first and the win
+		// happen within the same round; index 1 places both before win check
+		// per sub-step. After index 1 win, later sub-steps must not run:
+		// with budget 2, index 1 is last — both O cells applied.
+		expect(getCell(state.grid, { row: 2, col: 0 })).toBe("O");
+		expect(getCell(state.grid, { row: 2, col: 1 })).toBe("O");
+
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: [
+						{ row: 0, col: 1 },
+						{ row: 0, col: 2 }
+					],
+					O: [
+						{ row: 2, col: 0 },
+						{ row: 2, col: 1 }
+					]
+				}
+			}
+		];
+		const config = compileToGameConfig(seeded).gameConfig;
+		const replay = replayActions(config, actions, 0);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.winner).toBe("X");
+	});
+
+	it("hex: two rounds without seed — X wins hex line across rounds", () => {
+		const { kernel } = compileConfig(
+			examplePresets["double-place-simultaneous-hex"].config
+		);
+		let state = kernel.initialState();
+		state = kernel.stepSync(state, {
+			type: "simultaneousPlace",
+			placements: {
+				X: [
+					{ row: 0, col: 0 },
+					{ row: 0, col: 1 }
+				],
+				O: [
+					{ row: 2, col: 0 },
+					{ row: 1, col: 1 }
+				]
+			}
+		}).nextState;
+		expect(state.status).toBe("playing");
+		expect(state.moveCount).toBe(1);
+
+		state = kernel.stepSync(state, {
+			type: "simultaneousPlace",
+			placements: {
+				X: [
+					{ row: 0, col: 2 },
+					{ row: 1, col: 0 }
+				],
+				O: [
+					{ row: 2, col: 2 },
+					{ row: 1, col: 2 }
+				]
+			}
+		}).nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		// Mid-round: X wins at index 0; index 1 must not apply
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 1, col: 0 })).toBe(null);
+		expect(getCell(state.grid, { row: 1, col: 2 })).toBe(null);
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("O");
+	});
+
+	it("graph: multi-action on active nodes; composite-path win; inactive illegal", () => {
+		const seeded = {
+			...examplePresets["double-place-simultaneous-graph"].config,
+			initial: [
+				{
+					row: 0,
+					col: 0,
+					player: "X" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 0,
+					col: 1,
+					player: "X" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 2,
+					col: 0,
+					player: "O" as const,
+					visibility: "public" as const
+				}
+			]
+		};
+		const { kernel, gameConfig } = compileConfig(seeded);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.actionsPerTurn).toBe(2);
+
+		let state = kernel.initialState();
+		// Inactive embedding cell (1,0) is not a graph node
+		const illegal = kernel.stepSync(state, {
+			type: "simultaneousPlace",
+			placements: {
+				X: [
+					{ row: 1, col: 0 },
+					{ row: 0, col: 2 }
+				],
+				O: [
+					{ row: 2, col: 2 },
+					{ row: 1, col: 1 }
+				]
+			}
+		});
+		expect(illegal.events[0]?.type).toBe("ignored");
+
+		const result = kernel.stepSync(state, {
+			type: "simultaneousPlace",
+			placements: {
+				X: [
+					{ row: 0, col: 2 },
+					{ row: 1, col: 1 }
+				],
+				O: [
+					{ row: 2, col: 2 },
+					{ row: 1, col: 1 }
+				]
+			}
+		});
+		state = result.nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 1 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		// Win after index 0; index 1 must not apply (same-cell would conflict anyway)
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("O");
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe(null);
+
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: [
+						{ row: 0, col: 2 },
+						{ row: 1, col: 1 }
+					],
+					O: [
+						{ row: 2, col: 2 },
+						{ row: 1, col: 1 }
+					]
+				}
+			}
+		];
+		const config = compileToGameConfig(seeded).gameConfig;
+		const replay = replayActions(config, actions, 0);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.winner).toBe("X");
 	});
 });

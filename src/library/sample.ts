@@ -161,7 +161,7 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: true
 		}
 	};
-	// Occasionally compose with simultaneous joint-place (hex adjacency + schedule)
+	// Occasionally compose with simultaneous (optionally ordered / multi-action)
 	if (rng() > 0.7) {
 		const resolveOrder =
 			rng() > 0.6
@@ -169,10 +169,12 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 				: rng() > 0.5
 					? ("x_first" as const)
 					: ("o_first" as const);
+		const multiAction = rng() > 0.75;
 		cfg.turn = {
 			mode: "turn",
 			schedule: "simultaneous",
-			...(resolveOrder !== "joint" ? { resolveOrder } : {})
+			...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+			...(multiAction ? { actionsPerTurn: 2 } : {})
 		};
 	}
 	return cfg;
@@ -330,7 +332,7 @@ function sampleGraph(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: false
 		}
 	};
-	// Occasionally compose with simultaneous (active-node joint place)
+	// Occasionally compose with simultaneous (active-node joint / multi-action)
 	if (rng() > 0.7) {
 		const resolveOrder =
 			rng() > 0.6
@@ -338,10 +340,12 @@ function sampleGraph(rng: SamplerRng, seed: number): ConfigInput {
 				: rng() > 0.5
 					? ("x_first" as const)
 					: ("o_first" as const);
+		const multiAction = rng() > 0.75;
 		cfg.turn = {
 			mode: "turn",
 			schedule: "simultaneous",
-			...(resolveOrder !== "joint" ? { resolveOrder } : {})
+			...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+			...(multiAction ? { actionsPerTurn: 2 } : {})
 		};
 	}
 	return cfg;

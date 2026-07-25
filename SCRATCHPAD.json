@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T12:10-05:00",
-  "turn": 17,
+  "updated_at": "2026-07-25T12:25-05:00",
+  "turn": 18,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after multi-action simultaneous rounds"
+    "goal": "Hand off after hex/graph multi-action simultaneous"
   },
   "recent": [
-    "Synced e81b tip onto 1020",
-    "Landed actionsPerTurn under simultaneous",
-    "Double-Place Simultaneous TTT + multiActionSimultaneous tests"
+    "Synced progression-1020 onto ec3e",
+    "Lifted simultaneous actionsPerTurn>1 for hex/graph",
+    "Double-Place Simultaneous Hex/Graph + tests"
   ],
   "discoveries": [
-    "committedPlacements is Position[] per seat (N=1 = length 1)",
-    "Win-check after each indexed sub-step; moveCount +1 per round"
+    "Alternating multi-step stays rectangle-only",
+    "Kernel indexed-pair resolve already topology-aware"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick hex/graph multi-action simultaneous or next true new seam",
+  "next_step": "Cloud agent: pick alternating multi-step hex/graph or next true new seam",
   "blockers": []
 }
