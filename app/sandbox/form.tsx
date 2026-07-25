@@ -341,8 +341,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											/>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
-											&gt;1 keeps the current player until the budget is
-											spent (alternating + cell + n-in-a-row only).
+											&gt;1 = multi-step under alternating, or multi-action
+											rounds under simultaneous (rectangle + cell +
+											n-in-a-row).
 										</p>
 										<FormMessage />
 									</FormItem>

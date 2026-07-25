@@ -334,6 +334,18 @@ export const Contracts = {
 		invariants: ["actionsPerTurnBudgetBeforeHandoff"]
 	}),
 	/**
+	 * Multi-action simultaneous rounds (actionsPerTurn > 1 under simultaneous).
+	 * Each seat submits N places; joint resolve applies indexed pairs.
+	 */
+	ScheduleMultiActionSimultaneous: (): FeatureContract => ({
+		id: "ScheduleMultiActionSimultaneous",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: ["actionsPerRoundBudgetBeforeJointResolve"]
+	}),
+	/**
 	 * Delayed (queued) place: intent is recorded now; stone materializes after
 	 * delayTurns intervening places. Keeps PlacementPolicy = direct.
 	 */

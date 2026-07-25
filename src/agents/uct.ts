@@ -4,6 +4,7 @@
  * live state matches a prior tree node.
  */
 import type { GameState } from "@/engine/types";
+import { asPlacementList } from "@/engine/types";
 import type {
 	GameKernel,
 	KernelAction,
@@ -39,8 +40,11 @@ export function actionKey(action: KernelAction): string {
 			return "tick";
 		case "pass":
 			return "pass";
-		case "simultaneousPlace":
-			return `joint:${action.placements.X.row},${action.placements.X.col}|${action.placements.O.row},${action.placements.O.col}`;
+		case "simultaneousPlace": {
+			const xs = asPlacementList(action.placements.X);
+			const os = asPlacementList(action.placements.O);
+			return `joint:${xs.map((p) => `${p.row},${p.col}`).join("+")}|${os.map((p) => `${p.row},${p.col}`).join("+")}`;
+		}
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
 	}
@@ -60,7 +64,7 @@ function stateFingerprint(state: GameState): string {
 			)
 			.join(";"),
 		state.committedPlacements
-			? `cX:${state.committedPlacements.X ? `${state.committedPlacements.X.row},${state.committedPlacements.X.col}` : ""}|cO:${state.committedPlacements.O ? `${state.committedPlacements.O.row},${state.committedPlacements.O.col}` : ""}`
+			? `cX:${(state.committedPlacements.X ?? []).map((p) => `${p.row},${p.col}`).join("+")}|cO:${(state.committedPlacements.O ?? []).map((p) => `${p.row},${p.col}`).join("+")}`
 			: "",
 		state.consecutivePasses ?? "",
 		state.koPoint

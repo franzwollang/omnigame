@@ -17,13 +17,13 @@ describe("schema: turn.actionsPerTurn multi-step", () => {
 		expect(ok.success).toBe(true);
 	});
 
-	it("rejects actionsPerTurn > 1 with simultaneous or gravity", () => {
+	it("rejects actionsPerTurn > 1 with gravity; accepts with simultaneous", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		const withSim = zConfig.safeParse({
 			...base,
 			turn: { mode: "turn", schedule: "simultaneous", actionsPerTurn: 2 }
 		});
-		expect(withSim.success).toBe(false);
+		expect(withSim.success).toBe(true);
 
 		const withGravity = zConfig.safeParse({
 			...base,

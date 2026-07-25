@@ -59,8 +59,9 @@ export const zConfig = z
 					.enum(["alternating", "manual_tick", "simultaneous"])
 					.default("alternating"),
 				/**
-				 * Multi-step turns: successful actions before handoff (alternating only).
-				 * Default 1 = classic single-action turns. >1 keeps currentPlayer until budget spent.
+				 * Actions before schedule handoff: under alternating, successful
+				 * places before the opponent's turn; under simultaneous, places
+				 * each seat submits per joint round. Default 1.
 				 */
 				actionsPerTurn: z.number().int().min(1).max(8).optional(),
 				/**
@@ -653,20 +654,22 @@ export const zConfig = z
 					message: "simultaneous is incompatible with fleet placement"
 				});
 			}
-			if (multiStep) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["turn", "actionsPerTurn"],
-					message:
-						"actionsPerTurn > 1 requires turn.schedule = 'alternating' (not simultaneous)"
-				});
-			}
 			if (delayedPlace) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement", "delayTurns"],
 					message:
 						"placement.delayTurns > 0 requires turn.schedule = 'alternating' (not simultaneous)"
+				});
+			}
+			// Multi-action simultaneous rounds: actionsPerTurn > 1 under simultaneous
+			// is allowed on rectangle only (hex/graph deferred, matching multi-step).
+			if (multiStep && (hexBoard || graphBoard)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"actionsPerTurn > 1 under simultaneous requires topology = 'rectangle' (hex/graph deferred)"
 				});
 			}
 		} else if (cfg.turn.commitReveal === true) {
@@ -688,14 +691,17 @@ export const zConfig = z
 			});
 		}
 
-		// Multi-step turns foothold (actionsPerTurn > 1 on alternating)
+		// Multi-step / multi-action foothold (actionsPerTurn > 1)
 		if (multiStep) {
-			if (cfg.turn.schedule !== "alternating") {
+			if (
+				cfg.turn.schedule !== "alternating" &&
+				cfg.turn.schedule !== "simultaneous"
+			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "schedule"],
 					message:
-						"actionsPerTurn > 1 requires turn.schedule = 'alternating'"
+						"actionsPerTurn > 1 requires turn.schedule = 'alternating' or 'simultaneous'"
 				});
 			}
 			if (cfg.objective.mode !== "n_in_a_row") {

@@ -68,7 +68,7 @@ describe("kernel: hidden simultaneous commit-reveal", () => {
 		});
 		state = result.nextState;
 		expect(state.moveCount).toBe(0);
-		expect(state.committedPlacements?.X).toEqual({ row: 0, col: 0 });
+		expect(state.committedPlacements?.X).toEqual([{ row: 0, col: 0 }]);
 		expect(getCell(state.grid, { row: 0, col: 0 })).toBe(null);
 
 		const obsX = kernel.observe(state, 0);

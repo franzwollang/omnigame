@@ -75,7 +75,7 @@ function sampleNInARow(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: rng() > 0.3
 		}
 	};
-	// Occasionally compose with simultaneous (optionally ordered resolve)
+	// Occasionally compose with simultaneous (optionally ordered / multi-action)
 	if (rng() > 0.72) {
 		const resolveOrder =
 			rng() > 0.55
@@ -83,10 +83,12 @@ function sampleNInARow(rng: SamplerRng, seed: number): ConfigInput {
 				: rng() > 0.5
 					? ("x_first" as const)
 					: ("o_first" as const);
+		const multiAction = rng() > 0.75;
 		cfg.turn = {
 			mode: "turn",
 			schedule: "simultaneous",
-			...(resolveOrder !== "joint" ? { resolveOrder } : {})
+			...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+			...(multiAction ? { actionsPerTurn: 2 } : {})
 		};
 	}
 	return cfg;

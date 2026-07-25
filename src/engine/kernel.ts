@@ -6,7 +6,12 @@
  */
 import { Effect } from "effect";
 import type { GameState, Player, Position } from "@/engine/types";
-import { getCell } from "@/engine/types";
+import {
+	asPlacementList,
+	getCell,
+	listHasPosition,
+	positionsEqual
+} from "@/engine/types";
 import {
 	createInitialState,
 	reduce,
@@ -47,7 +52,10 @@ export type KernelAction =
 	| { type: "pass" }
 	| {
 			type: "simultaneousPlace";
-			placements: { X: Position; O: Position };
+			placements: {
+				X: Position | Position[];
+				O: Position | Position[];
+			};
 	  }
 	| {
 			type: "commitPlace";
@@ -175,8 +183,13 @@ function formatAction(action: KernelAction): string {
 			return "tick";
 		case "pass":
 			return "pass";
-		case "simultaneousPlace":
-			return `joint place X(${action.placements.X.row},${action.placements.X.col}) O(${action.placements.O.row},${action.placements.O.col})`;
+		case "simultaneousPlace": {
+			const xs = asPlacementList(action.placements.X);
+			const os = asPlacementList(action.placements.O);
+			const xPart = xs.map((p) => `(${p.row},${p.col})`).join("+");
+			const oPart = os.map((p) => `(${p.row},${p.col})`).join("+");
+			return `joint place X${xPart} O${oPart}`;
+		}
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
 	}
@@ -409,14 +422,17 @@ function collectLegalActions(
 	if (simultaneous) {
 		const commitReveal = config.commitReveal === true;
 		const acting = playerOf(player);
+		const budget = config.actionsPerTurn ?? 1;
 		if (commitReveal) {
-			// Already committed this round → no further actions until reveal.
-			if (state.committedPlacements?.[acting]) return [];
+			const own = state.committedPlacements?.[acting] ?? [];
+			// Budget full this round → no further actions until reveal.
+			if (own.length >= budget) return [];
 			for (const position of allActivePositions(
 				state.grid,
 				config.topology ?? "rectangle",
 				config.graph
 			)) {
+				if (listHasPosition(own, position)) continue;
 				if (canPlaceCell(state, position, config, acting)) {
 					actions.push({
 						type: "commitPlace",
@@ -702,7 +718,8 @@ export function explainKernelAction(
 		};
 	}
 
-	// Joint action: both constituent places must be individually legal
+	// Joint action: all constituent places must be individually legal on the
+	// pre-round board, lengths must match actionsPerTurn, no within-seat dups.
 	if (action.type === "simultaneousPlace") {
 		if (!simultaneous) {
 			return {
@@ -711,16 +728,39 @@ export function explainKernelAction(
 				detail: detailFor("mode_mismatch", action)
 			};
 		}
-		const xOk = canPlaceCell(state, action.placements.X, config, "X");
-		const oOk = canPlaceCell(state, action.placements.O, config, "O");
-		if (xOk && oOk) return { legal: true };
-		if (!xOk || !oOk) {
+		const budget = config.actionsPerTurn ?? 1;
+		const xs = asPlacementList(action.placements.X);
+		const os = asPlacementList(action.placements.O);
+		if (xs.length !== budget || os.length !== budget) {
 			return {
 				legal: false,
-				reason: "cell_occupied",
-				detail: detailFor("cell_occupied", action)
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
 			};
 		}
+		const hasDup = (list: Position[]) => {
+			for (let i = 0; i < list.length; i++) {
+				for (let j = i + 1; j < list.length; j++) {
+					if (positionsEqual(list[i]!, list[j]!)) return true;
+				}
+			}
+			return false;
+		};
+		if (hasDup(xs) || hasDup(os)) {
+			return {
+				legal: false,
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
+			};
+		}
+		const xOk = xs.every((p) => canPlaceCell(state, p, config, "X"));
+		const oOk = os.every((p) => canPlaceCell(state, p, config, "O"));
+		if (xOk && oOk) return { legal: true };
+		return {
+			legal: false,
+			reason: "cell_occupied",
+			detail: detailFor("cell_occupied", action)
+		};
 	}
 
 	if (action.type === "commitPlace") {
@@ -738,7 +778,16 @@ export function explainKernelAction(
 				detail: detailFor("wrong_player", action)
 			};
 		}
-		if (state.committedPlacements?.[action.player]) {
+		const budget = config.actionsPerTurn ?? 1;
+		const own = state.committedPlacements?.[action.player] ?? [];
+		if (own.length >= budget) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		if (listHasPosition(own, action.position)) {
 			return {
 				legal: false,
 				reason: "already_committed",
@@ -765,13 +814,6 @@ export function explainKernelAction(
 	const overflow = config.overflow ?? "reject";
 
 	switch (action.type) {
-		case "simultaneousPlace": {
-			return {
-				legal: false,
-				reason: "illegal_or_noop",
-				detail: detailFor("illegal_or_noop", action)
-			};
-		}
 		case "tick": {
 			if (!manualTick) {
 				return {
@@ -1056,14 +1098,18 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "tick":
 		case "pass":
 			return true;
-		case "simultaneousPlace":
+		case "simultaneousPlace": {
+			if (b.type !== "simultaneousPlace") return false;
+			const aX = asPlacementList(a.placements.X);
+			const aO = asPlacementList(a.placements.O);
+			const bX = asPlacementList(b.placements.X);
+			const bO = asPlacementList(b.placements.O);
+			if (aX.length !== bX.length || aO.length !== bO.length) return false;
 			return (
-				b.type === "simultaneousPlace" &&
-				a.placements.X.row === b.placements.X.row &&
-				a.placements.X.col === b.placements.X.col &&
-				a.placements.O.row === b.placements.O.row &&
-				a.placements.O.col === b.placements.O.col
+				aX.every((p, i) => positionsEqual(p, bX[i]!)) &&
+				aO.every((p, i) => positionsEqual(p, bO[i]!))
 			);
+		}
 		case "commitPlace":
 			return (
 				b.type === "commitPlace" &&
@@ -1074,7 +1120,7 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 	}
 }
 
-/** Build a joint place action from two per-player place actions. */
+/** Build a joint place action from two per-player place actions (1-per-seat). */
 export function jointPlaceFromActions(
 	action0: KernelAction,
 	action1: KernelAction
@@ -1083,6 +1129,30 @@ export function jointPlaceFromActions(
 	return {
 		type: "simultaneousPlace",
 		placements: { X: action0.position, O: action1.position }
+	};
+}
+
+/**
+ * Build a multi-action simultaneous place from N place actions per seat.
+ * Lengths must match; returns null on mismatch or non-place actions.
+ */
+export function jointPlacesFromActions(
+	actions0: readonly KernelAction[],
+	actions1: readonly KernelAction[]
+): KernelAction | null {
+	if (actions0.length === 0 || actions0.length !== actions1.length) return null;
+	const xs: Position[] = [];
+	const os: Position[] = [];
+	for (let i = 0; i < actions0.length; i++) {
+		const a = actions0[i]!;
+		const b = actions1[i]!;
+		if (a.type !== "place" || b.type !== "place") return null;
+		xs.push(a.position);
+		os.push(b.position);
+	}
+	return {
+		type: "simultaneousPlace",
+		placements: { X: xs, O: os }
 	};
 }
 
@@ -1252,7 +1322,9 @@ export function createGameKernel(config: GameConfig): GameKernel {
  * Advance one decision ply: alternating single action, or simultaneous joint
  * place when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
  * `legalActions` for the given player (called once, or twice when joint).
- * Under commitReveal, picks commits for both seats (second auto-reveals).
+ * Under commitReveal, picks commits until each seat fills its per-round budget
+ * (final commit auto-reveals). Under open multi-action simultaneous, picks
+ * `actionsPerTurn` places per seat then joint-resolves.
  */
 export function stepPly(
 	kernel: GameKernel,
@@ -1262,25 +1334,65 @@ export function stepPly(
 ): StepResult | null {
 	const side = kernel.currentPlayer(state);
 	if (side === "simultaneous") {
+		const budget = kernel.config.actionsPerTurn ?? 1;
 		if (kernel.config.commitReveal) {
 			let s = state;
 			let last: StepResult | null = null;
-			for (const pid of [0, 1] as const) {
-				const seat = playerOf(pid);
-				if (s.committedPlacements?.[seat]) continue;
+			// Fill each seat's commit budget; reveal fires when both are full.
+			let guard = budget * 2 + 2;
+			while (guard-- > 0 && s.status === "playing") {
+				const xLen = s.committedPlacements?.X?.length ?? 0;
+				const oLen = s.committedPlacements?.O?.length ?? 0;
+				if (xLen >= budget && oLen >= budget) break;
+				const pid: PlayerId = xLen < budget ? 0 : 1;
 				const legal = kernel.legalActions(s, pid);
 				const action = pickFor(pid, legal);
 				if (!action) return last;
 				last = kernel.stepSync(s, action, seed);
 				s = last.nextState;
 				if (s.status !== "playing") return last;
+				// After reveal, committedPlacements clears — stop.
+				if (
+					(s.committedPlacements?.X?.length ?? 0) === 0 &&
+					(s.committedPlacements?.O?.length ?? 0) === 0 &&
+					s.moveCount > state.moveCount
+				) {
+					return last;
+				}
 			}
 			return last;
 		}
-		const a0 = pickFor(0, kernel.legalActions(state, 0));
-		const a1 = pickFor(1, kernel.legalActions(state, 1));
-		if (!a0 || !a1) return null;
-		return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
+		if (budget <= 1) {
+			const a0 = pickFor(0, kernel.legalActions(state, 0));
+			const a1 = pickFor(1, kernel.legalActions(state, 1));
+			if (!a0 || !a1) return null;
+			return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
+		}
+		// Multi-action open simultaneous: collect N distinct places per seat.
+		const pickN = (pid: PlayerId): KernelAction[] | null => {
+			const picked: KernelAction[] = [];
+			const used = new Set<string>();
+			for (let i = 0; i < budget; i++) {
+				const legal = kernel
+					.legalActions(state, pid)
+					.filter((a) => {
+						if (a.type !== "place") return false;
+						const key = `${a.position.row},${a.position.col}`;
+						return !used.has(key);
+					});
+				const action = pickFor(pid, legal);
+				if (!action || action.type !== "place") return null;
+				used.add(`${action.position.row},${action.position.col}`);
+				picked.push(action);
+			}
+			return picked;
+		};
+		const xs = pickN(0);
+		const os = pickN(1);
+		if (!xs || !os) return null;
+		const joint = jointPlacesFromActions(xs, os);
+		if (!joint) return null;
+		return kernel.stepSync(state, joint, seed);
 	}
 	const action = pickFor(side, kernel.legalActions(state, side));
 	if (!action) return null;

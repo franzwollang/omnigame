@@ -9,7 +9,14 @@ import type {
 	Grid,
 	PendingPlace
 } from "./types";
-import { getCell, setCell, toIndex } from "./types";
+import {
+	asPlacementList,
+	getCell,
+	listHasPosition,
+	positionsEqual,
+	setCell,
+	toIndex
+} from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
 import {
@@ -95,8 +102,9 @@ export type GameConfig = {
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
-	 * Successful actions before handoff (alternating). Default 1.
-	 * When > 1, GameState.actionsRemaining tracks the remaining budget.
+	 * Successful actions before handoff (alternating) or places per seat per
+	 * simultaneous round. Default 1. When > 1 under alternating,
+	 * GameState.actionsRemaining tracks the remaining budget.
 	 */
 	actionsPerTurn?: number;
 	/**
@@ -223,6 +231,9 @@ function isBoardFull(grid: Grid, config: GameConfig): boolean {
 export function createInitialState(config: GameConfig): GameState {
 	const placement = usesPlacementPhase(config.fleet);
 	const actionsPerTurn = resolveActionsPerTurn(config);
+	const alternatingMultiStep =
+		actionsPerTurn > 1 &&
+		(config.turnSchedule ?? "alternating") === "alternating";
 	const base: GameState = {
 		grid: emptyGrid(config.gridWidth, config.gridHeight),
 		currentPlayer: "X",
@@ -233,7 +244,7 @@ export function createInitialState(config: GameConfig): GameState {
 		koPoint: null,
 		phase: placement ? "placement" : "combat",
 		fleetProgress: placement ? initialFleetProgressMap() : undefined,
-		actionsRemaining: actionsPerTurn > 1 ? actionsPerTurn : undefined
+		actionsRemaining: alternatingMultiStep ? actionsPerTurn : undefined
 	};
 
 	const seeds = config.initial ?? [];
@@ -389,14 +400,63 @@ function handleTick(state: GameState, config: GameConfig): GameState {
 }
 
 /**
- * Simultaneous schedule: both players submit a place; resolve in one step.
- * Joint (`resolveOrder=joint`): same-cell conflict → neither places (round advances).
- * Ordered (`x_first` / `o_first`): apply seats in order; earlier seat wins same-cell.
- * If both complete a winning line in the same round → draw.
+ * Apply one simultaneous sub-step pair onto `grid` (joint or ordered).
+ * Returns the updated grid and whether a same-cell joint conflict occurred
+ * (board unchanged for that pair under joint).
+ */
+function applySimultaneousPair(
+	grid: Grid,
+	pair: { X: Position; O: Position },
+	resolveOrder: "joint" | "x_first" | "o_first"
+): { grid: Grid; conflict: boolean } {
+	const conflict = positionsEqual(pair.X, pair.O);
+
+	if (resolveOrder === "joint") {
+		if (conflict) return { grid, conflict: true };
+		const xFree = getCell(grid, pair.X) === null;
+		const oFree = getCell(grid, pair.O) === null;
+		// Cross-index: a later pair may find a seat's cell already filled.
+		// Place only seats whose target is still empty (natural sequential apply).
+		let cells = grid.cells;
+		let next: Grid = grid;
+		if (xFree) {
+			cells = setCell(next, pair.X, "X");
+			next = { ...grid, cells };
+		}
+		if (oFree && getCell(next, pair.O) === null) {
+			cells = setCell(next, pair.O, "O");
+			next = { ...grid, cells };
+		}
+		return { grid: next, conflict: false };
+	}
+
+	const first: Player = resolveOrder === "x_first" ? "X" : "O";
+	const second: Player = first === "X" ? "O" : "X";
+	let next = grid;
+	if (getCell(next, pair[first]) === null) {
+		const cells = setCell(next, pair[first], first);
+		next = { ...grid, cells };
+	}
+	if (getCell(next, pair[second]) === null) {
+		const cells = setCell(next, pair[second], second);
+		next = { ...grid, cells };
+	}
+	return { grid: next, conflict };
+}
+
+/**
+ * Simultaneous schedule: both players submit place(s); resolve in one step.
+ * Scalar placements = classic 1-per-seat round. Arrays = multi-action rounds
+ * (`actionsPerTurn` > 1): apply indexed pairs as sequential sub-steps with
+ * win checks after each. Joint same-cell → neither; ordered → earlier seat wins.
+ * If both complete a winning line in the same sub-step → draw.
  */
 function handleSimultaneousPlace(
 	state: GameState,
-	placements: { X: Position; O: Position },
+	placements: {
+		X: Position | Position[];
+		O: Position | Position[];
+	},
 	config: GameConfig
 ): GameState {
 	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
@@ -407,6 +467,11 @@ function handleSimultaneousPlace(
 	const topology = config.topology ?? "rectangle";
 	const wrap = config.gridWrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
+	const budget = resolveActionsPerTurn(config);
+	const xs = asPlacementList(placements.X);
+	const os = asPlacementList(placements.O);
+
+	if (xs.length !== budget || os.length !== budget) return state;
 
 	const validPos = (pos: Position): boolean => {
 		if (
@@ -422,116 +487,115 @@ function handleSimultaneousPlace(
 		return true;
 	};
 
-	if (!validPos(placements.X) || !validPos(placements.O)) return state;
-
-	const conflict =
-		placements.X.row === placements.O.row &&
-		placements.X.col === placements.O.col;
-
-	let newGrid = state.grid;
-	if (resolveOrder === "joint") {
-		if (!conflict) {
-			let cells = setCell(state.grid, placements.X, "X");
-			cells = setCell({ ...state.grid, cells }, placements.O, "O");
-			newGrid = { ...state.grid, cells };
+	// Within-seat duplicates are illegal for the whole joint action.
+	for (let i = 0; i < xs.length; i++) {
+		for (let j = i + 1; j < xs.length; j++) {
+			if (positionsEqual(xs[i]!, xs[j]!)) return state;
 		}
-	} else {
-		const first: Player = resolveOrder === "x_first" ? "X" : "O";
-		const second: Player = first === "X" ? "O" : "X";
-		let cells = setCell(state.grid, placements[first], first);
-		let afterFirst: typeof state.grid = { ...state.grid, cells };
-		if (getCell(afterFirst, placements[second]) === null) {
-			cells = setCell(afterFirst, placements[second], second);
-			newGrid = { ...state.grid, cells };
-		} else {
-			newGrid = afterFirst;
+	}
+	for (let i = 0; i < os.length; i++) {
+		for (let j = i + 1; j < os.length; j++) {
+			if (positionsEqual(os[i]!, os[j]!)) return state;
 		}
 	}
 
-	const newMoveCount = state.moveCount + 1;
-	// Reveal clears any private commits from a commit-reveal round.
+	// All choices validated against the pre-round board (simultaneous intent).
+	for (const pos of xs) {
+		if (!validPos(pos)) return state;
+	}
+	for (const pos of os) {
+		if (!validPos(pos)) return state;
+	}
+
+	let workingGrid = state.grid;
 	const clearedCommits = { committedPlacements: undefined as undefined };
 
-	// Joint skips win checks on conflict (board unchanged). Ordered always checks.
-	const shouldCheckWin = resolveOrder !== "joint" || !conflict;
-	if (shouldCheckWin) {
-		const xWins = Boolean(
-			checkWinner(
-				newGrid,
-				"X",
-				config.winLength,
-				config.adjacency,
-				topology,
-				config.graph,
-				wrap
-			)
-		);
-		const oWins = Boolean(
-			checkWinner(
-				newGrid,
-				"O",
-				config.winLength,
-				config.adjacency,
-				topology,
-				config.graph,
-				wrap
-			)
-		);
-		if (xWins && oWins) {
+	for (let i = 0; i < budget; i++) {
+		const pair = { X: xs[i]!, O: os[i]! };
+		const applied = applySimultaneousPair(workingGrid, pair, resolveOrder);
+		workingGrid = applied.grid;
+
+		const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
+		if (shouldCheckWin) {
+			const xWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"X",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			const oWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"O",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			if (xWins && oWins) {
+				return {
+					...state,
+					...clearedCommits,
+					grid: workingGrid,
+					status: "draw",
+					winner: null,
+					moveCount: state.moveCount + 1
+				};
+			}
+			if (xWins) {
+				return {
+					...state,
+					...clearedCommits,
+					grid: workingGrid,
+					status: "won",
+					winner: "X",
+					moveCount: state.moveCount + 1
+				};
+			}
+			if (oWins) {
+				return {
+					...state,
+					...clearedCommits,
+					grid: workingGrid,
+					status: "won",
+					winner: "O",
+					moveCount: state.moveCount + 1
+				};
+			}
+		}
+
+		if (isBoardFull(workingGrid, config)) {
 			return {
 				...state,
 				...clearedCommits,
-				grid: newGrid,
+				grid: workingGrid,
 				status: "draw",
 				winner: null,
-				moveCount: newMoveCount
+				moveCount: state.moveCount + 1
 			};
 		}
-		if (xWins) {
-			return {
-				...state,
-				...clearedCommits,
-				grid: newGrid,
-				status: "won",
-				winner: "X",
-				moveCount: newMoveCount
-			};
-		}
-		if (oWins) {
-			return {
-				...state,
-				...clearedCommits,
-				grid: newGrid,
-				status: "won",
-				winner: "O",
-				moveCount: newMoveCount
-			};
-		}
-	}
-
-	if (isBoardFull(newGrid, config)) {
-		return {
-			...state,
-			...clearedCommits,
-			grid: newGrid,
-			status: "draw",
-			winner: null,
-			moveCount: newMoveCount
-		};
 	}
 
 	return {
 		...state,
 		...clearedCommits,
-		grid: newGrid,
-		moveCount: newMoveCount
+		grid: workingGrid,
+		moveCount: state.moveCount + 1
 		// Simultaneous rounds do not flip currentPlayer
 	};
 }
 
 /**
- * Hidden simultaneous: record a private commit. When both seats have committed,
- * resolve via handleSimultaneousPlace (joint or ordered resolveOrder).
+ * Hidden simultaneous: record a private commit. When both seats have committed
+ * their full per-round budget (`actionsPerTurn`), resolve via
+ * handleSimultaneousPlace (joint or ordered resolveOrder).
  */
 function handleCommitPlace(
 	state: GameState,
@@ -545,6 +609,7 @@ function handleCommitPlace(
 	if ((config.inputMode ?? "cell") === "move") return state;
 
 	const topology = config.topology ?? "rectangle";
+	const budget = resolveActionsPerTurn(config);
 	if (
 		position.row < 0 ||
 		position.row >= state.grid.height ||
@@ -557,19 +622,22 @@ function handleCommitPlace(
 	if (getCell(state.grid, position) !== null) return state;
 
 	const prior = state.committedPlacements ?? {};
-	if (prior[player]) return state; // already committed this round
+	const own = prior[player] ?? [];
+	if (own.length >= budget) return state; // budget already full
+	if (listHasPosition(own, position)) return state; // duplicate within seat
 
-	const nextCommits: Partial<Record<Player, Position>> = {
+	const nextOwn = [...own, position];
+	const nextCommits: Partial<Record<Player, Position[]>> = {
 		...prior,
-		[player]: position
+		[player]: nextOwn
 	};
 
-	const xPos = nextCommits.X;
-	const oPos = nextCommits.O;
-	if (xPos && oPos) {
+	const xList = nextCommits.X ?? [];
+	const oList = nextCommits.O ?? [];
+	if (xList.length === budget && oList.length === budget) {
 		return handleSimultaneousPlace(
 			{ ...state, committedPlacements: nextCommits },
-			{ X: xPos, O: oPos },
+			{ X: xList, O: oList },
 			config
 		);
 	}

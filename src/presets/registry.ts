@@ -99,6 +99,58 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"double-place-simultaneous-ttt": definePreset({
+		id: "double-place-simultaneous-ttt",
+		name: "Double-Place Simultaneous TTT",
+		tags: [
+			"simultaneous",
+			"actionsPerTurn",
+			"multi-action",
+			"3x3",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Each seat submits two cells per simultaneous round; indexed pairs resolve jointly. Unlocks actionsPerTurn > 1 under simultaneous.",
+		config: {
+			metadata: { name: "Double-Place Simultaneous TTT", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				actionsPerTurn: 2
+			},
+			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"ordered-simultaneous-ttt": definePreset({
 		id: "ordered-simultaneous-ttt",
 		name: "Ordered Simultaneous TTT",

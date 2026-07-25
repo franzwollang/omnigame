@@ -8,6 +8,7 @@ import {
 	createGameKernel,
 	formatKernelEvent,
 	jointPlaceFromActions,
+	jointPlacesFromActions,
 	type GameKernel,
 	type IllegalReason,
 	type KernelAction,
@@ -15,6 +16,7 @@ import {
 	type PlayerId,
 	type Seed
 } from "@/engine/kernel";
+import { listHasPosition } from "@/engine/types";
 import {
 	createInitialTurnContext,
 	type TurnContext
@@ -38,7 +40,14 @@ function turnContextFor(state: GameState): TurnContext {
 	return { phase: "awaitInput" };
 }
 
-export type PendingPlacements = Partial<Record<Player, Position>>;
+export type PendingPlacements = Partial<Record<Player, Position[]>>;
+
+function commitLen(
+	commits: GameState["committedPlacements"],
+	player: Player
+): number {
+	return commits?.[player]?.length ?? 0;
+}
 
 export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const kernel: GameKernel = useMemo(() => createGameKernel(config), [config]);
@@ -48,6 +57,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const resolveOrder = simultaneous
 		? (config.resolveOrder ?? "joint")
 		: "joint";
+	const actionsPerRound = simultaneous ? (config.actionsPerTurn ?? 1) : 1;
 
 	const [state, setState] = useState<GameState>(() =>
 		kernel.initialState(seed)
@@ -151,30 +161,38 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const simultaneousSeat: Player | null = useMemo(() => {
 		if (!simultaneous || state.status !== "playing") return null;
 		if (commitReveal) {
-			if (!state.committedPlacements?.X) return "X";
-			if (!state.committedPlacements?.O) return "O";
+			if (commitLen(state.committedPlacements, "X") < actionsPerRound)
+				return "X";
+			if (commitLen(state.committedPlacements, "O") < actionsPerRound)
+				return "O";
 			return null;
 		}
-		if (!pendingPlacements.X) return "X";
-		if (!pendingPlacements.O) return "O";
+		const xLen = pendingPlacements.X?.length ?? 0;
+		const oLen = pendingPlacements.O?.length ?? 0;
+		if (xLen < actionsPerRound) return "X";
+		if (oLen < actionsPerRound) return "O";
 		return null;
 	}, [
 		simultaneous,
 		commitReveal,
 		state.status,
 		state.committedPlacements,
-		pendingPlacements
+		pendingPlacements,
+		actionsPerRound
 	]);
 
 	const placeMove = useCallback(
 		(pos: Position) => {
 			if (simultaneous) {
 				if (commitReveal) {
-					const seat = !stateRef.current.committedPlacements?.X
-						? "X"
-						: !stateRef.current.committedPlacements?.O
-							? "O"
-							: null;
+					const seat =
+						commitLen(stateRef.current.committedPlacements, "X") <
+						actionsPerRound
+							? "X"
+							: commitLen(stateRef.current.committedPlacements, "O") <
+								  actionsPerRound
+								? "O"
+								: null;
 					if (!seat) return;
 					applyAction({
 						type: "commitPlace",
@@ -183,12 +201,19 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 					});
 					return;
 				}
-				const seat = !pendingRef.current.X
-					? "X"
-					: !pendingRef.current.O
-						? "O"
-						: null;
+				const xLen = pendingRef.current.X?.length ?? 0;
+				const oLen = pendingRef.current.O?.length ?? 0;
+				const seat =
+					xLen < actionsPerRound ? "X" : oLen < actionsPerRound ? "O" : null;
 				if (!seat) return;
+				const own = pendingRef.current[seat] ?? [];
+				if (listHasPosition(own, pos)) {
+					setLastIllegal({
+						reason: "already_committed",
+						detail: "Already chosen this cell this round"
+					});
+					return;
+				}
 				const explained = kernel.explainAction(
 					stateRef.current,
 					seat === "X" ? 0 : 1,
@@ -202,17 +227,32 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 					return;
 				}
 				setLastIllegal(null);
+				const nextOwn = [...own, pos];
 				const nextPending: PendingPlacements = {
 					...pendingRef.current,
-					[seat]: pos
+					[seat]: nextOwn
 				};
 				pendingRef.current = nextPending;
 				setPendingPlacements(nextPending);
-				if (nextPending.X && nextPending.O) {
-					const joint = jointPlaceFromActions(
-						{ type: "place", position: nextPending.X },
-						{ type: "place", position: nextPending.O }
-					);
+				const nx = nextPending.X?.length ?? 0;
+				const no = nextPending.O?.length ?? 0;
+				if (nx === actionsPerRound && no === actionsPerRound) {
+					const joint =
+						actionsPerRound <= 1
+							? jointPlaceFromActions(
+									{ type: "place", position: nextPending.X![0]! },
+									{ type: "place", position: nextPending.O![0]! }
+								)
+							: jointPlacesFromActions(
+									nextPending.X!.map((p) => ({
+										type: "place" as const,
+										position: p
+									})),
+									nextPending.O!.map((p) => ({
+										type: "place" as const,
+										position: p
+									}))
+								);
 					if (joint) applyAction(joint);
 				}
 				return;
@@ -255,7 +295,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 			}
 			applyAction({ type: "place", position: pos });
 		},
-		[applyAction, config.observationMode, config.inputMode, simultaneous, commitReveal, kernel]
+		[applyAction, config.observationMode, config.inputMode, simultaneous, commitReveal, kernel, actionsPerRound]
 	);
 
 	const activateColumn = useCallback(
@@ -382,6 +422,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		simultaneousSeat,
 		commitReveal,
 		resolveOrder,
+		actionsPerRound,
 		legalActions,
 		legalActionsList,
 		dispatchAction: applyAction,

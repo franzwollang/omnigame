@@ -107,8 +107,10 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		if (resolveOrder === "x_first" || resolveOrder === "o_first") {
 			features.push(Contracts.ScheduleOrderedResolve());
 		}
-	}
-	if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+		if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+			features.push(Contracts.ScheduleMultiActionSimultaneous());
+		}
+	} else if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
 		features.push(Contracts.ScheduleMultiStep());
 	}
 	if ((cfg.placement.delayTurns ?? 0) > 0) {

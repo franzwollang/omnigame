@@ -17,8 +17,10 @@ import { useGameEngine } from "@/engine/useGameEngine";
 import {
 	formatKernelEvent,
 	highlightCellsForActions,
-	jointPlaceFromActions
+	jointPlaceFromActions,
+	jointPlacesFromActions
 } from "@/engine/kernel";
+import type { KernelAction, PlayerId } from "@/engine/kernel";
 import { compileToGameConfig } from "@/compiler";
 import { validateConfig } from "@/engine/validateConfig";
 import { createAgent, type AgentKind } from "@/agents";
@@ -97,6 +99,7 @@ export default function GamePage() {
 		simultaneousSeat,
 		commitReveal,
 		resolveOrder,
+		actionsPerRound,
 		lastIllegal,
 		legalActionsList,
 		kernel,
@@ -150,21 +153,49 @@ export default function GamePage() {
 		if (gameState.status !== "playing") return;
 		const side = kernel.currentPlayer(gameState);
 		if (side === "simultaneous") {
+			const budget = actionsPerRound;
 			if (commitReveal) {
-				const seat = !gameState.committedPlacements?.X
-					? 0
-					: !gameState.committedPlacements?.O
-						? 1
-						: null;
+				const xLen = gameState.committedPlacements?.X?.length ?? 0;
+				const oLen = gameState.committedPlacements?.O?.length ?? 0;
+				const seat: PlayerId | null =
+					xLen < budget ? 0 : oLen < budget ? 1 : null;
 				if (seat === null) return;
 				const action = agentRef.current.act(kernel, gameState, seat);
 				if (action) dispatchAction(action);
 				return;
 			}
-			const a0 = agentRef.current.act(kernel, gameState, 0);
-			const a1 = agentRef.current.act(kernel, gameState, 1);
-			if (!a0 || !a1) return;
-			const joint = jointPlaceFromActions(a0, a1);
+			if (budget <= 1) {
+				const a0 = agentRef.current.act(kernel, gameState, 0);
+				const a1 = agentRef.current.act(kernel, gameState, 1);
+				if (!a0 || !a1) return;
+				const joint = jointPlaceFromActions(a0, a1);
+				if (joint) dispatchAction(joint);
+				return;
+			}
+			const pickN = (pid: PlayerId): KernelAction[] | null => {
+				const picked: KernelAction[] = [];
+				const used = new Set<string>();
+				for (let i = 0; i < budget; i++) {
+					const legal = kernel.legalActions(gameState, pid).filter((a) => {
+						if (a.type !== "place") return false;
+						return !used.has(`${a.position.row},${a.position.col}`);
+					});
+					const wrapped = {
+						...kernel,
+						legalActions: (s: typeof gameState, p: PlayerId) =>
+							p === pid ? legal : kernel.legalActions(s, p)
+					};
+					const action = agentRef.current.act(wrapped, gameState, pid);
+					if (!action || action.type !== "place") return null;
+					used.add(`${action.position.row},${action.position.col}`);
+					picked.push(action);
+				}
+				return picked;
+			};
+			const xs = pickN(0);
+			const os = pickN(1);
+			if (!xs || !os) return;
+			const joint = jointPlacesFromActions(xs, os);
 			if (joint) dispatchAction(joint);
 			return;
 		}
@@ -397,7 +428,26 @@ export default function GamePage() {
 											resolveOrder !== "joint"
 												? ` · ${resolveOrder}`
 												: ""
-										}${simultaneousSeat ? ` · ${simultaneousSeat} choosing` : ""}`
+										}${
+											actionsPerRound > 1
+												? ` · ${actionsPerRound}/seat`
+												: ""
+										}${
+											simultaneousSeat
+												? ` · ${simultaneousSeat} choosing${
+														actionsPerRound > 1
+															? ` (${
+																	commitReveal
+																		? (gameState.committedPlacements?.[
+																				simultaneousSeat
+																			]?.length ?? 0)
+																		: (pendingPlacements[simultaneousSeat]
+																				?.length ?? 0)
+																}/${actionsPerRound})`
+															: ""
+													}`
+												: ""
+										}`
 									: ` · ${gameState.currentPlayer} to move${
 											gameState.actionsRemaining != null
 												? ` · ${gameState.actionsRemaining} left`
@@ -509,10 +559,13 @@ export default function GamePage() {
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							{commitReveal ? (
 								<>
-									Hidden simultaneous: commit a cell for{" "}
-									{simultaneousSeat ?? "X"} (own commit visible only to
-									that seat); board reveals when both committed; same
-									cell →{" "}
+									Hidden simultaneous
+									{actionsPerRound > 1
+										? ` (${actionsPerRound} commits/seat)`
+										: ""}
+									: commit for {simultaneousSeat ?? "X"} (own commits
+									visible only to that seat); board reveals when both
+									fill their budget; same cell →{" "}
 									{resolveOrder === "joint"
 										? "neither places"
 										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
@@ -523,12 +576,15 @@ export default function GamePage() {
 									{resolveOrder !== "joint"
 										? ` (${resolveOrder})`
 										: ""}
-									: click a cell for {simultaneousSeat ?? "X"}
-									{pendingPlacements.X
-										? ` (X@${pendingPlacements.X.row},${pendingPlacements.X.col})`
+									{actionsPerRound > 1
+										? ` · ${actionsPerRound} places/seat`
 										: ""}
-									{pendingPlacements.O
-										? ` (O@${pendingPlacements.O.row},${pendingPlacements.O.col})`
+									: click a cell for {simultaneousSeat ?? "X"}
+									{pendingPlacements.X && pendingPlacements.X.length > 0
+										? ` (X@${pendingPlacements.X.map((p) => `${p.row},${p.col}`).join("+")})`
+										: ""}
+									{pendingPlacements.O && pendingPlacements.O.length > 0
+										? ` (O@${pendingPlacements.O.map((p) => `${p.row},${p.col}`).join("+")})`
 										: ""}
 									; same cell →{" "}
 									{resolveOrder === "joint"

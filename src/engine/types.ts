@@ -35,8 +35,9 @@ export type GameState = {
 	winner: Player | null;
 	moveCount: number;
 	/**
-	 * Multi-step turns: actions left in the current player's turn budget.
-	 * Present when `actionsPerTurn > 1`; decremented on success; reset on handoff.
+	 * Multi-step alternating: actions left in the current player's turn budget.
+	 * Present when `actionsPerTurn > 1` under alternating; decremented on success;
+	 * reset on handoff. Unused under simultaneous (budget is per-round collection).
 	 */
 	actionsRemaining?: number;
 	/**
@@ -74,11 +75,32 @@ export type GameState = {
 		};
 	};
 	/**
-	 * Hidden simultaneous: per-round private commits. Cleared after joint resolve.
-	 * Public grid unchanged until both seats have committed.
+	 * Hidden simultaneous: per-round private commits (0..actionsPerTurn each).
+	 * Cleared after joint resolve. Public grid unchanged until both seats have
+	 * committed their full per-round budget.
 	 */
-	committedPlacements?: Partial<Record<Player, Position>>;
+	committedPlacements?: Partial<Record<Player, Position[]>>;
 };
+
+/** Normalize a simultaneous placement payload to a position list. */
+export function asPlacementList(
+	p: Position | readonly Position[] | undefined
+): Position[] {
+	if (!p) return [];
+	return Array.isArray(p) ? [...p] : [p];
+}
+
+export function positionsEqual(a: Position, b: Position): boolean {
+	return a.row === b.row && a.col === b.col;
+}
+
+/** True when `list` already contains `pos`. */
+export function listHasPosition(
+	list: readonly Position[] | undefined,
+	pos: Position
+): boolean {
+	return (list ?? []).some((p) => positionsEqual(p, pos));
+}
 
 export type PlaceMoveEvent = {
 	type: "place";
@@ -126,7 +148,11 @@ export type PassEvent = {
 
 export type SimultaneousPlaceEvent = {
 	type: "simultaneousPlace";
-	placements: { X: Position; O: Position };
+	/** One place each (scalar) or N places per seat for multi-action rounds. */
+	placements: {
+		X: Position | Position[];
+		O: Position | Position[];
+	};
 };
 
 /** Hidden simultaneous: one seat's private commit (player required). */
