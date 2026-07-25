@@ -200,7 +200,7 @@ export const Contracts = {
 		requires: [],
 		provides: [],
 		slots: [],
-		hooks: ["projectObservation"],
+		hooks: [],
 		invariants: ["hidesCellsOutsideRadius"]
 	}),
 	DestroyHidden: (): FeatureContract => ({
