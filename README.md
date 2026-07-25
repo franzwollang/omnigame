@@ -109,9 +109,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
-- **Library explorer**: `src/library/` samples configs, scores playability (compile → opening legality → random playout), sandbox Library modal loads playable finds
+- **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: ko/full Go rules, deeper library search UX, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: ko/full Go rules, wrap/non-down gravity behind Kernel, simultaneous/delayed actions, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

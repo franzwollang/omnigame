@@ -1,24 +1,24 @@
 {
-  "updated_at": "2026-07-25T06:05-05:00",
-  "turn": 20,
+  "updated_at": "2026-07-25T06:25-05:00",
+  "turn": 21,
   "focus": {
     "milestone": "post-M7",
-    "issue": "library-explorer-depth",
-    "goal": "Deeper library search UX or graph sampling"
+    "issue": "next-missing-mechanism",
+    "goal": "Pick smallest unlock: wrap, ko, simultaneous, or delayed"
   },
   "recent": [
-    "Synced 4234 onto fcfd",
-    "fleet.ships placement→combat + Battleship Place",
-    "Closed observation-placement-phase"
+    "Synced fcfd onto eb3f",
+    "library-explorer-depth: graph sample + score + share",
+    "Closed library-explorer-depth"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "Fleet: player finishes whole fleet before opponent; then combat"
+    "Share finds via ?find= base64 or ?librarySeed=&libraryIndex="
   ],
   "open_threads": [
-    "Next: library-explorer-depth (graph sample / scoring / share)"
+    "Next: missing mechanism (wrap / ko / simultaneous / delayed)"
   ],
-  "next_step": "Deepen library explorer: graph sampling, better playability, or share links",
+  "next_step": "Choose one missing mechanism; implement schema+kernel+preset+tests",
   "blockers": []
 }
