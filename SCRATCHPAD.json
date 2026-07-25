@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T09:30-05:00",
-  "turn": 9,
+  "updated_at": "2026-07-25T09:50-05:00",
+  "turn": 10,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after horizontal pop-out"
+    "goal": "Hand off after hex wrap"
   },
   "recent": [
-    "Landed pop_out_top + Connect 4 Up Pop Out",
-    "Landed situational superko + Go Lite Situational Superko",
-    "Merged 67b2 onto acf9; landed horizontal pop-out"
+    "Merged acf9 (horizontal pop-out) onto d7b9",
+    "Landed hex wrap + Toroidal Hex Connect Lite",
+    "Graph wrap deferred as explicit edges (N/A)"
   ],
   "discoveries": [
-    "situational history = board|side; same stones different side legal vs positional",
-    "horizontal pop-out needs popOutRow (not popOutColumn); left↔left right↔right"
+    "hex wrap = stepHex cube-step then modular offset normalizePos",
+    "graph wrap is N/A — authors add cross-seam edges"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick next-missing-mechanism (hex/graph wrap / simultaneous / delayed)",
+  "next_step": "Cloud agent: pick simultaneous or delayed-actions mechanism",
   "blockers": []
 }

@@ -14,7 +14,10 @@ export const zConfig = z
 				topology: z
 					.enum(["rectangle", "hex_offset", "graph"])
 					.default("rectangle"),
-				/** Toroidal adjacency for rectangle boards (hex/graph wrap deferred). */
+				/**
+				 * Toroidal adjacency for rectangle and hex_offset boards.
+				 * Graph wrap is N/A — authors add cross-seam edges explicitly.
+				 */
 				wrap: z.boolean().default(false),
 				/** Playable nodes when topology = graph (inactive slots stay empty). */
 				nodes: z
@@ -249,12 +252,17 @@ export const zConfig = z
 		const manualTick = cfg.turn.schedule === "manual_tick";
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
-		// Toroidal wrap is rectangle-only for now (hex/graph wrap deferred)
-		if (cfg.grid.wrap && cfg.grid.topology !== "rectangle") {
+		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
+		if (
+			cfg.grid.wrap &&
+			cfg.grid.topology !== "rectangle" &&
+			cfg.grid.topology !== "hex_offset"
+		) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["grid", "wrap"],
-				message: "grid.wrap is only supported for topology = 'rectangle'"
+				message:
+					"grid.wrap is only supported for topology = 'rectangle' | 'hex_offset' (graph: add wrap edges explicitly)"
 			});
 		}
 		const captureEnabled = Boolean(cfg.placement.capture?.enabled);

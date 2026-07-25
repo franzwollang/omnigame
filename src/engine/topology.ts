@@ -5,7 +5,7 @@
  */
 import type { Grid, Position } from "@/engine/types";
 import type { AdjacencyConfig } from "@/engine/rules";
-import { inBounds, step } from "@/engine/adjacency";
+import { normalizePos, step } from "@/engine/adjacency";
 
 export type GridTopology = "rectangle" | "hex_offset" | "graph";
 
@@ -103,6 +103,24 @@ export function cubeToOffset(cube: Pick<Cube, "q" | "r">): Position {
 	return { row, col };
 }
 
+/**
+ * One cube-axis step from an odd-r cell, optionally wrapping via modular
+ * offset coords (rectangular hex torus — same storage model as rectangle wrap).
+ */
+export function stepHex(
+	grid: Grid,
+	from: Position,
+	cubeDelta: Pick<Cube, "q" | "r">,
+	wrap: boolean
+): Position | null {
+	const c = offsetToCube(from);
+	const next = cubeToOffset({
+		q: c.q + cubeDelta.q,
+		r: c.r + cubeDelta.r
+	});
+	return normalizePos(grid, next, wrap);
+}
+
 /** Six cube-neighbor deltas (pointy-top hex). */
 export const CUBE_NEIGHBOR_DIRS: readonly Cube[] = [
 	{ q: 1, r: 0, s: -1 },
@@ -144,12 +162,10 @@ export function neighbors(
 		return graph?.neighborsOf.get(posKey(pos))?.slice() ?? [];
 	}
 	if (topology === "hex_offset") {
-		// Hex wrap deferred — clip at board edges
-		const c = offsetToCube(pos);
 		const out: Position[] = [];
 		for (const d of CUBE_NEIGHBOR_DIRS) {
-			const n = cubeToOffset({ q: c.q + d.q, r: c.r + d.r });
-			if (inBounds(grid, n)) out.push(n);
+			const n = stepHex(grid, pos, d, wrap);
+			if (n) out.push(n);
 		}
 		return out;
 	}
@@ -190,10 +206,17 @@ export function getWinAdjFuncs(
 		const funcs: WinAdjFunc[] = [];
 		const pushAxis = (dirs: readonly Cube[]) => {
 			for (const d of dirs) {
-				funcs.push((pos) => {
-					const c = offsetToCube(pos);
-					return [cubeToOffset({ q: c.q + d.q, r: c.r + d.r })];
-				});
+				if (grid && wrap) {
+					funcs.push((pos) => {
+						const next = stepHex(grid, pos, d, true);
+						return next ? [next] : [];
+					});
+				} else {
+					funcs.push((pos) => {
+						const c = offsetToCube(pos);
+						return [cubeToOffset({ q: c.q + d.q, r: c.r + d.r })];
+					});
+				}
 			}
 		};
 		if (adjacency.horizontal) pushAxis(HEX_AXIS_BY_FLAG.horizontal);

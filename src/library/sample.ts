@@ -133,7 +133,7 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 		width: size,
 		height: size,
 		topology: "hex_offset",
-		wrap: false
+		wrap: rng() > 0.65
 	};
 	cfg.win = {
 		length,

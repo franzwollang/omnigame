@@ -87,11 +87,20 @@ describe("schema honesty (M0)", () => {
 				}
 			}).success
 		).toBe(false);
-		// wrap + non-rectangle still rejected
+		// wrap + graph still rejected; hex wrap allowed
 		expect(
 			zConfig.safeParse({
 				...base,
 				grid: { ...base.grid, topology: "hex_offset", wrap: true }
+			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["graph-connect-lite"].config,
+				grid: {
+					...examplePresets["graph-connect-lite"].config.grid,
+					wrap: true
+				}
 			}).success
 		).toBe(false);
 	});

@@ -126,7 +126,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<div className="space-y-0.5">
 											<FormLabel>Wrap (toroidal)</FormLabel>
 											<p className="text-xs text-muted-foreground">
-												Rectangle only — edges connect opposite sides
+												Rectangle and hex_offset — opposite edges connect
+												(graph: add wrap edges explicitly)
 											</p>
 										</div>
 										<FormControl>
@@ -134,8 +135,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												checked={field.value === true}
 												onCheckedChange={field.onChange}
 												disabled={
-													(form.watch("grid.topology") ?? "rectangle") !==
-													"rectangle"
+													!["rectangle", "hex_offset"].includes(
+														form.watch("grid.topology") ?? "rectangle"
+													)
 												}
 											/>
 										</FormControl>

@@ -50,6 +50,7 @@ These are built from the same shared schema and operators.
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
+- **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
 - **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
 - **Go Lite Situational Superko** (situational superko — forbids repeating a prior board+side-to-move)
@@ -103,7 +104,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 
 - **Topology**: rectangular grid, odd-r hex (`hex_offset`), or explicit adjacency
   graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
-  **rectangle** boards (hex/graph wrap deferred); Toroidal TTT preset
+  **rectangle** and **hex_offset** (graph wrap = explicit edges); Toroidal TTT +
+  Toroidal Hex Connect Lite presets
 - **Inputs**: cell-click, column-activation, row-activation, and piece move (`input.mode = "cell" | "column" | "row" | "move"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
@@ -121,8 +123,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, hex/graph wrap,
-simultaneous/delayed actions, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, simultaneous/delayed
+actions, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

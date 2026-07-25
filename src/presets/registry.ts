@@ -63,7 +63,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 		name: "Toroidal TTT",
 		tags: ["wrap", "topology", "3x3", "n-in-a-row", "mechanism"],
 		description:
-			"Tic-Tac-Toe on a torus — lines wrap across opposite edges. Unlocks grid.wrap (rectangle only).",
+			"Tic-Tac-Toe on a torus — lines wrap across opposite edges. Unlocks grid.wrap for rectangle boards.",
 		config: {
 			metadata: { name: "Toroidal TTT", version: 1 },
 			grid: { width: 3, height: 3, topology: "rectangle", wrap: true },
@@ -674,6 +674,49 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				},
 				{
 					id: "hex-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"toroidal-hex-connect-lite": definePreset({
+		id: "toroidal-hex-connect-lite",
+		name: "Toroidal Hex Connect Lite",
+		tags: ["wrap", "hex", "topology", "n-in-a-row", "mechanism"],
+		description:
+			"Hex n-in-a-row on a torus — cube-axis lines wrap across opposite edges. Unlocks grid.wrap for hex_offset (graph wrap remains explicit edges).",
+		config: {
+			metadata: { name: "Toroidal Hex Connect Lite", version: 1 },
+			grid: { width: 4, height: 3, topology: "hex_offset", wrap: true },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			tokens: [
+				{
+					id: "thex-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "thex-o",
 					label: "O",
 					players: ["O"],
 					asset: { type: "image", url: "/assets/tokens/o.png" }

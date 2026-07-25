@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Horizontal pop-out landed (Connect 4 Right Pop
-Out). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Hex wrap landed (Toroidal Hex Connect Lite). Hand
+off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -60,7 +60,7 @@ Working sandbox slice (see README “Current implementation status”):
   Connect 4 Up Pop Out, Connect 4 Right Pop Out, Gomoku, Capture / Flip Demo,
   Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
   Step Race (Move + reach_row),
-  Life Lite (manual tick + B3/S23)
+  Life Lite (manual tick + B3/S23), Toroidal TTT, Toroidal Hex Connect Lite
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -73,7 +73,8 @@ Working sandbox slice (see README “Current implementation status”):
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
 - Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
-- **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle); Toroidal TTT preset
+- **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle + hex_offset);
+  Toroidal TTT + Toroidal Hex Connect Lite presets (graph: explicit edges)
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 - **Simple (point) ko:** `placement.capture.ko` + `GameState.koPoint`; illegal reason `"ko"`
 - **Positional superko:** `capture.ko = "positional"` + `GameState.positionHistory`;
@@ -87,7 +88,7 @@ Working sandbox slice (see README “Current implementation status”):
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: full Go rules, hex/graph wrap, simultaneous/delayed actions.
+Not yet: full Go rules, simultaneous/delayed actions.
 
 ## Milestone exit criteria
 
