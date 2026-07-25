@@ -13,7 +13,7 @@ export type Slot =
 			type: "EndCondition";
 			value: "nInARow" | "destroyHidden" | "reachRow" | "areaControl" | "none";
 	  }
-	| { type: "Schedule"; value: "alternating" | "manualTick" };
+	| { type: "Schedule"; value: "alternating" | "manualTick" | "simultaneous" };
 
 export type PhaseHook =
 	| "validateInput"
@@ -281,7 +281,7 @@ export const Contracts = {
 	}),
 	ScheduleSimultaneous: (): FeatureContract => ({
 		id: "ScheduleSimultaneous",
-		requires: ["CellsWritable", "InputTargetCell"],
+		requires: ["CellsWritable", "ResolvedCell"],
 		provides: [],
 		slots: [{ type: "Schedule", value: "simultaneous" }],
 		hooks: ["validateInput", "applyEffects"],

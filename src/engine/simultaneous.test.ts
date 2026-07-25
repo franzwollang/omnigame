@@ -139,24 +139,17 @@ describe("kernel: simultaneous joint place", () => {
 
 	it("mutual win in one round is a draw", () => {
 		// Seed a board where one more X and O each complete a line.
-		const cfg = compileToGameConfig({
+		const seeded = {
 			...examplePresets["simultaneous-ttt"].config,
 			initial: [
-				{ row: 0, col: 0, player: "X" },
-				{ row: 0, col: 1, player: "X" },
-				{ row: 2, col: 0, player: "O" },
-				{ row: 2, col: 1, player: "O" }
+				{ row: 0, col: 0, player: "X" as const, visibility: "public" as const },
+				{ row: 0, col: 1, player: "X" as const, visibility: "public" as const },
+				{ row: 2, col: 0, player: "O" as const, visibility: "public" as const },
+				{ row: 2, col: 1, player: "O" as const, visibility: "public" as const }
 			]
-		}).gameConfig;
-		const { kernel } = compileConfig({
-			...examplePresets["simultaneous-ttt"].config,
-			initial: [
-				{ row: 0, col: 0, player: "X" },
-				{ row: 0, col: 1, player: "X" },
-				{ row: 2, col: 0, player: "O" },
-				{ row: 2, col: 1, player: "O" }
-			]
-		});
+		};
+		const cfg = compileToGameConfig(seeded).gameConfig;
+		const { kernel } = compileConfig(seeded);
 		expect(cfg.turnSchedule).toBe("simultaneous");
 		const state = kernel.initialState();
 		const result = kernel.stepSync(state, {

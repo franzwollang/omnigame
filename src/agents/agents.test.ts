@@ -19,6 +19,8 @@ describe("kernel agents (M6)", () => {
 		const agent = createRandomAgent(7);
 		for (let i = 0; i < 5; i++) {
 			const player = kernel.currentPlayer(state);
+			expect(player).not.toBe("simultaneous");
+			if (player === "simultaneous") throw new Error("unexpected");
 			const legal = kernel.legalActions(state, player);
 			const action = agent.act(kernel, state, player);
 			expect(action).not.toBeNull();
@@ -107,6 +109,8 @@ describe("kernel agents (M6)", () => {
 		let guard = 0;
 		while (state.status === "playing" && guard < 20) {
 			const player = kernel.currentPlayer(state);
+			expect(player).not.toBe("simultaneous");
+			if (player === "simultaneous") throw new Error("unexpected");
 			const agent = player === 0 ? uct : random;
 			const action = agent.act(kernel, state, player);
 			expect(action).not.toBeNull();
@@ -260,6 +264,8 @@ describe("kernel agents (M6)", () => {
 		let guard = 0;
 		while (state.status === "playing" && guard < 40) {
 			const player = kernel.currentPlayer(state);
+			expect(player).not.toBe("simultaneous");
+			if (player === "simultaneous") throw new Error("unexpected");
 			const agent = player === 0 ? x : o;
 			// Prove observe is available (agent uses it internally)
 			const obs = kernel.observe(state, player);
