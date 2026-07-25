@@ -9,16 +9,16 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 |---|---|---|
 | M0 | Honesty pass + Effect foothold | `done` |
 | M1 | GameKernel ABI + Effect core + event transcripts | `done` |
-| M2 | GameIR + deterministic replay | `not started` |
+| M2 | GameIR + deterministic replay | `done` |
 | M3 | Compiler / normalize / macro expansion | `not started` |
 | M4 | Observation primitive + Battleship-lite | `not started` |
 | M5 | Anchor / reference-game ports | `not started` |
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** residual honesty on server/Z3 validation, then M2
-GameIR — promote the sandbox kernel `eventLog` into a serializable transcript with
-deterministic replay from seed.
+**Optimizing for this phase:** M3 — move Zod/`toGameConfig` into a real
+validate→normalize→kernel-builder path so new mechanics don’t keep growing the
+sandbox adapter.
 
 ## Decisions (locked)
 
@@ -60,11 +60,12 @@ Working sandbox slice (see README “Current implementation status”):
 - Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
-- Vitest transcript + kernel + validateConfig tests
+- Vitest transcript + kernel + validateConfig + GameIR replay tests
 - Sandbox play through `GameKernel` (`useGameEngine` → `stepSync` + event log)
+- GameIR v0 (`src/ir/gameIr.ts`): `seed + actions` transcript + sandbox Replay
+- Client Zod + contract validation in sandbox; Z3 server action optional/experimental
 
-Not yet: `GameIR` / seeded replay, compiler, observation, hex/graph, library explorer.
-Server Z3 validate action still unwired (see `server-validation-unwired`).
+Not yet: compiler/normalize stage, observation, hex/graph, library explorer.
 
 ## Milestone exit criteria
 
@@ -90,6 +91,8 @@ Related: Immediate issues in `OPEN_ISSUES.md`.
 
 - Serializable action/event transcript; `seed + actions → same state`.
 - Minimal replay path in sandbox.
+
+**Done:** `src/ir/gameIr.ts` + tests; sandbox Replay button re-runs action log.
 
 ### M3 — Compiler / normalize
 

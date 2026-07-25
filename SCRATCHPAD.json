@@ -1,21 +1,22 @@
 {
-  "updated_at": "2026-07-25T01:25-05:00",
-  "turn": 6,
+  "updated_at": "2026-07-25T01:50-05:00",
+  "turn": 7,
   "focus": {
-    "milestone": "M2",
-    "issue": "server-validation-unwired",
-    "goal": "Decide wire vs document server/Z3 validate"
+    "milestone": "M3",
+    "issue": "compiler-normalize",
+    "goal": "Scaffold validate→normalize→kernel builder"
   },
   "recent": [
-    "Wired sandbox through GameKernel.step + event log",
-    "Closed contract-validation-coverage + marked M1 done"
+    "Closed server-validation-unwired: contracts in sandbox; Z3 optional",
+    "GameIR v0 + Replay button; marked M2 done"
   ],
   "discoveries": [
-    "Effect.gen needs downlevelIteration; prefer pipe/flatMap/sync"
+    "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
+    "Base new cron turns on latest progression branch, not main"
   ],
   "open_threads": [
-    "server-validation-unwired; then game-ir-replay from eventLog"
+    "M3: lift toGameConfig into compiler/normalize path"
   ],
-  "next_step": "Wire validate-config server action into sandbox Format/Validate, or demote docs to optional tool",
+  "next_step": "Add src/compiler normalize that owns Config→GameConfig; keep presets on that path",
   "blockers": []
 }

@@ -49,18 +49,21 @@ In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 - Styling: Tailwind CSS, shadcn/ui
 - Validation/typing: Zod (runtime), TypeScript (static)
 - State/Forms: react-hook-form, fast-deep-equal (for JSON→form sync)
-- FP runtime: Effect (Effect.ts) — seeded RNG foothold in core; fuller Kernel migration in progress
+- FP runtime: Effect (Effect.ts) — seeded RNG + GameKernel stepping; GameIR replay foothold landed
 - Rendering: Three.js (board/camera), ResizeObserver
 - Editor: react-simple-code-editor + Prism.js
-- Tests: Vitest (engine transcript tests)
+- Tests: Vitest (engine transcript + GameIR replay tests)
 - Package manager: pnpm
-- Optional SMT: z3-solver (server validation helper)
+- Optional SMT: z3-solver (experimental server helper — **not** wired into sandbox UI;
+  use `app/actions/validate-config.ts` from scripts/CI when needed)
 
 ## Usage
 
 The canvas supports panning with mouse/touch (clamped to board) and zooming with wheel/pinch.
 
-The editor provides live JSON + Zod validation. Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/dark mode (although no toggle added yet), and editor scroll position is preserved on format.
+The editor provides live JSON + Zod + feature-contract validation (`validateConfig`).
+Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/dark mode
+(although no toggle added yet), and editor scroll position is preserved on format.
 
 The form fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`) with updates syncing two-ways with the editor.
 
@@ -73,9 +76,9 @@ The form fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`) with 
 
 ## Architecture notes (directional)
 
-The core follows pure functional principles with reducers (`State -> Event -> State`). Deterministic RNG is available via Effect (`src/engine/rng.ts`); play stepping is not fully seeded yet. Sandbox play goes through a `GameKernel` (`src/engine/kernel.ts`: `initialState` / `legalActions` / Effect-backed `step`) via `useGameEngine`, which surfaces a kernel event log in the sidebar. Turn phases use a small hand-rolled scaffold (`turnMachine.ts`).
+The core follows pure functional principles with reducers (`State -> Event -> State`). Deterministic RNG is available via Effect (`src/engine/rng.ts`). Sandbox play goes through a `GameKernel` (`src/engine/kernel.ts`: `initialState` / `legalActions` / Effect-backed `step`) via `useGameEngine`, which surfaces a kernel event log and a GameIR action transcript (`src/ir/gameIr.ts`) with a sidebar Replay control. Turn phases use a small hand-rolled scaffold (`turnMachine.ts`).
 
-The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. A typed `toGameConfig` adapter maps Zod `Config` into the flat engine shape. `validateConfig` builds feature contracts for the selected input/placement/overflow/capture/end features. Adapters at the edges handle rendering (Three.js), input, and persistence.
+The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. A typed `toGameConfig` adapter maps Zod `Config` into the flat engine shape. `validateConfig` builds feature contracts for the selected input/placement/overflow/capture/end features (live in the sandbox editor). Z3 SMT remains an optional server-side experiment. Adapters at the edges handle rendering (Three.js), input, and persistence.
 
 Routing uses App Router with scroll-snap landing and URL replacement to reflect the active view. The planned “infinite library” mode will sample/randomize configs and reveal how rare playable settings are.
 
@@ -91,10 +94,10 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   - overflow: `reject` | `pop_out_bottom` (bottom pop-out column action)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
 - **Objectives**: n-in-a-row win detection with configurable adjacency + length
-- **Determinism**: `rng.seed` drives Effect RNG helpers; wiring into step/replay lands with GameIR (M2)
-- **Kernel**: sandbox plays presets through `GameKernel.step` and shows recent kernel events
+- **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
+- **Kernel**: sandbox plays presets through `GameKernel.step` and shows recent kernel events + Replay
 
-What’s **roadmap**, not fully realized yet: a normalized `GameIR` + deterministic replay, first-class observation models for partial information, and a larger library of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: compiler/normalize stage, first-class observation models for partial information, and a larger library of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

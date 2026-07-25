@@ -4,34 +4,27 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ---
 
-## Immediate (M1 residual → M2)
+## Immediate (M3+)
 
-### server-validation-unwired
+### compiler-normalize
 
-**Problem:** `app/actions/validate-config.ts` (Zod + contracts + Z3) is not imported by the
-sandbox UI; client only runs `zConfig.safeParse`. Contract composition via
-`validateConfig` is now covered client-side, but the server action / Z3 path is still
-orphaned.
+**Problem:** Specs still go Zod → flat `toGameConfig` → kernel with no normalize /
+macro-expansion stage. README targets `validate → normalize → kernel builder`.
+
+**Pointers:** `src/engine/validateConfig.ts`, `src/engine/toGameConfig.ts`,
+`src/schemas/config.ts`, `PLANNING.md` M3
 
 **Acceptance:**
 
-- [ ] Decide: wire into sandbox (e.g. on Format / Validate) **or** document as optional CLI/dev tool and stop implying server validation in architecture notes
-- [ ] If wired: user-visible errors for contract/Z3 failures
+- [ ] A `src/compiler/` (or equivalent) stage validates + normalizes a `Config` into
+      kernel-ready input without sandbox-specific adapters owning that logic
+- [ ] At least one “macro” or sugar field expands into named primitives (or documented
+      non-goal if deferred)
+- [ ] Presets still play through the normalized path
 
 ---
 
-## Near-term (M2)
-
-### game-ir-replay
-
-Serializable IR / action log + deterministic replay from seed. Sandbox already accumulates
-kernel `eventLog`; promote that into a stable GameIR transcript and `seed + actions → same state`.
-
-**Acceptance:** See `PLANNING.md` M2 exit criteria.
-
----
-
-## Later (M3+)
+## Near-term (M4–M5)
 
 ### observation-partial-info
 
