@@ -151,6 +151,125 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"simultaneous-hex-connect-lite": definePreset({
+		id: "simultaneous-hex-connect-lite",
+		name: "Simultaneous Hex Connect Lite",
+		tags: [
+			"simultaneous",
+			"hex",
+			"topology",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Joint-place rounds on odd-r hex: both seats place each round; wins use hex adjacency. Unlocks simultaneous + hex_offset composition (rectangle simultaneous alone cannot).",
+		config: {
+			metadata: { name: "Simultaneous Hex Connect Lite", version: 1 },
+			grid: { width: 3, height: 3, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			tokens: [
+				{
+					id: "shex-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "shex-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"simultaneous-graph-connect-lite": definePreset({
+		id: "simultaneous-graph-connect-lite",
+		name: "Simultaneous Graph Connect Lite",
+		tags: [
+			"simultaneous",
+			"graph",
+			"topology",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Joint-place rounds on an irregular graph: only active nodes are legal; wins follow composite edges. Unlocks simultaneous + graph composition.",
+		config: {
+			metadata: { name: "Simultaneous Graph Connect Lite", version: 1 },
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 0, col: 2, x: 2, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 0, x: 0.25, y: 2 },
+					{ row: 2, col: 2, x: 1.75, y: 2 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,1", "0,2"],
+					["0,1", "1,1"],
+					["1,1", "2,0"],
+					["1,1", "2,2"],
+					["2,0", "2,2"]
+				]
+			},
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "composite",
+					horizontal: false,
+					vertical: false,
+					backDiagonal: false,
+					forwardDiagonal: false
+				}
+			},
+			tokens: [
+				{
+					id: "sgraph-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "sgraph-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"double-move-ttt": definePreset({
 		id: "double-move-ttt",
 		name: "Double Move TTT",

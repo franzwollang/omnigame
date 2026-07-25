@@ -251,8 +251,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
 											manual_tick needs scheduler + objective none;
-											simultaneous needs cell + n-in-a-row (joint place).
-											Optional commitReveal hides picks until both commit.
+											simultaneous needs cell + n-in-a-row (joint place)
+											on rectangle, hex_offset, or graph. Optional
+											commitReveal hides picks until both commit.
 										</p>
 										<FormMessage />
 									</FormItem>

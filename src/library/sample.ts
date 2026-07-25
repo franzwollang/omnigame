@@ -145,6 +145,10 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: true
 		}
 	};
+	// Occasionally compose with simultaneous joint-place (hex adjacency + schedule)
+	if (rng() > 0.7) {
+		cfg.turn = { mode: "turn", schedule: "simultaneous" };
+	}
 	return cfg;
 }
 
@@ -300,6 +304,10 @@ function sampleGraph(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: false
 		}
 	};
+	// Occasionally compose with simultaneous (active-node joint place)
+	if (rng() > 0.7) {
+		cfg.turn = { mode: "turn", schedule: "simultaneous" };
+	}
 	return cfg;
 }
 

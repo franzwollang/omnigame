@@ -33,14 +33,18 @@ describe("schema: turn.schedule simultaneous", () => {
 		expect(bad.success).toBe(false);
 	});
 
-	it("rejects hex/graph and hit_miss under simultaneous", () => {
-		const base = examplePresets["tic-tac-toe"].config;
+	it("accepts hex/graph simultaneous; rejects hit_miss under simultaneous", () => {
 		const hex = zConfig.safeParse({
-			...base,
-			grid: { ...base.grid, topology: "hex_offset" },
+			...examplePresets["hex-connect-lite"].config,
 			turn: { mode: "turn", schedule: "simultaneous" }
 		});
-		expect(hex.success).toBe(false);
+		expect(hex.success).toBe(true);
+
+		const graph = zConfig.safeParse({
+			...examplePresets["graph-connect-lite"].config,
+			turn: { mode: "turn", schedule: "simultaneous" }
+		});
+		expect(graph.success).toBe(true);
 
 		const hit = zConfig.safeParse({
 			...examplePresets["battleship-lite"].config,
@@ -217,5 +221,158 @@ describe("validateConfig: simultaneous contract", () => {
 	it("accepts Simultaneous TTT preset", () => {
 		const result = validateConfig(examplePresets["simultaneous-ttt"].config);
 		expect(result.ok).toBe(true);
+	});
+
+	it("accepts Simultaneous Hex / Graph Connect Lite presets", () => {
+		expect(
+			validateConfig(examplePresets["simultaneous-hex-connect-lite"].config)
+				.ok
+		).toBe(true);
+		expect(
+			validateConfig(
+				examplePresets["simultaneous-graph-connect-lite"].config
+			).ok
+		).toBe(true);
+	});
+});
+
+describe("kernel: simultaneous on hex/graph topologies", () => {
+	it("hex: legal cells, joint place, hex-line win, replay faithful", () => {
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["simultaneous-hex-connect-lite"].config
+		);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.turnSchedule).toBe("simultaneous");
+
+		let state = kernel.initialState();
+		expect(kernel.legalActions(state, 0)).toHaveLength(9);
+		expect(kernel.legalActions(state, 1)).toHaveLength(9);
+
+		const rounds: KernelAction[] = [
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: { row: 0, col: 0 },
+					O: { row: 1, col: 0 }
+				}
+			},
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: { row: 0, col: 1 },
+					O: { row: 1, col: 1 }
+				}
+			},
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: { row: 0, col: 2 },
+					O: { row: 2, col: 0 }
+				}
+			}
+		];
+
+		for (const action of rounds) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 1 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+
+		const config = compileToGameConfig(
+			examplePresets["simultaneous-hex-connect-lite"].config
+		).gameConfig;
+		const replay = replayActions(config, rounds, 0);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+	});
+
+	it("graph: active nodes only; composite-path win; inactive illegal", () => {
+		const seeded = {
+			...examplePresets["simultaneous-graph-connect-lite"].config,
+			initial: [
+				{
+					row: 0,
+					col: 0,
+					player: "X" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 0,
+					col: 1,
+					player: "X" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 2,
+					col: 0,
+					player: "O" as const,
+					visibility: "public" as const
+				}
+			]
+		};
+		const { kernel, gameConfig } = compileConfig(seeded);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.turnSchedule).toBe("simultaneous");
+
+		let state = kernel.initialState();
+		// 6 nodes − 3 occupied
+		expect(kernel.legalActions(state, 0)).toHaveLength(3);
+		expect(kernel.legalActions(state, 1)).toHaveLength(3);
+		// Inactive embedding cell (1,0) is not a graph node
+		expect(
+			kernel.legalActions(state, 0).some(
+				(a) =>
+					a.type === "place" && a.position.row === 1 && a.position.col === 0
+			)
+		).toBe(false);
+
+		const rounds: KernelAction[] = [
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: { row: 0, col: 2 },
+					O: { row: 2, col: 2 }
+				}
+			}
+		];
+
+		const result = kernel.stepSync(state, rounds[0]!);
+		expect(result.events[0]?.type).toBe("actionApplied");
+		state = result.nextState;
+
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		// O only has two stones — no composite path of 3
+		expect(getCell(state.grid, { row: 2, col: 0 })).toBe("O");
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("O");
+
+		const config = compileToGameConfig(seeded).gameConfig;
+		const replay = replayActions(config, rounds, 0);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.winner).toBe("X");
+	});
+
+	it("same-cell conflict places neither on hex", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-hex-connect-lite"].config
+		);
+		const state = kernel.initialState();
+		const result = kernel.stepSync(state, {
+			type: "simultaneousPlace",
+			placements: {
+				X: { row: 1, col: 1 },
+				O: { row: 1, col: 1 }
+			}
+		});
+		expect(getCell(result.nextState.grid, { row: 1, col: 1 })).toBeNull();
+		expect(result.nextState.status).toBe("playing");
+		expect(result.nextState.moveCount).toBe(1);
 	});
 });

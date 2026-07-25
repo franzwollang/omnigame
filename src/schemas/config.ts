@@ -644,14 +644,6 @@ export const zConfig = z
 					message: "simultaneous is incompatible with fleet placement"
 				});
 			}
-			if (hexBoard || graphBoard) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["grid", "topology"],
-					message:
-						"simultaneous foothold requires topology = 'rectangle' (hex/graph deferred)"
-				});
-			}
 			if (multiStep) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
