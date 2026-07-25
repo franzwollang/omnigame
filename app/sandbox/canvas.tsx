@@ -15,7 +15,7 @@ type Props = {
 	onCellClick: (pos: Position) => void;
 	onActivateColumn?: (col: number) => void;
 	onPopOutColumn?: (col: number) => void;
-	inputMode?: "cell" | "column";
+	inputMode?: "cell" | "column" | "move";
 	enablePopOutButtons?: boolean;
 	// token rendering
 	tokens?: {

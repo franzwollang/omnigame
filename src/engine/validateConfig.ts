@@ -26,25 +26,28 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	// Input mode
 	if (cfg.input.mode === "cell") features.push(Contracts.InputTargetCell());
 	if (cfg.input.mode === "column") features.push(Contracts.InputTargetColumn());
+	if (cfg.input.mode === "move") features.push(Contracts.InputMove());
 
 	// Placement policy (mode or gravity.enabled sugar — macros expand the latter)
 	const gravityImplied =
 		cfg.placement.mode === "gravity" ||
 		cfg.placement.gravity?.enabled === true;
 
-	if (cfg.placement.mode === "direct" && !gravityImplied) {
-		features.push(Contracts.PlacementDirect());
-	}
-	if (gravityImplied) {
-		features.push(Contracts.GravityAxis());
-		features.push(Contracts.PlacementGravity());
-	}
+	if (cfg.input.mode !== "move") {
+		if (cfg.placement.mode === "direct" && !gravityImplied) {
+			features.push(Contracts.PlacementDirect());
+		}
+		if (gravityImplied) {
+			features.push(Contracts.GravityAxis());
+			features.push(Contracts.PlacementGravity());
+		}
 
-	// Overflow
-	if (cfg.placement.overflow === "reject") {
-		features.push(Contracts.OverflowReject());
-	} else if (cfg.placement.overflow === "pop_out_bottom") {
-		features.push(Contracts.OverflowPopOutBottom());
+		// Overflow
+		if (cfg.placement.overflow === "reject") {
+			features.push(Contracts.OverflowReject());
+		} else if (cfg.placement.overflow === "pop_out_bottom") {
+			features.push(Contracts.OverflowPopOutBottom());
+		}
 	}
 
 	// Capture
@@ -56,6 +59,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	}
 	if (cfg.objective.mode === "destroy_hidden") {
 		features.push(Contracts.DestroyHidden());
+	} else if (cfg.objective.mode === "reach_row") {
+		features.push(Contracts.ReachRow());
 	} else {
 		features.push(Contracts.NInARow());
 	}

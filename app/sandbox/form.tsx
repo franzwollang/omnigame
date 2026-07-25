@@ -206,6 +206,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<SelectContent>
 														<SelectItem value="cell">cell</SelectItem>
 														<SelectItem value="column">column</SelectItem>
+														<SelectItem value="move">move</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
@@ -265,11 +266,15 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="destroy_hidden">
 															destroy_hidden
 														</SelectItem>
+														<SelectItem value="reach_row">
+															reach_row
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												destroy_hidden pairs with hit_miss observation.
+												destroy_hidden pairs with hit_miss; reach_row with
+												move input.
 											</p>
 											<FormMessage />
 										</FormItem>

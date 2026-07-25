@@ -36,6 +36,13 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		captureEnabled: Boolean(config.placement.capture?.enabled),
 		observationMode: config.observation.mode,
 		objectiveMode: config.objective.mode,
+		movement: config.movement
+			? {
+					adjacency: config.movement.adjacency,
+					range: config.movement.range
+				}
+			: undefined,
+		targetRows: config.objective.targetRows,
 		initial: config.initial
 	};
 }

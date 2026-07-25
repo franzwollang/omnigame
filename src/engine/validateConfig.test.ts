@@ -47,6 +47,14 @@ describe("buildFeatureContracts", () => {
 		expect(battle.map((c) => c.id)).not.toContain("NInARow");
 		expect(battle.map((c) => c.id)).not.toContain("AdjacencyProvided");
 
+		const race = buildFeatureContracts(examplePresets["step-race"].config);
+		expect(race.map((c) => c.id).sort()).toEqual(
+			["BoardWritable", "InputMove", "ReachRow"].sort()
+		);
+		expect(race.map((c) => c.id)).not.toContain("NInARow");
+		expect(race.map((c) => c.id)).not.toContain("PlacementDirect");
+		expect(checkContracts(race)).toEqual([]);
+
 		const pop = buildFeatureContracts(
 			examplePresets["connect-4-popout"].config
 		);

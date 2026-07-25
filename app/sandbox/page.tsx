@@ -74,6 +74,7 @@ export default function GamePage() {
 		viewState,
 		eventLog,
 		actionLog,
+		selectedFrom,
 		placeMove,
 		activateColumn,
 		popOutColumn,
@@ -268,6 +269,13 @@ export default function GamePage() {
 								<li key={`${i}-${line}`}>{line}</li>
 							))}
 						</ul>
+					)}
+					{currentConfig?.input.mode === "move" && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							{selectedFrom
+								? `Selected (${selectedFrom.row},${selectedFrom.col}) — click destination`
+								: "Move: click your piece, then an adjacent empty cell"}
+						</p>
 					)}
 				</div>
 

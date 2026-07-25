@@ -18,10 +18,19 @@ export const zConfig = z
 		rng: z.object({ seed: z.number() }).strict(),
 		input: z
 			.object({
-				mode: z.enum(["cell", "column"]) // how user clicks map to actions
+				// move = piece relocation (select from → to); cell/column = placement
+				mode: z.enum(["cell", "column", "move"])
 			})
 			.strict()
 			.default({ mode: "cell" as const }),
+		/** Orthogonal step movement; required when input.mode = "move". */
+		movement: z
+			.object({
+				adjacency: z.literal("orthogonal").default("orthogonal"),
+				range: z.literal(1).default(1)
+			})
+			.strict()
+			.optional(),
 		placement: z
 			.object({
 				mode: z.enum(["direct", "gravity"]).default("direct"),
@@ -47,11 +56,21 @@ export const zConfig = z
 			.default({ mode: "full" as const }),
 		objective: z
 			.object({
-				mode: z.enum(["n_in_a_row", "destroy_hidden"]).default("n_in_a_row")
+				mode: z
+					.enum(["n_in_a_row", "destroy_hidden", "reach_row"])
+					.default("n_in_a_row"),
+				/** Target home rows for reach_row (e.g. X→0, O→height-1). */
+				targetRows: z
+					.object({
+						X: z.number().int().nonnegative(),
+						O: z.number().int().nonnegative()
+					})
+					.strict()
+					.optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row; unused when objective is destroy_hidden
+		// Required for n_in_a_row; unused for destroy_hidden / reach_row
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -117,6 +136,8 @@ export const zConfig = z
 			cfg.placement.gravity?.enabled === true;
 		const hitMiss = cfg.observation.mode === "hit_miss";
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
+		const reachRow = cfg.objective.mode === "reach_row";
+		const moveInput = cfg.input.mode === "move";
 
 		// column input requires gravity placement (mode or enabled sugar)
 		if (cfg.input.mode === "column" && !gravityImplied) {
@@ -126,6 +147,76 @@ export const zConfig = z
 				message:
 					"input.mode = 'column' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
+		}
+
+		// Move games: step pieces; pair with reach_row (Step Race foothold)
+		if (moveInput !== reachRow) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: moveInput ? ["objective", "mode"] : ["input", "mode"],
+				message:
+					"input.mode 'move' and objective.mode 'reach_row' must be used together"
+			});
+		}
+		if (moveInput) {
+			if (!cfg.movement) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement"],
+					message: "input.mode = 'move' requires a movement block"
+				});
+			}
+			if (gravityImplied || cfg.placement.capture?.enabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"move input requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "move input is incompatible with hit_miss observation"
+				});
+			}
+			const publicSeeds = cfg.initial.filter(
+				(p) => (p.visibility ?? "public") === "public"
+			);
+			const hasX = publicSeeds.some((p) => p.player === "X");
+			const hasO = publicSeeds.some((p) => p.player === "O");
+			if (!hasX || !hasO) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["initial"],
+					message:
+						"move / reach_row requires public initial seeds for both X and O"
+				});
+			}
+		}
+		if (reachRow) {
+			const targets = cfg.objective.targetRows;
+			if (!targets) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "targetRows"],
+					message: "objective.mode 'reach_row' requires targetRows for X and O"
+				});
+			} else {
+				for (const [player, row] of [
+					["X", targets.X],
+					["O", targets.O]
+				] as const) {
+					if (row < 0 || row >= cfg.grid.height) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["objective", "targetRows", player],
+							message: `targetRows.${player} must be in [0, ${cfg.grid.height - 1}]`
+						});
+					}
+				}
+			}
 		}
 		// overflow only valid under gravity
 		if (cfg.placement.overflow !== "reject" && !gravityImplied) {

@@ -8,8 +8,11 @@ export type Capability =
 	| "EndCondition";
 
 export type Slot =
-	| { type: "PlacementPolicy"; value: "direct" | "gravity" }
-	| { type: "EndCondition"; value: "nInARow" | "destroyHidden" };
+	| { type: "PlacementPolicy"; value: "direct" | "gravity" | "move" }
+	| {
+			type: "EndCondition";
+			value: "nInARow" | "destroyHidden" | "reachRow";
+	  };
 
 export type PhaseHook =
 	| "validateInput"
@@ -75,6 +78,14 @@ export const Contracts = {
 		slots: [],
 		hooks: ["validateInput"],
 		invariants: []
+	}),
+	InputMove: (): FeatureContract => ({
+		id: "InputMove",
+		requires: ["CellsWritable"],
+		provides: ["ResolvedCell"],
+		slots: [{ type: "PlacementPolicy", value: "move" }],
+		hooks: ["validateInput", "applyPlacement"],
+		invariants: ["movesOwnPieceToEmptyCell"]
 	}),
 	PlacementDirect: (): FeatureContract => ({
 		id: "PlacementDirect",
@@ -182,5 +193,13 @@ export const Contracts = {
 		slots: [{ type: "EndCondition", value: "destroyHidden" }],
 		hooks: ["checkEnd"],
 		invariants: []
+	}),
+	ReachRow: (): FeatureContract => ({
+		id: "ReachRow",
+		requires: ["ResolvedCell"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "reachRow" }],
+		hooks: ["checkEnd"],
+		invariants: ["winsOnTargetRow"]
 	})
 };

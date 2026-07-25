@@ -19,6 +19,7 @@ import {
 	type PlayerObservation,
 	type ShotResult
 } from "@/engine/observation";
+import { canMove, legalDestinations } from "@/engine/movement";
 
 /** Numeric player ids per README GameKernel sketch (X=0, O=1). */
 export type PlayerId = 0 | 1;
@@ -27,6 +28,7 @@ export type Seed = number;
 
 export type KernelAction =
 	| { type: "place"; position: Position }
+	| { type: "move"; from: Position; to: Position }
 	| { type: "fire"; position: Position }
 	| { type: "activateColumn"; col: number }
 	| { type: "popOutColumn"; col: number };
@@ -83,6 +85,8 @@ function formatAction(action: KernelAction): string {
 	switch (action.type) {
 		case "place":
 			return `place (${action.position.row},${action.position.col})`;
+		case "move":
+			return `move (${action.from.row},${action.from.col})→(${action.to.row},${action.to.col})`;
 		case "fire":
 			return `fire (${action.position.row},${action.position.col})`;
 		case "activateColumn":
@@ -236,6 +240,23 @@ function collectLegalActions(
 				const position = { row, col };
 				if (canFireCell(state, position, state.currentPlayer)) {
 					actions.push({ type: "fire", position });
+				}
+			}
+		}
+		return actions;
+	}
+
+	if (inputMode === "move") {
+		const movement = config.movement;
+		if (!movement) return actions;
+		for (let row = 0; row < state.grid.height; row++) {
+			for (let col = 0; col < state.grid.width; col++) {
+				const from = { row, col };
+				if (getCell(state.grid, from) !== state.currentPlayer) continue;
+				for (const to of legalDestinations(state.grid, from, movement)) {
+					if (canMove(state.grid, from, to, state.currentPlayer, movement)) {
+						actions.push({ type: "move", from, to });
+					}
 				}
 			}
 		}

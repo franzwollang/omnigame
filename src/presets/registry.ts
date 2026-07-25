@@ -264,6 +264,46 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 4, col: 4, player: "O", visibility: "owner" }
 			]
 		}
+	}),
+	"step-race": definePreset({
+		id: "step-race",
+		name: "Step Race",
+		tags: ["move", "reach-row", "5x5", "mechanism"],
+		description:
+			"Orthogonal step race: move your token one cell at a time; first to the far row wins. Unlocks Move + reach_row — not a full chase game.",
+		config: {
+			metadata: { name: "Step Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
 	})
 };
 

@@ -30,6 +30,12 @@ export type PlaceMoveEvent = {
 	position: Position;
 };
 
+export type MoveEvent = {
+	type: "move";
+	from: Position;
+	to: Position;
+};
+
 export type FireEvent = {
 	type: "fire";
 	position: Position;
@@ -51,6 +57,7 @@ export type ResetEvent = {
 
 export type GameEvent =
 	| PlaceMoveEvent
+	| MoveEvent
 	| FireEvent
 	| ActivateColumnEvent
 	| PopOutColumnEvent

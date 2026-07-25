@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import type { GameState, Position } from "./types";
+import { getCell } from "./types";
 import type { GameConfig } from "./reducer";
 import {
 	createGameKernel,
@@ -43,6 +44,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const [lastEvents, setLastEvents] = useState<KernelEvent[]>([]);
 	const [eventLog, setEventLog] = useState<KernelEvent[]>([]);
 	const [actionLog, setActionLog] = useState<KernelAction[]>([]);
+	const [selectedFrom, setSelectedFrom] = useState<Position | null>(null);
 	const [turnContext, setTurnContext] = useState<TurnContext>(() =>
 		createInitialTurnContext()
 	);
@@ -52,6 +54,8 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	seedRef.current = seed;
 	const actionLogRef = useRef(actionLog);
 	actionLogRef.current = actionLog;
+	const selectedFromRef = useRef<Position | null>(null);
+	selectedFromRef.current = selectedFrom;
 
 	const transcript: GameIRTranscript = useMemo(
 		() => createTranscript(actionLog, seed),
@@ -66,6 +70,8 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		setLastEvents([]);
 		setEventLog([]);
 		setActionLog([]);
+		selectedFromRef.current = null;
+		setSelectedFrom(null);
 		setTurnContext(turnContextFor(next));
 	}, [kernel, seed]);
 
@@ -97,11 +103,38 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		(pos: Position) => {
 			if ((config.observationMode ?? "full") === "hit_miss") {
 				applyAction({ type: "fire", position: pos });
-			} else {
-				applyAction({ type: "place", position: pos });
+				return;
 			}
+			if ((config.inputMode ?? "cell") === "move") {
+				const selected = selectedFromRef.current;
+				const occupant = getCell(stateRef.current.grid, pos);
+				if (!selected) {
+					if (occupant === stateRef.current.currentPlayer) {
+						selectedFromRef.current = pos;
+						setSelectedFrom(pos);
+					}
+					return;
+				}
+				// Re-click same cell clears selection
+				if (selected.row === pos.row && selected.col === pos.col) {
+					selectedFromRef.current = null;
+					setSelectedFrom(null);
+					return;
+				}
+				// Click another own piece retargets selection
+				if (occupant === stateRef.current.currentPlayer) {
+					selectedFromRef.current = pos;
+					setSelectedFrom(pos);
+					return;
+				}
+				applyAction({ type: "move", from: selected, to: pos });
+				selectedFromRef.current = null;
+				setSelectedFrom(null);
+				return;
+			}
+			applyAction({ type: "place", position: pos });
 		},
-		[applyAction, config.observationMode]
+		[applyAction, config.observationMode, config.inputMode]
 	);
 
 	const activateColumn = useCallback(
@@ -125,6 +158,8 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		setLastEvents([]);
 		setEventLog([]);
 		setActionLog([]);
+		selectedFromRef.current = null;
+		setSelectedFrom(null);
 		setTurnContext(turnContextFor(next));
 	}, [kernel]);
 
@@ -139,6 +174,8 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 			setLastEvents(result.events.slice(-8));
 			setEventLog(result.events.slice(-EVENT_LOG_CAP));
 			setActionLog(result.appliedActions.slice(-ACTION_LOG_CAP));
+			selectedFromRef.current = null;
+			setSelectedFrom(null);
 			setTurnContext(turnContextFor(result.finalState));
 			return result;
 		},
@@ -175,6 +212,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		eventLog,
 		actionLog,
 		transcript,
+		selectedFrom,
 		legalActions,
 		placeMove,
 		activateColumn,

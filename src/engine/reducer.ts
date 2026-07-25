@@ -12,6 +12,7 @@ import { getCell, setCell, toIndex } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
 import { fleetDestroyed } from "@/engine/observation";
+import { canMove, type MovementConfig } from "@/engine/movement";
 
 export type InitialSeed = {
 	row: number;
@@ -25,7 +26,7 @@ export type GameConfig = {
 	gridHeight: number;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column";
+	inputMode?: "cell" | "column" | "move";
 	placementMode?: "direct" | "gravity";
 	/** Only `"down"` is implemented; other directions deferred. */
 	gravityDirection?: "down";
@@ -33,7 +34,10 @@ export type GameConfig = {
 	overflow?: "reject" | "pop_out_bottom";
 	captureEnabled?: boolean;
 	observationMode?: "full" | "hit_miss";
-	objectiveMode?: "n_in_a_row" | "destroy_hidden";
+	objectiveMode?: "n_in_a_row" | "destroy_hidden" | "reach_row";
+	movement?: MovementConfig;
+	/** Home rows for reach_row objective (player → target row index). */
+	targetRows?: { X: number; O: number };
 	initial?: InitialSeed[];
 };
 
@@ -111,6 +115,8 @@ export function reduce(
 	switch (event.type) {
 		case "place":
 			return handlePlace(state, event.position, config);
+		case "move":
+			return handleMove(state, event.from, event.to, config);
 		case "fire":
 			return handleFire(state, event.position, config);
 		case "activateColumn":
@@ -122,6 +128,48 @@ export function reduce(
 		default:
 			return state;
 	}
+}
+
+function handleMove(
+	state: GameState,
+	from: Position,
+	to: Position,
+	config: GameConfig
+): GameState {
+	if ((config.inputMode ?? "cell") !== "move") return state;
+	if (state.status !== "playing") return state;
+	const movement = config.movement;
+	if (!movement) return state;
+	if (!canMove(state.grid, from, to, state.currentPlayer, movement)) {
+		return state;
+	}
+
+	let cells = setCell(state.grid, from, null);
+	cells = setCell({ ...state.grid, cells }, to, state.currentPlayer);
+	const newGrid = { ...state.grid, cells };
+	const newMoveCount = state.moveCount + 1;
+	const next: GameState = {
+		...state,
+		grid: newGrid,
+		moveCount: newMoveCount
+	};
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
+		const target = config.targetRows?.[state.currentPlayer];
+		if (target != null && to.row === target) {
+			return {
+				...next,
+				status: "won",
+				winner: state.currentPlayer
+			};
+		}
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...next,
+		currentPlayer: nextPlayer
+	};
 }
 
 function handleFire(
@@ -183,6 +231,8 @@ function handlePlace(
 ): GameState {
 	// Hit/miss games use fire, not place
 	if ((config.observationMode ?? "full") === "hit_miss") return state;
+	// Move games relocate existing pieces
+	if ((config.inputMode ?? "cell") === "move") return state;
 
 	// Guard: can only place if game is playing
 	if (state.status !== "playing") return state;
