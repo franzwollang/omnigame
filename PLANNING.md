@@ -7,7 +7,7 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 
 | ID | Milestone | Status |
 |---|---|---|
-| M0 | Honesty pass + Effect foothold | `in progress` |
+| M0 | Honesty pass + Effect foothold | `done` |
 | M1 | GameKernel ABI + Effect core + event transcripts | `not started` |
 | M2 | GameIR + deterministic replay | `not started` |
 | M3 | Compiler / normalize / macro expansion | `not started` |
@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** stop lying about unsupported knobs; land Effect as the core
-runtime; put play behind a thin `GameKernel` so new mechanics aren’t rewritten twice.
+**Optimizing for this phase:** land `GameKernel` + Effect-backed `step` / `legalActions`;
+sandbox plays through the kernel; deferred knobs wait for that ABI.
 
 ## Decisions (locked)
 
@@ -54,13 +54,15 @@ Near-term focus = sandbox. Library explorer needs a solid kernel + playability h
 Working sandbox slice (see README “Current implementation status”):
 
 - Rectangular grid; cell / column input
-- Direct + gravity placement (engine: gravity **down** only)
-- Capture (Reversi-like flips); n-in-a-row wins
-- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Reversi
+- Direct + gravity placement (engine: gravity **down** only; schema narrowed)
+- Capture (flip demo); n-in-a-row wins
+- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo
 - Zod schema + JSON/form sandbox + Three.js canvas
+- Effect foothold (`src/engine/rng.ts`); Vitest transcript tests
+- Unsupported knobs deferred (wrap, realtime, non-down gravity, `pop_out_top`)
 
-Not yet: Effect dependency, `GameKernel` / `GameIR`, compiler, observation, hex/graph,
-wired RNG, XState turn machine, automated tests, library explorer.
+Not yet: `GameKernel` / `GameIR`, compiler, observation, hex/graph, play-loop RNG,
+wired XState, library explorer.
 
 ## Milestone exit criteria
 

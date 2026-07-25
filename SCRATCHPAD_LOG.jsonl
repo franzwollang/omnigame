@@ -1,3 +1,4 @@
 {"ts":"2026-07-24T23:40-05:00","focus":"rules + continuity seed","summary":"Civic Lab rules → OmniGame; created PLANNING/OPEN_ISSUES/SCRATCHPAD + logs from codebase audit","next":"user clarifying Qs on Effect, milestone order, Reversi, tests"}
 {"ts":"2026-07-24T23:45-05:00","focus":"planning decisions","summary":"Effect locked; M0=narrow/label+foothold; M1=Kernel+Effect; explained sandbox vs library","next":"start M0 honesty pass or install effect"}
 {"ts":"2026-07-24T23:50-05:00","focus":"reference selection","summary":"Rules: pick anchors only when they add a new mechanism; references/ is corpus not backlog","next":"continue clarifying Qs or start M0"}
+{"ts":"2026-07-25T00:05-05:00","focus":"M0 honesty+Effect","summary":"Closed M0: schema narrow, Effect RNG, Vitest, Reversi label, docs","next":"pre-M1 hygiene (sandbox types) or start game-kernel-abi"}

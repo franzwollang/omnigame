@@ -4,30 +4,7 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ---
 
-## Immediate (M0 — honesty + Effect foothold)
-
-### schema-engine-parity
-
-**Problem:** Several Zod/schema knobs are accepted (and often editable in the form) but
-ignored or only partially implemented in `src/engine/reducer.ts`.
-
-Known gaps:
-
-- Gravity `direction`: schema allows `up|left|right`; engine only implements `down`
-- `placement.overflow = "pop_out_top"`: schema + form; no reducer path (bottom pop-out exists as a separate action)
-- `grid.wrap`: unused by reducer / win / capture
-- `turn.mode = "realtime"`: unused (`turnMachine.ts` is a manual scaffold)
-- `rng.seed`: present in config; not consumed for deterministic simulation
-
-**Policy (locked):** M0 prefers **narrow/remove/mark unsupported** over implementing in the
-plain reducer. Full behavior for deferred knobs lands in M1+ behind GameKernel + Effect.
-
-**Pointers:** `src/schemas/config.ts`, `src/engine/reducer.ts`, `src/engine/useGameEngine.ts`, `app/sandbox/form.tsx`
-
-**Acceptance:**
-
-- [ ] Each field above is either deferred (schema/UI narrowed or marked unsupported) or trivially implemented + tested
-- [ ] Sandbox cannot present a config that “looks valid” but silently no-ops an advertised mechanic
+## Immediate (pre-M1 hygiene)
 
 ### contract-validation-coverage
 
@@ -49,54 +26,6 @@ sandbox UI; client only runs `zConfig.safeParse`.
 
 - [ ] Decide: wire into sandbox (e.g. on Format / Validate) **or** document as optional CLI/dev tool and stop implying server validation in architecture notes
 - [ ] If wired: user-visible errors for contract/Z3 failures
-
-### reversi-endgame-wrong
-
-**Problem:** Reversi preset enables capture but still uses `win.length` n-in-a-row (5). Real
-Othello ends when neither player can move; score by disc count.
-
-**Pointers:** `src/presets/registry.ts`, `src/engine/capture.ts`, `src/engine/rules.ts`
-
-**Acceptance:**
-
-- [ ] Either implement pass / no-moves terminal + majority scoring for capture games, **or** rename/describe preset as “capture / flip demo” until endgame exists
-- [ ] README preset list matches behavior
-
-### no-core-tests
-
-**Problem:** No `*.test.ts` / `*.spec.ts` harness. README and `docs/semantics.md` call for
-property/transcript tests; none exist.
-
-**Acceptance:**
-
-- [ ] Test runner configured (project choice: Vitest or Jest-compatible)
-- [ ] Transcript tests for at least Tic-Tac-Toe win + Connect 4 gravity drop + one capture flip sequence
-- [ ] `pnpm` script (e.g. `test`) documented in README or package.json scripts
-
-### effect-foothold
-
-**Problem:** Decision is to work in Effect.ts, but `effect` is not a dependency and core is
-plain TS reducers. Need a real foothold before M1 Kernel migration.
-
-**Acceptance:**
-
-- [ ] `effect` added via pnpm; version pinned in lockfile
-- [ ] At least one small core helper uses Effect (e.g. seeded RNG service boundary or Option/Either-style result for illegal moves)
-- [ ] README tech stack: Effect is adopted / in progress (not merely “planned”)
-
-### dead-deps-and-docs-drift
-
-**Problem:** Docs/stack claims drift from code.
-
-- `xstate` in `package.json` with zero app imports; `turnMachine.ts` is hand-rolled
-- README mentions `window.jumpPanTo` (not found in canvas) and XState-structured transitions
-- Effect was “planned”; now directed — docs must catch up after foothold
-
-**Acceptance:**
-
-- [ ] XState: wire for real in M1+ **or** remove dependency and demote claim in README
-- [ ] Remove or implement `jumpPanTo` claim
-- [ ] README “Tech stack” / architecture notes match reality after M0
 
 ### sandbox-type-looseness
 
