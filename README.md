@@ -130,11 +130,13 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT cell
     reserve, or Delayed Connect 4 gravity settle-on-resolve)
 - **Movement**: range-1 piece steps via `{ type: "move", from, to }` with
-  `movement.adjacency` = `orthogonal` | `diagonal` | `king` (Step Race /
-  Diagonal Step Race / Simultaneous Step Race)
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle (Simultaneous Step Race); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite) or place→fire (Place & Fire Lite)
+  `movement.adjacency` = `orthogonal` | `diagonal` | `king` on rectangle
+  (Step Race / Diagonal Step Race / Simultaneous Step Race); hex_offset / graph
+  use topology neighbors (orthogonal) — Hex Step Race / Simultaneous Hex/Graph
+  Step Race
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite) or place→fire (Place & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race / Diagonal Step Race / Simultaneous Step Race); `none` (open-ended / tick demos)
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
@@ -143,8 +145,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, place→move→fire
-triple phases (dual-objective), hex/graph simultaneous move, longer-range /
-capture piece tables, and a larger set of reusable operators/constraints.
+triple phases (dual-objective), longer-range / capture piece tables, and a
+larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

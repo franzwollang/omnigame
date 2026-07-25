@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Diagonal / king movement adjacency landed
-(Diagonal Step Race). Hand off to the next **missing mechanism** (see
+**Optimizing for this phase:** Topology-aware movement landed (hex/graph move +
+simultaneous step races). Hand off to the next **missing mechanism** (see
 `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
@@ -76,7 +76,8 @@ Working sandbox slice (see README “Current implementation status”):
 - Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
 - Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
 - Move foothold (`src/engine/movement.ts`): range-1 `orthogonal` | `diagonal` |
-  `king` + `reach_row`; Step Race / Diagonal Step Race presets
+  `king` + `reach_row`; Step Race / Diagonal Step Race; topology-aware
+  orthogonal move on hex_offset / graph (Hex Step Race)
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
 - Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
@@ -116,12 +117,13 @@ Working sandbox slice (see README “Current implementation status”):
   Place & Fire Lite presets
 - **Simultaneous move:** `turn.schedule = simultaneous` + `input.mode = move` +
   `simultaneousMove` joint resolve; same-destination conflict; reach_row win;
-  Simultaneous Step Race preset (rectangle; no multi-action / commitReveal)
+  Simultaneous Step Race / Hex / Graph (no multi-action / commitReveal)
 - **Piece-table adjacency:** `movement.adjacency` = `orthogonal` | `diagonal` |
-  `king` (range 1); Diagonal Step Race proves diagonal-only steps
+  `king` (range 1) on rectangle; Diagonal Step Race proves diagonal-only steps;
+  hex/graph move uses topology neighbors (orthogonal only)
 
 Not yet: full Go rules; place→move→fire triple phases (dual-objective); phases
-hex/graph lift; hex/graph simultaneous move; longer-range / capture piece tables.
+hex/graph lift; longer-range / capture piece tables.
 
 ## Milestone exit criteria
 

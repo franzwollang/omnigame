@@ -8,17 +8,16 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Diagonal / king movement** landed — `movement.adjacency` =
-`orthogonal` | `diagonal` | `king` (range 1) + Diagonal Step Race preset +
-tests. Orthogonal Step Race unchanged. Pick the **next smallest** unlock the
-engine still lacks — not another recombination of covered primitives (see
-project-structure selection principle).
+**Topology-aware movement** landed — `movement.ts` uses topology neighbors on
+`hex_offset` / `graph` (orthogonal); Simultaneous Hex/Graph Step Race + Hex
+Step Race presets + tests. Rectangle diagonal/king unchanged. Pick the **next
+smallest** unlock the engine still lacks — not another recombination of covered
+primitives (see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
 - `turn.phases` place→move→fire (triple) — needs dual-objective routing
 - phases hex/graph lift (only if a new seam appears; kernel already topology-aware)
-- hex/graph simultaneous move (topology lift of joint move; move input still rectangle-only)
 - longer-range / sliding / capture piece tables
 - richer multi-phase game machines beyond fleet + in-turn phases
 
@@ -58,5 +57,6 @@ hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
 delayed gravity), hidden simultaneous `commitReveal`, ordered simultaneous
 `resolveOrder`, multi-action simultaneous (rectangle + hex + graph), in-turn
 `turn.phases` place→move / place→fire, simultaneous move (joint move resolve),
-and diagonal/king movement adjacency also landed. Further ports only when a
-**new** missing mechanism appears — not a backlog.
+diagonal/king movement adjacency, and topology-aware movement (hex/graph move +
+simultaneous) also landed. Further ports only when a **new** missing mechanism
+appears — not a backlog.
