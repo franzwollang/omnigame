@@ -95,6 +95,7 @@ export default function GamePage() {
 		selectedFrom,
 		pendingPlacements,
 		simultaneousSeat,
+		commitReveal,
 		lastIllegal,
 		legalActionsList,
 		kernel,
@@ -148,6 +149,17 @@ export default function GamePage() {
 		if (gameState.status !== "playing") return;
 		const side = kernel.currentPlayer(gameState);
 		if (side === "simultaneous") {
+			if (commitReveal) {
+				const seat = !gameState.committedPlacements?.X
+					? 0
+					: !gameState.committedPlacements?.O
+						? 1
+						: null;
+				if (seat === null) return;
+				const action = agentRef.current.act(kernel, gameState, seat);
+				if (action) dispatchAction(action);
+				return;
+			}
 			const a0 = agentRef.current.act(kernel, gameState, 0);
 			const a1 = agentRef.current.act(kernel, gameState, 1);
 			if (!a0 || !a1) return;
@@ -378,7 +390,9 @@ export default function GamePage() {
 							Kernel events
 							{gameState.status === "playing"
 								? enableSimultaneous
-									? ` · simultaneous${simultaneousSeat ? ` · ${simultaneousSeat} choosing` : ""}`
+									? ` · simultaneous${
+											commitReveal ? " commit-reveal" : ""
+										}${simultaneousSeat ? ` · ${simultaneousSeat} choosing` : ""}`
 									: ` · ${gameState.currentPlayer} to move${
 											gameState.actionsRemaining != null
 												? ` · ${gameState.actionsRemaining} left`
@@ -488,15 +502,26 @@ export default function GamePage() {
 					)}
 					{enableSimultaneous && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
-							Simultaneous: click a cell for{" "}
-							{simultaneousSeat ?? "X"}
-							{pendingPlacements.X
-								? ` (X@${pendingPlacements.X.row},${pendingPlacements.X.col})`
-								: ""}
-							{pendingPlacements.O
-								? ` (O@${pendingPlacements.O.row},${pendingPlacements.O.col})`
-								: ""}
-							; same cell → neither places
+							{commitReveal ? (
+								<>
+									Hidden simultaneous: commit a cell for{" "}
+									{simultaneousSeat ?? "X"} (own commit visible only to
+									that seat); board reveals when both committed; same
+									cell → neither places
+								</>
+							) : (
+								<>
+									Simultaneous: click a cell for{" "}
+									{simultaneousSeat ?? "X"}
+									{pendingPlacements.X
+										? ` (X@${pendingPlacements.X.row},${pendingPlacements.X.col})`
+										: ""}
+									{pendingPlacements.O
+										? ` (O@${pendingPlacements.O.row},${pendingPlacements.O.col})`
+										: ""}
+									; same cell → neither places
+								</>
+							)}
 						</p>
 					)}
 					{enablePass && (

@@ -44,6 +44,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const kernel: GameKernel = useMemo(() => createGameKernel(config), [config]);
 	const simultaneous =
 		(config.turnSchedule ?? "alternating") === "simultaneous";
+	const commitReveal = simultaneous && config.commitReveal === true;
 
 	const [state, setState] = useState<GameState>(() =>
 		kernel.initialState(seed)
@@ -98,7 +99,13 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		(action: KernelAction) => {
 			const side = kernel.currentPlayer(stateRef.current);
 			const explainPlayer: PlayerId =
-				side === "simultaneous" ? 0 : side;
+				action.type === "commitPlace"
+					? action.player === "X"
+						? 0
+						: 1
+					: side === "simultaneous"
+						? 0
+						: side;
 			const explained = kernel.explainAction(
 				stateRef.current,
 				explainPlayer,
@@ -137,17 +144,42 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		[kernel]
 	);
 
-	/** Which seat is choosing next in simultaneous pending collection. */
+	/** Which seat is choosing next in simultaneous / commit-reveal collection. */
 	const simultaneousSeat: Player | null = useMemo(() => {
 		if (!simultaneous || state.status !== "playing") return null;
+		if (commitReveal) {
+			if (!state.committedPlacements?.X) return "X";
+			if (!state.committedPlacements?.O) return "O";
+			return null;
+		}
 		if (!pendingPlacements.X) return "X";
 		if (!pendingPlacements.O) return "O";
 		return null;
-	}, [simultaneous, state.status, pendingPlacements]);
+	}, [
+		simultaneous,
+		commitReveal,
+		state.status,
+		state.committedPlacements,
+		pendingPlacements
+	]);
 
 	const placeMove = useCallback(
 		(pos: Position) => {
 			if (simultaneous) {
+				if (commitReveal) {
+					const seat = !stateRef.current.committedPlacements?.X
+						? "X"
+						: !stateRef.current.committedPlacements?.O
+							? "O"
+							: null;
+					if (!seat) return;
+					applyAction({
+						type: "commitPlace",
+						player: seat,
+						position: pos
+					});
+					return;
+				}
 				const seat = !pendingRef.current.X
 					? "X"
 					: !pendingRef.current.O
@@ -220,7 +252,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 			}
 			applyAction({ type: "place", position: pos });
 		},
-		[applyAction, config.observationMode, config.inputMode, simultaneous, kernel]
+		[applyAction, config.observationMode, config.inputMode, simultaneous, commitReveal, kernel]
 	);
 
 	const activateColumn = useCallback(
@@ -310,12 +342,16 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		return legalActionsList;
 	}, [legalActionsList]);
 
-	/** Current player's observation (full / hit-miss / fog projection). */
+	/** Current seat's observation (commit-reveal uses choosing seat). */
 	const observation = useMemo(() => {
+		if (simultaneous) {
+			const seat = simultaneousSeat ?? "X";
+			return kernel.observe(state, seat === "X" ? 0 : 1);
+		}
 		const side = kernel.currentPlayer(state);
 		const pid: PlayerId = side === "simultaneous" ? 0 : side;
 		return kernel.observe(state, pid);
-	}, [kernel, state]);
+	}, [kernel, state, simultaneous, simultaneousSeat]);
 
 	/** State with grid replaced by the current player's observation cells. */
 	const viewState: GameState = useMemo(
@@ -341,6 +377,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		selectedFrom,
 		pendingPlacements,
 		simultaneousSeat,
+		commitReveal,
 		legalActions,
 		legalActionsList,
 		dispatchAction: applyAction,

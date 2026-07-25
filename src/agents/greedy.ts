@@ -17,6 +17,7 @@ function centerBias(state: GameState, action: KernelAction): number {
 	switch (action.type) {
 		case "place":
 		case "fire":
+		case "commitPlace":
 			row = action.position.row;
 			col = action.position.col;
 			break;
@@ -42,10 +43,18 @@ function centerBias(state: GameState, action: KernelAction): number {
 }
 
 function captureBias(state: GameState, action: KernelAction): number {
-	if (action.type !== "place" && action.type !== "move") return 0;
+	if (
+		action.type !== "place" &&
+		action.type !== "move" &&
+		action.type !== "commitPlace"
+	) {
+		return 0;
+	}
 	// Prefer placing near opponent pieces (local flip / liberty pressure heuristic).
 	const pos =
-		action.type === "place" ? action.position : action.to;
+		action.type === "place" || action.type === "commitPlace"
+			? action.position
+			: action.to;
 	let near = 0;
 	for (const [dr, dc] of [
 		[-1, 0],

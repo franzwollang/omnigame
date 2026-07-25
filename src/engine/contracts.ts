@@ -288,6 +288,21 @@ export const Contracts = {
 		invariants: ["jointPlacePerRound", "sameCellConflictNeitherPlaces"]
 	}),
 	/**
+	 * Hidden simultaneous (commit-then-reveal). Keeps Schedule = simultaneous;
+	 * adds private commit buffer before joint resolve.
+	 */
+	ScheduleCommitReveal: (): FeatureContract => ({
+		id: "ScheduleCommitReveal",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: [
+			"commitBeforeJointResolve",
+			"opponentCommitHiddenUntilReveal"
+		]
+	}),
+	/**
 	 * Multi-step alternating turns (actionsPerTurn > 1). Keeps Schedule free —
 	 * schedule remains alternating; this owns the nextTurn budget invariant.
 	 */

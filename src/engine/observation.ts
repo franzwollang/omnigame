@@ -185,9 +185,17 @@ export function observe(
 	}
 
 	if (mode !== "hit_miss") {
+		const cells = [...state.grid.cells];
+		// Hidden simultaneous: overlay own commit only (opponent stays secret).
+		if (config.commitReveal && state.committedPlacements) {
+			const own = state.committedPlacements[player];
+			if (own) {
+				cells[toIndex(own, state.grid.width)] = player;
+			}
+		}
 		return {
 			player,
-			cells: [...state.grid.cells],
+			cells,
 			visible: allVisible(size),
 			lastShot
 		};

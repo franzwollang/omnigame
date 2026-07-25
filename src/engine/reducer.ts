@@ -104,6 +104,11 @@ export type GameConfig = {
 	 * materializes. 0 / omitted = immediate place.
 	 */
 	delayTurns?: number;
+	/**
+	 * Hidden simultaneous: commit privately then reveal jointly.
+	 * Requires turnSchedule = simultaneous.
+	 */
+	commitReveal?: boolean;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -320,6 +325,8 @@ export function reduce(
 			return handlePass(state, config);
 		case "simultaneousPlace":
 			return handleSimultaneousPlace(state, event.placements, config);
+		case "commitPlace":
+			return handleCommitPlace(state, event.player, event.position, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -422,6 +429,8 @@ function handleSimultaneousPlace(
 	}
 
 	const newMoveCount = state.moveCount + 1;
+	// Reveal clears any private commits from a commit-reveal round.
+	const clearedCommits = { committedPlacements: undefined as undefined };
 
 	if (!conflict) {
 		const xWins = Boolean(
@@ -449,6 +458,7 @@ function handleSimultaneousPlace(
 		if (xWins && oWins) {
 			return {
 				...state,
+				...clearedCommits,
 				grid: newGrid,
 				status: "draw",
 				winner: null,
@@ -458,6 +468,7 @@ function handleSimultaneousPlace(
 		if (xWins) {
 			return {
 				...state,
+				...clearedCommits,
 				grid: newGrid,
 				status: "won",
 				winner: "X",
@@ -467,6 +478,7 @@ function handleSimultaneousPlace(
 		if (oWins) {
 			return {
 				...state,
+				...clearedCommits,
 				grid: newGrid,
 				status: "won",
 				winner: "O",
@@ -478,6 +490,7 @@ function handleSimultaneousPlace(
 	if (isBoardFull(newGrid, config)) {
 		return {
 			...state,
+			...clearedCommits,
 			grid: newGrid,
 			status: "draw",
 			winner: null,
@@ -487,9 +500,62 @@ function handleSimultaneousPlace(
 
 	return {
 		...state,
+		...clearedCommits,
 		grid: newGrid,
 		moveCount: newMoveCount
 		// Simultaneous rounds do not flip currentPlayer
+	};
+}
+
+/**
+ * Hidden simultaneous: record a private commit. When both seats have committed,
+ * resolve via the same joint-place rules (conflict / win / draw).
+ */
+function handleCommitPlace(
+	state: GameState,
+	player: Player,
+	position: Position,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") === "move") return state;
+
+	const topology = config.topology ?? "rectangle";
+	if (
+		position.row < 0 ||
+		position.row >= state.grid.height ||
+		position.col < 0 ||
+		position.col >= state.grid.width
+	) {
+		return state;
+	}
+	if (!isActivePosition(position, topology, config.graph)) return state;
+	if (getCell(state.grid, position) !== null) return state;
+
+	const prior = state.committedPlacements ?? {};
+	if (prior[player]) return state; // already committed this round
+
+	const nextCommits: Partial<Record<Player, Position>> = {
+		...prior,
+		[player]: position
+	};
+
+	const xPos = nextCommits.X;
+	const oPos = nextCommits.O;
+	if (xPos && oPos) {
+		return handleSimultaneousPlace(
+			{ ...state, committedPlacements: nextCommits },
+			{ X: xPos, O: oPos },
+			config
+		);
+	}
+
+	return {
+		...state,
+		committedPlacements: nextCommits
+		// moveCount unchanged until reveal
 	};
 }
 

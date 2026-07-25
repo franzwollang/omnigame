@@ -62,7 +62,12 @@ export const zConfig = z
 				 * Multi-step turns: successful actions before handoff (alternating only).
 				 * Default 1 = classic single-action turns. >1 keeps currentPlayer until budget spent.
 				 */
-				actionsPerTurn: z.number().int().min(1).max(8).optional()
+				actionsPerTurn: z.number().int().min(1).max(8).optional(),
+				/**
+				 * Hidden simultaneous: each seat commits privately; joint resolve when both
+				 * have committed. Requires schedule = simultaneous. Default false = open joint.
+				 */
+				commitReveal: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "turn" as const, schedule: "alternating" as const }),
@@ -663,6 +668,13 @@ export const zConfig = z
 						"placement.delayTurns > 0 requires turn.schedule = 'alternating' (not simultaneous)"
 				});
 			}
+		} else if (cfg.turn.commitReveal === true) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["turn", "commitReveal"],
+				message:
+					"turn.commitReveal requires turn.schedule = 'simultaneous'"
+			});
 		}
 
 		// Multi-step turns foothold (actionsPerTurn > 1 on alternating)

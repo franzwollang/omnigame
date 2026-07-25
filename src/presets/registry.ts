@@ -99,6 +99,58 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"hidden-simultaneous-ttt": definePreset({
+		id: "hidden-simultaneous-ttt",
+		name: "Hidden Simultaneous TTT",
+		tags: [
+			"simultaneous",
+			"commitReveal",
+			"hidden",
+			"3x3",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Each seat commits a cell privately; board reveals when both have committed. Same-cell conflict places neither. Unlocks turn.commitReveal.",
+		config: {
+			metadata: { name: "Hidden Simultaneous TTT", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				commitReveal: true
+			},
+			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"double-move-ttt": definePreset({
 		id: "double-move-ttt",
 		name: "Double Move TTT",

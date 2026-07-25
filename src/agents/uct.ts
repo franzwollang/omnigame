@@ -41,6 +41,8 @@ export function actionKey(action: KernelAction): string {
 			return "pass";
 		case "simultaneousPlace":
 			return `joint:${action.placements.X.row},${action.placements.X.col}|${action.placements.O.row},${action.placements.O.col}`;
+		case "commitPlace":
+			return `commit:${action.player}:${action.position.row},${action.position.col}`;
 	}
 }
 
@@ -57,6 +59,9 @@ function stateFingerprint(state: GameState): string {
 					`${p.player}@${p.position.row},${p.position.col}@${p.resolveAt}`
 			)
 			.join(";"),
+		state.committedPlacements
+			? `cX:${state.committedPlacements.X ? `${state.committedPlacements.X.row},${state.committedPlacements.X.col}` : ""}|cO:${state.committedPlacements.O ? `${state.committedPlacements.O.row},${state.committedPlacements.O.col}` : ""}`
+			: "",
 		state.consecutivePasses ?? "",
 		state.koPoint
 			? `${state.koPoint.row},${state.koPoint.col}`

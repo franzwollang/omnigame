@@ -63,6 +63,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
+		commitReveal: config.turn.commitReveal === true,
 		scheduler: config.scheduler
 			? {
 					rules: config.scheduler.rules,
@@ -105,6 +106,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,
+	commitReveal: false,
 	initial: []
 };
 

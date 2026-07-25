@@ -48,6 +48,11 @@ export type KernelAction =
 	| {
 			type: "simultaneousPlace";
 			placements: { X: Position; O: Position };
+	  }
+	| {
+			type: "commitPlace";
+			player: Player;
+			position: Position;
 	  };
 
 /** Structured legality failure codes for debug UI / agents. */
@@ -68,7 +73,8 @@ export type IllegalReason =
 	| "not_applicable"
 	| "illegal_or_noop"
 	| "ship_shape"
-	| "wrong_phase";
+	| "wrong_phase"
+	| "already_committed";
 
 export type ExplainResult =
 	| { legal: true }
@@ -171,6 +177,8 @@ function formatAction(action: KernelAction): string {
 			return "pass";
 		case "simultaneousPlace":
 			return `joint place X(${action.placements.X.row},${action.placements.X.col}) O(${action.placements.O.row},${action.placements.O.col})`;
+		case "commitPlace":
+			return `commit ${action.player} (${action.position.row},${action.position.col})`;
 	}
 }
 
@@ -202,7 +210,8 @@ function isNoop(before: GameState, after: GameState): boolean {
 		(before.phase ?? "combat") === (after.phase ?? "combat") &&
 		before.grid.cells === after.grid.cells &&
 		before.hidden?.cells === after.hidden?.cells &&
-		before.pendingPlaces === after.pendingPlaces
+		before.pendingPlaces === after.pendingPlaces &&
+		before.committedPlacements === after.committedPlacements
 	);
 }
 
@@ -230,9 +239,11 @@ function applyStep(
 	const nextState = reduce(state, action, config);
 	if (isNoop(state, nextState)) {
 		const probePlayer =
-			(config.turnSchedule ?? "alternating") === "simultaneous"
-				? 0
-				: playerIdOf(state.currentPlayer);
+			action.type === "commitPlace"
+				? playerIdOf(action.player)
+				: (config.turnSchedule ?? "alternating") === "simultaneous"
+					? 0
+					: playerIdOf(state.currentPlayer);
 		const explained = explainKernelAction(
 			config,
 			state,
@@ -253,7 +264,9 @@ function applyStep(
 	const actor: Player | "simultaneous" =
 		action.type === "simultaneousPlace"
 			? "simultaneous"
-			: state.currentPlayer;
+			: action.type === "commitPlace"
+				? action.player
+				: state.currentPlayer;
 	const events: KernelEvent[] = [
 		{ type: "actionApplied", action, player: actor }
 	];
@@ -394,7 +407,27 @@ function collectLegalActions(
 	const actingPlayer = simultaneous ? playerOf(player) : state.currentPlayer;
 
 	if (simultaneous) {
-		// Per-player place choices; UI/agents compose simultaneousPlace via stepJoint.
+		const commitReveal = config.commitReveal === true;
+		const acting = playerOf(player);
+		if (commitReveal) {
+			// Already committed this round → no further actions until reveal.
+			if (state.committedPlacements?.[acting]) return [];
+			for (const position of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (canPlaceCell(state, position, config, acting)) {
+					actions.push({
+						type: "commitPlace",
+						player: acting,
+						position
+					});
+				}
+			}
+			return actions;
+		}
+		// Open simultaneous: per-player place choices; compose via stepJoint.
 		for (const position of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
@@ -640,6 +673,8 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 			return "Ship cells must form a contiguous orthogonal line";
 		case "wrong_phase":
 			return "Action is not valid in the current game phase";
+		case "already_committed":
+			return "This seat already committed for the current round";
 	}
 }
 
@@ -686,6 +721,38 @@ export function explainKernelAction(
 				detail: detailFor("cell_occupied", action)
 			};
 		}
+	}
+
+	if (action.type === "commitPlace") {
+		if (!simultaneous || !config.commitReveal) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (playerIdOf(action.player) !== player) {
+			return {
+				legal: false,
+				reason: "wrong_player",
+				detail: detailFor("wrong_player", action)
+			};
+		}
+		if (state.committedPlacements?.[action.player]) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		if (!canPlaceCell(state, action.position, config, action.player)) {
+			return {
+				legal: false,
+				reason: "cell_occupied",
+				detail: detailFor("cell_occupied", action)
+			};
+		}
+		return { legal: true };
 	}
 
 	const legal = collectLegalActions(config, state, player);
@@ -997,6 +1064,13 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 				a.placements.O.row === b.placements.O.row &&
 				a.placements.O.col === b.placements.O.col
 			);
+		case "commitPlace":
+			return (
+				b.type === "commitPlace" &&
+				a.player === b.player &&
+				a.position.row === b.position.row &&
+				a.position.col === b.position.col
+			);
 	}
 }
 
@@ -1039,6 +1113,7 @@ export function highlightCellsForActions(
 		switch (action.type) {
 			case "place":
 			case "fire":
+			case "commitPlace":
 				push(action.position);
 				break;
 			case "move":
@@ -1177,6 +1252,7 @@ export function createGameKernel(config: GameConfig): GameKernel {
  * Advance one decision ply: alternating single action, or simultaneous joint
  * place when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
  * `legalActions` for the given player (called once, or twice when joint).
+ * Under commitReveal, picks commits for both seats (second auto-reveals).
  */
 export function stepPly(
 	kernel: GameKernel,
@@ -1186,6 +1262,21 @@ export function stepPly(
 ): StepResult | null {
 	const side = kernel.currentPlayer(state);
 	if (side === "simultaneous") {
+		if (kernel.config.commitReveal) {
+			let s = state;
+			let last: StepResult | null = null;
+			for (const pid of [0, 1] as const) {
+				const seat = playerOf(pid);
+				if (s.committedPlacements?.[seat]) continue;
+				const legal = kernel.legalActions(s, pid);
+				const action = pickFor(pid, legal);
+				if (!action) return last;
+				last = kernel.stepSync(s, action, seed);
+				s = last.nextState;
+				if (s.status !== "playing") return last;
+			}
+			return last;
+		}
 		const a0 = pickFor(0, kernel.legalActions(state, 0));
 		const a1 = pickFor(1, kernel.legalActions(state, 1));
 		if (!a0 || !a1) return null;

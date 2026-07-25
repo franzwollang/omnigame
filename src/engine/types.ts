@@ -73,6 +73,11 @@ export type GameState = {
 			done: boolean;
 		};
 	};
+	/**
+	 * Hidden simultaneous: per-round private commits. Cleared after joint resolve.
+	 * Public grid unchanged until both seats have committed.
+	 */
+	committedPlacements?: Partial<Record<Player, Position>>;
 };
 
 export type PlaceMoveEvent = {
@@ -124,6 +129,13 @@ export type SimultaneousPlaceEvent = {
 	placements: { X: Position; O: Position };
 };
 
+/** Hidden simultaneous: one seat's private commit (player required). */
+export type CommitPlaceEvent = {
+	type: "commitPlace";
+	player: Player;
+	position: Position;
+};
+
 export type ResetEvent = {
 	type: "reset";
 };
@@ -139,6 +151,7 @@ export type GameEvent =
 	| TickEvent
 	| PassEvent
 	| SimultaneousPlaceEvent
+	| CommitPlaceEvent
 	| ResetEvent;
 
 // Helper to convert row/col to flat index

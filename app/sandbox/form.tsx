@@ -199,8 +199,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 							</div>
 							<p className="text-xs text-muted-foreground">
 								manual_tick + Life Lite, simultaneous joint place,
-								actionsPerTurn for multi-step, or delayTurns for queued
-								places.
+								commitReveal for hidden simultaneous, actionsPerTurn for
+								multi-step, or delayTurns for queued places.
 							</p>
 							<FormField
 								control={form.control}
@@ -252,6 +252,37 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<p className="text-xs text-muted-foreground">
 											manual_tick needs scheduler + objective none;
 											simultaneous needs cell + n-in-a-row (joint place).
+											Optional commitReveal hides picks until both commit.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.commitReveal"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Commit-reveal</FormLabel>
+										<FormControl>
+											<Select
+												value={field.value === true ? "true" : "false"}
+												onValueChange={(v) =>
+													field.onChange(v === "true")
+												}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="false" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="false">false</SelectItem>
+													<SelectItem value="true">true</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Requires schedule = simultaneous. Each seat commits
+											privately; board updates when both have committed.
 										</p>
 										<FormMessage />
 									</FormItem>
