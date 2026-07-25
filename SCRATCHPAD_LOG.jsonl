@@ -19,3 +19,4 @@
 {"ts":"2026-07-25T05:45-05:00","focus":"hit-miss-aware-agents","summary":"Landed observation hunt fire agent; hand off to placement-phase Battleship","next":"observation-placement-phase schema+kernel"}
 {"ts":"2026-07-25T06:05-05:00","focus":"observation-placement-phase","summary":"Fleet placement phase + Battleship Place; synced from 4234","next":"library-explorer-depth or next missing mechanism"}
 {"ts":"2026-07-25T06:25-05:00","focus":"library-explorer-depth","summary":"graph samples, playability scores, sandbox share links; handed off to next-missing-mechanism","next":"pick wrap/ko/simultaneous/delayed and implement"}
+{"ts":"2026-07-25T06:45-05:00","focus":"grid.wrap","summary":"Landed rectangle toroidal wrap + Toroidal TTT; handed off next mechanism","next":"Pick gravity-up, ko, simultaneous, delayed, or hex-wrap"}
