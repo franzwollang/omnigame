@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
 	Select,
 	SelectContent,
@@ -113,6 +114,31 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											</SelectContent>
 										</Select>
 										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="grid.wrap"
+								render={({ field }) => (
+									<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+										<div className="space-y-0.5">
+											<FormLabel>Wrap (toroidal)</FormLabel>
+											<p className="text-xs text-muted-foreground">
+												Rectangle only — edges connect opposite sides
+											</p>
+										</div>
+										<FormControl>
+											<Switch
+												checked={field.value === true}
+												onCheckedChange={field.onChange}
+												disabled={
+													(form.watch("grid.topology") ?? "rectangle") !==
+													"rectangle"
+												}
+											/>
+										</FormControl>
 									</FormItem>
 								)}
 							/>

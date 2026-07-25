@@ -269,16 +269,18 @@ function canPlaceCell(
 	if (!isActivePosition(pos, topology, config.graph)) return false;
 	if (getCell(state.grid, pos) !== null) return false;
 	if (!config.captureEnabled) return true;
+	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
-		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer);
+		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap);
 	}
 	const placedCells = setCell(state.grid, pos, state.currentPlayer);
 	const after = applyCaptureIfAny(
 		{ ...state.grid, cells: placedCells },
 		pos,
 		state.currentPlayer,
-		config.adjacency
+		config.adjacency,
+		wrap
 	);
 	return after !== placedCells;
 }
@@ -355,14 +357,17 @@ function collectLegalActions(
 	if (inputMode === "move") {
 		const movement = config.movement;
 		if (!movement) return actions;
+		const wrap = config.gridWrap === true;
 		for (const from of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
 			config.graph
 		)) {
 			if (getCell(state.grid, from) !== state.currentPlayer) continue;
-			for (const to of legalDestinations(state.grid, from, movement)) {
-				if (canMove(state.grid, from, to, state.currentPlayer, movement)) {
+			for (const to of legalDestinations(state.grid, from, movement, wrap)) {
+				if (
+					canMove(state.grid, from, to, state.currentPlayer, movement, wrap)
+				) {
 					actions.push({ type: "move", from, to });
 				}
 			}
@@ -414,9 +419,10 @@ function placeFailureReason(
 	if (!isActivePosition(pos, topology, config.graph)) return "not_applicable";
 	if (getCell(state.grid, pos) !== null) return "cell_occupied";
 	if (!config.captureEnabled) return null;
+	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
-		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer)
+		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap)
 			? null
 			: "suicide";
 	}
@@ -425,7 +431,8 @@ function placeFailureReason(
 		{ ...state.grid, cells: placedCells },
 		pos,
 		state.currentPlayer,
-		config.adjacency
+		config.adjacency,
+		wrap
 	);
 	return after !== placedCells ? null : "must_flip";
 }
@@ -669,7 +676,8 @@ export function explainKernelAction(
 					action.from,
 					action.to,
 					state.currentPlayer,
-					config.movement
+					config.movement,
+					config.gridWrap === true
 				)
 			) {
 				return {

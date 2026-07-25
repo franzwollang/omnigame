@@ -5,6 +5,7 @@
  */
 import type { CellValue, Grid, Player, Position } from "@/engine/types";
 import { getCell, setCell, toIndex } from "@/engine/types";
+import { step } from "@/engine/adjacency";
 
 const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
 	[-1, 0],
@@ -26,18 +27,26 @@ function keyOf(pos: Position): string {
 	return `${pos.row},${pos.col}`;
 }
 
-/** Four orthognal neighbors (von Neumann), in-bounds only. */
-export function orthogonalNeighbors(grid: Grid, pos: Position): Position[] {
+/** Four orthogonal neighbors (von Neumann); toroidal when wrap=true. */
+export function orthogonalNeighbors(
+	grid: Grid,
+	pos: Position,
+	wrap: boolean = false
+): Position[] {
 	const out: Position[] = [];
 	for (const [dr, dc] of ORTHOGONAL) {
-		const next = { row: pos.row + dr, col: pos.col + dc };
-		if (inBounds(grid, next)) out.push(next);
+		const next = step(grid, pos, { row: dr, col: dc }, wrap);
+		if (next) out.push(next);
 	}
 	return out;
 }
 
 /** Flood-fill same-color stone group containing `start` (must be occupied). */
-export function findGroup(grid: Grid, start: Position): Position[] {
+export function findGroup(
+	grid: Grid,
+	start: Position,
+	wrap: boolean = false
+): Position[] {
 	const color = getCell(grid, start);
 	if (color !== "X" && color !== "O") return [];
 
@@ -49,7 +58,7 @@ export function findGroup(grid: Grid, start: Position): Position[] {
 	while (stack.length > 0) {
 		const cur = stack.pop()!;
 		group.push(cur);
-		for (const n of orthogonalNeighbors(grid, cur)) {
+		for (const n of orthogonalNeighbors(grid, cur, wrap)) {
 			const k = keyOf(n);
 			if (seen.has(k)) continue;
 			if (getCell(grid, n) !== color) continue;
@@ -61,10 +70,14 @@ export function findGroup(grid: Grid, start: Position): Position[] {
 }
 
 /** Distinct empty cells orthogonally adjacent to any stone in the group. */
-export function countLiberties(grid: Grid, group: Position[]): number {
+export function countLiberties(
+	grid: Grid,
+	group: Position[],
+	wrap: boolean = false
+): number {
 	const libs = new Set<string>();
 	for (const stone of group) {
-		for (const n of orthogonalNeighbors(grid, stone)) {
+		for (const n of orthogonalNeighbors(grid, stone, wrap)) {
 			if (getCell(grid, n) === null) libs.add(keyOf(n));
 		}
 	}
@@ -86,20 +99,21 @@ function removePositions(grid: Grid, positions: Position[]): CellValue[] {
 export function applyLibertyCapture(
 	grid: Grid,
 	placed: Position,
-	currentPlayer: Player
+	currentPlayer: Player,
+	wrap: boolean = false
 ): CellValue[] {
 	const opponent: Player = currentPlayer === "X" ? "O" : "X";
 	let cells = grid.cells;
 	const working: Grid = { ...grid, cells };
 	const removed = new Set<string>();
 
-	for (const n of orthogonalNeighbors(working, placed)) {
+	for (const n of orthogonalNeighbors(working, placed, wrap)) {
 		if (getCell(working, n) !== opponent) continue;
 		const k = keyOf(n);
 		if (removed.has(k)) continue;
-		const group = findGroup({ ...working, cells }, n);
+		const group = findGroup({ ...working, cells }, n, wrap);
 		if (group.length === 0) continue;
-		if (countLiberties({ ...working, cells }, group) === 0) {
+		if (countLiberties({ ...working, cells }, group, wrap) === 0) {
 			cells = removePositions({ ...working, cells }, group);
 			for (const p of group) removed.add(keyOf(p));
 		}
@@ -114,7 +128,8 @@ export function applyLibertyCapture(
 export function isLegalLibertyPlace(
 	grid: Grid,
 	pos: Position,
-	player: Player
+	player: Player,
+	wrap: boolean = false
 ): boolean {
 	if (!inBounds(grid, pos)) return false;
 	if (getCell(grid, pos) !== null) return false;
@@ -123,11 +138,12 @@ export function isLegalLibertyPlace(
 	const afterCapture = applyLibertyCapture(
 		{ ...grid, cells: placedCells },
 		pos,
-		player
+		player,
+		wrap
 	);
 	const afterGrid: Grid = { ...grid, cells: afterCapture };
-	const ownGroup = findGroup(afterGrid, pos);
-	return countLiberties(afterGrid, ownGroup) > 0;
+	const ownGroup = findGroup(afterGrid, pos, wrap);
+	return countLiberties(afterGrid, ownGroup, wrap) > 0;
 }
 
 export type AreaScore = { X: number; O: number };
@@ -135,8 +151,9 @@ export type AreaScore = { X: number; O: number };
 /**
  * Simplified area scoring: stones + empty regions bordered only by one color.
  * Mixed-border or edge-open empty regions score for neither (dame).
+ * On wrap boards, regions never "edge-open" via board boundary.
  */
-export function scoreArea(grid: Grid): AreaScore {
+export function scoreArea(grid: Grid, wrap: boolean = false): AreaScore {
 	const score: AreaScore = { X: 0, O: 0 };
 	for (const cell of grid.cells) {
 		if (cell === "X") score.X += 1;
@@ -162,7 +179,7 @@ export function scoreArea(grid: Grid): AreaScore {
 			while (stack.length > 0) {
 				const cur = stack.pop()!;
 				region.push(cur);
-				for (const n of orthogonalNeighbors(grid, cur)) {
+				for (const n of orthogonalNeighbors(grid, cur, wrap)) {
 					const nk = keyOf(n);
 					const val = getCell(grid, n);
 					if (val === null) {
@@ -187,22 +204,29 @@ export function scoreArea(grid: Grid): AreaScore {
 }
 
 /** Winner by area score; draw on tie. */
-export function areaOutcome(grid: Grid): {
+export function areaOutcome(
+	grid: Grid,
+	wrap: boolean = false
+): {
 	status: "won" | "draw";
 	winner: Player | null;
 	score: AreaScore;
 } {
-	const score = scoreArea(grid);
+	const score = scoreArea(grid, wrap);
 	if (score.X > score.O) return { status: "won", winner: "X", score };
 	if (score.O > score.X) return { status: "won", winner: "O", score };
 	return { status: "draw", winner: null, score };
 }
 
 /** Debug helper: liberty count for the group at a stone. */
-export function libertiesAt(grid: Grid, pos: Position): number {
-	const group = findGroup(grid, pos);
+export function libertiesAt(
+	grid: Grid,
+	pos: Position,
+	wrap: boolean = false
+): number {
+	const group = findGroup(grid, pos, wrap);
 	if (group.length === 0) return 0;
-	return countLiberties(grid, group);
+	return countLiberties(grid, group, wrap);
 }
 
 export function cellIndex(grid: Grid, pos: Position): number {

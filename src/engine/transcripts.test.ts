@@ -36,12 +36,6 @@ describe("schema honesty (M0)", () => {
 		expect(
 			zConfig.safeParse({
 				...base,
-				grid: { ...base.grid, wrap: true }
-			}).success
-		).toBe(false);
-		expect(
-			zConfig.safeParse({
-				...base,
 				placement: {
 					mode: "gravity",
 					gravity: { enabled: true, direction: "up", wrap: false },
@@ -58,9 +52,23 @@ describe("schema honesty (M0)", () => {
 				}
 			}).success
 		).toBe(false);
+		// wrap + non-rectangle still rejected
+		expect(
+			zConfig.safeParse({
+				...base,
+				grid: { ...base.grid, topology: "hex_offset", wrap: true }
+			}).success
+		).toBe(false);
 	});
 
-	it("accepts all shipped presets", () => {
+	it("accepts rectangle wrap and all shipped presets", () => {
+		const base = examplePresets["tic-tac-toe"].config;
+		expect(
+			zConfig.safeParse({
+				...base,
+				grid: { ...base.grid, wrap: true }
+			}).success
+		).toBe(true);
 		for (const preset of Object.values(examplePresets)) {
 			const parsed = zConfig.safeParse(preset.config);
 			expect(parsed.success, preset.id).toBe(true);

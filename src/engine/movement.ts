@@ -4,6 +4,7 @@
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell } from "@/engine/types";
+import { inBounds, step } from "@/engine/adjacency";
 
 export type MovementAdjacency = "orthogonal";
 
@@ -19,34 +20,33 @@ const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
 	[0, 1]
 ];
 
-function inBounds(grid: Grid, pos: Position): boolean {
-	return (
-		pos.row >= 0 &&
-		pos.row < grid.height &&
-		pos.col >= 0 &&
-		pos.col < grid.width
-	);
-}
-
-/** Manhattan / Chebyshev distance depending on adjacency mode. */
+/** Toroidal or clipped orthogonal adjacency of range 1. */
 export function isWithinRange(
 	from: Position,
 	to: Position,
-	config: MovementConfig
+	config: MovementConfig,
+	grid?: Grid,
+	wrap: boolean = false
 ): boolean {
+	if (config.adjacency !== "orthogonal") return false;
+	if (wrap && grid) {
+		for (const [dr, dc] of ORTHOGONAL) {
+			const n = step(grid, from, { row: dr, col: dc }, true);
+			if (n && n.row === to.row && n.col === to.col) return true;
+		}
+		return false;
+	}
 	const dr = Math.abs(to.row - from.row);
 	const dc = Math.abs(to.col - from.col);
-	if (config.adjacency === "orthogonal") {
-		return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
-	}
-	return false;
+	return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
 }
 
 /** Empty destinations a piece at `from` may step to. */
 export function legalDestinations(
 	grid: Grid,
 	from: Position,
-	config: MovementConfig
+	config: MovementConfig,
+	wrap: boolean = false
 ): Position[] {
 	if (!inBounds(grid, from)) return [];
 	if (getCell(grid, from) === null) return [];
@@ -54,8 +54,8 @@ export function legalDestinations(
 	const out: Position[] = [];
 	if (config.adjacency === "orthogonal" && config.range === 1) {
 		for (const [dr, dc] of ORTHOGONAL) {
-			const to = { row: from.row + dr, col: from.col + dc };
-			if (!inBounds(grid, to)) continue;
+			const to = step(grid, from, { row: dr, col: dc }, wrap);
+			if (!to) continue;
 			if (getCell(grid, to) !== null) continue;
 			out.push(to);
 		}
@@ -68,10 +68,11 @@ export function canMove(
 	from: Position,
 	to: Position,
 	player: Player,
-	config: MovementConfig
+	config: MovementConfig,
+	wrap: boolean = false
 ): boolean {
 	if (!inBounds(grid, from) || !inBounds(grid, to)) return false;
 	if (getCell(grid, from) !== player) return false;
 	if (getCell(grid, to) !== null) return false;
-	return isWithinRange(from, to, config);
+	return isWithinRange(from, to, config, grid, wrap);
 }

@@ -1,7 +1,7 @@
 // Win detection with decomposed adjacency (rectangle, hex_offset, or graph)
 
 import type { Grid, Player, Position } from "./types";
-import { inBounds } from "@/engine/adjacency";
+import { normalizePos } from "@/engine/adjacency";
 import {
 	allActivePositions,
 	getWinAdjFuncs,
@@ -30,6 +30,7 @@ function recursiveCheck(
 	pos: Position,
 	adjFunc: WinAdjFunc,
 	winLength: number,
+	wrap: boolean,
 	currentLength: number = 1,
 	memo: Set<string> = new Set()
 ): boolean {
@@ -39,8 +40,9 @@ function recursiveCheck(
 	memo.add(key);
 
 	const adjacents = adjFunc(pos)
+		.map((adj) => normalizePos(grid, adj, wrap))
+		.filter((adj): adj is Position => adj !== null)
 		.filter((adj) => !memo.has(posKey(adj)))
-		.filter((adj) => inBounds(grid, adj))
 		.filter((adj) => getCell(grid, adj) === player);
 
 	for (const adj of adjacents) {
@@ -51,6 +53,7 @@ function recursiveCheck(
 				adj,
 				adjFunc,
 				winLength,
+				wrap,
 				currentLength + 1,
 				new Set(memo)
 			)
@@ -69,9 +72,16 @@ export function checkWinner(
 	winLength: number,
 	adjacencyConfig: AdjacencyConfig,
 	topology: GridTopology = "rectangle",
-	graph?: GraphTopologyData
+	graph?: GraphTopologyData,
+	wrap: boolean = false
 ): boolean {
-	const adjFuncs = getWinAdjFuncs(adjacencyConfig, topology, graph);
+	const adjFuncs = getWinAdjFuncs(
+		adjacencyConfig,
+		topology,
+		graph,
+		grid,
+		wrap
+	);
 	if (adjFuncs.length === 0) return false;
 
 	const playerCells: Position[] = [];
@@ -84,7 +94,16 @@ export function checkWinner(
 	if (adjacencyConfig.mode === "linear" && topology !== "graph") {
 		for (const adjFunc of adjFuncs) {
 			for (const startPos of playerCells) {
-				if (recursiveCheck(grid, player, startPos, adjFunc, winLength)) {
+				if (
+					recursiveCheck(
+						grid,
+						player,
+						startPos,
+						adjFunc,
+						winLength,
+						wrap
+					)
+				) {
 					return true;
 				}
 			}
@@ -95,7 +114,16 @@ export function checkWinner(
 	// composite (and all graph wins): any path through neighbor edges
 	const compositeAdj: WinAdjFunc = (pos) => adjFuncs.flatMap((f) => f(pos));
 	for (const startPos of playerCells) {
-		if (recursiveCheck(grid, player, startPos, compositeAdj, winLength)) {
+		if (
+			recursiveCheck(
+				grid,
+				player,
+				startPos,
+				compositeAdj,
+				winLength,
+				wrap
+			)
+		) {
 			return true;
 		}
 	}

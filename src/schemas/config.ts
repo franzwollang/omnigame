@@ -14,8 +14,8 @@ export const zConfig = z
 				topology: z
 					.enum(["rectangle", "hex_offset", "graph"])
 					.default("rectangle"),
-				// wrap deferred; only false is accepted today
-				wrap: z.literal(false),
+				/** Toroidal adjacency for rectangle boards (hex/graph wrap deferred). */
+				wrap: z.boolean().default(false),
 				/** Playable nodes when topology = graph (inactive slots stay empty). */
 				nodes: z
 					.array(
@@ -223,6 +223,14 @@ export const zConfig = z
 		const manualTick = cfg.turn.schedule === "manual_tick";
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
+		// Toroidal wrap is rectangle-only for now (hex/graph wrap deferred)
+		if (cfg.grid.wrap && cfg.grid.topology !== "rectangle") {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["grid", "wrap"],
+				message: "grid.wrap is only supported for topology = 'rectangle'"
+			});
+		}
 		const captureEnabled = Boolean(cfg.placement.capture?.enabled);
 		const captureMode = cfg.placement.capture?.mode ?? "flip";
 		const libertyCapture = captureEnabled && captureMode === "liberties";

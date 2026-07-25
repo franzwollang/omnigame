@@ -58,6 +58,47 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"toroidal-ttt": definePreset({
+		id: "toroidal-ttt",
+		name: "Toroidal TTT",
+		tags: ["wrap", "topology", "3x3", "n-in-a-row", "mechanism"],
+		description:
+			"Tic-Tac-Toe on a torus — lines wrap across opposite edges. Unlocks grid.wrap (rectangle only).",
+		config: {
+			metadata: { name: "Toroidal TTT", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: true },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"connect-4": definePreset({
 		id: "connect-4",
 		name: "Connect 4",

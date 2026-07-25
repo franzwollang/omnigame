@@ -51,6 +51,8 @@ export type GameConfig = {
 	topology?: GridTopology;
 	/** Compiled adjacency when topology = graph. */
 	graph?: GraphTopologyData;
+	/** Toroidal adjacency for rectangle boards. */
+	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
 	inputMode?: "cell" | "column" | "move";
@@ -199,7 +201,10 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 	const newMoveCount = state.moveCount + 1;
 
 	if (passes >= 2) {
-		const { status, winner } = areaOutcome(state.grid);
+		const { status, winner } = areaOutcome(
+			state.grid,
+			config.gridWrap === true
+		);
 		return {
 			...state,
 			status,
@@ -224,7 +229,11 @@ function handleTick(state: GameState, config: GameConfig): GameState {
 	const scheduler = config.scheduler;
 	if (!scheduler) return state;
 
-	const newGrid = applyLifeStep(state.grid, scheduler.rules);
+	const newGrid = applyLifeStep(
+		state.grid,
+		scheduler.rules,
+		config.gridWrap === true
+	);
 	return {
 		...state,
 		grid: newGrid,
@@ -243,7 +252,16 @@ function handleMove(
 	if (state.status !== "playing") return state;
 	const movement = config.movement;
 	if (!movement) return state;
-	if (!canMove(state.grid, from, to, state.currentPlayer, movement)) {
+	if (
+		!canMove(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			config.gridWrap === true
+		)
+	) {
 		return state;
 	}
 
@@ -422,9 +440,11 @@ function handlePlace(
 	const libertyMode =
 		Boolean(config.captureEnabled) && captureMode === "liberties";
 
+	const wrap = config.gridWrap === true;
+
 	// Go-lite: empty + no suicide after opponent group capture
 	if (libertyMode) {
-		if (!isLegalLibertyPlace(state.grid, pos, state.currentPlayer)) {
+		if (!isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap)) {
 			return state;
 		}
 	} else if (config.captureEnabled) {
@@ -434,7 +454,8 @@ function handlePlace(
 			{ ...state.grid, cells: placedCells },
 			pos,
 			state.currentPlayer,
-			config.adjacency
+			config.adjacency,
+			wrap
 		);
 		if (after === placedCells) {
 			return state;
@@ -447,14 +468,16 @@ function handlePlace(
 		newCells = applyLibertyCapture(
 			{ ...state.grid, cells: newCells },
 			pos,
-			state.currentPlayer
+			state.currentPlayer,
+			wrap
 		);
 	} else if (config.captureEnabled) {
 		newCells = applyCaptureIfAny(
 			{ ...state.grid, cells: newCells },
 			pos,
 			state.currentPlayer,
-			config.adjacency
+			config.adjacency,
+			wrap
 		);
 	}
 	const newMoveCount = state.moveCount + 1;
@@ -488,7 +511,8 @@ function handlePlace(
 		config.winLength,
 		config.adjacency,
 		config.topology ?? "rectangle",
-		config.graph
+		config.graph,
+		wrap
 	);
 	if (winner) {
 		return {
@@ -594,7 +618,8 @@ function handlePopOutColumn(
 		config.winLength,
 		config.adjacency,
 		config.topology ?? "rectangle",
-		config.graph
+		config.graph,
+		config.gridWrap === true
 	);
 	if (winner) {
 		return {

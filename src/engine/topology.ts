@@ -5,7 +5,7 @@
  */
 import type { Grid, Position } from "@/engine/types";
 import type { AdjacencyConfig } from "@/engine/rules";
-import { inBounds } from "@/engine/adjacency";
+import { inBounds, step } from "@/engine/adjacency";
 
 export type GridTopology = "rectangle" | "hex_offset" | "graph";
 
@@ -137,12 +137,14 @@ export function neighbors(
 	grid: Grid,
 	pos: Position,
 	topology: GridTopology = "rectangle",
-	graph?: GraphTopologyData
+	graph?: GraphTopologyData,
+	wrap: boolean = false
 ): Position[] {
 	if (topology === "graph") {
 		return graph?.neighborsOf.get(posKey(pos))?.slice() ?? [];
 	}
 	if (topology === "hex_offset") {
+		// Hex wrap deferred — clip at board edges
 		const c = offsetToCube(pos);
 		const out: Position[] = [];
 		for (const d of CUBE_NEIGHBOR_DIRS) {
@@ -163,8 +165,8 @@ export function neighbors(
 	];
 	const out: Position[] = [];
 	for (const d of deltas) {
-		const n = { row: pos.row + d.row, col: pos.col + d.col };
-		if (inBounds(grid, n)) out.push(n);
+		const n = step(grid, pos, d, wrap);
+		if (n) out.push(n);
 	}
 	return out;
 }
@@ -175,7 +177,9 @@ export type WinAdjFunc = (pos: Position) => Position[];
 export function getWinAdjFuncs(
 	adjacency: AdjacencyConfig,
 	topology: GridTopology = "rectangle",
-	graph?: GraphTopologyData
+	graph?: GraphTopologyData,
+	grid?: Grid,
+	wrap: boolean = false
 ): WinAdjFunc[] {
 	if (topology === "graph") {
 		return [
@@ -207,6 +211,17 @@ export function getWinAdjFuncs(
 		dirs.push({ row: -1, col: -1 }, { row: 1, col: 1 });
 	if (adjacency.forwardDiagonal)
 		dirs.push({ row: -1, col: 1 }, { row: 1, col: -1 });
+
+	if (grid && wrap) {
+		return dirs.map(
+			(d) =>
+				(pos: Position) => {
+					const next = step(grid, pos, d, true);
+					return next ? [next] : [];
+				}
+		);
+	}
+
 	return dirs.map(
 		(d) =>
 			({ row, col }: Position) =>

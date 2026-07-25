@@ -94,7 +94,8 @@ Routing uses App Router with scroll-snap landing and URL replacement to reflect 
 OmniGame is actively evolving toward the “spec → compiler → kernel + IR” shape described below. The current sandbox already supports a useful (but intentionally small) slice of the primitive space:
 
 - **Topology**: rectangular grid, odd-r hex (`hex_offset`), or explicit adjacency
-  graph (`graph` with `nodes`/`edges`); wrap is schema-locked to `false` until later
+  graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
+  **rectangle** boards (hex/graph wrap deferred); Toroidal TTT preset
 - **Inputs**: cell-click, column-activation, and piece move (`input.mode = "cell" | "column" | "move"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
@@ -111,7 +112,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: ko/full Go rules, wrap/non-down gravity behind Kernel, simultaneous/delayed actions, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: ko/full Go rules, non-down gravity,
+hex/graph wrap, simultaneous/delayed actions, and a larger set of reusable
+operators/constraints.
 
 ## Technical vision (expanded)
 

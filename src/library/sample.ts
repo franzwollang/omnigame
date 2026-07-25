@@ -59,7 +59,12 @@ function sampleNInARow(rng: SamplerRng, seed: number): ConfigInput {
 	const height = int(rng, 3, 5);
 	const length = int(rng, 3, Math.min(width, height));
 	const cfg = baseMeta(`Sample n-in-a-row ${width}x${height}`, seed);
-	cfg.grid = { width, height, topology: "rectangle", wrap: false };
+	cfg.grid = {
+		width,
+		height,
+		topology: "rectangle",
+		wrap: rng() > 0.55
+	};
 	cfg.win = {
 		length,
 		adjacency: {

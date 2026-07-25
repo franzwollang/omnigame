@@ -4,6 +4,7 @@
  */
 import type { CellValue, Grid } from "@/engine/types";
 import { getCell, toIndex } from "@/engine/types";
+import { step } from "@/engine/adjacency";
 
 export type SchedulerRules = "life_b3s23";
 export type SchedulerNeighborhood = "moore";
@@ -30,13 +31,18 @@ export function isAlive(value: CellValue): boolean {
 	return value === "X" || value === "O";
 }
 
-export function countAliveNeighbors(grid: Grid, row: number, col: number): number {
+export function countAliveNeighbors(
+	grid: Grid,
+	row: number,
+	col: number,
+	wrap: boolean = false
+): number {
 	let n = 0;
+	const origin = { row, col };
 	for (const [dr, dc] of MOORE) {
-		const r = row + dr;
-		const c = col + dc;
-		if (r < 0 || c < 0 || r >= grid.height || c >= grid.width) continue;
-		if (isAlive(getCell(grid, { row: r, col: c }))) n += 1;
+		const next = step(grid, origin, { row: dr, col: dc }, wrap);
+		if (!next) continue;
+		if (isAlive(getCell(grid, next))) n += 1;
 	}
 	return n;
 }
@@ -45,13 +51,17 @@ export function countAliveNeighbors(grid: Grid, row: number, col: number): numbe
  * One Conway B3/S23 generation. Births inherit the canonical alive mark `"X"`.
  * Double-buffered: all fates computed from `grid`, then applied.
  */
-export function applyLifeStep(grid: Grid, _rules: SchedulerRules = "life_b3s23"): Grid {
+export function applyLifeStep(
+	grid: Grid,
+	_rules: SchedulerRules = "life_b3s23",
+	wrap: boolean = false
+): Grid {
 	const next = new Array<CellValue>(grid.cells.length);
 	for (let row = 0; row < grid.height; row++) {
 		for (let col = 0; col < grid.width; col++) {
 			const idx = toIndex({ row, col }, grid.width);
 			const alive = isAlive(grid.cells[idx] ?? null);
-			const neighbors = countAliveNeighbors(grid, row, col);
+			const neighbors = countAliveNeighbors(grid, row, col, wrap);
 			if (alive) {
 				// Survive with 2 or 3 neighbors; else die
 				next[idx] = neighbors === 2 || neighbors === 3 ? "X" : null;
