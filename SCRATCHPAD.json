@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T13:10-05:00",
-  "turn": 20,
+  "updated_at": "2026-07-25T13:25-05:00",
+  "turn": 21,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after turn.phases place→move"
+    "goal": "Hand off after turn.phases place→fire"
   },
   "recent": [
-    "Synced progression-a5b2 onto ef83",
-    "Landed turn.phases place→move + Place & Move Lite",
-    "229 tests green"
+    "Synced progression-ef83 onto 609c",
+    "Landed turn.phases place→fire + Place & Fire Lite",
+    "237 tests green"
   ],
   "discoveries": [
-    "actionsPerTurn ≠ phases: former repeats one type; latter sequences types",
-    "Rejected delayed+gravity / hidden-sim hex as recombinations"
+    "place→fire ≠ fleet placement→combat; public spotters + in-turn fire",
+    "Rejected place→move→fire triple and delayed+gravity as recombinations"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick phases+attack, phases hex/graph, or next true seam",
+  "next_step": "Cloud agent: pick place→move→fire, phases hex/graph, or next true seam",
   "blockers": []
 }

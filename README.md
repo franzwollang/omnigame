@@ -67,6 +67,7 @@ These are built from the same shared schema and operators.
 - **Double-Place Simultaneous Hex / Graph** (multi-action simultaneous on hex_offset / graph)
 - **Delayed TTT** (`placement.delayTurns = 1` queued place; pending cells reserved)
 - **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
+- **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -125,7 +126,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
     `pop_out_right` (paired with gravity direction; horizontal uses `popOutRow`)
   - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite); `turn.resolveOrder = x_first | o_first` ordered same-cell priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move sequence (Place & Move Lite)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite); `turn.resolveOrder = x_first | o_first` ordered same-cell priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite) or place→fire (Place & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
@@ -217,7 +218,7 @@ Turn logic is declarative:
 
 - N players
 - schedule: alternating, simultaneous (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action rounds), or multi-step alternating
-- phases: in-turn `turn.phases` (place → move foothold); game-long fleet placement → combat; place → move → attack (etc.) still expanding
+- phases: in-turn `turn.phases` (place→move, place→fire); game-long fleet placement → combat; place→move→fire / hex-graph phase lifts still expanding
 - action points / per-turn budgets
 
 ### 6) Observation primitive (high leverage; optional early, core later)

@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** In-turn `turn.phases` (place→move) landed
-(Place & Move Lite). Hand off to the next **missing mechanism** (see
+**Optimizing for this phase:** In-turn `turn.phases` place→fire landed
+(Place & Fire Lite). Hand off to the next **missing mechanism** (see
 `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
@@ -65,7 +65,7 @@ Working sandbox slice (see README “Current implementation status”):
   Simultaneous TTT, Ordered Simultaneous TTT, Hidden Simultaneous TTT,
   Double-Place Simultaneous TTT, Double-Place Simultaneous Hex,
   Double-Place Simultaneous Graph, Double Move TTT, Double Move Hex,
-  Double Move Graph, Delayed TTT, Place & Move Lite
+  Double Move Graph, Delayed TTT, Place & Move Lite, Place & Fire Lite
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -108,10 +108,11 @@ Working sandbox slice (see README “Current implementation status”):
   resolve; Double-Place Simultaneous TTT / Hex / Graph
 - **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
   intent queues then materializes after intervening places; Delayed TTT preset
-- **In-turn phases:** `turn.phases` (v1: `["place","move"]`) +
-  `GameState.turnPhaseIndex`; phase-routed legality; Place & Move Lite preset
+- **In-turn phases:** `turn.phases` (`["place","move"]` or `["place","fire"]`) +
+  `GameState.turnPhaseIndex`; phase-routed legality; Place & Move Lite /
+  Place & Fire Lite presets
 
-Not yet: full Go rules; phases with attack/fire or hex/graph lift; hidden
+Not yet: full Go rules; place→move→fire triple phases or hex/graph lift; hidden
 simultaneous on hex/graph (if a new observe/legal seam appears).
 
 ## Milestone exit criteria
