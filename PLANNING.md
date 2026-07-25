@@ -7,17 +7,17 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 
 | ID | Milestone | Status |
 |---|---|---|
-| M0 | Honesty pass + Effect foothold | `in progress` |
-| M1 | GameKernel ABI + Effect core + event transcripts | `not started` |
-| M2 | GameIR + deterministic replay | `not started` |
-| M3 | Compiler / normalize / macro expansion | `not started` |
-| M4 | Observation primitive + Battleship-lite | `not started` |
-| M5 | Anchor / reference-game ports | `not started` |
-| M6 | Debug tooling + baseline agents | `not started` |
-| M7 | Infinite library / config explorer | `not started` |
+| M0 | Honesty pass + Effect foothold | `done` |
+| M1 | GameKernel ABI + Effect core + event transcripts | `done` |
+| M2 | GameIR + deterministic replay | `done` |
+| M3 | Compiler / normalize / macro expansion | `done` |
+| M4 | Observation primitive + Battleship-lite | `done` |
+| M5 | Anchor / reference-game ports | `done` |
+| M6 | Debug tooling + baseline agents | `done` |
+| M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** stop lying about unsupported knobs; land Effect as the core
-runtime; put play behind a thin `GameKernel` so new mechanics aren’t rewritten twice.
+**Optimizing for this phase:** Positional superko landed on liberties games
+(Go Lite Superko). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -25,7 +25,7 @@ runtime; put play behind a thin `GameKernel` so new mechanics aren’t rewritten
 |---|---|
 | FP runtime | **Effect.ts** — core + edge services; keep Zod at the JSON/UI boundary until Effect Schema migration is deliberate |
 | M0 vs Kernel | **Hybrid:** short honesty pass (narrow/label), then Kernel+Effect — do **not** expand the plain reducer for every unused knob first |
-| Product surface (near-term) | **Sandbox composer** (edit one config, play it). Library explorer is later (M7) |
+| Product surface (near-term) | **Sandbox composer** + **Library explorer** (sample/classify/score; share links; load finds). |
 
 ### Why this sequencing
 
@@ -46,21 +46,41 @@ Two different UIs, same engine:
 | **Sandbox (composer)** | “Can I author *this* game and play it?” | You edit JSON/form for one config; board updates; browse presets |
 | **Library explorer** | “What’s out there in config-space?” | System samples/randomizes many configs; most are junk; you hunt for rare playable hybrids |
 
-Near-term focus = sandbox. Library explorer needs a solid kernel + playability heuristics first
-(that’s why it’s M7).
+Near-term focus = sandbox composer + library explorer (graph sampling, scores, share links).
 
 ## What exists today
 
 Working sandbox slice (see README “Current implementation status”):
 
-- Rectangular grid; cell / column input
-- Direct + gravity placement (engine: gravity **down** only)
-- Capture (Reversi-like flips); n-in-a-row wins
-- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Reversi
+- Rectangular grid; cell / column / row input
+- Direct + gravity placement (down | up | left | right; column ↔ vertical, row ↔ horizontal)
+- Capture (flip demo); n-in-a-row wins
+- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Up, Connect 4 Right, Connect 4 Pop Out,
+  Gomoku, Capture / Flip Demo,
+  Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
+  Step Race (Move + reach_row),
+  Life Lite (manual tick + B3/S23)
 - Zod schema + JSON/form sandbox + Three.js canvas
+- Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
+- Vitest transcript + kernel + validateConfig + GameIR replay tests
+- Sandbox play through `GameKernel` (`useGameEngine` → `stepSync` + event log)
+- GameIR v0 (`src/ir/gameIr.ts`): `seed + actions` transcript + sandbox Replay
+- Client Zod + contract validation in sandbox; Z3 server action optional/experimental
+- Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
+- Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
+- Move foothold (`src/engine/movement.ts`): orthogonal step + `reach_row`; Step Race preset
+- Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
+- Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
+- Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
+- **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle); Toroidal TTT preset
+- Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
+- **Simple (point) ko:** `placement.capture.ko` + `GameState.koPoint`; illegal reason `"ko"`
+- Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
+  `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
+- Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: Effect dependency, `GameKernel` / `GameIR`, compiler, observation, hex/graph,
-wired RNG, XState turn machine, automated tests, library explorer.
+Not yet: superko/full Go rules, hex/graph wrap, simultaneous/delayed actions,
+`pop_out_top` / horizontal pop-out.
 
 ## Milestone exit criteria
 
@@ -87,13 +107,22 @@ Related: Immediate issues in `OPEN_ISSUES.md`.
 - Serializable action/event transcript; `seed + actions → same state`.
 - Minimal replay path in sandbox.
 
+**Done:** `src/ir/gameIr.ts` + tests; sandbox Replay button re-runs action log.
+
 ### M3 — Compiler / normalize
 
 - Validate → normalize → kernel builder; macros → named primitives only.
 
+**Done:** `src/compiler/` (`compile` / macros / `normalizeConfig`); sandbox +
+presets play through it; `gravity.enabled` and `placements→initial` macros.
+
 ### M4 — Observation + Battleship-lite
 
 - Hit/miss (+ hidden placement) observation; Battleship-lite preset.
+
+**Done:** `observation.mode` / `objective.mode` in schema; hidden fleet layer;
+`fire` action; per-player `observe()` on kernel steps; Battleship-lite preset +
+tests. Fleet placement phase (`fleet.ships` + Battleship Place) landed post-M7.
 
 ### M5 — Anchor / reference ports
 
@@ -101,13 +130,28 @@ Related: Immediate issues in `OPEN_ISSUES.md`.
   principle in `.cursor/rules/project-structure.mdc`). Not “finish `references/`.”
 - Each port has transcript/simulation tests for the mechanism it claims to prove.
 
+**Done:** Step Race (Move), Life Lite (tick), Hex Connect Lite
+(`hex_offset`), Go Lite (liberties + area_control + simple ko), Graph Connect Lite
+(`graph`). Planned M5 mechanism slots covered; optional later anchors still
+allowed by selection principle.
+
 ### M6 — Debug tooling + agents
 
 - Legal-move / “why illegal” / event trace; random/greedy/(tiny) MCTS on kernel only.
 
+**Done:** `explainAction` + `highlightCellsForActions`; sandbox legal overlay +
+why-illegal + full event log; `src/agents/` random/greedy/tiny MCTS + Agent step.
+Post-M6 depth: UCT (`createUctAgent`) with tree reuse landed; hit/miss-aware
+agents still open.
+
 ### M7 — Library explorer
 
 - Sample/randomize configs; surface playable vs noise (Library of Babel framing).
+
+**Done:** `src/library/` (`sample` / `assessPlayability` / `exploreLibrary`) +
+sandbox Library modal (load playable finds). Heuristics: compile → opening
+legality → short random playout. Post-M7: graph topology + UCT agent landed;
+hand off to fog observation / hit-miss agents / library depth.
 
 ## Sequencing notes
 

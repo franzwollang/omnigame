@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
 	Select,
 	SelectContent,
@@ -87,6 +88,60 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									)}
 								/>
 							</div>
+							<FormField
+								control={form.control}
+								name="grid.topology"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Topology</FormLabel>
+										<Select
+											onValueChange={field.onChange}
+											value={field.value ?? "rectangle"}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="rectangle" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value="rectangle">rectangle</SelectItem>
+												<SelectItem value="hex_offset">
+													hex_offset (odd-r)
+												</SelectItem>
+												<SelectItem value="graph">
+													graph (adjacency list)
+												</SelectItem>
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="grid.wrap"
+								render={({ field }) => (
+									<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+										<div className="space-y-0.5">
+											<FormLabel>Wrap (toroidal)</FormLabel>
+											<p className="text-xs text-muted-foreground">
+												Rectangle only — edges connect opposite sides
+											</p>
+										</div>
+										<FormControl>
+											<Switch
+												checked={field.value === true}
+												onCheckedChange={field.onChange}
+												disabled={
+													(form.watch("grid.topology") ?? "rectangle") !==
+													"rectangle"
+												}
+											/>
+										</FormControl>
+									</FormItem>
+								)}
+							/>
 
 							{/* Tokens */}
 							<div className="space-y-2">
@@ -140,21 +195,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									))}
 								</div>
 							</div>
-							<FormField
-								control={form.control}
-								name="grid.wrap"
-								render={({ field }) => (
-									<FormItem className="flex flex-row gap-2 items-center space-y-0">
-										<FormControl>
-											<Checkbox
-												checked={field.value}
-												onCheckedChange={field.onChange}
-											/>
-										</FormControl>
-										<FormLabel className="font-normal">Wrap edges</FormLabel>
-									</FormItem>
-								)}
-							/>
+							<p className="text-xs text-muted-foreground">
+								Wrap edges and realtime turns are deferred. Use
+								manual_tick + Life Lite for discrete generations.
+							</p>
 							<FormField
 								control={form.control}
 								name="turn.mode"
@@ -162,19 +206,46 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<FormItem>
 										<FormLabel>Turn mode</FormLabel>
 										<FormControl>
-											<Select
-												value={field.value}
-												onValueChange={field.onChange}
-											>
+											<Select value={field.value} disabled>
 												<SelectTrigger>
-													<SelectValue placeholder="Select mode" />
+													<SelectValue placeholder="turn" />
 												</SelectTrigger>
 												<SelectContent>
 													<SelectItem value="turn">turn</SelectItem>
-													<SelectItem value="realtime">realtime</SelectItem>
 												</SelectContent>
 											</Select>
 										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.schedule"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Schedule</FormLabel>
+										<FormControl>
+											<Select
+												value={field.value ?? "alternating"}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="alternating" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="alternating">
+														alternating
+													</SelectItem>
+													<SelectItem value="manual_tick">
+														manual_tick
+													</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											manual_tick requires scheduler + objective none.
+										</p>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -192,6 +263,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												onChange={(e) => field.onChange(Number(e.target.value))}
 											/>
 										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Used by Effect RNG helpers; not yet wired into play
+											stepping.
+										</p>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -217,9 +292,186 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<SelectContent>
 														<SelectItem value="cell">cell</SelectItem>
 														<SelectItem value="column">column</SelectItem>
+														<SelectItem value="row">row</SelectItem>
+														<SelectItem value="move">move</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+
+							<div className="space-y-2">
+								<p className="text-sm font-medium">Observation / objective</p>
+								<FormField
+									control={form.control}
+									name="observation.mode"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Observation mode</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value ?? "full"}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="full" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="full">full</SelectItem>
+														<SelectItem value="hit_miss">hit_miss</SelectItem>
+														<SelectItem value="fog">fog</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												hit_miss = Battleship-lite; fog = radius vision around
+												own pieces.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="fleet.ships"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Fleet ships (placement phase)</FormLabel>
+											<FormControl>
+												<Input
+													placeholder="e.g. 2,3"
+													value={
+														Array.isArray(field.value)
+															? field.value.join(",")
+															: ""
+													}
+													onChange={(e) => {
+														const raw = e.target.value.trim();
+														if (!raw) {
+															form.setValue("fleet", undefined, {
+																shouldDirty: true
+															});
+															return;
+														}
+														const parts = raw
+															.split(/[,\s]+/)
+															.map((s) => Number(s))
+															.filter((n) => Number.isFinite(n) && n >= 1);
+														if (parts.length === 0) {
+															form.setValue("fleet", undefined, {
+																shouldDirty: true
+															});
+															return;
+														}
+														form.setValue(
+															"fleet",
+															{ ships: parts },
+															{ shouldDirty: true }
+														);
+													}}
+												/>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												hit_miss only: contiguous ship lengths each player
+												places before combat. Clear to use fixed owner
+												initial seeds instead.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="observation.radius"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Fog radius</FormLabel>
+											<FormControl>
+												<Input
+													type="number"
+													value={field.value ?? 1}
+													onChange={(e) =>
+														field.onChange(Number(e.target.value))
+													}
+												/>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												Used when observation.mode = fog.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="observation.metric"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Fog metric</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value ?? "chebyshev"}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="chebyshev" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="chebyshev">
+															chebyshev
+														</SelectItem>
+														<SelectItem value="manhattan">
+															manhattan
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												Rectangle only; hex uses cube distance, graph uses
+												BFS hops.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="objective.mode"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Objective</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value ?? "n_in_a_row"}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="n_in_a_row" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="n_in_a_row">
+															n_in_a_row
+														</SelectItem>
+														<SelectItem value="destroy_hidden">
+															destroy_hidden
+														</SelectItem>
+														<SelectItem value="reach_row">
+															reach_row
+														</SelectItem>
+														<SelectItem value="area_control">
+															area_control
+														</SelectItem>
+														<SelectItem value="none">none</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												destroy_hidden↔hit_miss; reach_row↔move;
+												area_control↔liberties; none↔tick.
+											</p>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -260,11 +512,11 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<FormLabel>Gravity direction</FormLabel>
 											<FormControl>
 												<Select
-													value={field.value}
+													value={field.value ?? "down"}
 													onValueChange={field.onChange}
 												>
 													<SelectTrigger>
-														<SelectValue placeholder="Select direction" />
+														<SelectValue placeholder="down" />
 													</SelectTrigger>
 													<SelectContent>
 														<SelectItem value="down">down</SelectItem>
@@ -274,24 +526,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													</SelectContent>
 												</Select>
 											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												column ↔ down/up; row ↔ left/right.
+											</p>
 											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="placement.gravity.wrap"
-									render={({ field }) => (
-										<FormItem className="flex flex-row gap-2 items-center space-y-0">
-											<FormControl>
-												<Checkbox
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormControl>
-											<FormLabel className="text-xs font-normal">
-												Wrap (gravity)
-											</FormLabel>
 										</FormItem>
 									)}
 								/>
@@ -314,12 +552,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="pop_out_bottom">
 															pop_out_bottom
 														</SelectItem>
-														<SelectItem value="pop_out_top">
-															pop_out_top
-														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												pop_out_top / horizontal pop-out deferred.
+											</p>
 											<FormMessage />
 										</FormItem>
 									)}
@@ -334,10 +572,19 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormControl>
 											<Input
 												type="number"
-												value={field.value}
-												onChange={(e) => field.onChange(Number(e.target.value))}
+												value={field.value ?? ""}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value === ""
+															? undefined
+															: Number(e.target.value)
+													)
+												}
 											/>
 										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Used for n_in_a_row; ignored for destroy_hidden.
+										</p>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -352,7 +599,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<FormLabel>Mode</FormLabel>
 											<FormControl>
 												<Select
-													value={field.value}
+													value={field.value ?? "linear"}
 													onValueChange={field.onChange}
 												>
 													<SelectTrigger>
@@ -375,7 +622,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>
@@ -392,7 +639,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>
@@ -409,7 +656,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>
@@ -426,7 +673,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>

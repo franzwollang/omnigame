@@ -5,55 +5,183 @@ import type {
 	GameEvent,
 	Position,
 	Player,
-	CellValue
+	CellValue,
+	Grid
 } from "./types";
 import { getCell, setCell, toIndex } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
+import {
+	applyLibertyCapture,
+	areaOutcome,
+	boardPositionHash,
+	isLegalLibertyPlace,
+	koPointFromCapture,
+	type KoRule
+} from "@/engine/liberties";
+import { fleetDestroyed } from "@/engine/observation";
+import {
+	advanceFleetProgress,
+	bothFleetsPlaced,
+	canPlaceFleetCell,
+	initialFleetProgressMap,
+	usesPlacementPhase,
+	type FleetConfig
+} from "@/engine/fleet";
+import { canMove, type MovementConfig } from "@/engine/movement";
+import {
+	applyLifeStep,
+	type SchedulerConfig
+} from "@/engine/scheduler";
+import {
+	isActivePosition,
+	type GraphTopologyData,
+	type GridTopology
+} from "@/engine/topology";
+import { getCell as readCell } from "@/engine/types";
+
+export type InitialSeed = {
+	row: number;
+	col: number;
+	player: Player;
+	visibility?: "public" | "owner";
+};
 
 export type GameConfig = {
 	gridWidth: number;
 	gridHeight: number;
+	/** Board topology; default rectangle. */
+	topology?: GridTopology;
+	/** Compiled adjacency when topology = graph. */
+	graph?: GraphTopologyData;
+	/** Toroidal adjacency for rectangle boards. */
+	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column";
+	inputMode?: "cell" | "column" | "row" | "move";
 	placementMode?: "direct" | "gravity";
+	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
+	/** Bottom pop-out (Connect 4 Pop Out). Top / horizontal pop-out deferred. */
+	overflow?: "reject" | "pop_out_bottom";
 	captureEnabled?: boolean;
-	initial?: { row: number; col: number; player: Player }[];
+	/** flip = Reversi; liberties = Go-lite group removal. */
+	captureMode?: "flip" | "liberties";
+	/** none | point (simple ko) | positional (superko). */
+	koRule?: KoRule;
+	/** Legacy alias: true when koRule is point or positional. */
+	koEnabled?: boolean;
+	observationMode?: "full" | "hit_miss" | "fog";
+	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
+	fogRadius?: number;
+	fogMetric?: "chebyshev" | "manhattan";
+	objectiveMode?:
+		| "n_in_a_row"
+		| "destroy_hidden"
+		| "reach_row"
+		| "area_control"
+		| "none";
+	/** Classic alternating turns vs discrete global tick (Life Lite). */
+	turnSchedule?: "alternating" | "manual_tick";
+	scheduler?: SchedulerConfig;
+	movement?: MovementConfig;
+	/** Home rows for reach_row objective (player → target row index). */
+	targetRows?: { X: number; O: number };
+	/**
+	 * Multi-ship placement phase for hit_miss. When set, game starts in
+	 * placement (place onto hidden) then transitions to combat (fire).
+	 */
+	fleet?: FleetConfig;
+	initial?: InitialSeed[];
 };
+
+function emptyGrid(width: number, height: number): Grid {
+	return {
+		width,
+		height,
+		cells: Array(width * height).fill(null) as CellValue[]
+	};
+}
+
+function resolveKoRule(config: GameConfig): KoRule {
+	if (config.koRule) return config.koRule;
+	return config.koEnabled ? "point" : "none";
+}
+
+function isBoardFull(grid: Grid, config: GameConfig): boolean {
+	const topology = config.topology ?? "rectangle";
+	if (topology === "graph" && config.graph) {
+		return config.graph.active.every((pos) => readCell(grid, pos) !== null);
+	}
+	return grid.cells.every((c) => c !== null);
+}
 
 // Create initial game state from config
 export function createInitialState(config: GameConfig): GameState {
+	const placement = usesPlacementPhase(config.fleet);
 	const base: GameState = {
-		grid: {
-			width: config.gridWidth,
-			height: config.gridHeight,
-			cells: Array(config.gridWidth * config.gridHeight).fill(null)
-		},
+		grid: emptyGrid(config.gridWidth, config.gridHeight),
 		currentPlayer: "X",
 		status: "playing",
 		winner: null,
-		moveCount: 0
+		moveCount: 0,
+		consecutivePasses: 0,
+		koPoint: null,
+		phase: placement ? "placement" : "combat",
+		fleetProgress: placement ? initialFleetProgressMap() : undefined
 	};
-	// Seed initial placements if provided (e.g., Reversi starting position)
-	if (config.initial && config.initial.length > 0) {
-		let cells = base.grid.cells;
-		for (const p of config.initial) {
-			if (
-				p.row >= 0 &&
-				p.row < base.grid.height &&
-				p.col >= 0 &&
-				p.col < base.grid.width
-			) {
-				cells = setCell(
-					{ ...base.grid, cells },
-					{ row: p.row, col: p.col },
-					p.player
-				);
-			}
+
+	const seeds = config.initial ?? [];
+	const hasOwner = seeds.some((p) => (p.visibility ?? "public") === "owner");
+	if (hasOwner || config.observationMode === "hit_miss" || placement) {
+		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
+	}
+
+	if (seeds.length === 0) {
+		if (resolveKoRule(config) === "positional") {
+			base.positionHistory = [boardPositionHash(base.grid)];
 		}
-		base.grid = { ...base.grid, cells };
+		return base;
+	}
+
+	let publicCells = base.grid.cells;
+	let hiddenCells = base.hidden?.cells;
+
+	for (const p of seeds) {
+		if (
+			p.row < 0 ||
+			p.row >= base.grid.height ||
+			p.col < 0 ||
+			p.col >= base.grid.width
+		) {
+			continue;
+		}
+		const visibility = p.visibility ?? "public";
+		if (visibility === "owner") {
+			if (!hiddenCells) {
+				base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
+				hiddenCells = base.hidden.cells;
+			}
+			hiddenCells = setCell(
+				{ ...base.grid, cells: hiddenCells },
+				{ row: p.row, col: p.col },
+				p.player
+			);
+		} else {
+			publicCells = setCell(
+				{ ...base.grid, cells: publicCells },
+				{ row: p.row, col: p.col },
+				p.player
+			);
+		}
+	}
+
+	base.grid = { ...base.grid, cells: publicCells };
+	if (base.hidden && hiddenCells) {
+		base.hidden = { ...base.hidden, cells: hiddenCells };
+	}
+	if (resolveKoRule(config) === "positional") {
+		base.positionHistory = [boardPositionHash(base.grid)];
 	}
 	return base;
 }
@@ -67,10 +195,20 @@ export function reduce(
 	switch (event.type) {
 		case "place":
 			return handlePlace(state, event.position, config);
+		case "move":
+			return handleMove(state, event.from, event.to, config);
+		case "fire":
+			return handleFire(state, event.position, config);
 		case "activateColumn":
 			return handleActivateColumn(state, event.col, config);
+		case "activateRow":
+			return handleActivateRow(state, event.row, config);
 		case "popOutColumn":
 			return handlePopOutColumn(state, event.col, config);
+		case "tick":
+			return handleTick(state, config);
+		case "pass":
+			return handlePass(state, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -78,11 +216,227 @@ export function reduce(
 	}
 }
 
+function handlePass(state: GameState, config: GameConfig): GameState {
+	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
+	if (state.status !== "playing") return state;
+
+	const passes = (state.consecutivePasses ?? 0) + 1;
+	const newMoveCount = state.moveCount + 1;
+
+	if (passes >= 2) {
+		const { status, winner } = areaOutcome(
+			state.grid,
+			config.gridWrap === true
+		);
+		return {
+			...state,
+			status,
+			winner,
+			moveCount: newMoveCount,
+			consecutivePasses: passes
+		};
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...state,
+		currentPlayer: nextPlayer,
+		moveCount: newMoveCount,
+		consecutivePasses: passes
+	};
+}
+
+function handleTick(state: GameState, config: GameConfig): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "manual_tick") return state;
+	if (state.status !== "playing") return state;
+	const scheduler = config.scheduler;
+	if (!scheduler) return state;
+
+	const newGrid = applyLifeStep(
+		state.grid,
+		scheduler.rules,
+		config.gridWrap === true
+	);
+	return {
+		...state,
+		grid: newGrid,
+		moveCount: state.moveCount + 1
+		// Tick is a neutral global step — do not flip currentPlayer
+	};
+}
+
+function handleMove(
+	state: GameState,
+	from: Position,
+	to: Position,
+	config: GameConfig
+): GameState {
+	if ((config.inputMode ?? "cell") !== "move") return state;
+	if (state.status !== "playing") return state;
+	const movement = config.movement;
+	if (!movement) return state;
+	if (
+		!canMove(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			config.gridWrap === true
+		)
+	) {
+		return state;
+	}
+
+	let cells = setCell(state.grid, from, null);
+	cells = setCell({ ...state.grid, cells }, to, state.currentPlayer);
+	const newGrid = { ...state.grid, cells };
+	const newMoveCount = state.moveCount + 1;
+	const next: GameState = {
+		...state,
+		grid: newGrid,
+		moveCount: newMoveCount
+	};
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
+		const target = config.targetRows?.[state.currentPlayer];
+		if (target != null && to.row === target) {
+			return {
+				...next,
+				status: "won",
+				winner: state.currentPlayer
+			};
+		}
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...next,
+		currentPlayer: nextPlayer
+	};
+}
+
+function handleFire(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): GameState {
+	if ((config.observationMode ?? "full") !== "hit_miss") return state;
+	if (state.status !== "playing") return state;
+	// Placement phase: only place actions are legal
+	if ((state.phase ?? "combat") === "placement") return state;
+	if (
+		pos.row < 0 ||
+		pos.row >= state.grid.height ||
+		pos.col < 0 ||
+		pos.col >= state.grid.width
+	) {
+		return state;
+	}
+	// Already shot
+	if (getCell(state.grid, pos) !== null) return state;
+
+	const occupant =
+		state.hidden != null ? getCell(state.hidden, pos) : null;
+	// Cannot fire on own fleet cell
+	if (occupant === state.currentPlayer) return state;
+
+	const result: CellValue =
+		occupant === "X" || occupant === "O" ? "hit" : "miss";
+	const newCells = setCell(state.grid, pos, result);
+	const newGrid = { ...state.grid, cells: newCells };
+	const newMoveCount = state.moveCount + 1;
+	const next: GameState = {
+		...state,
+		grid: newGrid,
+		moveCount: newMoveCount
+	};
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "destroy_hidden") {
+		const opponent: Player = state.currentPlayer === "X" ? "O" : "X";
+		if (fleetDestroyed(next, opponent)) {
+			return {
+				...next,
+				status: "won",
+				winner: state.currentPlayer
+			};
+		}
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...next,
+		currentPlayer: nextPlayer
+	};
+}
+
+function handleFleetPlace(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): GameState {
+	const fleet = config.fleet;
+	if (!fleet || !usesPlacementPhase(fleet)) return state;
+	if (!canPlaceFleetCell(state, pos, state.currentPlayer, fleet)) {
+		return state;
+	}
+	if (!state.hidden || !state.fleetProgress) return state;
+
+	const hiddenCells = setCell(state.hidden, pos, state.currentPlayer);
+	const playerProgress = advanceFleetProgress(
+		state.fleetProgress[state.currentPlayer],
+		pos,
+		fleet
+	);
+	const fleetProgress = {
+		...state.fleetProgress,
+		[state.currentPlayer]: playerProgress
+	};
+	const newMoveCount = state.moveCount + 1;
+
+	if (bothFleetsPlaced(fleetProgress)) {
+		return {
+			...state,
+			hidden: { ...state.hidden, cells: hiddenCells },
+			fleetProgress,
+			phase: "combat",
+			currentPlayer: "X",
+			moveCount: newMoveCount
+		};
+	}
+
+	// Current player keeps placing until their fleet is done; then hand off.
+	if (playerProgress.done) {
+		const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+		return {
+			...state,
+			hidden: { ...state.hidden, cells: hiddenCells },
+			fleetProgress,
+			currentPlayer: nextPlayer,
+			moveCount: newMoveCount
+		};
+	}
+
+	return {
+		...state,
+		hidden: { ...state.hidden, cells: hiddenCells },
+		fleetProgress,
+		moveCount: newMoveCount
+	};
+}
+
 function handlePlace(
 	state: GameState,
 	pos: Position,
 	config: GameConfig
 ): GameState {
+	// Hit/miss with fleet: place onto hidden during placement phase
+	if ((config.observationMode ?? "full") === "hit_miss") {
+		return handleFleetPlace(state, pos, config);
+	}
+	// Move games relocate existing pieces
+	if ((config.inputMode ?? "cell") === "move") return state;
+
 	// Guard: can only place if game is playing
 	if (state.status !== "playing") return state;
 
@@ -96,44 +450,114 @@ function handlePlace(
 		return state;
 	}
 
+	// Guard: graph boards only place on declared nodes
+	const topology = config.topology ?? "rectangle";
+	if (!isActivePosition(pos, topology, config.graph)) {
+		return state;
+	}
+
 	// Guard: cell must be empty
 	if (getCell(state.grid, pos) !== null) return state;
-	// Guard: if capture required (Reversi style), ensure move captures at least one line
-	if (config.captureEnabled) {
-		// simulate capture
+
+	const captureMode = config.captureMode ?? "flip";
+	const libertyMode =
+		Boolean(config.captureEnabled) && captureMode === "liberties";
+
+	const wrap = config.gridWrap === true;
+	const koRule = resolveKoRule(config);
+
+	// Go-lite: empty + no suicide after opponent group capture (+ optional ko/superko)
+	if (libertyMode) {
+		if (
+			!isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
+				koRule,
+				koPoint: state.koPoint,
+				positionHistory: state.positionHistory
+			})
+		) {
+			return state;
+		}
+	} else if (config.captureEnabled) {
+		// Reversi: must flip at least one line
 		const placedCells = setCell(state.grid, pos, state.currentPlayer);
 		const after = applyCaptureIfAny(
 			{ ...state.grid, cells: placedCells },
 			pos,
 			state.currentPlayer,
-			config.adjacency
+			config.adjacency,
+			wrap
 		);
 		if (after === placedCells) {
-			// no capture occurred; invalid
 			return state;
 		}
 	}
 
 	// Effect: place current player's mark
 	let newCells = setCell(state.grid, pos, state.currentPlayer);
-	// Optional capture (Reversi-style)
-	if (config.captureEnabled) {
+	let nextKoPoint: Position | null = null;
+	let nextHistory = state.positionHistory;
+	if (libertyMode) {
+		const capture = applyLibertyCapture(
+			{ ...state.grid, cells: newCells },
+			pos,
+			state.currentPlayer,
+			wrap
+		);
+		newCells = capture.cells;
+		nextKoPoint =
+			koRule === "point" ? koPointFromCapture(capture.removed) : null;
+	} else if (config.captureEnabled) {
 		newCells = applyCaptureIfAny(
 			{ ...state.grid, cells: newCells },
 			pos,
 			state.currentPlayer,
-			config.adjacency
+			config.adjacency,
+			wrap
 		);
 	}
 	const newMoveCount = state.moveCount + 1;
+	const newGrid = { ...state.grid, cells: newCells };
+	if (libertyMode && koRule === "positional") {
+		nextHistory = [
+			...(state.positionHistory ?? []),
+			boardPositionHash(newGrid)
+		];
+	}
+
+	// Open-ended demos (Life Lite): place seeds without win/turn flip
+	if ((config.objectiveMode ?? "n_in_a_row") === "none") {
+		return {
+			...state,
+			grid: newGrid,
+			moveCount: newMoveCount,
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
+		};
+	}
+
+	// Area control (Go-lite): play continues until two passes; no mid-game n-in-a-row
+	if ((config.objectiveMode ?? "n_in_a_row") === "area_control") {
+		const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+		return {
+			...state,
+			grid: newGrid,
+			currentPlayer: nextPlayer,
+			moveCount: newMoveCount,
+			consecutivePasses: 0,
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
+		};
+	}
 
 	// Check win condition using config
-	const newGrid = { ...state.grid, cells: newCells };
 	const winner = checkWinner(
 		newGrid,
 		state.currentPlayer,
 		config.winLength,
-		config.adjacency
+		config.adjacency,
+		config.topology ?? "rectangle",
+		config.graph,
+		wrap
 	);
 	if (winner) {
 		return {
@@ -141,18 +565,22 @@ function handlePlace(
 			grid: newGrid,
 			status: "won",
 			winner: state.currentPlayer,
-			moveCount: newMoveCount
+			moveCount: newMoveCount,
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
 		};
 	}
 
-	// Check draw (all cells filled)
-	const isFull = newCells.every((c) => c !== null);
+	// Check draw (all playable cells filled)
+	const isFull = isBoardFull(newGrid, config);
 	if (isFull) {
 		return {
 			...state,
 			grid: newGrid,
 			status: "draw",
-			moveCount: newMoveCount
+			moveCount: newMoveCount,
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
 		};
 	}
 
@@ -163,7 +591,9 @@ function handlePlace(
 		...state,
 		grid: newGrid,
 		currentPlayer: nextPlayer,
-		moveCount: newMoveCount
+		moveCount: newMoveCount,
+		koPoint: nextKoPoint,
+		positionHistory: nextHistory
 	};
 }
 
@@ -177,19 +607,25 @@ function handleActivateColumn(
 	const width = state.grid.width;
 	if (col < 0 || col >= width) return state;
 
-	// Only supported gravity down for now
 	const direction = config.gravityDirection ?? "down";
-	if (direction !== "down") {
-		// Future directions can be added
-		return state;
-	}
+	if (direction !== "down" && direction !== "up") return state;
 
-	// Find first empty from bottom row to top
+	// Settle toward the gravity exit: down → first empty from bottom;
+	// up → first empty from top.
 	let targetRow = -1;
-	for (let row = height - 1; row >= 0; row--) {
-		if (getCell(state.grid, { row, col }) === null) {
-			targetRow = row;
-			break;
+	if (direction === "down") {
+		for (let row = height - 1; row >= 0; row--) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetRow = row;
+				break;
+			}
+		}
+	} else {
+		for (let row = 0; row < height; row++) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetRow = row;
+				break;
+			}
 		}
 	}
 	if (targetRow === -1) {
@@ -198,6 +634,45 @@ function handleActivateColumn(
 	}
 
 	return handlePlace(state, { row: targetRow, col }, config);
+}
+
+function handleActivateRow(
+	state: GameState,
+	row: number,
+	config: GameConfig
+): GameState {
+	if (state.status !== "playing") return state;
+	const height = state.grid.height;
+	const width = state.grid.width;
+	if (row < 0 || row >= height) return state;
+
+	const direction = config.gravityDirection ?? "down";
+	if (direction !== "left" && direction !== "right") return state;
+
+	// Settle toward the gravity exit: right → first empty from right;
+	// left → first empty from left.
+	let targetCol = -1;
+	if (direction === "right") {
+		for (let col = width - 1; col >= 0; col--) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetCol = col;
+				break;
+			}
+		}
+	} else {
+		for (let col = 0; col < width; col++) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetCol = col;
+				break;
+			}
+		}
+	}
+	if (targetCol === -1) {
+		// Row full
+		return state;
+	}
+
+	return handlePlace(state, { row, col: targetCol }, config);
 }
 
 function handlePopOutColumn(
@@ -237,7 +712,10 @@ function handlePopOutColumn(
 		newGrid,
 		state.currentPlayer,
 		config.winLength,
-		config.adjacency
+		config.adjacency,
+		config.topology ?? "rectangle",
+		config.graph,
+		config.gridWrap === true
 	);
 	if (winner) {
 		return {
@@ -249,7 +727,7 @@ function handlePopOutColumn(
 		};
 	}
 
-	const isFull = newCells.every((c) => c !== null);
+	const isFull = isBoardFull(newGrid, config);
 	if (isFull) {
 		return {
 			...state,

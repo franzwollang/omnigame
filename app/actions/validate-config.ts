@@ -1,6 +1,16 @@
 "use server";
 
-// Server action wrapper to run structural + SMT validation (Z3 WASM stubbed)
+/**
+ * Optional / experimental SMT validation helper (Z3 WASM).
+ *
+ * Not wired into the sandbox UI. Sandbox live validation uses client-side
+ * Zod + `validateConfig` (feature contracts). Call this from scripts, CI, or
+ * a future explicit “deep check” when Z3 constraints grow past contract checks.
+ *
+ * Today Z3 mostly re-checks the same placement/input/overflow implications
+ * already covered by Zod refinements + contracts — keep it optional until it
+ * adds unique value.
+ */
 import { zConfig } from "@/schemas/config";
 import {
 	validateConfig,

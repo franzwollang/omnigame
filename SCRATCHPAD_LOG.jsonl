@@ -1,3 +1,26 @@
 {"ts":"2026-07-24T23:40-05:00","focus":"rules + continuity seed","summary":"Civic Lab rules → OmniGame; created PLANNING/OPEN_ISSUES/SCRATCHPAD + logs from codebase audit","next":"user clarifying Qs on Effect, milestone order, Reversi, tests"}
 {"ts":"2026-07-24T23:45-05:00","focus":"planning decisions","summary":"Effect locked; M0=narrow/label+foothold; M1=Kernel+Effect; explained sandbox vs library","next":"start M0 honesty pass or install effect"}
 {"ts":"2026-07-24T23:50-05:00","focus":"reference selection","summary":"Rules: pick anchors only when they add a new mechanism; references/ is corpus not backlog","next":"continue clarifying Qs or start M0"}
+{"ts":"2026-07-25T00:25-05:00","focus":"M0 complete → M1","summary":"Schema honesty, Effect RNG, Vitest transcripts, Reversi relabel, docs/xstate cleanup","next":"typed adapter then GameKernel scaffold"}
+{"ts":"2026-07-25T00:45-05:00","focus":"M1 game-kernel-abi","summary":"toGameConfig + kernel scaffold; closed sandbox-type-looseness","next":"wire useGameEngine through kernel.step"}
+{"ts":"2026-07-25T01:25-05:00","focus":"M1→M2 handoff","summary":"Kernel sandbox wiring + contract coverage; M1 marked done","next":"server-validation-unwired then GameIR replay"}
+{"ts":"2026-07-25T01:50-05:00","focus":"M2 GameIR + validation honesty","summary":"Wired client contracts; demoted Z3; shipped GameIR replay foothold; M2 done","next":"scaffold src/compiler normalize for M3"}
+{"ts":"2026-07-25T02:10-05:00","focus":"M3 compiler-normalize","summary":"Scaffolded src/compiler; presets/sandbox on normalize path; marked M3 done","next":"start M4 observation-partial-info"}
+{"ts":"2026-07-25T02:30-05:00","focus":"M4 observation","summary":"Landed hit/miss + Battleship-lite; marked M4 done; next is M5 mechanism port","next":"Choose next missing mechanism for reference-game-ports"}
+{"ts":"2026-07-25T02:50-05:00","focus":"M5 Move + Step Race","summary":"orthogonal move + reach_row objective; Step Race preset through compiler→kernel","next":"pick tick or hex/liberties for next M5 port"}
+{"ts":"2026-07-25T03:05-05:00","focus":"M5 tick/scheduler","summary":"Life Lite preset + scheduler.ts + Tick sandbox control","next":"liberties or hex topology"}
+{"ts":"2026-07-25T03:30-05:00","focus":"M5 hex topology","summary":"landed hex_offset + Hex Connect Lite; hand off liberties/territory","next":"Go-lite liberties/group capture via compiler→kernel"}
+{"ts":"2026-07-25T03:45-05:00","focus":"M5 liberties/Go Lite","summary":"group capture + area scoring + pass; Go Lite preset; hand off M6","next":"M6 debug-and-agents foothold on GameKernel"}
+{"ts":"2026-07-25T04:05-05:00","focus":"M6 debug-and-agents","summary":"Landed legal overlay, why-illegal, event trace, kernel agents; M6 done","next":"M7 library-explorer foothold"}
+{"ts":"2026-07-25T04:25-05:00","focus":"M7 library-explorer","summary":"Landed config sampling + playability classify + Library modal; M7 done","next":"graph board topology foothold"}
+{"ts":"2026-07-25T04:50-05:00","focus":"graph topology foothold","summary":"landed grid.topology=graph with irregular Graph Connect Lite preset","next":"richer MCTS/UCT or fog observation"}
+{"ts":"2026-07-25T05:10-05:00","focus":"richer-mcts-agents","summary":"UCT tree-search agent landed; resolved richer-mcts-agents","next":"observation-fog-radius or hit-miss-aware-agents"}
+{"ts":"2026-07-25T05:25-05:00","focus":"observation-fog-radius","summary":"Fog radius observation seam + Fog Connect Lite preset; sandbox fogVisible","next":"hit-miss-aware agents or placement-phase"}
+{"ts":"2026-07-25T05:45-05:00","focus":"hit-miss-aware-agents","summary":"Landed observation hunt fire agent; hand off to placement-phase Battleship","next":"observation-placement-phase schema+kernel"}
+{"ts":"2026-07-25T06:05-05:00","focus":"observation-placement-phase","summary":"Fleet placement phase + Battleship Place; synced from 4234","next":"library-explorer-depth or next missing mechanism"}
+{"ts":"2026-07-25T06:25-05:00","focus":"library-explorer-depth","summary":"graph samples, playability scores, sandbox share links; handed off to next-missing-mechanism","next":"pick wrap/ko/simultaneous/delayed and implement"}
+{"ts":"2026-07-25T06:45-05:00","focus":"grid.wrap","summary":"Landed rectangle toroidal wrap + Toroidal TTT; handed off next mechanism","next":"Pick gravity-up, ko, simultaneous, delayed, or hex-wrap"}
+{"ts":"2026-07-25T07:05-05:00","focus":"gravity-up","summary":"schema+kernel+preset+tests for placement.gravity.direction=up","next":"pick next missing mechanism (row gravity / ko / simultaneous / delayed)"}
+{"ts":"2026-07-25T07:25-05:00","focus":"gravity-row","summary":"schema+kernel+preset+tests for input.mode=row and gravity left/right","next":"pick next missing mechanism (ko / simultaneous / delayed / hex-wrap / pop_out)"}
+{"ts":"2026-07-25T07:45-05:00","focus":"simple-ko","summary":"point ko foothold on liberties/Go Lite; hand off next missing mechanism","next":"pick superko, simultaneous, delayed, hex-wrap, or pop_out"}
+{"ts":"2026-07-25T13:05+00:00","focus":"positional superko","summary":"Landed capture.ko=positional + positionHistory + Go Lite Superko; hand off next mechanism","next":"pick situational-superko / simultaneous / delayed / hex-wrap / pop_out"}

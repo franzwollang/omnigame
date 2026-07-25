@@ -14,6 +14,13 @@ import SandboxCanvas from "./canvas";
 import dynamic from "next/dynamic";
 import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
+import {
+	formatKernelEvent,
+	highlightCellsForActions
+} from "@/engine/kernel";
+import { compileToGameConfig } from "@/compiler";
+import { validateConfig } from "@/engine/validateConfig";
+import { createAgent, type AgentKind } from "@/agents";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -22,7 +29,9 @@ import {
 	DialogTitle
 } from "@/components/ui/dialog";
 import { PresetsModal } from "@/components/presets-modal";
+import { LibraryExplorerModal } from "@/components/library-explorer-modal";
 import { examplePresets, type ExamplePreset } from "@/presets/registry";
+import { parseSandboxShare } from "@/library";
 import { Maximize2, Minimize2 } from "lucide-react";
 
 const SandboxEditorLazy = dynamic(() => import("./editor"), {
@@ -55,40 +64,74 @@ export default function GamePage() {
 	const [schemaErrors, setSchemaErrors] = useState<string[]>([]);
 	const [currentConfig, setCurrentConfig] = useState<Config | null>(null);
 	const [presetsModalOpen, setPresetsModalOpen] = useState(false);
+	const [libraryModalOpen, setLibraryModalOpen] = useState(false);
+	const [libraryShareSeed, setLibraryShareSeed] = useState<number | undefined>();
+	const [libraryShareCount, setLibraryShareCount] = useState<
+		number | undefined
+	>();
+	const [shareNotice, setShareNotice] = useState<string | null>(null);
+	const shareLoadedRef = useRef(false);
 	const [fullscreenMode, setFullscreenMode] = useState<"form" | "json" | null>(
 		null
 	);
 	const [activeTab, setActiveTab] = useState<"form" | "json">("json");
+	const [showLegalOverlay, setShowLegalOverlay] = useState(true);
+	const [agentKind, setAgentKind] = useState<AgentKind>("random");
+	const agentRef = useRef(createAgent("random", 0));
 
-	// Initialize game engine from config
-	const engineConfig = {
-		gridWidth: currentConfig?.grid.width ?? 3,
-		gridHeight: currentConfig?.grid.height ?? 3,
-		winLength: currentConfig?.win.length ?? 3,
-		adjacency: currentConfig?.win.adjacency ?? {
-			mode: "linear" as const,
-			horizontal: true,
-			vertical: true,
-			backDiagonal: true,
-			forwardDiagonal: true
-		},
-		inputMode: (currentConfig as any)?.input?.mode ?? "cell",
-		placementMode: (currentConfig as any)?.placement?.mode ?? "direct",
-		gravityDirection:
-			(currentConfig as any)?.placement?.gravity?.direction ?? "down",
-		captureEnabled: Boolean(
-			(currentConfig as any)?.placement?.capture?.enabled
-		),
-		initial: (currentConfig as any)?.initial ?? []
-	};
+	// Compiler owns Config→GameConfig (macros + flatten); sandbox does not.
+	const engineConfig = useMemo(
+		() => compileToGameConfig(currentConfig).gameConfig,
+		[currentConfig]
+	);
+	const playSeed = currentConfig?.rng?.seed ?? 0;
 	const {
 		state: gameState,
+		viewState,
+		observation,
+		eventLog,
+		actionLog,
+		selectedFrom,
+		lastIllegal,
+		legalActionsList,
+		kernel,
+		dispatchAction,
 		placeMove,
 		activateColumn,
-		// @ts-ignore pop out supported by engine hook
+		activateRow,
 		popOutColumn,
-		reset
-	} = useGameEngine(engineConfig);
+		tick,
+		pass,
+		reset,
+		replayFromTranscript
+	} = useGameEngine(engineConfig, playSeed);
+	const enablePopOut =
+		currentConfig?.placement.overflow === "pop_out_bottom";
+	const enableTick = currentConfig?.turn.schedule === "manual_tick";
+	const enablePass = currentConfig?.objective.mode === "area_control";
+	const eventLines = useMemo(
+		() => eventLog.map(formatKernelEvent),
+		[eventLog]
+	);
+	const highlightCells = useMemo(
+		() =>
+			highlightCellsForActions(gameState, legalActionsList, {
+				selectedFrom,
+				gravityDirection: engineConfig.gravityDirection ?? "down"
+			}),
+		[gameState, legalActionsList, selectedFrom, engineConfig.gravityDirection]
+	);
+
+	useEffect(() => {
+		agentRef.current = createAgent(agentKind, playSeed);
+	}, [agentKind, playSeed]);
+
+	const stepAgent = () => {
+		if (gameState.status !== "playing") return;
+		const player = kernel.currentPlayer(gameState);
+		const action = agentRef.current.act(kernel, gameState, player);
+		if (action) dispatchAction(action);
+	};
 
 	const initialJson = useMemo(() => {
 		const preset = examplePresets["tic-tac-toe"];
@@ -119,6 +162,13 @@ export default function GamePage() {
 		try {
 			const parsed = JSON.parse(jsonText) as unknown;
 			setJsonError(null);
+			// Zod shape + feature contracts (client). Z3 SMT stays optional/server-only.
+			const structural = validateConfig(parsed);
+			if (!structural.ok) {
+				setSchemaErrors(structural.errors);
+				setCurrentConfig(null);
+				return;
+			}
 			const result = zConfig.safeParse(parsed);
 			if (!result.success) {
 				const msgs = result.error.issues.map(
@@ -207,6 +257,47 @@ export default function GamePage() {
 		setPresetsModalOpen(false);
 	};
 
+	const handleLoadLibraryConfig = (config: Config) => {
+		const newJson = JSON.stringify(config, null, 2);
+		setJsonText(newJson);
+		form.reset(config);
+		reset();
+	};
+
+	// Deep-link: /sandbox?find=… or ?librarySeed=&libraryIndex=
+	useEffect(() => {
+		if (shareLoadedRef.current) return;
+		if (typeof window === "undefined") return;
+		const params = new URLSearchParams(window.location.search);
+		if (
+			!params.has("find") &&
+			!(params.has("librarySeed") && params.has("libraryIndex"))
+		) {
+			return;
+		}
+		shareLoadedRef.current = true;
+		const decoded = parseSandboxShare(params);
+		if (!decoded) {
+			setShareNotice("Could not resolve shared library find from URL.");
+			return;
+		}
+		handleLoadLibraryConfig(decoded.config);
+		if (decoded.kind === "explore") {
+			setLibraryShareSeed(decoded.params.seed);
+			if (decoded.params.count != null) {
+				setLibraryShareCount(decoded.params.count);
+			}
+			setLibraryModalOpen(true);
+			setShareNotice(
+				`Loaded explore find #${decoded.params.index} (seed ${decoded.params.seed}).`
+			);
+		} else {
+			setShareNotice(
+				`Loaded shared find “${decoded.config.metadata.name}”.`
+			);
+		}
+	}, [form]);
+
 	const highlight = (code: string) =>
 		Prism.highlight(code, Prism.languages.json, "json");
 
@@ -225,14 +316,166 @@ export default function GamePage() {
 					configuration—entities, rules, and transitions—using a deterministic
 					render loop built on Three.js.
 				</p>
-				<div className="mt-4">
+				{shareNotice && (
+					<p className="mt-2 font-mono text-xs text-muted-foreground">
+						{shareNotice}{" "}
+						<button
+							type="button"
+							className="underline"
+							onClick={() => setShareNotice(null)}
+						>
+							dismiss
+						</button>
+					</p>
+				)}
+				<div className="mt-4 flex gap-2">
 					<Button
 						variant="outline"
-						className="w-full"
+						className="flex-1"
 						onClick={() => setPresetsModalOpen(true)}
 					>
 						Browse presets
 					</Button>
+					<Button
+						variant="outline"
+						className="flex-1"
+						onClick={() => setLibraryModalOpen(true)}
+						title="Sample random configs; load playable finds"
+					>
+						Library
+					</Button>
+				</div>
+
+				<div className="mt-4 space-y-1">
+					<div className="flex items-center justify-between gap-2">
+						<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+							Kernel events
+							{gameState.status === "playing"
+								? ` · ${gameState.currentPlayer} to move`
+								: ""}
+						</p>
+						<div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+							<Button
+								variant="outline"
+								size="sm"
+								className="h-7 px-2 text-xs"
+								disabled={actionLog.length === 0}
+								onClick={() => replayFromTranscript()}
+								title="Re-run seed + action log through GameIR"
+							>
+								Replay ({actionLog.length})
+							</Button>
+							{enableTick && (
+								<Button
+									variant="outline"
+									size="sm"
+									className="h-7 px-2 text-xs"
+									disabled={gameState.status !== "playing"}
+									onClick={() => tick()}
+									title="Advance one Life generation"
+								>
+									Tick
+								</Button>
+							)}
+							{enablePass && (
+								<Button
+									variant="outline"
+									size="sm"
+									className="h-7 px-2 text-xs"
+									disabled={gameState.status !== "playing"}
+									onClick={() => pass()}
+									title="Pass turn (two consecutive passes end Go Lite)"
+								>
+									Pass
+								</Button>
+							)}
+						</div>
+					</div>
+					{eventLines.length === 0 ? (
+						<p className="font-mono text-xs text-muted-foreground">
+							No steps yet — play from the board.
+						</p>
+					) : (
+						<ul className="max-h-40 space-y-0.5 overflow-y-auto font-mono text-xs text-muted-foreground">
+							{eventLines.map((line, i) => (
+								<li key={`${i}-${line}`}>{line}</li>
+							))}
+						</ul>
+					)}
+					{lastIllegal && (
+						<p className="mt-1 font-mono text-xs text-amber-700 dark:text-amber-400">
+							Why illegal: {lastIllegal.reason} — {lastIllegal.detail}
+						</p>
+					)}
+					<div className="mt-2 flex flex-wrap items-center gap-2">
+						<label className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+							<input
+								type="checkbox"
+								checked={showLegalOverlay}
+								onChange={(e) => setShowLegalOverlay(e.target.checked)}
+								className="rounded border-muted-foreground"
+							/>
+							Legal overlay ({highlightCells.length})
+						</label>
+						<select
+							className="h-7 rounded border bg-background px-1 font-mono text-xs"
+							value={agentKind}
+							onChange={(e) =>
+								setAgentKind(e.target.value as AgentKind)
+							}
+							aria-label="Agent kind"
+						>
+							<option value="random">random</option>
+							<option value="greedy">greedy</option>
+							<option value="hunt">hunt</option>
+							<option value="mcts">mcts</option>
+							<option value="uct">uct</option>
+						</select>
+						<Button
+							variant="outline"
+							size="sm"
+							className="h-7 px-2 text-xs"
+							disabled={
+								gameState.status !== "playing" ||
+								legalActionsList.length === 0
+							}
+							onClick={stepAgent}
+							title="Play one kernel legal action from the selected agent"
+						>
+							Agent step
+						</Button>
+					</div>
+					{enableTick && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							Life Lite: place cells, then Tick for B3/S23 step
+						</p>
+					)}
+					{enablePass && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							Go Lite: place stones (liberties + simple ko); Pass twice to score
+						</p>
+					)}
+					{currentConfig?.observation.mode === "hit_miss" &&
+						(gameState.phase ?? "combat") === "placement" && (
+							<p className="mt-1 font-mono text-xs text-muted-foreground">
+								Placement: lay ships{" "}
+								{currentConfig.fleet?.ships?.join("+") ?? "?"} as contiguous
+								lines ({gameState.currentPlayer}&apos;s turn)
+							</p>
+						)}
+					{currentConfig?.observation.mode === "hit_miss" &&
+						(gameState.phase ?? "combat") === "combat" && (
+							<p className="mt-1 font-mono text-xs text-muted-foreground">
+								Combat: click a cell to fire (hit/miss)
+							</p>
+						)}
+					{currentConfig?.input.mode === "move" && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							{selectedFrom
+								? `Selected (${selectedFrom.row},${selectedFrom.col}) — click destination`
+								: "Move: click your piece, then an adjacent empty cell"}
+						</p>
+					)}
 				</div>
 
 				<Tabs
@@ -301,21 +544,21 @@ export default function GamePage() {
 			{/* Canvas area with results overlay */}
 			<div className="relative flex-1 min-w-0">
 				<SandboxCanvasLazy
-					gameState={gameState}
+					gameState={viewState}
 					onCellClick={placeMove}
 					onActivateColumn={activateColumn}
-					enablePopOutButtons={
-						(currentConfig as any)?.placement?.overflow === "pop_out_bottom"
-					}
-					onPopOutColumn={
-						(currentConfig as any)?.placement?.overflow === "pop_out_bottom"
-							? (popOutColumn as any)
-							: undefined
-					}
-					inputMode={(currentConfig as any)?.input?.mode ?? "cell"}
-					// pass tokens/placements for rendering
-					tokens={(currentConfig as any)?.tokens ?? []}
-					placements={(currentConfig as any)?.placements ?? []}
+					onActivateRow={activateRow}
+					enablePopOutButtons={enablePopOut}
+					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
+					inputMode={currentConfig?.input.mode ?? "cell"}
+					topology={currentConfig?.grid.topology ?? "rectangle"}
+					graph={engineConfig.graph}
+					highlightCells={highlightCells}
+					selectedCell={selectedFrom}
+					showLegalOverlay={showLegalOverlay}
+					fogVisible={observation.visible}
+					tokens={currentConfig?.tokens ?? []}
+					placements={currentConfig?.placements ?? []}
 				/>
 				{gameState.status !== "playing" && (
 					<div className="flex absolute inset-0 z-10 justify-center items-center p-6 pointer-events-none">
@@ -406,6 +649,13 @@ export default function GamePage() {
 				open={presetsModalOpen}
 				onOpenChange={setPresetsModalOpen}
 				onSelectPreset={handleSelectPreset}
+			/>
+			<LibraryExplorerModal
+				open={libraryModalOpen}
+				onOpenChange={setLibraryModalOpen}
+				onLoadConfig={handleLoadLibraryConfig}
+				initialSeed={libraryShareSeed}
+				initialCount={libraryShareCount}
 			/>
 		</div>
 	);

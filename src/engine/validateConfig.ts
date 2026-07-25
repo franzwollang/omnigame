@@ -12,18 +12,87 @@ export type ValidationResult = {
 	warnings?: string[];
 };
 
-function buildFeatureContracts(cfg: Config): FeatureContract[] {
+/** Build contracts for every feature the config actually selects. */
+export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	const features: FeatureContract[] = [];
-	// Base capabilities present
-	// Placement policy
-	if (cfg.placement.mode === "direct")
-		features.push(Contracts.PlacementDirect());
-	if (cfg.placement.mode === "gravity")
-		features.push(Contracts.PlacementGravity());
+
+	features.push(Contracts.BoardWritable());
+
+	const needsAdjacency =
+		cfg.objective.mode === "n_in_a_row" ||
+		(Boolean(cfg.placement.capture?.enabled) &&
+			(cfg.placement.capture?.mode ?? "flip") === "flip");
+	if (needsAdjacency) features.push(Contracts.AdjacencyProvided());
+	if (cfg.grid.topology === "hex_offset") {
+		features.push(Contracts.TopologyHex());
+	}
+	if (cfg.grid.topology === "graph") {
+		features.push(Contracts.TopologyGraph());
+	}
+
+	// Input mode
+	if (cfg.input.mode === "cell") features.push(Contracts.InputTargetCell());
+	if (cfg.input.mode === "column") features.push(Contracts.InputTargetColumn());
+	if (cfg.input.mode === "row") features.push(Contracts.InputTargetRow());
+	if (cfg.input.mode === "move") features.push(Contracts.InputMove());
+
+	// Placement policy (mode or gravity.enabled sugar — macros expand the latter)
+	const gravityImplied =
+		cfg.placement.mode === "gravity" ||
+		cfg.placement.gravity?.enabled === true;
+
+	if (cfg.input.mode !== "move") {
+		if (cfg.placement.mode === "direct" && !gravityImplied) {
+			features.push(Contracts.PlacementDirect());
+		}
+		if (gravityImplied) {
+			features.push(Contracts.GravityAxis());
+			features.push(Contracts.PlacementGravity());
+		}
+
+		// Overflow
+		if (cfg.placement.overflow === "reject") {
+			features.push(Contracts.OverflowReject());
+		} else if (cfg.placement.overflow === "pop_out_bottom") {
+			features.push(Contracts.OverflowPopOutBottom());
+		}
+	}
+
 	// Capture
-	if (cfg.placement.capture?.enabled) features.push(Contracts.Capture());
-	// End condition (n in a row)
-	features.push(Contracts.NInARow());
+	if (cfg.placement.capture?.enabled) {
+		if ((cfg.placement.capture.mode ?? "flip") === "liberties") {
+			features.push(Contracts.LibertyCapture());
+		} else {
+			features.push(Contracts.Capture());
+		}
+	}
+
+	// Observation + objective
+	if (cfg.observation.mode === "hit_miss") {
+		features.push(Contracts.ObservationHitMiss());
+		if (cfg.fleet && cfg.fleet.ships.length > 0) {
+			features.push(Contracts.FleetPlacement());
+		}
+	}
+	if (cfg.observation.mode === "fog") {
+		features.push(Contracts.ObservationFog());
+	}
+	if (cfg.objective.mode === "destroy_hidden") {
+		features.push(Contracts.DestroyHidden());
+	} else if (cfg.objective.mode === "reach_row") {
+		features.push(Contracts.ReachRow());
+	} else if (cfg.objective.mode === "area_control") {
+		features.push(Contracts.AreaControl());
+	} else if (cfg.objective.mode === "none") {
+		features.push(Contracts.OpenEnded());
+	} else {
+		features.push(Contracts.NInARow());
+	}
+
+	if (cfg.turn.schedule === "manual_tick") {
+		features.push(Contracts.SchedulerManualTick());
+	}
+
 	return features;
 }
 
@@ -38,12 +107,7 @@ export function validateConfig(cfg: unknown): ValidationResult {
 	const contracts = buildFeatureContracts(parsed.data);
 	const contractErrors = checkContracts(contracts);
 	if (contractErrors.length > 0) return { ok: false, errors: contractErrors };
-	// Optional warnings: initial seeds forming an immediate win
-	const warnings: string[] = [];
-	try {
-		// quick heuristic: if win.length = 1 (never true due to schema) or unrealistic seeds > 0 for now skip
-	} catch {}
-	return { ok: true, errors: [], warnings };
+	return { ok: true, errors: [], warnings: [] };
 }
 
 export type ZodLikeIssue = {

@@ -37,9 +37,21 @@ These are built from the same shared schema and operators.
 
 - **Tic‑Tac‑Toe**
 - **Connect 4**
+- **Connect 4 (Up)** (gravity rises toward the top)
+- **Connect 4 (Right)** (row activation; discs slide right)
 - **Connect 4 (Pop Out)**
 - **Gomoku (5‑in‑a‑row)**
-- **Reversi / Othello** (capture enabled)
+- **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
+- **Battleship Lite** (hit/miss observation + destroy_hidden)
+- **Battleship Place** (fleet.ships placement phase → combat)
+- **Fog Connect Lite** (fog-of-war radius observation + n-in-a-row)
+- **Step Race** (orthogonal `Move` + reach_row objective)
+- **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
+- **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
+- **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
+- **Go Lite Superko** (positional superko — forbids repeating any prior board position)
+- **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
+- **Toroidal TTT** (`grid.wrap` rectangle)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -49,43 +61,65 @@ In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 - Styling: Tailwind CSS, shadcn/ui
 - Validation/typing: Zod (runtime), TypeScript (static)
 - State/Forms: react-hook-form, fast-deep-equal (for JSON→form sync)
-- State machines: XState (to structure transitions and model compositions)
+- FP runtime: Effect (Effect.ts) — seeded RNG + GameKernel stepping; GameIR replay foothold landed
 - Rendering: Three.js (board/camera), ResizeObserver
 - Editor: react-simple-code-editor + Prism.js
+- Tests: Vitest (engine transcript + GameIR replay + library explore tests)
 - Package manager: pnpm
-- FP runtime (planned): Effect (Effect.ts) for FP primitives in core and runtime at edges
+- Optional SMT: z3-solver (experimental server helper — **not** wired into sandbox UI;
+  use `app/actions/validate-config.ts` from scripts/CI when needed)
 
 ## Usage
 
-The canvas supports panning with mouse/touch (clamped to board) and zooming with wheel/pinch. `window.jumpPanTo(x, y)` is available for quick developer testing.
+The canvas supports panning with mouse/touch (clamped to board) and zooming with wheel/pinch.
 
-The editor provides live JSON + Zod validation. Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/dark mode (although no toggle added yet), and editor scroll position is preserved on format.
+The editor provides live JSON + Zod + feature-contract validation (`validateConfig`).
+Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/dark mode
+(although no toggle added yet), and editor scroll position is preserved on format.
 
 The form fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`) with updates syncing two-ways with the editor.
 
+## Scripts
+
+- `pnpm run dev` — Next.js sandbox
+- `pnpm run build` / `start` — production
+- `pnpm run typecheck` / `lint`
+- `pnpm test` — Vitest engine transcripts
+
 ## Architecture notes (directional)
 
-The core follows pure functional principles with reducers (`State -> Event -> State`), a scheduler, and deterministic RNG. State transitions use XState statecharts to structure phases and keep compositions algebraic (operators on state always yield valid states).
+The core follows pure functional principles with reducers (`State -> Event -> State`). Deterministic RNG is available via Effect (`src/engine/rng.ts`). Sandbox play goes through a `GameKernel` (`src/engine/kernel.ts`: `initialState` / `legalActions` / Effect-backed `step`) via `useGameEngine`, which surfaces a kernel event log and a GameIR action transcript (`src/ir/gameIr.ts`) with a sidebar Replay control. Turn phases use a small hand-rolled scaffold (`turnMachine.ts`).
 
-The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. Adapters at the edges handle rendering (Three.js), input, and persistence.
+The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. Specs go through `src/compiler/` (`validate → expand macros → normalize → GameKernel`); the sandbox calls `compileToGameConfig` rather than owning the adapter. Macros today: `gravity.enabled` → gravity placement primitives; token `placements` → `initial` seeds. `validateConfig` builds feature contracts for the selected input/placement/overflow/capture/end features (live in the sandbox editor). Z3 SMT remains an optional server-side experiment. Adapters at the edges handle rendering (Three.js), input, and persistence.
 
-Routing uses App Router with scroll-snap landing and URL replacement to reflect the active view. The planned “infinite library” mode will sample/randomize configs and reveal how rare playable settings are.
+Routing uses App Router with scroll-snap landing and URL replacement to reflect the active view. The library explorer (`src/library/` + sandbox **Library** modal) samples/randomizes configs and classifies playable vs noise (Library of Babel framing).
 
 ## Current implementation status (today)
 
 OmniGame is actively evolving toward the “spec → compiler → kernel + IR” shape described below. The current sandbox already supports a useful (but intentionally small) slice of the primitive space:
 
-- **Topology**: rectangular grid only (`grid.topology = "rectangle"`)
-- **Inputs**: cell-click and column-activation (`input.mode = "cell" | "column"`)
+- **Topology**: rectangular grid, odd-r hex (`hex_offset`), or explicit adjacency
+  graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
+  **rectangle** boards (hex/graph wrap deferred); Toroidal TTT preset
+- **Inputs**: cell-click, column-activation, row-activation, and piece move (`input.mode = "cell" | "column" | "row" | "move"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
-  - gravity placement with a direction (`placement.mode = "gravity"`, `gravity.direction`)
-  - overflow variants (Connect-4 PopOut style): `overflow = "reject" | "pop_out_bottom" | "pop_out_top"`
-- **Effects**: optional capture toggles (used for Reversi-like behavior)
-- **Objectives**: n-in-a-row win detection with configurable adjacency + length
-- **Determinism**: seeded RNG in config (used for reproducible runs as the runtime expands)
+  - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
+  - overflow: `reject` | `pop_out_bottom` (bottom pop-out; requires gravity down; `pop_out_top` / horizontal pop-out deferred)
+- **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite)
+- **Effects**: optional capture toggles (Capture / Flip Demo)
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
+- **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
+- **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
+- **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
+- **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
+- **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: a stable `GameKernel` ABI boundary, a normalized `GameIR`, first-class observation models for partial information, and a larger library of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: situational superko / full Go rules, hex/graph wrap,
+simultaneous/delayed actions, `pop_out_top` / horizontal pop-out, and a larger set of
+reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -282,8 +316,10 @@ Don’t commit to heavy theory early, but keep the seam clean:
 Baseline agents (enough to prove the ABI):
 
 - random legal
-- greedy (simple local heuristic)
-- tiny MCTS for fully observed deterministic games
+- greedy 1-ply (win / block / heuristics)
+- hunt (hit/miss observe → target after hits, parity search)
+- tiny flat MCTS
+- UCT tree search (UCB1 + optional tree reuse)
 
 ## Suggested module structure (directional)
 
@@ -301,17 +337,22 @@ For formal composition semantics and invariants, see `docs/semantics.md`.
 
 ## Roadmap
 
-Core development focuses on turning the current sandbox into a compiler-like pipeline (spec → kernel + IR), plus a library explorer for navigating the configuration space.
+Core development focuses on turning the current sandbox into a compiler-like pipeline (spec → kernel + IR). Library explorer foothold landed (`src/library/` + sandbox Library modal).
 
 Near-term milestones:
 
 - **Kernel/IR boundary**: formalize the `GameKernel` interface and introduce a stable `GameIR` for replay/logging
 - **Compiler stages**: validate/normalize specs and expand macros into primitive operators + constraints
 - **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
-- **Observation support**: make partial information explicit (enables Battleship-lite correctly)
-- **Anchor games**: implement the 2–3 “stress test” games above to validate primitive completeness
+- **Observation support**: hit/miss + fog radius + fleet placement phase landed (Battleship-lite / Fog Connect Lite / Battleship Place)
+- **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
+- **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
+- **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
+- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"` + `positionHistory`)
+- **Library explorer foothold**: sample/classify playable vs noise; load finds into sandbox
+- **Anchor games**: mechanism-first ports only — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
-- **Baseline agents**: random/greedy/tiny MCTS to prove bot play with clean interfaces
+- **Baseline agents**: random/greedy/hunt/tiny MCTS/UCT on kernel only; hunt uses `observe` for hit/miss
 
 Future features include camera/perspective modes, richer multi-entity interactions, schema-driven UI generation (richer controls, constraints), and 3D functionality once the 2D path is stable.
 

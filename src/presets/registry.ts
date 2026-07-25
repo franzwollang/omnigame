@@ -1,4 +1,4 @@
-import type { Config } from "@/schemas/config";
+import { zConfig, type Config, type ConfigInput } from "@/schemas/config";
 
 export interface ExamplePreset {
 	id: string;
@@ -9,9 +9,15 @@ export interface ExamplePreset {
 	thumbnail?: string; // Optional base64 image or path
 }
 
+function definePreset(
+	preset: Omit<ExamplePreset, "config"> & { config: ConfigInput }
+): ExamplePreset {
+	return { ...preset, config: zConfig.parse(preset.config) };
+}
+
 // Current examples registry
 export const examplePresets: Record<string, ExamplePreset> = {
-	"tic-tac-toe": {
+	"tic-tac-toe": definePreset({
 		id: "tic-tac-toe",
 		name: "Tic-Tac-Toe",
 		tags: ["classic", "3x3", "linear", "turn-based"],
@@ -51,8 +57,49 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	},
-	"connect-4": {
+	}),
+	"toroidal-ttt": definePreset({
+		id: "toroidal-ttt",
+		name: "Toroidal TTT",
+		tags: ["wrap", "topology", "3x3", "n-in-a-row", "mechanism"],
+		description:
+			"Tic-Tac-Toe on a torus — lines wrap across opposite edges. Unlocks grid.wrap (rectangle only).",
+		config: {
+			metadata: { name: "Toroidal TTT", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: true },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
+	"connect-4": definePreset({
 		id: "connect-4",
 		name: "Connect 4",
 		tags: ["classic", "7x6", "gravity", "column-activation"],
@@ -95,8 +142,98 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	},
-	gomoku: {
+	}),
+	"connect-4-up": definePreset({
+		id: "connect-4-up",
+		name: "Connect 4 (Up)",
+		tags: ["classic", "7x6", "gravity", "column-activation", "gravity-up"],
+		description:
+			"Gravity inverted: discs rise and stack toward the top; first to connect four wins.",
+		config: {
+			metadata: { name: "Connect 4 Up", version: 1 },
+			grid: { width: 7, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "column" },
+			tokens: [
+				{
+					id: "disc-red",
+					label: "R",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disc-red.png" }
+				},
+				{
+					id: "disc-yellow",
+					label: "Y",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disc-yellow.png" }
+				}
+			],
+			placement: {
+				mode: "gravity",
+				gravity: { enabled: true, direction: "up", wrap: false },
+				overflow: "reject"
+			},
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
+	"connect-4-right": definePreset({
+		id: "connect-4-right",
+		name: "Connect 4 (Right)",
+		tags: ["classic", "7x6", "gravity", "row-activation", "gravity-right"],
+		description:
+			"Horizontal gravity: activate a row and discs slide right; first to connect four wins.",
+		config: {
+			metadata: { name: "Connect 4 Right", version: 1 },
+			grid: { width: 7, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "row" },
+			tokens: [
+				{
+					id: "disc-red",
+					label: "R",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disc-red.png" }
+				},
+				{
+					id: "disc-yellow",
+					label: "Y",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disc-yellow.png" }
+				}
+			],
+			placement: {
+				mode: "gravity",
+				gravity: { enabled: true, direction: "right", wrap: false },
+				overflow: "reject"
+			},
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
+	gomoku: definePreset({
 		id: "gomoku",
 		name: "Gomoku",
 		tags: ["classic", "15x15", "n-in-a-row", "direct"],
@@ -135,15 +272,15 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	},
-	reversi: {
+	}),
+	reversi: definePreset({
 		id: "reversi",
-		name: "Reversi / Othello",
-		tags: ["classic", "capture", "8x8"],
+		name: "Capture / Flip Demo",
+		tags: ["capture", "8x8", "demo"],
 		description:
-			"Sandwich opponent stones to flip them; valid move must capture at least one line.",
+			"Sandwich-and-flip capture demo (Reversi-style). Uses n-in-a-row win — not full Othello endgame/scoring.",
 		config: {
-			metadata: { name: "Reversi", version: 1 },
+			metadata: { name: "Capture Flip Demo", version: 1 },
 			grid: { width: 8, height: 8, topology: "rectangle", wrap: false },
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
@@ -185,8 +322,8 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 4, col: 4, player: "O" }
 			]
 		}
-	},
-	"connect-4-popout": {
+	}),
+	"connect-4-popout": definePreset({
 		id: "connect-4-popout",
 		name: "Connect 4 (Pop Out)",
 		tags: ["classic", "7x6", "gravity", "pop-out"],
@@ -230,8 +367,374 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	}
-	// Add more presets here as we create them
+	}),
+	"battleship-lite": definePreset({
+		id: "battleship-lite",
+		name: "Battleship Lite",
+		tags: ["observation", "hit-miss", "partial-info", "5x5"],
+		description:
+			"Minimal partial-info demo: fixed hidden fleets, fire for hit/miss, sink to win. Unlocks observation — not a full Battleship port.",
+		config: {
+			metadata: { name: "Battleship Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			objective: { mode: "destroy_hidden" },
+			tokens: [
+				{ id: "fleet-x", label: "X", players: ["X"] },
+				{ id: "fleet-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: [
+				{ row: 0, col: 0, player: "X", visibility: "owner" },
+				{ row: 0, col: 1, player: "X", visibility: "owner" },
+				{ row: 4, col: 3, player: "O", visibility: "owner" },
+				{ row: 4, col: 4, player: "O", visibility: "owner" }
+			]
+		}
+	}),
+	"battleship-place": definePreset({
+		id: "battleship-place",
+		name: "Battleship Place",
+		tags: [
+			"observation",
+			"hit-miss",
+			"placement-phase",
+			"multi-ship",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Place contiguous ships (lengths 2+3) onto the hidden layer, then fire. Unlocks fleet placement phase — still not full Battleship.",
+		config: {
+			metadata: { name: "Battleship Place", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			fleet: { ships: [2, 3] },
+			objective: { mode: "destroy_hidden" },
+			tokens: [
+				{ id: "fleet-x", label: "X", players: ["X"] },
+				{ id: "fleet-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"fog-connect-lite": definePreset({
+		id: "fog-connect-lite",
+		name: "Fog Connect Lite",
+		tags: ["observation", "fog", "radius", "partial-info", "5x5", "mechanism"],
+		description:
+			"n-in-a-row with fog-of-war: after your first stone, only cells within Chebyshev radius 1 of your pieces are visible. Unlocks fog radius observation.",
+		config: {
+			metadata: { name: "Fog Connect Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "fog", radius: 1, metric: "chebyshev" },
+			objective: { mode: "n_in_a_row" },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
+	"step-race": definePreset({
+		id: "step-race",
+		name: "Step Race",
+		tags: ["move", "reach-row", "5x5", "mechanism"],
+		description:
+			"Orthogonal step race: move your token one cell at a time; first to the far row wins. Unlocks Move + reach_row — not a full chase game.",
+		config: {
+			metadata: { name: "Step Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"life-lite": definePreset({
+		id: "life-lite",
+		name: "Life Lite",
+		tags: ["scheduler", "tick", "life", "b3s23", "mechanism"],
+		description:
+			"Conway B3/S23 on a small grid with a manual tick action. Unlocks discrete scheduler — not a full Life port or realtime loop.",
+		config: {
+			metadata: { name: "Life Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "manual_tick" },
+			scheduler: { rules: "life_b3s23", neighborhood: "moore" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "none" },
+			tokens: [
+				{
+					id: "cell-alive",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				}
+			],
+			placements: [],
+			// Horizontal blinker centered on 5×5
+			initial: [
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "X", visibility: "public" }
+			]
+		}
+	}),
+	"hex-connect-lite": definePreset({
+		id: "hex-connect-lite",
+		name: "Hex Connect Lite",
+		tags: ["hex", "topology", "n-in-a-row", "mechanism"],
+		description:
+			"N-in-a-row on an odd-r hex board (pointy-top offset). Unlocks hex_offset topology — not a full hex strategy game.",
+		config: {
+			metadata: { name: "Hex Connect Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			tokens: [
+				{
+					id: "hex-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"graph-connect-lite": definePreset({
+		id: "graph-connect-lite",
+		name: "Graph Connect Lite",
+		tags: ["graph", "topology", "n-in-a-row", "mechanism"],
+		description:
+			"N-in-a-row along an irregular adjacency graph (bridge + triangle). Unlocks graph topology — not expressible as a uniform rectangle/hex lattice.",
+		config: {
+			metadata: { name: "Graph Connect Lite", version: 1 },
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				// Layout (y-down): top bar + hub + bottom triangle — missing lattice edges
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 0, col: 2, x: 2, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 0, x: 0.25, y: 2 },
+					{ row: 2, col: 2, x: 1.75, y: 2 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,1", "0,2"],
+					["0,1", "1,1"],
+					["1,1", "2,0"],
+					["1,1", "2,2"],
+					["2,0", "2,2"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "composite",
+					horizontal: false,
+					vertical: false,
+					backDiagonal: false,
+					forwardDiagonal: false
+				}
+			},
+			tokens: [
+				{
+					id: "graph-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"go-lite": definePreset({
+		id: "go-lite",
+		name: "Go Lite",
+		tags: ["liberties", "territory", "area-control", "ko", "mechanism"],
+		description:
+			"Orthogonal group capture by liberties + simple (point) ko + pass-to-score area control. Unlocks liberties/territory/ko — not full Go (simplified scoring). See Go Lite Superko for positional history.",
+		config: {
+			metadata: { name: "Go Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control" },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"go-lite-superko": definePreset({
+		id: "go-lite-superko",
+		name: "Go Lite Superko",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"superko",
+			"mechanism"
+		],
+		description:
+			"Go Lite with positional superko: any prior public-board position is illegal to recreate. Unlocks history-aware legality beyond point ko.",
+		config: {
+			metadata: { name: "Go Lite Superko", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: {
+					enabled: true,
+					mode: "liberties",
+					ko: "positional"
+				},
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control" },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	})
 };
 
 // Helper to get all presets as array

@@ -20,7 +20,7 @@ export function nextPhase(
 ): TurnContext {
 	switch (ctx.phase) {
 		case "awaitInput":
-			if (event.type === "place" || event.type === "activateColumn")
+			if (event.type === "place" || event.type === "activateColumn" || event.type === "activateRow")
 				return { phase: "placing" };
 			return ctx;
 		case "placing":

@@ -8,7 +8,7 @@ This document sketches a minimal formal model to reason about feature compositio
 - Grid: G = (W, H, cells) with cells ∈ (P ∪ {∅})^{W×H}
 - Status: S ∈ {playing, won(p), draw}
 - State: σ = (G, p∈P, S, m∈ℕ)  // grid, current player, game status, move count
-- Events: ε ∈ { place(r,c), activateColumn(c), reset }
+- Events: ε ∈ { place(r,c), activateColumn(c), activateRow(r), reset }
 
 ## 2. Small-step Transition Relation
 
@@ -39,11 +39,16 @@ Examples (informal):
   - Req: TargetLine, CellsWritable; Prov: ResolvedCell
   - Slot: {PlacementPolicy=gravity}; Hooks: applyPlacement
   - Pre: exists empty cell along scan; Post: writes exactly one cell
-- Capture (Reversi)
+- Capture (Reversi flip)
   - Req: ResolvedCell, Adjacency, CellsWritable; Hooks: applyEffects
   - Pre: ≥1 flippable path; Post: flips captured opponent stones only
+- LibertyCapture (Go-lite)
+  - Req: ResolvedCell, CellsWritable; Hooks: applyEffects
+  - Pre: empty cell + no suicide after opponent removals; Post: removes 0-liberty opponent groups
 - WinCheck (n-in-a-row)
   - Req: Adjacency; Slot: {EndCondition}; Hooks: checkEnd
+- AreaControl
+  - Slot: {EndCondition=areaControl}; Hooks: checkEnd (two consecutive passes → stone+territory score)
 
 ## 4. Composition
 
@@ -76,8 +81,10 @@ A set of features 𝔽 conflicts iff one holds:
 
 - Adjacency decomposition: enabled directions + linear/composite traversal
 - Placement policies: direct vs gravity (line-scan → resolved cell)
-- Effects: capture (flips), overflow policies
-- End conditions: n-in-a-row, draw
+- Effects: capture (flips or liberty group removal), overflow policies
+- End conditions: n-in-a-row, destroy-hidden, reach-row, area-control (two passes → score)
+- Observation: full (identity), hit/miss (project own fleet + public shots), fog (radius mask)
+- Fleet placement phase: `fleet.ships` → place contiguous ships on hidden, then combat fire
 
 These are consumed by phase Hooks to ensure consistent semantics.
 
@@ -85,7 +92,7 @@ These are consumed by phase Hooks to ensure consistent semantics.
 
 - Static typing/refinements (TypeScript): shapes and slot exclusivity
 - Schema refinements (Zod): reject invalid config combos early
-- Machine guards (XState): temporal/protocol enforcement
+- Machine guards / phases: temporal/protocol enforcement (hand-rolled scaffold today; Effect Kernel planned)
 - Bounded model checking (optional): SMT/TLA+ instances for specific 𝔽
 - Property-based tests: random valid configs + invariants
 

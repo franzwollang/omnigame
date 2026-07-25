@@ -1,21 +1,24 @@
 {
-  "updated_at": "2026-07-24T23:50-05:00",
-  "turn": 3,
+  "updated_at": "2026-07-25T13:05+00:00",
+  "turn": 26,
   "focus": {
-    "milestone": "M0",
-    "issue": "effect-foothold",
-    "goal": "Honesty pass + install Effect foothold"
+    "milestone": "post-M7",
+    "issue": "next-missing-mechanism",
+    "goal": "Pick next unlock: situational-superko, simultaneous, delayed, hex-wrap, or pop_out"
   },
   "recent": [
-    "Enshrined mechanism-first reference selection in project-structure",
-    "M5/OPEN_ISSUES no longer treat references/ as a checklist"
+    "Synced 4dc4 onto fbb4",
+    "Landed positional superko + Go Lite Superko + tests",
+    "Closed superko slice of next-missing-mechanism"
   ],
   "discoveries": [
-    "Expanding plain reducer for all knobs before Effect would double work"
+    "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
+    "Base new cron turns on latest progression branch, not main",
+    "Positional: ko=positional + positionHistory; immediate cycle → superko"
   ],
   "open_threads": [
-    "Still open: Reversi label vs fix; XState keep/drop; Vitest; next hero game"
+    "Next: situational-superko / simultaneous / delayed / hex-wrap / pop_out"
   ],
-  "next_step": "User remaining clarifying Qs, or begin M0 (narrow schema + pnpm add effect)",
+  "next_step": "Choose next missing mechanism; implement schema+kernel+preset+tests",
   "blockers": []
 }

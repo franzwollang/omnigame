@@ -8,8 +8,12 @@ export type Capability =
 	| "EndCondition";
 
 export type Slot =
-	| { type: "PlacementPolicy"; value: "direct" | "gravity" }
-	| { type: "EndCondition"; value: "nInARow" };
+	| { type: "PlacementPolicy"; value: "direct" | "gravity" | "move" }
+	| {
+			type: "EndCondition";
+			value: "nInARow" | "destroyHidden" | "reachRow" | "areaControl" | "none";
+	  }
+	| { type: "Schedule"; value: "alternating" | "manualTick" };
 
 export type PhaseHook =
 	| "validateInput"
@@ -70,11 +74,27 @@ export const Contracts = {
 	}),
 	InputTargetColumn: (): FeatureContract => ({
 		id: "InputTargetColumn",
-		requires: ["TargetLine"],
-		provides: [],
+		requires: [],
+		provides: ["TargetLine"],
 		slots: [],
 		hooks: ["validateInput"],
 		invariants: []
+	}),
+	InputTargetRow: (): FeatureContract => ({
+		id: "InputTargetRow",
+		requires: [],
+		provides: ["TargetLine"],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: []
+	}),
+	InputMove: (): FeatureContract => ({
+		id: "InputMove",
+		requires: ["CellsWritable"],
+		provides: ["ResolvedCell"],
+		slots: [{ type: "PlacementPolicy", value: "move" }],
+		hooks: ["validateInput", "applyPlacement"],
+		invariants: ["movesOwnPieceToEmptyCell"]
 	}),
 	PlacementDirect: (): FeatureContract => ({
 		id: "PlacementDirect",
@@ -116,6 +136,24 @@ export const Contracts = {
 		hooks: ["applyEffects"],
 		invariants: []
 	}),
+	/** Base board always present: cells can be written by placement features. */
+	BoardWritable: (): FeatureContract => ({
+		id: "BoardWritable",
+		requires: [],
+		provides: ["CellsWritable"],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: []
+	}),
+	/** Gravity implies a line axis (column drops / row slides / pop-out). */
+	GravityAxis: (): FeatureContract => ({
+		id: "GravityAxis",
+		requires: [],
+		provides: ["TargetLine"],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: []
+	}),
 	Capture: (): FeatureContract => ({
 		id: "Capture",
 		requires: ["ResolvedCell", "Adjacency", "CellsWritable"],
@@ -123,6 +161,18 @@ export const Contracts = {
 		slots: [],
 		hooks: ["applyEffects"],
 		invariants: ["flipsOnlyOpponent"]
+	}),
+	LibertyCapture: (): FeatureContract => ({
+		id: "LibertyCapture",
+		requires: ["ResolvedCell", "CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: [
+			"removesZeroLibertyOpponentGroups",
+			"noSuicide",
+			"noImmediateKoRecapture"
+		]
 	}),
 	// Placeholder adapter: project gravity line selection to a resolved cell before capture
 	GravityToCellAdapter: (): FeatureContract => ({
@@ -148,5 +198,85 @@ export const Contracts = {
 		slots: [{ type: "EndCondition", value: "nInARow" }],
 		hooks: ["checkEnd"],
 		invariants: []
+	}),
+	ObservationHitMiss: (): FeatureContract => ({
+		id: "ObservationHitMiss",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["hidesOpponentFleet"]
+	}),
+	FleetPlacement: (): FeatureContract => ({
+		id: "FleetPlacement",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyPlacement"],
+		invariants: ["placesContiguousShipsThenCombat"]
+	}),
+	ObservationFog: (): FeatureContract => ({
+		id: "ObservationFog",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: [],
+		invariants: ["hidesCellsOutsideRadius"]
+	}),
+	DestroyHidden: (): FeatureContract => ({
+		id: "DestroyHidden",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "destroyHidden" }],
+		hooks: ["checkEnd"],
+		invariants: []
+	}),
+	ReachRow: (): FeatureContract => ({
+		id: "ReachRow",
+		requires: ["ResolvedCell"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "reachRow" }],
+		hooks: ["checkEnd"],
+		invariants: ["winsOnTargetRow"]
+	}),
+	AreaControl: (): FeatureContract => ({
+		id: "AreaControl",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "areaControl" }],
+		hooks: ["checkEnd"],
+		invariants: ["twoPassesEndGame", "scoreStonesPlusTerritory"]
+	}),
+	OpenEnded: (): FeatureContract => ({
+		id: "OpenEnded",
+		requires: [],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "none" }],
+		hooks: [],
+		invariants: ["noAutomaticTerminal"]
+	}),
+	SchedulerManualTick: (): FeatureContract => ({
+		id: "SchedulerManualTick",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "Schedule", value: "manualTick" }],
+		hooks: ["applyEffects"],
+		invariants: ["globalSynchronousUpdate"]
+	}),
+	TopologyHex: (): FeatureContract => ({
+		id: "TopologyHex",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["oddROffsetHex"]
+	}),
+	TopologyGraph: (): FeatureContract => ({
+		id: "TopologyGraph",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["explicitAdjacencyGraph"]
 	})
 };
