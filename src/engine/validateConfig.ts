@@ -55,6 +55,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 			features.push(Contracts.OverflowReject());
 		} else if (cfg.placement.overflow === "pop_out_bottom") {
 			features.push(Contracts.OverflowPopOutBottom());
+		} else if (cfg.placement.overflow === "pop_out_top") {
+			features.push(Contracts.OverflowPopOutTop());
 		}
 	}
 

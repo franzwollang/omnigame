@@ -552,11 +552,15 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="pop_out_bottom">
 															pop_out_bottom
 														</SelectItem>
+														<SelectItem value="pop_out_top">
+															pop_out_top
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												pop_out_top / horizontal pop-out deferred.
+												pop_out_bottom ↔ gravity down; pop_out_top ↔ gravity
+												up. Horizontal pop-out deferred.
 											</p>
 											<FormMessage />
 										</FormItem>

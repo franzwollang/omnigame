@@ -103,6 +103,53 @@ describe("GameKernel scaffold", () => {
 		expect(getCell(state.grid, { row: 5, col: 0 })).toBe(null);
 	});
 
+	it("includes top pop-out actions for gravity-up overflow", () => {
+		const { kernel } = compileConfig(
+			examplePresets["connect-4-up-popout"].config
+		);
+		let state = kernel.initialState();
+		state = kernel.stepSync(state, { type: "activateColumn", col: 0 }).nextState;
+		state = kernel.stepSync(state, { type: "activateColumn", col: 1 }).nextState;
+		// X's piece sits at top (row 0) of col 0 under gravity up
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.some((a) => a.type === "popOutColumn" && a.col === 0)).toBe(
+			true
+		);
+		state = kernel.stepSync(state, { type: "popOutColumn", col: 0 }).nextState;
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe(null);
+		expect(getCell(state.grid, { row: 5, col: 0 })).toBe(null);
+	});
+
+	it("shifts column toward exit when popping from top", () => {
+		const { kernel } = compileConfig(
+			examplePresets["connect-4-up-popout"].config
+		);
+		let state = kernel.initialState();
+		// Fill col 0: X, O, X rise to top
+		state = kernel.stepSync(state, { type: "activateColumn", col: 0 }).nextState;
+		state = kernel.stepSync(state, { type: "activateColumn", col: 0 }).nextState;
+		state = kernel.stepSync(state, { type: "activateColumn", col: 0 }).nextState;
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 1, col: 0 })).toBe("O");
+		expect(getCell(state.grid, { row: 2, col: 0 })).toBe("X");
+		// O's turn — pop own top piece is illegal (top is X); O activates elsewhere
+		const oExplain = kernel.explainAction(state, 1, {
+			type: "popOutColumn",
+			col: 0
+		});
+		expect(oExplain.legal).toBe(false);
+		if (!oExplain.legal) {
+			expect(oExplain.reason).toBe("no_own_piece");
+		}
+		state = kernel.stepSync(state, { type: "activateColumn", col: 1 }).nextState;
+		// X pops top of col 0 → O slides to row 0, X to row 1
+		state = kernel.stepSync(state, { type: "popOutColumn", col: 0 }).nextState;
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("O");
+		expect(getCell(state.grid, { row: 1, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 2, col: 0 })).toBe(null);
+	});
+
 	it("marks illegal steps as ignored without mutating state", () => {
 		const { kernel } = compileConfig(examplePresets["tic-tac-toe"].config);
 		const state = kernel.initialState();

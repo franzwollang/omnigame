@@ -106,7 +106,10 @@ export default function GamePage() {
 		replayFromTranscript
 	} = useGameEngine(engineConfig, playSeed);
 	const enablePopOut =
-		currentConfig?.placement.overflow === "pop_out_bottom";
+		currentConfig?.placement.overflow === "pop_out_bottom" ||
+		currentConfig?.placement.overflow === "pop_out_top";
+	const popOutSide =
+		currentConfig?.placement.overflow === "pop_out_top" ? "top" : "bottom";
 	const enableTick = currentConfig?.turn.schedule === "manual_tick";
 	const enablePass = currentConfig?.objective.mode === "area_control";
 	const eventLines = useMemo(
@@ -553,6 +556,7 @@ export default function GamePage() {
 					onActivateColumn={activateColumn}
 					onActivateRow={activateRow}
 					enablePopOutButtons={enablePopOut}
+					popOutSide={popOutSide}
 					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
 					inputMode={currentConfig?.input.mode ?? "cell"}
 					topology={currentConfig?.grid.topology ?? "rectangle"}

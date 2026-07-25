@@ -71,8 +71,9 @@ describe("schema honesty (M0)", () => {
 			zConfig.safeParse({
 				...examplePresets["connect-4"].config,
 				placement: {
-					...examplePresets["connect-4"].config.placement,
-					overflow: "pop_out_top"
+					mode: "gravity",
+					gravity: { enabled: true, direction: "up", wrap: false },
+					overflow: "pop_out_bottom"
 				}
 			}).success
 		).toBe(false);
@@ -81,8 +82,8 @@ describe("schema honesty (M0)", () => {
 				...examplePresets["connect-4"].config,
 				placement: {
 					mode: "gravity",
-					gravity: { enabled: true, direction: "up", wrap: false },
-					overflow: "pop_out_bottom"
+					gravity: { enabled: true, direction: "down", wrap: false },
+					overflow: "pop_out_top"
 				}
 			}).success
 		).toBe(false);
@@ -95,7 +96,7 @@ describe("schema honesty (M0)", () => {
 		).toBe(false);
 	});
 
-	it("accepts rectangle wrap, gravity axes, and all shipped presets", () => {
+	it("accepts rectangle wrap, gravity axes, pop_out_top, and all shipped presets", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		expect(
 			zConfig.safeParse({
@@ -110,6 +111,16 @@ describe("schema honesty (M0)", () => {
 					mode: "gravity",
 					gravity: { enabled: true, direction: "up", wrap: false },
 					overflow: "reject"
+				}
+			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "up", wrap: false },
+					overflow: "pop_out_top"
 				}
 			}).success
 		).toBe(true);

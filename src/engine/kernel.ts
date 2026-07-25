@@ -442,13 +442,16 @@ function collectLegalActions(
 		actions.push({ type: "pass" });
 	}
 
-	if (overflow === "pop_out_bottom") {
-		// Pop-out from bottom only pairs with gravity down.
-		if ((config.gravityDirection ?? "down") === "down") {
+	if (overflow === "pop_out_bottom" || overflow === "pop_out_top") {
+		const direction = config.gravityDirection ?? "down";
+		const fromBottom = overflow === "pop_out_bottom" && direction === "down";
+		const fromTop = overflow === "pop_out_top" && direction === "up";
+		if (fromBottom || fromTop) {
 			const height = state.grid.height;
+			const exitRow = fromBottom ? height - 1 : 0;
 			for (let col = 0; col < state.grid.width; col++) {
-				const bottom = getCell(state.grid, { row: height - 1, col });
-				if (bottom === state.currentPlayer) {
+				const exit = getCell(state.grid, { row: exitRow, col });
+				if (exit === state.currentPlayer) {
 					actions.push({ type: "popOutColumn", col });
 				}
 			}
@@ -535,7 +538,7 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 		case "row_full":
 			return "Row has no empty space";
 		case "no_own_piece":
-			return "No owned piece at source / column bottom";
+			return "No owned piece at source / pop-out exit cell";
 		case "invalid_destination":
 			return "Destination is not a legal move target";
 		case "mode_mismatch":
@@ -747,21 +750,23 @@ export function explainKernelAction(
 			break;
 		}
 		case "popOutColumn": {
-			if (
-				overflow !== "pop_out_bottom" ||
-				(config.gravityDirection ?? "down") !== "down"
-			) {
+			const direction = config.gravityDirection ?? "down";
+			const fromBottom =
+				overflow === "pop_out_bottom" && direction === "down";
+			const fromTop = overflow === "pop_out_top" && direction === "up";
+			if (!fromBottom && !fromTop) {
 				return {
 					legal: false,
 					reason: "not_applicable",
 					detail: detailFor("not_applicable", action)
 				};
 			}
-			const bottom = getCell(state.grid, {
-				row: state.grid.height - 1,
+			const exitRow = fromBottom ? state.grid.height - 1 : 0;
+			const exit = getCell(state.grid, {
+				row: exitRow,
 				col: action.col
 			});
-			if (bottom !== state.currentPlayer) {
+			if (exit !== state.currentPlayer) {
 				return {
 					legal: false,
 					reason: "no_own_piece",

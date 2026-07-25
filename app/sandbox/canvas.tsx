@@ -26,6 +26,8 @@ type Props = {
 	onPopOutColumn?: (col: number) => void;
 	inputMode?: "cell" | "column" | "row" | "move";
 	enablePopOutButtons?: boolean;
+	/** Which board edge hosts pop-out buttons (exit side). */
+	popOutSide?: "top" | "bottom";
 	topology?: GridTopology;
 	/** Compiled graph adjacency/layout when topology = graph. */
 	graph?: GraphTopologyData;
@@ -102,6 +104,7 @@ export default function SandboxCanvas({
 	onPopOutColumn,
 	inputMode = "cell",
 	enablePopOutButtons = false,
+	popOutSide = "bottom",
 	topology = "rectangle",
 	graph,
 	highlightCells = [],
@@ -785,7 +788,11 @@ export default function SandboxCanvas({
 		const spacing = 0.1;
 		const totalCellSize = cellSize + spacing;
 		const planeHeight = gridHeight * totalCellSize;
-		const y = planeHeight / 2 + spacing * 0.5; // slightly above top edge
+		// Place buttons on the exit side (top for pop_out_top, bottom for pop_out_bottom)
+		const y =
+			popOutSide === "top"
+				? planeHeight / 2 + spacing * 0.5
+				: -(planeHeight / 2 + spacing * 0.5);
 		for (let col = 0; col < gridWidth; col++) {
 			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
 			const btn = document.createElement("button");
@@ -800,7 +807,12 @@ export default function SandboxCanvas({
 			obj.position.set(x, y, 0);
 			group.add(obj);
 		}
-	}, [enablePopOutButtons, gameState.grid.width, gameState.grid.height]);
+	}, [
+		enablePopOutButtons,
+		popOutSide,
+		gameState.grid.width,
+		gameState.grid.height
+	]);
 
 	// Legal-move / selection / fog overlay (tint cell hit meshes)
 	useEffect(() => {

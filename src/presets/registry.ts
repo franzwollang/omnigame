@@ -188,6 +188,51 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"connect-4-up-popout": definePreset({
+		id: "connect-4-up-popout",
+		name: "Connect 4 (Up Pop Out)",
+		tags: ["classic", "7x6", "gravity", "gravity-up", "pop-out"],
+		description:
+			"Gravity up with top pop-out: eject your topmost token to shift the column toward the exit side.",
+		config: {
+			metadata: { name: "Connect 4 Up Pop Out", version: 1 },
+			grid: { width: 7, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "column" },
+			tokens: [
+				{
+					id: "disc-red",
+					label: "R",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disc-red.png" }
+				},
+				{
+					id: "disc-yellow",
+					label: "Y",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disc-yellow.png" }
+				}
+			],
+			placement: {
+				mode: "gravity",
+				gravity: { enabled: true, direction: "up", wrap: false },
+				overflow: "pop_out_top"
+			},
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"connect-4-right": definePreset({
 		id: "connect-4-right",
 		name: "Connect 4 (Right)",

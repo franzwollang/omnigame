@@ -62,8 +62,8 @@ export type GameConfig = {
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
-	/** Bottom pop-out (Connect 4 Pop Out). Top / horizontal pop-out deferred. */
-	overflow?: "reject" | "pop_out_bottom";
+	/** Column pop-out: bottom ↔ gravity down, top ↔ gravity up. Horizontal deferred. */
+	overflow?: "reject" | "pop_out_bottom" | "pop_out_top";
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
 	captureMode?: "flip" | "liberties";
@@ -685,24 +685,37 @@ function handlePopOutColumn(
 	const width = state.grid.width;
 	if (col < 0 || col >= width) return state;
 
-	// Only support pop-out from bottom with gravity down
+	const overflow = config.overflow ?? "reject";
 	const direction = config.gravityDirection ?? "down";
-	if (direction !== "down") return state;
+	const fromBottom =
+		overflow === "pop_out_bottom" && direction === "down";
+	const fromTop = overflow === "pop_out_top" && direction === "up";
+	if (!fromBottom && !fromTop) return state;
 
-	const bottomVal = getCell(state.grid, { row: height - 1, col });
-	if (bottomVal === null) return state; // nothing to pop
-	// Optional strict rule: must pop own token; relax by removing this if desired
-	if (bottomVal !== state.currentPlayer) return state;
+	const exitRow = fromBottom ? height - 1 : 0;
+	const exitVal = getCell(state.grid, { row: exitRow, col });
+	if (exitVal === null) return state; // nothing to pop
+	// Must pop own token
+	if (exitVal !== state.currentPlayer) return state;
 
-	// Shift column down: remove bottom, pull from above
-	let newCells = [...state.grid.cells];
-	for (let row = height - 1; row > 0; row--) {
-		const from = { row: row - 1, col };
-		const to = { row, col };
-		newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+	const newCells = [...state.grid.cells];
+	if (fromBottom) {
+		// Shift column down: remove bottom, pull from above
+		for (let row = height - 1; row > 0; row--) {
+			const from = { row: row - 1, col };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row: 0, col }, state.grid.width)] = null;
+	} else {
+		// Shift column up: remove top, pull from below
+		for (let row = 0; row < height - 1; row++) {
+			const from = { row: row + 1, col };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row: height - 1, col }, state.grid.width)] = null;
 	}
-	// Top becomes empty
-	newCells[toIndex({ row: 0, col }, state.grid.width)] = null;
 
 	const newGrid = { ...state.grid, cells: newCells };
 	const newMoveCount = state.moveCount + 1;
