@@ -201,7 +201,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								manual_tick + Life Lite, simultaneous joint place,
 								commitReveal for hidden simultaneous, resolveOrder for
 								ordered same-cell priority, actionsPerTurn for
-								multi-step, or delayTurns for queued places.
+								multi-step, delayTurns for queued places, or phases
+								for place→move within a turn.
 							</p>
 							<FormField
 								control={form.control}

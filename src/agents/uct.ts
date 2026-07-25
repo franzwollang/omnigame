@@ -57,6 +57,7 @@ function stateFingerprint(state: GameState): string {
 		state.moveCount,
 		state.winner ?? "",
 		state.actionsRemaining ?? "",
+		state.turnPhaseIndex ?? "",
 		(state.pendingPlaces ?? [])
 			.map(
 				(p) =>

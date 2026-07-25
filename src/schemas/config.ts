@@ -77,6 +77,15 @@ export const zConfig = z
 				resolveOrder: z
 					.enum(["joint", "x_first", "o_first"])
 					.default("joint")
+					.optional(),
+				/**
+				 * Ordered in-turn action types before handoff (v1: place → move).
+				 * Distinct from actionsPerTurn (N copies of one action type).
+				 */
+				phases: z
+					.array(z.enum(["place", "move"]))
+					.min(2)
+					.max(3)
 					.optional()
 			})
 			.strict()
@@ -285,6 +294,7 @@ export const zConfig = z
 		const multiStep = actionsPerTurn > 1;
 		const delayTurns = cfg.placement.delayTurns ?? 0;
 		const delayedPlace = delayTurns > 0;
+		const inTurnPhases = (cfg.turn.phases?.length ?? 0) > 0;
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
 		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
@@ -829,6 +839,109 @@ export const zConfig = z
 					path: ["grid", "topology"],
 					message:
 						"placement.delayTurns foothold requires topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
+		}
+
+		// In-turn phase sequence (place → move) — distinct from actionsPerTurn
+		if (inTurnPhases) {
+			const phases = cfg.turn.phases!;
+			if (cfg.turn.schedule !== "alternating") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message:
+						"turn.phases requires turn.schedule = 'alternating'"
+				});
+			}
+			if (multiStep) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message:
+						"turn.phases is incompatible with actionsPerTurn > 1 (phases sequence action types; actionsPerTurn repeats one type)"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message: "turn.phases is incompatible with placement.delayTurns > 0"
+				});
+			}
+			if (simultaneous || cfg.turn.commitReveal === true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"turn.phases is incompatible with simultaneous / commitReveal"
+				});
+			}
+			if (phases[0] !== "place" || !phases.includes("move")) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"turn.phases v1 must start with 'place' and include 'move' (e.g. ['place','move'])"
+				});
+			}
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message: "turn.phases requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message:
+						"turn.phases requires input.mode = 'cell' (place phase); move phase uses movement"
+				});
+			}
+			if (!cfg.movement) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement"],
+					message: "turn.phases with 'move' requires a movement block"
+				});
+			}
+			if (gravityImplied || captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"turn.phases requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "turn.phases is incompatible with hit_miss observation"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "turn.phases is incompatible with fog observation"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "turn.phases is incompatible with fleet placement"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"turn.phases foothold requires topology = 'rectangle' (hex/graph deferred)"
 				});
 			}
 		}

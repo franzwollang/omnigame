@@ -499,6 +499,45 @@ function collectLegalActions(
 		return actions;
 	}
 
+	// In-turn phase sequence: legal actions follow phases[turnPhaseIndex]
+	const turnPhases = config.turnPhases;
+	if (turnPhases && turnPhases.length > 0) {
+		const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
+		if (phase === "place") {
+			for (const position of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (canPlaceCell(state, position, config)) {
+					actions.push({ type: "place", position });
+				}
+			}
+			return actions;
+		}
+		if (phase === "move") {
+			const movement = config.movement;
+			if (!movement) return actions;
+			const wrap = config.gridWrap === true;
+			for (const from of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (getCell(state.grid, from) !== state.currentPlayer) continue;
+				for (const to of legalDestinations(state.grid, from, movement, wrap)) {
+					if (
+						canMove(state.grid, from, to, state.currentPlayer, movement, wrap)
+					) {
+						actions.push({ type: "move", from, to });
+					}
+				}
+			}
+			return actions;
+		}
+		return actions;
+	}
+
 	if (inputMode === "move") {
 		const movement = config.movement;
 		if (!movement) return actions;
@@ -804,6 +843,26 @@ export function explainKernelAction(
 		return { legal: true };
 	}
 
+	// In-turn phases: place/move must match the active phase
+	const turnPhases = config.turnPhases;
+	if (turnPhases && turnPhases.length > 0) {
+		const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
+		if (action.type === "place" && phase !== "place") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "move" && phase !== "move") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+	}
+
 	const legal = collectLegalActions(config, state, player);
 	const isLegal = legal.some((a) => actionsEqual(a, action));
 	if (isLegal) return { legal: true };
@@ -1030,7 +1089,11 @@ export function explainKernelAction(
 			break;
 		}
 		case "move": {
-			if (inputMode !== "move" || !config.movement) {
+			const turnPhases = config.turnPhases;
+			const inTurnMove =
+				turnPhases &&
+				turnPhases[state.turnPhaseIndex ?? 0] === "move";
+			if ((inputMode !== "move" && !inTurnMove) || !config.movement) {
 				return {
 					legal: false,
 					reason: "mode_mismatch",

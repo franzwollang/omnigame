@@ -122,6 +122,11 @@ export type GameConfig = {
 	 * seat priority (`x_first` / `o_first`). Default joint.
 	 */
 	resolveOrder?: "joint" | "x_first" | "o_first";
+	/**
+	 * Ordered in-turn action types (e.g. place then move) before handoff.
+	 * When set, GameState.turnPhaseIndex tracks the active phase.
+	 */
+	turnPhases?: Array<"place" | "move">;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -219,6 +224,34 @@ function withTurnAdvanced(
 	};
 }
 
+/**
+ * In-turn phases advance the phase index; after the last phase, hand off and
+ * reset. Without turnPhases, delegates to multi-step / alternating handoff.
+ */
+function withPhaseOrTurnAdvanced(
+	state: GameState,
+	config: GameConfig
+): Pick<GameState, "currentPlayer" | "actionsRemaining" | "turnPhaseIndex"> {
+	const phases = config.turnPhases;
+	if (phases && phases.length > 1) {
+		const idx = state.turnPhaseIndex ?? 0;
+		if (idx + 1 < phases.length) {
+			return {
+				currentPlayer: state.currentPlayer,
+				actionsRemaining: undefined,
+				turnPhaseIndex: idx + 1
+			};
+		}
+		return {
+			currentPlayer: state.currentPlayer === "X" ? "O" : "X",
+			actionsRemaining: undefined,
+			turnPhaseIndex: 0
+		};
+	}
+	const turn = withTurnAdvanced(state, config);
+	return { ...turn, turnPhaseIndex: undefined };
+}
+
 function isBoardFull(grid: Grid, config: GameConfig): boolean {
 	const topology = config.topology ?? "rectangle";
 	if (topology === "graph" && config.graph) {
@@ -234,6 +267,7 @@ export function createInitialState(config: GameConfig): GameState {
 	const alternatingMultiStep =
 		actionsPerTurn > 1 &&
 		(config.turnSchedule ?? "alternating") === "alternating";
+	const inTurnPhases = (config.turnPhases?.length ?? 0) > 0;
 	const base: GameState = {
 		grid: emptyGrid(config.gridWidth, config.gridHeight),
 		currentPlayer: "X",
@@ -244,7 +278,8 @@ export function createInitialState(config: GameConfig): GameState {
 		koPoint: null,
 		phase: placement ? "placement" : "combat",
 		fleetProgress: placement ? initialFleetProgressMap() : undefined,
-		actionsRemaining: alternatingMultiStep ? actionsPerTurn : undefined
+		actionsRemaining: alternatingMultiStep ? actionsPerTurn : undefined,
+		turnPhaseIndex: inTurnPhases ? 0 : undefined
 	};
 
 	const seeds = config.initial ?? [];
@@ -655,7 +690,10 @@ function handleMove(
 	to: Position,
 	config: GameConfig
 ): GameState {
-	if ((config.inputMode ?? "cell") !== "move") return state;
+	const phases = config.turnPhases;
+	const phaseIdx = state.turnPhaseIndex ?? 0;
+	const inTurnMovePhase = Boolean(phases && phases[phaseIdx] === "move");
+	if ((config.inputMode ?? "cell") !== "move" && !inTurnMovePhase) return state;
 	if (state.status !== "playing") return state;
 	const movement = config.movement;
 	if (!movement) return state;
@@ -693,10 +731,38 @@ function handleMove(
 		}
 	}
 
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
+		const wrap = config.gridWrap === true;
+		const winner = checkWinner(
+			newGrid,
+			state.currentPlayer,
+			config.winLength,
+			config.adjacency,
+			config.topology ?? "rectangle",
+			config.graph,
+			wrap
+		);
+		if (winner) {
+			return {
+				...next,
+				status: "won",
+				winner: state.currentPlayer
+			};
+		}
+		if (isBoardFull(newGrid, config)) {
+			return {
+				...next,
+				status: "draw"
+			};
+		}
+	}
+
+	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
 		...next,
-		currentPlayer: nextPlayer
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
 	};
 }
 
@@ -822,6 +888,13 @@ function handlePlace(
 	}
 	// Move games relocate existing pieces
 	if ((config.inputMode ?? "cell") === "move") return state;
+
+	// In-turn phases: only place during the place phase
+	const phases = config.turnPhases;
+	if (phases && phases.length > 0) {
+		const phase = phases[state.turnPhaseIndex ?? 0];
+		if (phase !== "place") return state;
+	}
 
 	// Guard: can only place if game is playing
 	if (state.status !== "playing") return state;
@@ -978,14 +1051,15 @@ function handlePlace(
 		};
 	}
 
-	// Effect: advance turn (multi-step keeps currentPlayer until budget spent)
-	const turn = withTurnAdvanced(state, config);
+	// Effect: advance turn (multi-step / in-turn phases keep currentPlayer)
+	const turn = withPhaseOrTurnAdvanced(state, config);
 
 	return {
 		...state,
 		grid: newGrid,
 		currentPlayer: turn.currentPlayer,
 		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex,
 		moveCount: newMoveCount,
 		koPoint: nextKoPoint,
 		positionHistory: nextHistory

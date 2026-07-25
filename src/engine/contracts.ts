@@ -357,6 +357,18 @@ export const Contracts = {
 		hooks: ["applyPlacement", "applyEffects"],
 		invariants: ["intentBeforeResolve", "pendingCellsReserved"]
 	}),
+	/**
+	 * Ordered in-turn phase sequence (e.g. place then move before handoff).
+	 * Distinct from ScheduleMultiStep (N copies of one action type).
+	 */
+	ScheduleInTurnPhases: (): FeatureContract => ({
+		id: "ScheduleInTurnPhases",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "nextTurn"],
+		invariants: ["phaseIndexBeforeHandoff", "phaseRoutesActionType"]
+	}),
 	TopologyHex: (): FeatureContract => ({
 		id: "TopologyHex",
 		requires: ["CellsWritable"],

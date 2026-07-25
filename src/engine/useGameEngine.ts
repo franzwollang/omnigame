@@ -266,7 +266,12 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				}
 				return;
 			}
-			if ((config.inputMode ?? "cell") === "move") {
+			const turnPhases = config.turnPhases;
+			const inTurnPhase =
+				turnPhases && turnPhases.length > 0
+					? turnPhases[stateRef.current.turnPhaseIndex ?? 0]
+					: null;
+			if (inTurnPhase === "move" || (config.inputMode ?? "cell") === "move") {
 				const selected = selectedFromRef.current;
 				const occupant = getCell(stateRef.current.grid, pos);
 				if (!selected) {
@@ -294,8 +299,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				return;
 			}
 			applyAction({ type: "place", position: pos });
+			selectedFromRef.current = null;
+			setSelectedFrom(null);
 		},
-		[applyAction, config.observationMode, config.inputMode, simultaneous, commitReveal, kernel, actionsPerRound]
+		[applyAction, config.observationMode, config.inputMode, config.turnPhases, simultaneous, commitReveal, kernel, actionsPerRound]
 	);
 
 	const activateColumn = useCallback(

@@ -65,6 +65,10 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		delayTurns: config.placement.delayTurns ?? 0,
 		commitReveal: config.turn.commitReveal === true,
 		resolveOrder: config.turn.resolveOrder ?? "joint",
+		turnPhases:
+			config.turn.phases && config.turn.phases.length > 0
+				? [...config.turn.phases]
+				: undefined,
 		scheduler: config.scheduler
 			? {
 					rules: config.scheduler.rules,

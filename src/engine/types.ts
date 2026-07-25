@@ -80,6 +80,12 @@ export type GameState = {
 	 * committed their full per-round budget.
 	 */
 	committedPlacements?: Partial<Record<Player, Position[]>>;
+	/**
+	 * In-turn phase index when `turn.phases` is set (0 .. phases.length-1).
+	 * Advances after each successful phase action; resets to 0 on handoff.
+	 * Distinct from fleet `phase` (game-long placement/combat).
+	 */
+	turnPhaseIndex?: number;
 };
 
 /** Normalize a simultaneous placement payload to a position list. */

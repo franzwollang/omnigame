@@ -449,6 +449,11 @@ export default function GamePage() {
 												: ""
 										}`
 									: ` · ${gameState.currentPlayer} to move${
+											gameState.turnPhaseIndex != null &&
+											(engineConfig.turnPhases?.length ?? 0) > 0
+												? ` · ${engineConfig.turnPhases![gameState.turnPhaseIndex]}`
+												: ""
+										}${
 											gameState.actionsRemaining != null
 												? ` · ${gameState.actionsRemaining} left`
 												: ""

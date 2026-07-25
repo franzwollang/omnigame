@@ -1217,6 +1217,54 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"place-move-lite": definePreset({
+		id: "place-move-lite",
+		name: "Place & Move Lite",
+		tags: ["phases", "place", "move", "5x5", "n-in-a-row", "mechanism"],
+		description:
+			"Each turn: place one stone, then move one of yours one step. Unlocks turn.phases (in-turn action sequence) — not multi-step same-action budget.",
+		config: {
+			metadata: { name: "Place & Move Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "alternating",
+				phases: ["place", "move"]
+			},
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			tokens: [
+				{
+					id: "x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"step-race": definePreset({
 		id: "step-race",
 		name: "Step Race",

@@ -116,6 +116,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if ((cfg.placement.delayTurns ?? 0) > 0) {
 		features.push(Contracts.PlacementDelayed());
 	}
+	if ((cfg.turn.phases?.length ?? 0) > 0) {
+		features.push(Contracts.ScheduleInTurnPhases());
+	}
 
 	return features;
 }
