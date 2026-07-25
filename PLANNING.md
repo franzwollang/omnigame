@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Simple (point) ko landed on liberties games
-(Go Lite). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Positional superko landed on liberties games
+(Go Lite Superko). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
