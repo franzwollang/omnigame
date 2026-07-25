@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Delayed (queued) place landed (Delayed TTT /
-`placement.delayTurns`). Hand off to the next **missing mechanism** (see
+**Optimizing for this phase:** Hidden simultaneous landed (`turn.commitReveal`
++ Hidden Simultaneous TTT). Hand off to the next **missing mechanism** (see
 `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
@@ -91,12 +91,15 @@ Working sandbox slice (see README “Current implementation status”):
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 - **Simultaneous schedule:** `turn.schedule = "simultaneous"` + `simultaneousPlace` /
   `stepJoint`; same-cell conflict places neither; Simultaneous TTT preset
+- **Hidden simultaneous:** `turn.commitReveal` + `commitPlace` +
+  `GameState.committedPlacements`; opponent commit hidden until reveal;
+  Hidden Simultaneous TTT preset
 - **Multi-step turns:** `turn.actionsPerTurn` + `GameState.actionsRemaining`;
   handoff after budget; Double Move TTT preset
 - **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
   intent queues then materializes after intervening places; Delayed TTT preset
 
-Not yet: full Go rules, hidden/hex/graph simultaneous.
+Not yet: full Go rules, hex/graph simultaneous.
 
 ## Milestone exit criteria
 

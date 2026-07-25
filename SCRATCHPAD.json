@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T10:55-05:00",
-  "turn": 13,
+  "updated_at": "2026-07-25T11:05-05:00",
+  "turn": 14,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after delayed place delayTurns"
+    "goal": "Hand off after hidden simultaneous commitReveal"
   },
   "recent": [
-    "Synced b103 multi-step tip onto b7a6",
-    "Landed placement.delayTurns + Delayed TTT",
-    "pendingPlaces queue/resolve + reserve + flush"
+    "Synced b7a6 delayed-place tip onto 292d",
+    "Landed turn.commitReveal + commitPlace + Hidden Simultaneous TTT",
+    "observe hides opponent commit until joint reveal"
   ],
   "discoveries": [
-    "delayTurns = intervening places before materialize",
-    "Flush pending when no free cells avoids deadlock"
+    "commitReveal extends simultaneous; joint resolve reused",
+    "stepPly under commitReveal commits both seats then reveals"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick hidden simultaneous or hex/graph simultaneous",
+  "next_step": "Cloud agent: pick hex/graph simultaneous or ordered simultaneous",
   "blockers": []
 }
