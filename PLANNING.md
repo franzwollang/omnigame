@@ -11,13 +11,14 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M1 | GameKernel ABI + Effect core + event transcripts | `done` |
 | M2 | GameIR + deterministic replay | `done` |
 | M3 | Compiler / normalize / macro expansion | `done` |
-| M4 | Observation primitive + Battleship-lite | `not started` |
+| M4 | Observation primitive + Battleship-lite | `done` |
 | M5 | Anchor / reference-game ports | `not started` |
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** M4 — first-class observation (hit/miss, hidden
-placement) so partial-info games compile through the same kernel path.
+**Optimizing for this phase:** M5 — pick the next mechanism-first anchor (not
+exhausting `references/`); candidates unlock something new (tick, Move,
+liberties, hex, …).
 
 ## Decisions (locked)
 
@@ -56,7 +57,8 @@ Working sandbox slice (see README “Current implementation status”):
 - Rectangular grid; cell / column input
 - Direct + gravity placement (schema/engine: gravity **down** only)
 - Capture (flip demo); n-in-a-row wins
-- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo
+- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo,
+  Battleship Lite (hit/miss observation)
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -64,8 +66,9 @@ Working sandbox slice (see README “Current implementation status”):
 - GameIR v0 (`src/ir/gameIr.ts`): `seed + actions` transcript + sandbox Replay
 - Client Zod + contract validation in sandbox; Z3 server action optional/experimental
 - Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
+- Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
 
-Not yet: observation / partial info, hex/graph, library explorer.
+Not yet: hex/graph topology, library explorer, placement-phase / multi-ship Battleship, agents.
 
 ## Milestone exit criteria
 
@@ -104,6 +107,10 @@ presets play through it; `gravity.enabled` and `placements→initial` macros.
 ### M4 — Observation + Battleship-lite
 
 - Hit/miss (+ hidden placement) observation; Battleship-lite preset.
+
+**Done:** `observation.mode` / `objective.mode` in schema; hidden fleet layer;
+`fire` action; per-player `observe()` on kernel steps; Battleship-lite preset +
+tests. Full placement-phase / multi-ship Battleship deferred.
 
 ### M5 — Anchor / reference ports
 

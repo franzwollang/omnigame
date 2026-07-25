@@ -77,7 +77,8 @@ A set of features 𝔽 conflicts iff one holds:
 - Adjacency decomposition: enabled directions + linear/composite traversal
 - Placement policies: direct vs gravity (line-scan → resolved cell)
 - Effects: capture (flips), overflow policies
-- End conditions: n-in-a-row, draw
+- End conditions: n-in-a-row, destroy-hidden (sink all opponent fleet cells)
+- Observation: full (identity) or hit/miss (project own fleet + public shots)
 
 These are consumed by phase Hooks to ensure consistent semantics.
 

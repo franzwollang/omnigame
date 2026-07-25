@@ -93,12 +93,13 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   - gravity placement **down only** (`placement.mode = "gravity"`, `gravity.direction = "down"`)
   - overflow: `reject` | `pop_out_bottom` (bottom pop-out column action)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row win detection with configurable adjacency + length
+- **Objectives**: n-in-a-row win detection with configurable adjacency + length; `destroy_hidden` sink objective for hit/miss
+- **Observation**: `full` (identity) or `hit_miss` (own fleet + public shots); Battleship-lite preset
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
-- **Kernel**: sandbox plays presets through `GameKernel.step` and shows recent kernel events + Replay
+- **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations) and shows recent kernel events + Replay
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 
-What’s **roadmap**, not fully realized yet: first-class observation models for partial information, richer macro library (e.g. piece-move sugar), and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), richer macro library (e.g. piece-move sugar), hex/graph topology, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -321,7 +322,7 @@ Near-term milestones:
 - **Kernel/IR boundary**: formalize the `GameKernel` interface and introduce a stable `GameIR` for replay/logging
 - **Compiler stages**: validate/normalize specs and expand macros into primitive operators + constraints
 - **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
-- **Observation support**: make partial information explicit (enables Battleship-lite correctly)
+- **Observation support**: hit/miss + Battleship-lite landed; fog radius / placement phase still open
 - **Anchor games**: implement the 2–3 “stress test” games above to validate primitive completeness
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
 - **Baseline agents**: random/greedy/tiny MCTS to prove bot play with clean interfaces

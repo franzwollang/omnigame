@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-07-25T02:10-05:00",
-  "turn": 8,
+  "updated_at": "2026-07-25T02:30-05:00",
+  "turn": 9,
   "focus": {
-    "milestone": "M4",
-    "issue": "observation-partial-info",
-    "goal": "Add hit/miss observation + Battleship-lite preset"
+    "milestone": "M5",
+    "issue": "reference-game-ports",
+    "goal": "Pick next mechanism-first anchor (not observation)"
   },
   "recent": [
-    "Based on b7c8 (M0–M2); started M3 compiler-normalize",
-    "src/compiler: validate→macros→normalize→kernel; sandbox wired"
+    "Synced onto 6127 (M0–M3) before M4",
+    "M4: hit/miss observation + Battleship-lite + tests"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main"
   ],
   "open_threads": [
-    "M4: observation schema + kernel path; smallest Battleship-lite"
+    "M5: choose mechanism (tick/Move/liberties/hex) for next preset"
   ],
-  "next_step": "Design observation primitive (hit/miss + hidden) behind compiler→kernel",
+  "next_step": "Pick smallest anchor that unlocks a missing mechanism; implement via compiler→kernel",
   "blockers": []
 }
