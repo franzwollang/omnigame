@@ -14,3 +14,4 @@
 {"ts":"2026-07-25T04:05-05:00","focus":"M6 debug-and-agents","summary":"Landed legal overlay, why-illegal, event trace, kernel agents; M6 done","next":"M7 library-explorer foothold"}
 {"ts":"2026-07-25T04:25-05:00","focus":"M7 library-explorer","summary":"Landed config sampling + playability classify + Library modal; M7 done","next":"graph board topology foothold"}
 {"ts":"2026-07-25T04:50-05:00","focus":"graph topology foothold","summary":"landed grid.topology=graph with irregular Graph Connect Lite preset","next":"richer MCTS/UCT or fog observation"}
+{"ts":"2026-07-25T05:10-05:00","focus":"richer-mcts-agents","summary":"UCT tree-search agent landed; resolved richer-mcts-agents","next":"observation-fog-radius or hit-miss-aware-agents"}

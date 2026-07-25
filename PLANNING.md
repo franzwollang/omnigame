@@ -16,9 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Graph topology foothold landed (`grid.topology =
-"graph"` + Graph Connect Lite). Hand off to remaining post-roadmap gaps (richer
-agents, fog observation, library depth).
+**Optimizing for this phase:** UCT tree-search agent landed (`src/agents/uct.ts`).
+Hand off to fog-radius observation and/or hit/miss-aware agents; optional library
+depth.
 
 ## Decisions (locked)
 
@@ -73,10 +73,10 @@ Working sandbox slice (see README “Current implementation status”):
 - Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
-  `src/agents/` random / greedy / tiny MCTS on kernel only
+  `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: richer UCT/partial-info agents, placement-phase / multi-ship Battleship,
+Not yet: hit/miss-aware agents, placement-phase / multi-ship Battleship,
 ko/full Go rules, fog radius, deeper library explorer UX.
 
 ## Milestone exit criteria
@@ -138,7 +138,8 @@ allowed by selection principle.
 
 **Done:** `explainAction` + `highlightCellsForActions`; sandbox legal overlay +
 why-illegal + full event log; `src/agents/` random/greedy/tiny MCTS + Agent step.
-Hand off to M7.
+Post-M6 depth: UCT (`createUctAgent`) with tree reuse landed; hit/miss-aware
+agents still open.
 
 ### M7 — Library explorer
 
@@ -146,8 +147,8 @@ Hand off to M7.
 
 **Done:** `src/library/` (`sample` / `assessPlayability` / `exploreLibrary`) +
 sandbox Library modal (load playable finds). Heuristics: compile → opening
-legality → short random playout. Post-M7: graph topology landed; hand off to
-richer agents / fog observation / library depth.
+legality → short random playout. Post-M7: graph topology + UCT agent landed;
+hand off to fog observation / hit-miss agents / library depth.
 
 ## Sequencing notes
 

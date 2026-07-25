@@ -43,8 +43,7 @@ function stateFingerprint(state: GameState): string {
 		state.currentPlayer,
 		state.moveCount,
 		state.winner ?? "",
-		state.generation ?? "",
-		state.passCount ?? "",
+		state.consecutivePasses ?? "",
 		state.grid.cells.join(",")
 	].join("|");
 }
@@ -129,7 +128,7 @@ function selectChild(
 	const maximize = toMove === rootPlayer;
 	let best: UctNode | null = null;
 	let bestScore = Number.NEGATIVE_INFINITY;
-	for (const child of node.children.values()) {
+	for (const child of Array.from(node.children.values())) {
 		if (child.visits === 0) {
 			return child;
 		}
@@ -193,14 +192,14 @@ function findReuseRoot(start: UctNode | null, fingerprint: string): UctNode | nu
 			n.actionFromParent = null;
 			return n;
 		}
-		for (const child of n.children.values()) queue.push(child);
+		for (const child of Array.from(n.children.values())) queue.push(child);
 	}
 	return null;
 }
 
 function bestRootAction(root: UctNode): KernelAction | null {
 	let best: UctNode | null = null;
-	for (const child of root.children.values()) {
+	for (const child of Array.from(root.children.values())) {
 		if (!best || child.visits > best.visits) best = child;
 	}
 	return best?.actionFromParent ?? null;

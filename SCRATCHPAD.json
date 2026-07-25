@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T04:50-05:00",
-  "turn": 16,
+  "updated_at": "2026-07-25T05:10-05:00",
+  "turn": 17,
   "focus": {
     "milestone": "post-M7",
-    "issue": "richer-mcts-agents",
-    "goal": "UCT or hit/miss-aware kernel agent"
+    "issue": "observation-fog-radius",
+    "goal": "Fog/radius observation or hit/miss-aware agent"
   },
   "recent": [
-    "Synced b13a (M0–M7) onto 3263",
-    "Graph topology: schema nodes/edges + Graph Connect Lite"
+    "Synced 3263 (M0–M7 + graph) onto 23ff",
+    "UCT agent: UCB1 tree + reuse; sandbox uct option"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "Graph wins use composite path walk over neighborsOf"
+    "UCT values stay root-perspective; maximize/minimize by side-to-move"
   ],
   "open_threads": [
-    "Next: richer MCTS/UCT or fog observation"
+    "Next: fog-radius observation or hit-miss-aware agent"
   ],
-  "next_step": "Implement UCT tree-search agent or hit/miss-aware baseline + tests",
+  "next_step": "Implement observation fog/radius seam + preset/tests, or hit/miss agent",
   "blockers": []
 }

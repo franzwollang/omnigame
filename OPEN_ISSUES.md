@@ -6,18 +6,6 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ## Immediate (post-M7)
 
-### richer-mcts-agents
-
-M6 landed random / greedy / tiny flat MCTS. Optional depth: UCT tree search
-and/or partial-info agents for hit/miss games.
-
-**Acceptance:**
-
-- [ ] At least one stronger agent than flat MCTS (e.g. UCT with tree reuse) **or**
-      a hit/miss-aware baseline that uses observations
-- [ ] Agents remain kernel-only (`legalActions` + `stepSync`)
-- [ ] Tests cover a short scripted match or playout smoke
-
 ### observation-fog-radius
 
 Hit/miss + Battleship-lite landed. Remaining observation depth: fog radius and/or
@@ -28,6 +16,18 @@ placement-phase / multi-ship Battleship if still desired.
 - [ ] Schema + kernel observation path for a fog/radius (or placement-phase) model
 - [ ] Preset or transcript proving the new observation seam
 - [ ] Sandbox or agent path can consume the richer observation
+
+### hit-miss-aware-agents
+
+UCT landed for full-info games. Hit/miss configs still fall back to uniform
+random inside MCTS/UCT. Optional: a baseline that uses `kernel.observe` (hunt
+mode after hits, parity shooting, etc.).
+
+**Acceptance:**
+
+- [ ] Agent uses observations (not full hidden fleet) to choose `fire` actions
+- [ ] Kernel-only (`legalActions` + `stepSync` + `observe`)
+- [ ] Smoke test on Battleship-lite
 
 ---
 
