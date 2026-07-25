@@ -8,10 +8,13 @@ export const zConfig = z
 				width: z.number().int().positive(),
 				height: z.number().int().positive(),
 				topology: z.literal("rectangle"),
-				wrap: z.boolean()
+				// wrap deferred to M1+ GameKernel; only false is accepted today
+				wrap: z.literal(false)
 			})
 			.strict(),
-		turn: z.object({ mode: z.enum(["turn", "realtime"]) }).strict(),
+		// realtime deferred to M1+; only turn-based is supported
+		turn: z.object({ mode: z.literal("turn") }).strict(),
+		// seed consumed by Effect RNG helpers; engine stepping not yet seeded
 		rng: z.object({ seed: z.number() }).strict(),
 		input: z
 			.object({
@@ -25,14 +28,14 @@ export const zConfig = z
 				gravity: z
 					.object({
 						enabled: z.boolean().default(false),
-						direction: z.enum(["down", "up", "left", "right"]).default("down"),
-						wrap: z.boolean().default(false)
+						// non-down directions deferred to M1+
+						direction: z.literal("down").default("down"),
+						wrap: z.literal(false).default(false)
 					})
 					.optional(),
 				capture: z.object({ enabled: z.boolean().default(false) }).optional(),
-				overflow: z
-					.enum(["reject", "pop_out_bottom", "pop_out_top"])
-					.default("reject")
+				// pop_out_top deferred to M1+
+				overflow: z.enum(["reject", "pop_out_bottom"]).default("reject")
 			})
 			.strict()
 			.default({ mode: "direct" as const, overflow: "reject" as const }),

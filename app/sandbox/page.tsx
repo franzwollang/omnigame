@@ -74,8 +74,8 @@ export default function GamePage() {
 		},
 		inputMode: (currentConfig as any)?.input?.mode ?? "cell",
 		placementMode: (currentConfig as any)?.placement?.mode ?? "direct",
-		gravityDirection:
-			(currentConfig as any)?.placement?.gravity?.direction ?? "down",
+		// Schema locks gravity to "down"; engine only implements down
+		gravityDirection: "down" as const,
 		captureEnabled: Boolean(
 			(currentConfig as any)?.placement?.capture?.enabled
 		),

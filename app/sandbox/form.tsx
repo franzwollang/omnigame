@@ -140,21 +140,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									))}
 								</div>
 							</div>
-							<FormField
-								control={form.control}
-								name="grid.wrap"
-								render={({ field }) => (
-									<FormItem className="flex flex-row gap-2 items-center space-y-0">
-										<FormControl>
-											<Checkbox
-												checked={field.value}
-												onCheckedChange={field.onChange}
-											/>
-										</FormControl>
-										<FormLabel className="font-normal">Wrap edges</FormLabel>
-									</FormItem>
-								)}
-							/>
+							<p className="text-xs text-muted-foreground">
+								Wrap edges and realtime turns are deferred to M1+ (schema
+								rejects unsupported values).
+							</p>
 							<FormField
 								control={form.control}
 								name="turn.mode"
@@ -162,16 +151,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<FormItem>
 										<FormLabel>Turn mode</FormLabel>
 										<FormControl>
-											<Select
-												value={field.value}
-												onValueChange={field.onChange}
-											>
+											<Select value={field.value} disabled>
 												<SelectTrigger>
-													<SelectValue placeholder="Select mode" />
+													<SelectValue placeholder="turn" />
 												</SelectTrigger>
 												<SelectContent>
 													<SelectItem value="turn">turn</SelectItem>
-													<SelectItem value="realtime">realtime</SelectItem>
 												</SelectContent>
 											</Select>
 										</FormControl>
@@ -192,6 +177,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												onChange={(e) => field.onChange(Number(e.target.value))}
 											/>
 										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Used by Effect RNG helpers; not yet wired into play
+											stepping.
+										</p>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -259,39 +248,19 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem>
 											<FormLabel>Gravity direction</FormLabel>
 											<FormControl>
-												<Select
-													value={field.value}
-													onValueChange={field.onChange}
-												>
+												<Select value={field.value ?? "down"} disabled>
 													<SelectTrigger>
-														<SelectValue placeholder="Select direction" />
+														<SelectValue placeholder="down" />
 													</SelectTrigger>
 													<SelectContent>
 														<SelectItem value="down">down</SelectItem>
-														<SelectItem value="up">up</SelectItem>
-														<SelectItem value="left">left</SelectItem>
-														<SelectItem value="right">right</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												Only down is implemented (up/left/right → M1+).
+											</p>
 											<FormMessage />
-										</FormItem>
-									)}
-								/>
-								<FormField
-									control={form.control}
-									name="placement.gravity.wrap"
-									render={({ field }) => (
-										<FormItem className="flex flex-row gap-2 items-center space-y-0">
-											<FormControl>
-												<Checkbox
-													checked={field.value}
-													onCheckedChange={field.onChange}
-												/>
-											</FormControl>
-											<FormLabel className="text-xs font-normal">
-												Wrap (gravity)
-											</FormLabel>
 										</FormItem>
 									)}
 								/>
@@ -314,12 +283,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="pop_out_bottom">
 															pop_out_bottom
 														</SelectItem>
-														<SelectItem value="pop_out_top">
-															pop_out_top
-														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												pop_out_top deferred to M1+.
+											</p>
 											<FormMessage />
 										</FormItem>
 									)}

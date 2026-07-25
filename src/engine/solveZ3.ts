@@ -10,27 +10,21 @@ export async function solveZ3Config(cfg: Config): Promise<Z3Result> {
 	// Enums as ints
 	const placement = Z3.Int.const("placement"); // 0=direct,1=gravity
 	const input = Z3.Int.const("input"); // 0=cell,1=column
-	const overflow = Z3.Int.const("overflow"); // 0=reject,1=pop_bottom,2=pop_top
+	const overflow = Z3.Int.const("overflow"); // 0=reject,1=pop_bottom
 
 	const s = new Z3.Solver();
 
 	// Domains
 	s.add(placement.ge(Z3.Int.val(0)), placement.le(Z3.Int.val(1)));
 	s.add(input.ge(Z3.Int.val(0)), input.le(Z3.Int.val(1)));
-	s.add(overflow.ge(Z3.Int.val(0)), overflow.le(Z3.Int.val(2)));
+	s.add(overflow.ge(Z3.Int.val(0)), overflow.le(Z3.Int.val(1)));
 
 	// Bind values from cfg
 	s.add(placement.eq(Z3.Int.val(cfg.placement.mode === "direct" ? 0 : 1)));
 	s.add(input.eq(Z3.Int.val(cfg.input.mode === "cell" ? 0 : 1)));
 	s.add(
 		overflow.eq(
-			Z3.Int.val(
-				cfg.placement.overflow === "reject"
-					? 0
-					: cfg.placement.overflow === "pop_out_bottom"
-					? 1
-					: 2
-			)
+			Z3.Int.val(cfg.placement.overflow === "reject" ? 0 : 1)
 		)
 	);
 
