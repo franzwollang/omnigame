@@ -39,7 +39,7 @@ These are built from the same shared schema and operators.
 - **Connect 4**
 - **Connect 4 (Pop Out)**
 - **Gomoku (5‑in‑a‑row)**
-- **Reversi / Othello** (capture enabled)
+- **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -49,23 +49,31 @@ In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 - Styling: Tailwind CSS, shadcn/ui
 - Validation/typing: Zod (runtime), TypeScript (static)
 - State/Forms: react-hook-form, fast-deep-equal (for JSON→form sync)
-- State machines: XState (to structure transitions and model compositions)
+- FP runtime: Effect (Effect.ts) — seeded RNG foothold in core; fuller Kernel migration in progress
 - Rendering: Three.js (board/camera), ResizeObserver
 - Editor: react-simple-code-editor + Prism.js
+- Tests: Vitest (engine transcript tests)
 - Package manager: pnpm
-- FP runtime (planned): Effect (Effect.ts) for FP primitives in core and runtime at edges
+- Optional SMT: z3-solver (server validation helper)
 
 ## Usage
 
-The canvas supports panning with mouse/touch (clamped to board) and zooming with wheel/pinch. `window.jumpPanTo(x, y)` is available for quick developer testing.
+The canvas supports panning with mouse/touch (clamped to board) and zooming with wheel/pinch.
 
 The editor provides live JSON + Zod validation. Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/dark mode (although no toggle added yet), and editor scroll position is preserved on format.
 
 The form fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`) with updates syncing two-ways with the editor.
 
+## Scripts
+
+- `pnpm run dev` — Next.js sandbox
+- `pnpm run build` / `start` — production
+- `pnpm run typecheck` / `lint`
+- `pnpm test` — Vitest engine transcripts
+
 ## Architecture notes (directional)
 
-The core follows pure functional principles with reducers (`State -> Event -> State`), a scheduler, and deterministic RNG. State transitions use XState statecharts to structure phases and keep compositions algebraic (operators on state always yield valid states).
+The core follows pure functional principles with reducers (`State -> Event -> State`). Deterministic RNG is available via Effect (`src/engine/rng.ts`); play stepping is not fully seeded yet. Turn phases use a small hand-rolled scaffold (`turnMachine.ts`); a richer Effect-backed `GameKernel` is the next milestone.
 
 The data-driven configuration uses declarative JSON as a control surface, with the dynamic form mirroring the nested schema. Adapters at the edges handle rendering (Three.js), input, and persistence.
 
@@ -75,15 +83,15 @@ Routing uses App Router with scroll-snap landing and URL replacement to reflect 
 
 OmniGame is actively evolving toward the “spec → compiler → kernel + IR” shape described below. The current sandbox already supports a useful (but intentionally small) slice of the primitive space:
 
-- **Topology**: rectangular grid only (`grid.topology = "rectangle"`)
+- **Topology**: rectangular grid only (`grid.topology = "rectangle"`); wrap is schema-locked to `false` until M1+
 - **Inputs**: cell-click and column-activation (`input.mode = "cell" | "column"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
-  - gravity placement with a direction (`placement.mode = "gravity"`, `gravity.direction`)
-  - overflow variants (Connect-4 PopOut style): `overflow = "reject" | "pop_out_bottom" | "pop_out_top"`
-- **Effects**: optional capture toggles (used for Reversi-like behavior)
+  - gravity placement **down only** (`placement.mode = "gravity"`, `gravity.direction = "down"`)
+  - overflow: `reject` | `pop_out_bottom` (bottom pop-out column action)
+- **Effects**: optional capture toggles (Capture / Flip Demo)
 - **Objectives**: n-in-a-row win detection with configurable adjacency + length
-- **Determinism**: seeded RNG in config (used for reproducible runs as the runtime expands)
+- **Determinism**: `rng.seed` drives Effect RNG helpers; wiring into step/replay lands with GameKernel
 
 What’s **roadmap**, not fully realized yet: a stable `GameKernel` ABI boundary, a normalized `GameIR`, first-class observation models for partial information, and a larger library of reusable operators/constraints.
 

@@ -85,7 +85,7 @@ These are consumed by phase Hooks to ensure consistent semantics.
 
 - Static typing/refinements (TypeScript): shapes and slot exclusivity
 - Schema refinements (Zod): reject invalid config combos early
-- Machine guards (XState): temporal/protocol enforcement
+- Machine guards / phases: temporal/protocol enforcement (hand-rolled scaffold today; Effect Kernel planned)
 - Bounded model checking (optional): SMT/TLA+ instances for specific 𝔽
 - Property-based tests: random valid configs + invariants
 

@@ -1,21 +1,20 @@
 {
-  "updated_at": "2026-07-24T23:50-05:00",
-  "turn": 3,
+  "updated_at": "2026-07-25T00:25-05:00",
+  "turn": 4,
   "focus": {
-    "milestone": "M0",
-    "issue": "effect-foothold",
-    "goal": "Honesty pass + install Effect foothold"
+    "milestone": "M1",
+    "issue": "game-kernel-abi",
+    "goal": "Scaffold GameKernel ABI on Effect"
   },
   "recent": [
-    "Enshrined mechanism-first reference selection in project-structure",
-    "M5/OPEN_ISSUES no longer treat references/ as a checklist"
+    "M0 done: schema narrowed, Effect RNG, Vitest, Reversi relabel, xstate removed"
   ],
   "discoveries": [
-    "Expanding plain reducer for all knobs before Effect would double work"
+    "Effect.gen + yield* needs downlevelIteration; pipe/flatMap foothold typechecks clean"
   ],
   "open_threads": [
-    "Still open: Reversi label vs fix; XState keep/drop; Vitest; next hero game"
+    "Residual: sandbox-type-looseness; contract-validation; server-validation-unwired"
   ],
-  "next_step": "User remaining clarifying Qs, or begin M0 (narrow schema + pnpm add effect)",
+  "next_step": "Typed Config→GameConfig adapter, then GameKernel initialState/legalActions/step",
   "blockers": []
 }
