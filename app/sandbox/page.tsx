@@ -15,7 +15,7 @@ import dynamic from "next/dynamic";
 import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
 import { formatKernelEvent } from "@/engine/kernel";
-import { toGameConfig } from "@/engine/toGameConfig";
+import { compileToGameConfig } from "@/compiler";
 import { validateConfig } from "@/engine/validateConfig";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,9 +63,9 @@ export default function GamePage() {
 	);
 	const [activeTab, setActiveTab] = useState<"form" | "json">("json");
 
-	// Typed Config → GameConfig adapter (no `as any`)
+	// Compiler owns Config→GameConfig (macros + flatten); sandbox does not.
 	const engineConfig = useMemo(
-		() => toGameConfig(currentConfig),
+		() => compileToGameConfig(currentConfig).gameConfig,
 		[currentConfig]
 	);
 	const playSeed = currentConfig?.rng?.seed ?? 0;
