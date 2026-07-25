@@ -50,6 +50,7 @@ function stateFingerprint(state: GameState): string {
 		state.koPoint
 			? `${state.koPoint.row},${state.koPoint.col}`
 			: "",
+		(state.positionHistory ?? []).join(";"),
 		state.phase ?? "combat",
 		state.fleetProgress
 			? `X:${state.fleetProgress.X.shipIndex}:${state.fleetProgress.X.done}:${state.fleetProgress.X.cells.map((c) => `${c.row},${c.col}`).join(";")}|O:${state.fleetProgress.O.shipIndex}:${state.fleetProgress.O.done}:${state.fleetProgress.O.cells.map((c) => `${c.row},${c.col}`).join(";")}`

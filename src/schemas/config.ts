@@ -98,10 +98,19 @@ export const zConfig = z
 						/** flip = Reversi sandwich; liberties = Go-lite group removal. */
 						mode: z.enum(["flip", "liberties"]).default("flip"),
 						/**
-						 * Simple (point) ko: forbid immediate recapture of a single
-						 * stone just captured. Only meaningful with mode = liberties.
+						 * Ko / superko for liberties games:
+						 * - false: off
+						 * - true | "point": simple (point) ko — forbid immediate
+						 *   recapture of a single stone just captured
+						 * - "positional": positional superko — forbid any prior
+						 *   public-board position (cells hash)
 						 */
-						ko: z.boolean().default(false)
+						ko: z
+							.union([
+								z.boolean(),
+								z.enum(["point", "positional"])
+							])
+							.default(false)
 					})
 					.strict()
 					.optional(),
@@ -241,9 +250,11 @@ export const zConfig = z
 		const captureEnabled = Boolean(cfg.placement.capture?.enabled);
 		const captureMode = cfg.placement.capture?.mode ?? "flip";
 		const libertyCapture = captureEnabled && captureMode === "liberties";
-		const koEnabled = cfg.placement.capture?.ko === true;
+		const koRaw = cfg.placement.capture?.ko;
+		const koOn =
+			koRaw === true || koRaw === "point" || koRaw === "positional";
 
-		if (koEnabled && !libertyCapture) {
+		if (koOn && !libertyCapture) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["placement", "capture", "ko"],

@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 import { compileConfig } from "@/compiler";
 import {
 	applyLibertyCapture,
+	boardPositionHash,
 	countLiberties,
 	findGroup,
 	isLegalLibertyPlace,
 	orthogonalNeighbors,
-	scoreArea
+	scoreArea,
+	simulateLibertyPlace
 } from "@/engine/liberties";
 import { createInitialState, type GameConfig } from "@/engine/reducer";
 import { getCell, setCell, type Grid } from "@/engine/types";
@@ -116,6 +118,28 @@ describe("liberties helpers", () => {
 		).toBe(true);
 	});
 
+	it("positional superko forbids recreating a hashed board without koPoint", () => {
+		let g = gridOf(3, 3, Array(9).fill(null));
+		g = { ...g, cells: setCell(g, { row: 0, col: 0 }, "X") };
+		const pos = { row: 1, col: 1 };
+		const simulated = simulateLibertyPlace(g, pos, "O");
+		expect(simulated).not.toBeNull();
+		const hash = boardPositionHash({ ...g, cells: simulated!.cells });
+		expect(
+			isLegalLibertyPlace(g, pos, "O", false, {
+				koRule: "positional",
+				positionHistory: [hash]
+			})
+		).toBe(false);
+		expect(
+			isLegalLibertyPlace(g, pos, "O", false, {
+				koRule: "point",
+				koPoint: null,
+				positionHistory: [hash]
+			})
+		).toBe(true);
+	});
+
 	it("scores stones plus enclosed territory", () => {
 		// X owns left column + enclosed empties on left of a wall
 		let g = gridOf(3, 2, Array(6).fill(null));
@@ -136,12 +160,27 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(gameConfig.captureEnabled).toBe(true);
 		expect(gameConfig.captureMode).toBe("liberties");
 		expect(gameConfig.koEnabled).toBe(true);
+		expect(gameConfig.koRule).toBe("point");
 		expect(gameConfig.objectiveMode).toBe("area_control");
 		const state = kernel.initialState(cfg.rng.seed);
 		expect(state.koPoint).toBeNull();
+		expect(state.positionHistory).toBeUndefined();
 		const legal = kernel.legalActions(state, 0);
 		expect(legal.some((a) => a.type === "pass")).toBe(true);
 		expect(legal.some((a) => a.type === "place")).toBe(true);
+	});
+
+	it("validates and compiles the go-lite-superko preset", () => {
+		const cfg = examplePresets["go-lite-superko"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.koRule).toBe("positional");
+		expect(gameConfig.koEnabled).toBe(true);
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(state.koPoint).toBeNull();
+		expect(state.positionHistory).toEqual([
+			boardPositionHash(state.grid)
+		]);
 	});
 
 	it("rejects capture.ko without liberties mode", () => {
@@ -294,6 +333,95 @@ describe("Go Lite (liberties + area_control)", () => {
 		).toBe(false);
 	});
 
+	it("enforces positional superko: immediate cycle illegal; history grows; pass keeps history", () => {
+		const cfg = structuredClone(examplePresets["go-lite-superko"].config);
+		cfg.initial = [
+			{ row: 0, col: 1, player: "X", visibility: "public" },
+			{ row: 0, col: 2, player: "O", visibility: "public" },
+			{ row: 1, col: 0, player: "X", visibility: "public" },
+			{ row: 1, col: 1, player: "O", visibility: "public" },
+			{ row: 1, col: 3, player: "O", visibility: "public" },
+			{ row: 2, col: 1, player: "X", visibility: "public" },
+			{ row: 2, col: 2, player: "O", visibility: "public" }
+		];
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		const initialHash = boardPositionHash(state.grid);
+		expect(state.positionHistory).toEqual([initialHash]);
+
+		const capture: KernelAction = {
+			type: "place",
+			position: { row: 1, col: 2 }
+		};
+		state = kernel.stepSync(state, capture).nextState;
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe(null);
+		expect(state.koPoint).toBeNull();
+		expect(state.positionHistory).toHaveLength(2);
+		expect(state.positionHistory![0]).toBe(initialHash);
+		expect(state.positionHistory![1]).toBe(boardPositionHash(state.grid));
+
+		const recapture: KernelAction = {
+			type: "place",
+			position: { row: 1, col: 1 }
+		};
+		expect(
+			kernel.legalActions(state, 1).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 1
+			)
+		).toBe(false);
+		const ignored = kernel.stepSync(state, recapture);
+		expect(ignored.events[0]).toMatchObject({
+			type: "ignored",
+			reason: "superko"
+		});
+		expect(ignored.nextState).toBe(state);
+
+		const histAfterCapture = state.positionHistory!.length;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.positionHistory).toHaveLength(histAfterCapture);
+		expect(state.currentPlayer).toBe("X");
+
+		// Rebuild for the retake path (no pass): elsewhere clears the 2-cycle
+		state = kernel.initialState(cfg.rng.seed);
+		state = kernel.stepSync(state, capture).nextState;
+		const elsewhere: KernelAction = {
+			type: "place",
+			position: { row: 4, col: 4 }
+		};
+		state = kernel.stepSync(state, elsewhere).nextState;
+		const xElsewhere: KernelAction = {
+			type: "place",
+			position: { row: 4, col: 0 }
+		};
+		state = kernel.stepSync(state, xElsewhere).nextState;
+		expect(
+			kernel.legalActions(state, 1).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 1
+			)
+		).toBe(true);
+		state = kernel.stepSync(state, recapture).nextState;
+		expect(getCell(state.grid, { row: 1, col: 2 })).toBe(null);
+		expect(state.positionHistory!.length).toBe(5);
+
+		const script: KernelAction[] = [
+			capture,
+			elsewhere,
+			xElsewhere,
+			recapture
+		];
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.positionHistory).toEqual(
+			state.positionHistory
+		);
+	});
+
 	it("rejects unpaired liberties / area_control", () => {
 		const bad = structuredClone(examplePresets["go-lite"].config);
 		bad.objective.mode = "n_in_a_row";
@@ -382,11 +510,37 @@ describe("createInitialState consecutivePasses + koPoint", () => {
 			},
 			captureEnabled: true,
 			captureMode: "liberties",
+			koRule: "point",
 			koEnabled: true,
 			objectiveMode: "area_control"
 		};
 		const state = createInitialState(config);
 		expect(state.consecutivePasses).toBe(0);
 		expect(state.koPoint).toBeNull();
+		expect(state.positionHistory).toBeUndefined();
+	});
+
+	it("seeds positionHistory for positional superko", () => {
+		const config: GameConfig = {
+			gridWidth: 5,
+			gridHeight: 5,
+			winLength: 3,
+			adjacency: {
+				mode: "linear",
+				horizontal: true,
+				vertical: true,
+				backDiagonal: false,
+				forwardDiagonal: false
+			},
+			captureEnabled: true,
+			captureMode: "liberties",
+			koRule: "positional",
+			koEnabled: true,
+			objectiveMode: "area_control"
+		};
+		const state = createInitialState(config);
+		expect(state.positionHistory).toEqual([
+			boardPositionHash(state.grid)
+		]);
 	});
 });

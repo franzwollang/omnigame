@@ -31,9 +31,15 @@ export type GameState = {
 	/**
 	 * Simple (point) ko: intersection forbidden for the next place only.
 	 * Set when a single stone was just captured; cleared otherwise / on reset.
-	 * Pass does not clear (Go-correct).
+	 * Pass does not clear (Go-correct). Unused when koRule = positional.
 	 */
 	koPoint?: Position | null;
+	/**
+	 * Positional superko: hashes of prior public-board positions (cells only).
+	 * Seeded with the initial board; appended after each successful place.
+	 * Pass does not append (board unchanged).
+	 */
+	positionHistory?: string[];
 	/** Placement vs combat for fleet games; default combat when omitted. */
 	phase?: GamePhase;
 	/** Per-player ship placement progress when phase = placement. */

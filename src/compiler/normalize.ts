@@ -4,6 +4,7 @@
  */
 import type { Config } from "@/schemas/config";
 import type { GameConfig } from "@/engine/reducer";
+import type { KoRule } from "@/engine/liberties";
 import { expandMacros, type MacroExpansion } from "@/compiler/macros";
 import { buildGraphTopologyData } from "@/engine/topology";
 
@@ -23,12 +24,21 @@ export type NormalizeResult = {
 	expansions: MacroExpansion[];
 };
 
+function resolveKoRule(
+	ko: boolean | "point" | "positional" | undefined
+): KoRule {
+	if (ko === true || ko === "point") return "point";
+	if (ko === "positional") return "positional";
+	return "none";
+}
+
 /** Flatten a (possibly already expanded) Config into GameConfig. */
 export function flattenToGameConfig(config: Config): GameConfig {
 	const graph =
 		config.grid.topology === "graph" && config.grid.nodes && config.grid.edges
 			? buildGraphTopologyData(config.grid.nodes, config.grid.edges)
 			: undefined;
+	const koRule = resolveKoRule(config.placement.capture?.ko);
 	return {
 		gridWidth: config.grid.width,
 		gridHeight: config.grid.height,
@@ -43,7 +53,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		overflow: config.placement.overflow,
 		captureEnabled: Boolean(config.placement.capture?.enabled),
 		captureMode: config.placement.capture?.mode ?? "flip",
-		koEnabled: config.placement.capture?.ko === true,
+		koRule,
+		koEnabled: koRule !== "none",
 		observationMode: config.observation.mode,
 		fogRadius: config.observation.radius,
 		fogMetric: config.observation.metric,
@@ -82,6 +93,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	overflow: "reject",
 	captureEnabled: false,
 	captureMode: "flip",
+	koRule: "none",
 	koEnabled: false,
 	observationMode: "full",
 	fogRadius: 1,

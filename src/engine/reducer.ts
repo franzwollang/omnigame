@@ -14,8 +14,10 @@ import { applyCaptureIfAny } from "@/engine/capture";
 import {
 	applyLibertyCapture,
 	areaOutcome,
+	boardPositionHash,
 	isLegalLibertyPlace,
-	koPointFromCapture
+	koPointFromCapture,
+	type KoRule
 } from "@/engine/liberties";
 import { fleetDestroyed } from "@/engine/observation";
 import {
@@ -65,7 +67,9 @@ export type GameConfig = {
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
 	captureMode?: "flip" | "liberties";
-	/** Simple point-ko when captureMode = liberties. */
+	/** none | point (simple ko) | positional (superko). */
+	koRule?: KoRule;
+	/** Legacy alias: true when koRule is point or positional. */
 	koEnabled?: boolean;
 	observationMode?: "full" | "hit_miss" | "fog";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
@@ -99,6 +103,11 @@ function emptyGrid(width: number, height: number): Grid {
 	};
 }
 
+function resolveKoRule(config: GameConfig): KoRule {
+	if (config.koRule) return config.koRule;
+	return config.koEnabled ? "point" : "none";
+}
+
 function isBoardFull(grid: Grid, config: GameConfig): boolean {
 	const topology = config.topology ?? "rectangle";
 	if (topology === "graph" && config.graph) {
@@ -128,7 +137,12 @@ export function createInitialState(config: GameConfig): GameState {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
 	}
 
-	if (seeds.length === 0) return base;
+	if (seeds.length === 0) {
+		if (resolveKoRule(config) === "positional") {
+			base.positionHistory = [boardPositionHash(base.grid)];
+		}
+		return base;
+	}
 
 	let publicCells = base.grid.cells;
 	let hiddenCells = base.hidden?.cells;
@@ -165,6 +179,9 @@ export function createInitialState(config: GameConfig): GameState {
 	base.grid = { ...base.grid, cells: publicCells };
 	if (base.hidden && hiddenCells) {
 		base.hidden = { ...base.hidden, cells: hiddenCells };
+	}
+	if (resolveKoRule(config) === "positional") {
+		base.positionHistory = [boardPositionHash(base.grid)];
 	}
 	return base;
 }
@@ -447,13 +464,15 @@ function handlePlace(
 		Boolean(config.captureEnabled) && captureMode === "liberties";
 
 	const wrap = config.gridWrap === true;
+	const koRule = resolveKoRule(config);
 
-	// Go-lite: empty + no suicide after opponent group capture (+ optional ko)
+	// Go-lite: empty + no suicide after opponent group capture (+ optional ko/superko)
 	if (libertyMode) {
 		if (
 			!isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
-				koEnabled: config.koEnabled === true,
-				koPoint: state.koPoint
+				koRule,
+				koPoint: state.koPoint,
+				positionHistory: state.positionHistory
 			})
 		) {
 			return state;
@@ -476,6 +495,7 @@ function handlePlace(
 	// Effect: place current player's mark
 	let newCells = setCell(state.grid, pos, state.currentPlayer);
 	let nextKoPoint: Position | null = null;
+	let nextHistory = state.positionHistory;
 	if (libertyMode) {
 		const capture = applyLibertyCapture(
 			{ ...state.grid, cells: newCells },
@@ -485,9 +505,7 @@ function handlePlace(
 		);
 		newCells = capture.cells;
 		nextKoPoint =
-			config.koEnabled === true
-				? koPointFromCapture(capture.removed)
-				: null;
+			koRule === "point" ? koPointFromCapture(capture.removed) : null;
 	} else if (config.captureEnabled) {
 		newCells = applyCaptureIfAny(
 			{ ...state.grid, cells: newCells },
@@ -499,6 +517,12 @@ function handlePlace(
 	}
 	const newMoveCount = state.moveCount + 1;
 	const newGrid = { ...state.grid, cells: newCells };
+	if (libertyMode && koRule === "positional") {
+		nextHistory = [
+			...(state.positionHistory ?? []),
+			boardPositionHash(newGrid)
+		];
+	}
 
 	// Open-ended demos (Life Lite): place seeds without win/turn flip
 	if ((config.objectiveMode ?? "n_in_a_row") === "none") {
@@ -506,7 +530,8 @@ function handlePlace(
 			...state,
 			grid: newGrid,
 			moveCount: newMoveCount,
-			koPoint: nextKoPoint
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
 		};
 	}
 
@@ -519,7 +544,8 @@ function handlePlace(
 			currentPlayer: nextPlayer,
 			moveCount: newMoveCount,
 			consecutivePasses: 0,
-			koPoint: nextKoPoint
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
 		};
 	}
 
@@ -540,7 +566,8 @@ function handlePlace(
 			status: "won",
 			winner: state.currentPlayer,
 			moveCount: newMoveCount,
-			koPoint: nextKoPoint
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
 		};
 	}
 
@@ -552,7 +579,8 @@ function handlePlace(
 			grid: newGrid,
 			status: "draw",
 			moveCount: newMoveCount,
-			koPoint: nextKoPoint
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
 		};
 	}
 
@@ -564,7 +592,8 @@ function handlePlace(
 		grid: newGrid,
 		currentPlayer: nextPlayer,
 		moveCount: newMoveCount,
-		koPoint: nextKoPoint
+		koPoint: nextKoPoint,
+		positionHistory: nextHistory
 	};
 }
 

@@ -49,6 +49,7 @@ These are built from the same shared schema and operators.
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
+- **Go Lite Superko** (positional superko — forbids repeating any prior board position)
 - **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
 - **Toroidal TTT** (`grid.wrap` rectangle)
 
@@ -116,7 +117,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: superko/full Go rules, hex/graph wrap,
+What’s **roadmap**, not fully realized yet: situational superko / full Go rules, hex/graph wrap,
 simultaneous/delayed actions, `pop_out_top` / horizontal pop-out, and a larger set of
 reusable operators/constraints.
 
@@ -347,7 +348,7 @@ Near-term milestones:
 - **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
 - **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
-- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **simple (point) ko** via `capture.ko` + `koPoint` state
+- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"` + `positionHistory`)
 - **Library explorer foothold**: sample/classify playable vs noise; load finds into sandbox
 - **Anchor games**: mechanism-first ports only — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations

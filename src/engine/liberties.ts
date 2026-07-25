@@ -1,11 +1,19 @@
 /**
  * Liberty / group-capture helpers (M5 Go-lite foothold).
  * Orthogonal connectivity only — enough for group capture + area scoring.
- * Optional simple (point) ko; suicide is illegal after resolving opponent captures.
+ * Optional point ko or positional superko; suicide is illegal after opponent captures.
  */
 import type { CellValue, Grid, Player, Position } from "@/engine/types";
 import { getCell, setCell, toIndex } from "@/engine/types";
 import { step } from "@/engine/adjacency";
+
+/** Ko / superko rule selected by config. */
+export type KoRule = "none" | "point" | "positional";
+
+/** Stable hash of the public board for positional superko. */
+export function boardPositionHash(grid: Grid): string {
+	return grid.cells.map((c) => (c == null ? "." : c)).join("");
+}
 
 const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
 	[-1, 0],
@@ -142,27 +150,33 @@ function samePoint(a: Position, b: Position): boolean {
 	return a.row === b.row && a.col === b.col;
 }
 
+export type LibertyPlaceOpts = {
+	/** Prefer over legacy koEnabled. */
+	koRule?: KoRule;
+	/** Legacy: true ≡ point ko when koRule omitted. */
+	koEnabled?: boolean;
+	koPoint?: Position | null;
+	/** Prior board hashes when koRule = positional. */
+	positionHistory?: readonly string[];
+};
+
+function resolveKoRule(opts?: LibertyPlaceOpts): KoRule {
+	if (opts?.koRule) return opts.koRule;
+	return opts?.koEnabled ? "point" : "none";
+}
+
 /**
- * Legal Go-lite placement: empty cell, not the active ko point (when enabled),
- * and after place + opponent capture the placer's group still has ≥1 liberty.
+ * Simulate place + opponent capture. Returns null if out of bounds, occupied,
+ * or the placer's group would have zero liberties (suicide).
  */
-export function isLegalLibertyPlace(
+export function simulateLibertyPlace(
 	grid: Grid,
 	pos: Position,
 	player: Player,
-	wrap: boolean = false,
-	opts?: { koEnabled?: boolean; koPoint?: Position | null }
-): boolean {
-	if (!inBounds(grid, pos)) return false;
-	if (getCell(grid, pos) !== null) return false;
-	if (
-		opts?.koEnabled &&
-		opts.koPoint != null &&
-		samePoint(pos, opts.koPoint)
-	) {
-		return false;
-	}
-
+	wrap: boolean = false
+): LibertyCaptureResult | null {
+	if (!inBounds(grid, pos)) return null;
+	if (getCell(grid, pos) !== null) return null;
 	const placedCells = setCell(grid, pos, player);
 	const afterCapture = applyLibertyCapture(
 		{ ...grid, cells: placedCells },
@@ -172,7 +186,40 @@ export function isLegalLibertyPlace(
 	);
 	const afterGrid: Grid = { ...grid, cells: afterCapture.cells };
 	const ownGroup = findGroup(afterGrid, pos, wrap);
-	return countLiberties(afterGrid, ownGroup, wrap) > 0;
+	if (countLiberties(afterGrid, ownGroup, wrap) <= 0) return null;
+	return afterCapture;
+}
+
+/**
+ * Legal Go-lite placement: empty cell, point-ko / positional-superko rules,
+ * and after place + opponent capture the placer's group still has ≥1 liberty.
+ */
+export function isLegalLibertyPlace(
+	grid: Grid,
+	pos: Position,
+	player: Player,
+	wrap: boolean = false,
+	opts?: LibertyPlaceOpts
+): boolean {
+	const koRule = resolveKoRule(opts);
+	if (
+		koRule === "point" &&
+		opts?.koPoint != null &&
+		samePoint(pos, opts.koPoint)
+	) {
+		return false;
+	}
+
+	const simulated = simulateLibertyPlace(grid, pos, player, wrap);
+	if (!simulated) return false;
+
+	if (koRule === "positional") {
+		const hash = boardPositionHash({ ...grid, cells: simulated.cells });
+		const history = opts?.positionHistory ?? [];
+		if (history.includes(hash)) return false;
+	}
+
+	return true;
 }
 
 export type AreaScore = { X: number; O: number };

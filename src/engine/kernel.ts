@@ -13,7 +13,7 @@ import {
 	type GameConfig
 } from "@/engine/reducer";
 import { applyCaptureIfAny } from "@/engine/capture";
-import { isLegalLibertyPlace } from "@/engine/liberties";
+import { isLegalLibertyPlace, type KoRule } from "@/engine/liberties";
 import { setCell } from "@/engine/types";
 import {
 	observe,
@@ -53,6 +53,7 @@ export type IllegalReason =
 	| "must_flip"
 	| "suicide"
 	| "ko"
+	| "superko"
 	| "own_ship"
 	| "column_full"
 	| "row_full"
@@ -261,6 +262,11 @@ function applyStep(
 	};
 }
 
+function resolveKoRule(config: GameConfig): KoRule {
+	if (config.koRule) return config.koRule;
+	return config.koEnabled ? "point" : "none";
+}
+
 function columnHasSpace(
 	state: GameState,
 	col: number,
@@ -296,8 +302,9 @@ function canPlaceCell(
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
 		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
-			koEnabled: config.koEnabled === true,
-			koPoint: state.koPoint
+			koRule: resolveKoRule(config),
+			koPoint: state.koPoint,
+			positionHistory: state.positionHistory
 		});
 	}
 	const placedCells = setCell(state.grid, pos, state.currentPlayer);
@@ -463,20 +470,36 @@ function placeFailureReason(
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
+		const koRule = resolveKoRule(config);
 		if (
-			config.koEnabled === true &&
+			koRule === "point" &&
 			state.koPoint != null &&
 			state.koPoint.row === pos.row &&
 			state.koPoint.col === pos.col
 		) {
 			return "ko";
 		}
-		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
-			koEnabled: config.koEnabled === true,
-			koPoint: state.koPoint
-		})
-			? null
-			: "suicide";
+		if (
+			isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
+				koRule,
+				koPoint: state.koPoint,
+				positionHistory: state.positionHistory
+			})
+		) {
+			return null;
+		}
+		// Distinguish positional superko from suicide when the cell is empty
+		if (koRule === "positional" && getCell(state.grid, pos) === null) {
+			const withoutHistory = isLegalLibertyPlace(
+				state.grid,
+				pos,
+				state.currentPlayer,
+				wrap,
+				{ koRule: "none" }
+			);
+			if (withoutHistory) return "superko";
+		}
+		return "suicide";
 	}
 	const placedCells = setCell(state.grid, pos, state.currentPlayer);
 	const after = applyCaptureIfAny(
@@ -503,6 +526,8 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 			return "Placement would leave a group with no liberties";
 		case "ko":
 			return "Immediate recapture of the last captured stone is forbidden";
+		case "superko":
+			return "Move would repeat a previous board position (positional superko)";
 		case "own_ship":
 			return "Cannot fire on your own ship";
 		case "column_full":
