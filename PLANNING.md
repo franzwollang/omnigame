@@ -8,7 +8,7 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | ID | Milestone | Status |
 |---|---|---|
 | M0 | Honesty pass + Effect foothold | `done` |
-| M1 | GameKernel ABI + Effect core + event transcripts | `not started` |
+| M1 | GameKernel ABI + Effect core + event transcripts | `in progress` |
 | M2 | GameIR + deterministic replay | `not started` |
 | M3 | Compiler / normalize / macro expansion | `not started` |
 | M4 | Observation primitive + Battleship-lite | `not started` |
@@ -16,8 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** introduce a thin `GameKernel` ABI and move stepping /
-legal-actions behind Effect so deferred knobs (wrap, non-down gravity, etc.) land once.
+**Optimizing for this phase:** wire sandbox through the `GameKernel` scaffold
+(`src/engine/kernel.ts`) and finish residual validation honesty so play and
+checks share one ABI.
 
 ## Decisions (locked)
 
@@ -61,8 +62,8 @@ Working sandbox slice (see README “Current implementation status”):
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript tests (TTT / Connect 4 / capture)
 
-Not yet: `GameKernel` / `GameIR`, compiler, observation, hex/graph, seeded play stepping,
-wired XState (removed), library explorer.
+Not yet: sandbox-on-kernel wiring, `GameIR`, compiler, observation, hex/graph, seeded play
+stepping, wired XState (removed), library explorer. Kernel scaffold: `src/engine/kernel.ts`.
 
 ## Milestone exit criteria
 

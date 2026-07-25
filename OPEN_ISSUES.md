@@ -4,19 +4,18 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ---
 
-## Immediate (post-M0 residual / M1 prep)
+## Immediate (M1 in progress)
 
-### sandbox-type-looseness
+### game-kernel-abi
 
-**Problem:** Sandbox / engine hook use `(config as any)` and `@ts-ignore` (e.g. pop-out),
-weakening the typed-config story.
+Scaffold exists (`src/engine/kernel.ts`: `initialState` / `legalActions` / `step` +
+`stepSync`). Remaining work to close M1:
 
-**Pointers:** `app/sandbox/page.tsx`, `src/engine/useGameEngine.ts`
+- Wire sandbox play through the kernel (thin `useGameEngine` to consume `step` events)
+- Prefer Effect composition at edges; keep reducer pure until features migrate
+- Deferred knobs (wrap, non-down gravity, etc.) implement behind this ABI—not the old path
 
-**Acceptance:**
-
-- [ ] Engine config type covers pop-out and other used fields without ignores
-- [ ] Sandbox maps `Config` → engine input without `any` (or with a single typed adapter)
+**Acceptance:** See `PLANNING.md` M1 exit criteria.
 
 ### contract-validation-coverage
 
@@ -41,15 +40,7 @@ sandbox UI; client only runs `zConfig.safeParse`.
 
 ---
 
-## Near-term (M1–M2)
-
-### game-kernel-abi
-
-Introduce a stable `GameKernel`-shaped boundary (`initialState`, `legalActions`, `step`
-returning events). Move stepping into Effect-backed core; sandbox consumes events.
-Deferred schema knobs (wrap, gravity dirs, etc.) implement here—not in the pre-kernel reducer.
-
-**Acceptance:** See `PLANNING.md` M1 exit criteria.
+## Near-term (M2)
 
 ### game-ir-replay
 

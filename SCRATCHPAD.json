@@ -1,20 +1,21 @@
 {
-  "updated_at": "2026-07-25T00:25-05:00",
-  "turn": 4,
+  "updated_at": "2026-07-25T00:45-05:00",
+  "turn": 5,
   "focus": {
     "milestone": "M1",
     "issue": "game-kernel-abi",
-    "goal": "Scaffold GameKernel ABI on Effect"
+    "goal": "Wire sandbox play through GameKernel"
   },
   "recent": [
-    "M0 done: schema narrowed, Effect RNG, Vitest, Reversi relabel, xstate removed"
+    "Resolved sandbox-type-looseness via toGameConfig",
+    "Scaffolded GameKernel (legalActions/step) + tests"
   ],
   "discoveries": [
-    "Effect.gen + yield* needs downlevelIteration; pipe/flatMap foothold typechecks clean"
+    "Effect.gen needs downlevelIteration; prefer pipe/flatMap/sync"
   ],
   "open_threads": [
-    "Residual: sandbox-type-looseness; contract-validation; server-validation-unwired"
+    "Residual: contract-validation; server-validation-unwired"
   ],
-  "next_step": "Typed Config→GameConfig adapter, then GameKernel initialState/legalActions/step",
+  "next_step": "Thin useGameEngine to call kernel.step; surface events in sandbox",
   "blockers": []
 }
