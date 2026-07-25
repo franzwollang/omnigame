@@ -18,7 +18,8 @@ export type GameConfig = {
 	adjacency: AdjacencyConfig;
 	inputMode?: "cell" | "column";
 	placementMode?: "direct" | "gravity";
-	gravityDirection?: "down" | "up" | "left" | "right";
+	/** Only `down` is supported until GameKernel (M1). */
+	gravityDirection?: "down";
 	captureEnabled?: boolean;
 	initial?: { row: number; col: number; player: Player }[];
 };

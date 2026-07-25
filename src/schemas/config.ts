@@ -1,5 +1,10 @@
 import { z } from "zod";
 
+/**
+ * Game config schema — narrowed to mechanics the plain reducer actually supports.
+ * Deferred knobs (wrap, realtime, non-down gravity, pop_out_top) return in M1+
+ * behind GameKernel + Effect.
+ */
 export const zConfig = z
 	.object({
 		metadata: z.object({ name: z.string(), version: z.number() }).strict(),
@@ -8,10 +13,16 @@ export const zConfig = z
 				width: z.number().int().positive(),
 				height: z.number().int().positive(),
 				topology: z.literal("rectangle"),
-				wrap: z.boolean()
+				/** Wrap edges — deferred until Kernel; must be false for now. */
+				wrap: z.literal(false)
 			})
 			.strict(),
-		turn: z.object({ mode: z.enum(["turn", "realtime"]) }).strict(),
+		turn: z
+			.object({
+				/** Realtime mode deferred until Kernel + scheduler. */
+				mode: z.literal("turn")
+			})
+			.strict(),
 		rng: z.object({ seed: z.number() }).strict(),
 		input: z
 			.object({
@@ -25,13 +36,15 @@ export const zConfig = z
 				gravity: z
 					.object({
 						enabled: z.boolean().default(false),
-						direction: z.enum(["down", "up", "left", "right"]).default("down"),
-						wrap: z.boolean().default(false)
+						/** Only `down` is implemented in the reducer today. */
+						direction: z.literal("down").default("down"),
+						/** Gravity wrap deferred until Kernel. */
+						wrap: z.literal(false).default(false)
 					})
 					.optional(),
 				capture: z.object({ enabled: z.boolean().default(false) }).optional(),
 				overflow: z
-					.enum(["reject", "pop_out_bottom", "pop_out_top"])
+					.enum(["reject", "pop_out_bottom"])
 					.default("reject")
 			})
 			.strict()

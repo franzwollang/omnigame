@@ -138,12 +138,12 @@ export const examplePresets: Record<string, ExamplePreset> = {
 	},
 	reversi: {
 		id: "reversi",
-		name: "Reversi / Othello",
-		tags: ["classic", "capture", "8x8"],
+		name: "Capture / Flip Demo",
+		tags: ["demo", "capture", "8x8"],
 		description:
-			"Sandwich opponent stones to flip them; valid move must capture at least one line.",
+			"Reversi-like flips on an 8×8 board. Demo only: ends via n-in-a-row (5), not true Othello pass/score rules.",
 		config: {
-			metadata: { name: "Reversi", version: 1 },
+			metadata: { name: "Capture Flip Demo", version: 1 },
 			grid: { width: 8, height: 8, topology: "rectangle", wrap: false },
 			turn: { mode: "turn" },
 			rng: { seed: 42 },
