@@ -70,8 +70,8 @@ export const Contracts = {
 	}),
 	InputTargetColumn: (): FeatureContract => ({
 		id: "InputTargetColumn",
-		requires: ["TargetLine"],
-		provides: [],
+		requires: [],
+		provides: ["TargetLine"],
 		slots: [],
 		hooks: ["validateInput"],
 		invariants: []
@@ -114,6 +114,24 @@ export const Contracts = {
 		provides: [],
 		slots: [],
 		hooks: ["applyEffects"],
+		invariants: []
+	}),
+	/** Base board always present: cells can be written by placement features. */
+	BoardWritable: (): FeatureContract => ({
+		id: "BoardWritable",
+		requires: [],
+		provides: ["CellsWritable"],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: []
+	}),
+	/** Gravity implies a vertical line axis (column drops / pop-out). */
+	GravityAxis: (): FeatureContract => ({
+		id: "GravityAxis",
+		requires: [],
+		provides: ["TargetLine"],
+		slots: [],
+		hooks: ["validateInput"],
 		invariants: []
 	}),
 	Capture: (): FeatureContract => ({

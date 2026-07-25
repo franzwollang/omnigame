@@ -12,18 +12,40 @@ export type ValidationResult = {
 	warnings?: string[];
 };
 
-function buildFeatureContracts(cfg: Config): FeatureContract[] {
+/** Build contracts for every feature the config actually selects. */
+export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	const features: FeatureContract[] = [];
-	// Base capabilities present
+
+	// Base board + adjacency (objectives and capture need them)
+	features.push(Contracts.BoardWritable());
+	features.push(Contracts.AdjacencyProvided());
+
+	// Input mode
+	if (cfg.input.mode === "cell") features.push(Contracts.InputTargetCell());
+	if (cfg.input.mode === "column") features.push(Contracts.InputTargetColumn());
+
 	// Placement policy
-	if (cfg.placement.mode === "direct")
+	if (cfg.placement.mode === "direct") {
 		features.push(Contracts.PlacementDirect());
-	if (cfg.placement.mode === "gravity")
+	}
+	if (cfg.placement.mode === "gravity") {
+		features.push(Contracts.GravityAxis());
 		features.push(Contracts.PlacementGravity());
+	}
+
+	// Overflow
+	if (cfg.placement.overflow === "reject") {
+		features.push(Contracts.OverflowReject());
+	} else if (cfg.placement.overflow === "pop_out_bottom") {
+		features.push(Contracts.OverflowPopOutBottom());
+	}
+
 	// Capture
 	if (cfg.placement.capture?.enabled) features.push(Contracts.Capture());
-	// End condition (n in a row)
+
+	// End condition (n-in-a-row is the only objective today)
 	features.push(Contracts.NInARow());
+
 	return features;
 }
 
@@ -38,12 +60,7 @@ export function validateConfig(cfg: unknown): ValidationResult {
 	const contracts = buildFeatureContracts(parsed.data);
 	const contractErrors = checkContracts(contracts);
 	if (contractErrors.length > 0) return { ok: false, errors: contractErrors };
-	// Optional warnings: initial seeds forming an immediate win
-	const warnings: string[] = [];
-	try {
-		// quick heuristic: if win.length = 1 (never true due to schema) or unrealistic seeds > 0 for now skip
-	} catch {}
-	return { ok: true, errors: [], warnings };
+	return { ok: true, errors: [], warnings: [] };
 }
 
 export type ZodLikeIssue = {
