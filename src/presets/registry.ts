@@ -265,6 +265,49 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"fog-connect-lite": definePreset({
+		id: "fog-connect-lite",
+		name: "Fog Connect Lite",
+		tags: ["observation", "fog", "radius", "partial-info", "5x5", "mechanism"],
+		description:
+			"n-in-a-row with fog-of-war: after your first stone, only cells within Chebyshev radius 1 of your pieces are visible. Unlocks fog radius observation.",
+		config: {
+			metadata: { name: "Fog Connect Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "fog", radius: 1, metric: "chebyshev" },
+			objective: { mode: "n_in_a_row" },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"step-race": definePreset({
 		id: "step-race",
 		name: "Step Race",

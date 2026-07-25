@@ -81,6 +81,7 @@ export default function GamePage() {
 	const {
 		state: gameState,
 		viewState,
+		observation,
 		eventLog,
 		actionLog,
 		selectedFrom,
@@ -484,6 +485,7 @@ export default function GamePage() {
 					highlightCells={highlightCells}
 					selectedCell={selectedFrom}
 					showLegalOverlay={showLegalOverlay}
+					fogVisible={observation.visible}
 					tokens={currentConfig?.tokens ?? []}
 					placements={currentConfig?.placements ?? []}
 				/>

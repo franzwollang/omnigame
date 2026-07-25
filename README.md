@@ -41,6 +41,7 @@ These are built from the same shared schema and operators.
 - **Gomoku (5‑in‑a‑row)**
 - **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
 - **Battleship Lite** (hit/miss observation + destroy_hidden)
+- **Fog Connect Lite** (fog-of-war radius observation + n-in-a-row)
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
@@ -102,14 +103,14 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity) or `hit_miss` (own fleet + public shots); Battleship-lite preset
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Fog Connect Lite presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync`), including UCT tree search
 - **Library explorer**: `src/library/` samples configs, scores playability (compile → opening legality → random playout), sandbox Library modal loads playable finds
 
-What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), ko/full Go rules, deeper library search UX / hit-miss-aware agents, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: placement-phase / multi-ship Battleship depth, ko/full Go rules, deeper library search UX / hit-miss-aware agents, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -333,7 +334,7 @@ Near-term milestones:
 - **Kernel/IR boundary**: formalize the `GameKernel` interface and introduce a stable `GameIR` for replay/logging
 - **Compiler stages**: validate/normalize specs and expand macros into primitive operators + constraints
 - **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
-- **Observation support**: hit/miss + Battleship-lite landed; fog radius / placement phase still open
+- **Observation support**: hit/miss + fog radius landed (Battleship-lite / Fog Connect Lite); placement-phase Battleship still open
 - **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
 - **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open

@@ -1,23 +1,24 @@
 {
-  "updated_at": "2026-07-25T05:10-05:00",
-  "turn": 17,
+  "updated_at": "2026-07-25T05:25-05:00",
+  "turn": 18,
   "focus": {
     "milestone": "post-M7",
-    "issue": "observation-fog-radius",
-    "goal": "Fog/radius observation or hit/miss-aware agent"
+    "issue": "hit-miss-aware-agents",
+    "goal": "Observation-aware fire agent for Battleship-lite"
   },
   "recent": [
-    "Synced 3263 (M0–M7 + graph) onto 23ff",
-    "UCT agent: UCB1 tree + reuse; sandbox uct option"
+    "Synced 23ff onto b701",
+    "Fog radius: observation.mode=fog + Fog Connect Lite",
+    "Sandbox consumes observation.visible as fog mask"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "UCT values stay root-perspective; maximize/minimize by side-to-move"
+    "Fog bootstrap: full vision until player has own pieces"
   ],
   "open_threads": [
-    "Next: fog-radius observation or hit-miss-aware agent"
+    "Next: hit-miss-aware agent or placement-phase Battleship"
   ],
-  "next_step": "Implement observation fog/radius seam + preset/tests, or hit/miss agent",
+  "next_step": "Implement hit/miss-aware agent using kernel.observe (hunt after hits)",
   "blockers": []
 }

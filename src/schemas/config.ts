@@ -105,10 +105,18 @@ export const zConfig = z
 			.default({ mode: "direct" as const, overflow: "reject" as const }),
 		observation: z
 			.object({
-				mode: z.enum(["full", "hit_miss"]).default("full")
+				mode: z.enum(["full", "hit_miss", "fog"]).default("full"),
+				/** Vision radius when mode = fog (ignored otherwise). */
+				radius: z.number().int().min(0).max(32).default(1),
+				/** Rectangle distance metric for fog; hex uses cube, graph uses BFS. */
+				metric: z.enum(["chebyshev", "manhattan"]).default("chebyshev")
 			})
 			.strict()
-			.default({ mode: "full" as const }),
+			.default({
+				mode: "full" as const,
+				radius: 1,
+				metric: "chebyshev" as const
+			}),
 		objective: z
 			.object({
 				mode: z
@@ -196,6 +204,7 @@ export const zConfig = z
 			cfg.placement.mode === "gravity" ||
 			cfg.placement.gravity?.enabled === true;
 		const hitMiss = cfg.observation.mode === "hit_miss";
+		const fog = cfg.observation.mode === "fog";
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
 		const reachRow = cfg.objective.mode === "reach_row";
 		const areaControl = cfg.objective.mode === "area_control";
@@ -579,6 +588,23 @@ export const zConfig = z
 				path: hitMiss ? ["objective", "mode"] : ["observation", "mode"],
 				message:
 					"observation.mode 'hit_miss' and objective.mode 'destroy_hidden' must be used together"
+			});
+		}
+
+		if (fog && destroyHidden) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["observation", "mode"],
+				message:
+					"observation.mode 'fog' is incompatible with objective.mode 'destroy_hidden'"
+			});
+		}
+
+		if (fog && manualTick) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["observation", "mode"],
+				message: "fog observation is incompatible with manual_tick"
 			});
 		}
 

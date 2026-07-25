@@ -47,6 +47,22 @@ describe("buildFeatureContracts", () => {
 		expect(battle.map((c) => c.id)).not.toContain("NInARow");
 		expect(battle.map((c) => c.id)).not.toContain("AdjacencyProvided");
 
+		const fog = buildFeatureContracts(
+			examplePresets["fog-connect-lite"].config
+		);
+		expect(fog.map((c) => c.id).sort()).toEqual(
+			[
+				"AdjacencyProvided",
+				"BoardWritable",
+				"InputTargetCell",
+				"NInARow",
+				"ObservationFog",
+				"OverflowReject",
+				"PlacementDirect"
+			].sort()
+		);
+		expect(checkContracts(fog)).toEqual([]);
+
 		const race = buildFeatureContracts(examplePresets["step-race"].config);
 		expect(race.map((c) => c.id).sort()).toEqual(
 			["BoardWritable", "InputMove", "ReachRow"].sort()

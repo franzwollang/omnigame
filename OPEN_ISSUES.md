@@ -6,17 +6,6 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ## Immediate (post-M7)
 
-### observation-fog-radius
-
-Hit/miss + Battleship-lite landed. Remaining observation depth: fog radius and/or
-placement-phase / multi-ship Battleship if still desired.
-
-**Acceptance:**
-
-- [ ] Schema + kernel observation path for a fog/radius (or placement-phase) model
-- [ ] Preset or transcript proving the new observation seam
-- [ ] Sandbox or agent path can consume the richer observation
-
 ### hit-miss-aware-agents
 
 UCT landed for full-info games. Hit/miss configs still fall back to uniform
@@ -28,6 +17,17 @@ mode after hits, parity shooting, etc.).
 - [ ] Agent uses observations (not full hidden fleet) to choose `fire` actions
 - [ ] Kernel-only (`legalActions` + `stepSync` + `observe`)
 - [ ] Smoke test on Battleship-lite
+
+### observation-placement-phase
+
+Fog radius landed (`observation.mode = fog` + Fog Connect Lite). Remaining
+Battleship depth: placement-phase / multi-ship authoring if still desired.
+
+**Acceptance:**
+
+- [ ] Schema + kernel path for a placement phase (or multi-ship) model
+- [ ] Preset or transcript proving the seam
+- [ ] Sandbox can author / play the phase without a forked engine
 
 ---
 

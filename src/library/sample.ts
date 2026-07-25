@@ -153,13 +153,38 @@ function sampleFlip(rng: SamplerRng, seed: number): ConfigInput {
 	return cfg;
 }
 
-type CoherentFamily = "n_in_a_row" | "gravity" | "hex" | "flip";
+/** Coherent fog-of-war + n-in-a-row. */
+function sampleFog(rng: SamplerRng, seed: number): ConfigInput {
+	const size = int(rng, 4, 6);
+	const length = int(rng, 3, Math.min(4, size));
+	const cfg = baseMeta(`Sample fog ${size}`, seed);
+	cfg.grid = { width: size, height: size, topology: "rectangle", wrap: false };
+	cfg.observation = {
+		mode: "fog",
+		radius: int(rng, 1, 2),
+		metric: pick(rng, ["chebyshev", "manhattan"] as const)
+	};
+	cfg.win = {
+		length,
+		adjacency: {
+			mode: "linear",
+			horizontal: true,
+			vertical: true,
+			backDiagonal: true,
+			forwardDiagonal: true
+		}
+	};
+	return cfg;
+}
+
+type CoherentFamily = "n_in_a_row" | "gravity" | "hex" | "flip" | "fog";
 
 const COHERENT_FAMILIES: readonly CoherentFamily[] = [
 	"n_in_a_row",
 	"gravity",
 	"hex",
-	"flip"
+	"flip",
+	"fog"
 ];
 
 function sampleCoherent(rng: SamplerRng, seed: number): ConfigInput {
@@ -173,6 +198,8 @@ function sampleCoherent(rng: SamplerRng, seed: number): ConfigInput {
 			return sampleHex(rng, seed);
 		case "flip":
 			return sampleFlip(rng, seed);
+		case "fog":
+			return sampleFog(rng, seed);
 	}
 }
 
@@ -192,7 +219,7 @@ function sampleNoise(rng: SamplerRng, seed: number): unknown {
 		"area_control",
 		"none"
 	] as const);
-	const observation = pick(rng, ["full", "hit_miss"] as const);
+	const observation = pick(rng, ["full", "hit_miss", "fog"] as const);
 	const topology = pick(rng, ["rectangle", "hex_offset"] as const);
 	const schedule = pick(rng, ["alternating", "manual_tick"] as const);
 	const captureOn = rng() > 0.5;

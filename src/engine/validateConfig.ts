@@ -70,6 +70,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.observation.mode === "hit_miss") {
 		features.push(Contracts.ObservationHitMiss());
 	}
+	if (cfg.observation.mode === "fog") {
+		features.push(Contracts.ObservationFog());
+	}
 	if (cfg.objective.mode === "destroy_hidden") {
 		features.push(Contracts.DestroyHidden());
 	} else if (cfg.objective.mode === "reach_row") {

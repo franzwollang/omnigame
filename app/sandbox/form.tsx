@@ -295,11 +295,67 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<SelectContent>
 														<SelectItem value="full">full</SelectItem>
 														<SelectItem value="hit_miss">hit_miss</SelectItem>
+														<SelectItem value="fog">fog</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												hit_miss projects per-player views (Battleship-lite).
+												hit_miss = Battleship-lite; fog = radius vision around
+												own pieces.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="observation.radius"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Fog radius</FormLabel>
+											<FormControl>
+												<Input
+													type="number"
+													value={field.value ?? 1}
+													onChange={(e) =>
+														field.onChange(Number(e.target.value))
+													}
+												/>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												Used when observation.mode = fog.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="observation.metric"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Fog metric</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value ?? "chebyshev"}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="chebyshev" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="chebyshev">
+															chebyshev
+														</SelectItem>
+														<SelectItem value="manhattan">
+															manhattan
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												Rectangle only; hex uses cube distance, graph uses
+												BFS hops.
 											</p>
 											<FormMessage />
 										</FormItem>

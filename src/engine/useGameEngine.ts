@@ -221,7 +221,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		return legalActionsList;
 	}, [legalActionsList]);
 
-	/** Current player's observation (full grid or projected hit/miss view). */
+	/** Current player's observation (full / hit-miss / fog projection). */
 	const observation = useMemo(
 		() => kernel.observe(state, kernel.currentPlayer(state)),
 		[kernel, state]

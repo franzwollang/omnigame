@@ -33,6 +33,11 @@ type Props = {
 	/** Selected piece for move-mode (M6). */
 	selectedCell?: Position | null;
 	showLegalOverlay?: boolean;
+	/**
+	 * Optional fog mask (same length as grid.cells). false ⇒ cell is fogged.
+	 * When omitted, all cells are treated as visible.
+	 */
+	fogVisible?: boolean[];
 	// token rendering
 	tokens?: {
 		id: string;
@@ -100,6 +105,7 @@ export default function SandboxCanvas({
 	highlightCells = [],
 	selectedCell = null,
 	showLegalOverlay = true,
+	fogVisible,
 	tokens = [],
 	placements = []
 }: Props) {
@@ -790,7 +796,7 @@ export default function SandboxCanvas({
 		}
 	}, [enablePopOutButtons, gameState.grid.width, gameState.grid.height]);
 
-	// Legal-move / selection overlay (tint cell hit meshes)
+	// Legal-move / selection / fog overlay (tint cell hit meshes)
 	useEffect(() => {
 		const meshes = cellMeshesRef.current;
 		if (!meshes.length) return;
@@ -805,10 +811,14 @@ export default function SandboxCanvas({
 				: null;
 		const isHex = isHexRef.current;
 		const isGraph = Boolean(graphRef.current);
+		const width = gameState.grid.width;
 		for (const mesh of meshes) {
 			const { row, col } = mesh.userData as { row: number; col: number };
 			const key = `${row},${col}`;
 			const mat = mesh.material as THREE.MeshBasicMaterial;
+			const idx = row * width + col;
+			const isFogged =
+				Array.isArray(fogVisible) && fogVisible[idx] === false;
 			if (selectedKey === key) {
 				mat.color.setHex(0xfbbf24);
 				mat.opacity = 0.45;
@@ -817,6 +827,10 @@ export default function SandboxCanvas({
 				mat.color.setHex(0x22c55e);
 				mat.opacity = isHex || isGraph ? 0.55 : 0.28;
 				mat.transparent = true;
+			} else if (isFogged) {
+				mat.color.setHex(0x64748b);
+				mat.opacity = isHex || isGraph ? 0.55 : 0.35;
+				mat.transparent = true;
 			} else {
 				mat.color.setHex(isHex || isGraph ? 0xe2e8f0 : 0xf8fafc);
 				mat.opacity = isHex || isGraph ? 0.9 : 0.01;
@@ -824,7 +838,14 @@ export default function SandboxCanvas({
 			}
 			mat.needsUpdate = true;
 		}
-	}, [highlightCells, selectedCell, showLegalOverlay, gameState.grid.cells]);
+	}, [
+		highlightCells,
+		selectedCell,
+		showLegalOverlay,
+		gameState.grid.cells,
+		gameState.grid.width,
+		fogVisible
+	]);
 
 	return (
 		<div ref={containerRef} className="flex relative flex-1 min-w-0 h-full">

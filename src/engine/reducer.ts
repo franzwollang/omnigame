@@ -54,7 +54,10 @@ export type GameConfig = {
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
 	captureMode?: "flip" | "liberties";
-	observationMode?: "full" | "hit_miss";
+	observationMode?: "full" | "hit_miss" | "fog";
+	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
+	fogRadius?: number;
+	fogMetric?: "chebyshev" | "manhattan";
 	objectiveMode?:
 		| "n_in_a_row"
 		| "destroy_hidden"

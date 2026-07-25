@@ -16,8 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** UCT tree-search agent landed (`src/agents/uct.ts`).
-Hand off to fog-radius observation and/or hit/miss-aware agents; optional library
+**Optimizing for this phase:** Fog-of-war radius observation landed
+(`observation.mode = fog`, Fog Connect Lite, sandbox fog mask). Hand off to
+hit/miss-aware agents and/or placement-phase Battleship depth; optional library
 depth.
 
 ## Decisions (locked)

@@ -43,6 +43,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		captureEnabled: Boolean(config.placement.capture?.enabled),
 		captureMode: config.placement.capture?.mode ?? "flip",
 		observationMode: config.observation.mode,
+		fogRadius: config.observation.radius,
+		fogMetric: config.observation.metric,
 		objectiveMode: config.objective.mode,
 		turnSchedule: config.turn.schedule,
 		scheduler: config.scheduler
@@ -75,6 +77,8 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	captureEnabled: false,
 	captureMode: "flip",
 	observationMode: "full",
+	fogRadius: 1,
+	fogMetric: "chebyshev",
 	objectiveMode: "n_in_a_row",
 	turnSchedule: "alternating",
 	initial: []

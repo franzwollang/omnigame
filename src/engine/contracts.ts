@@ -195,6 +195,14 @@ export const Contracts = {
 		hooks: ["validateInput"],
 		invariants: ["hidesOpponentFleet"]
 	}),
+	ObservationFog: (): FeatureContract => ({
+		id: "ObservationFog",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: ["projectObservation"],
+		invariants: ["hidesCellsOutsideRadius"]
+	}),
 	DestroyHidden: (): FeatureContract => ({
 		id: "DestroyHidden",
 		requires: ["CellsWritable"],
