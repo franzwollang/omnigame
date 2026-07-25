@@ -20,6 +20,8 @@ export type GameConfig = {
 	placementMode?: "direct" | "gravity";
 	/** Only `"down"` is implemented; other directions deferred to M1+. */
 	gravityDirection?: "down";
+	/** Bottom pop-out (Connect 4 Pop Out). `pop_out_top` deferred to M1+. */
+	overflow?: "reject" | "pop_out_bottom";
 	captureEnabled?: boolean;
 	initial?: { row: number; col: number; player: Player }[];
 };

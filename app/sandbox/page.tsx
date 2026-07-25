@@ -14,6 +14,7 @@ import SandboxCanvas from "./canvas";
 import dynamic from "next/dynamic";
 import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
+import { toGameConfig } from "@/engine/toGameConfig";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -60,35 +61,20 @@ export default function GamePage() {
 	);
 	const [activeTab, setActiveTab] = useState<"form" | "json">("json");
 
-	// Initialize game engine from config
-	const engineConfig = {
-		gridWidth: currentConfig?.grid.width ?? 3,
-		gridHeight: currentConfig?.grid.height ?? 3,
-		winLength: currentConfig?.win.length ?? 3,
-		adjacency: currentConfig?.win.adjacency ?? {
-			mode: "linear" as const,
-			horizontal: true,
-			vertical: true,
-			backDiagonal: true,
-			forwardDiagonal: true
-		},
-		inputMode: (currentConfig as any)?.input?.mode ?? "cell",
-		placementMode: (currentConfig as any)?.placement?.mode ?? "direct",
-		// Schema locks gravity to "down"; engine only implements down
-		gravityDirection: "down" as const,
-		captureEnabled: Boolean(
-			(currentConfig as any)?.placement?.capture?.enabled
-		),
-		initial: (currentConfig as any)?.initial ?? []
-	};
+	// Typed Config → GameConfig adapter (no `as any`)
+	const engineConfig = useMemo(
+		() => toGameConfig(currentConfig),
+		[currentConfig]
+	);
 	const {
 		state: gameState,
 		placeMove,
 		activateColumn,
-		// @ts-ignore pop out supported by engine hook
 		popOutColumn,
 		reset
 	} = useGameEngine(engineConfig);
+	const enablePopOut =
+		currentConfig?.placement.overflow === "pop_out_bottom";
 
 	const initialJson = useMemo(() => {
 		const preset = examplePresets["tic-tac-toe"];
@@ -304,18 +290,11 @@ export default function GamePage() {
 					gameState={gameState}
 					onCellClick={placeMove}
 					onActivateColumn={activateColumn}
-					enablePopOutButtons={
-						(currentConfig as any)?.placement?.overflow === "pop_out_bottom"
-					}
-					onPopOutColumn={
-						(currentConfig as any)?.placement?.overflow === "pop_out_bottom"
-							? (popOutColumn as any)
-							: undefined
-					}
-					inputMode={(currentConfig as any)?.input?.mode ?? "cell"}
-					// pass tokens/placements for rendering
-					tokens={(currentConfig as any)?.tokens ?? []}
-					placements={(currentConfig as any)?.placements ?? []}
+					enablePopOutButtons={enablePopOut}
+					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
+					inputMode={currentConfig?.input.mode ?? "cell"}
+					tokens={currentConfig?.tokens ?? []}
+					placements={currentConfig?.placements ?? []}
 				/>
 				{gameState.status !== "playing" && (
 					<div className="flex absolute inset-0 z-10 justify-center items-center p-6 pointer-events-none">

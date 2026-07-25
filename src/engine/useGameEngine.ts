@@ -33,6 +33,7 @@ export function useGameEngine(config: GameConfig) {
 		config.inputMode,
 		config.placementMode,
 		config.gravityDirection,
+		config.overflow,
 		config.captureEnabled,
 		config.initial ? config.initial.length : 0
 	]);
@@ -66,7 +67,7 @@ export function useGameEngine(config: GameConfig) {
 
 	const popOutColumn = useCallback(
 		(col: number) => {
-			dispatch({ type: "popOutColumn", col } as any);
+			dispatch({ type: "popOutColumn", col });
 		},
 		[dispatch]
 	);
