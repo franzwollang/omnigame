@@ -8,17 +8,18 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Hidden simultaneous** landed — `turn.commitReveal` + `commitPlace` +
-`GameState.committedPlacements` + Hidden Simultaneous TTT preset + tests.
-Open simultaneous (`commitReveal` omitted/false) unchanged. Pick the **next
-smallest** unlock the engine still lacks — not another recombination of covered
-primitives (see project-structure selection principle).
+**Hex/graph simultaneous** landed — schema allows `turn.schedule = simultaneous`
+on `hex_offset` | `graph`; Simultaneous Hex Connect Lite + Simultaneous Graph
+Connect Lite presets + tests; library hex/graph families may sample joint-place.
+Rectangle simultaneous / commitReveal unchanged. Pick the **next smallest**
+unlock the engine still lacks — not another recombination of covered primitives
+(see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- hex/graph simultaneous (extend beyond rectangle foothold)
-- delayed + gravity / multi-step composition (only if a new seam appears)
 - ordered simultaneous resolution / multi-action simultaneous rounds
+- delayed + gravity / multi-step composition (only if a new seam appears)
+- hidden simultaneous on hex/graph (composition only if a new observe/legal seam)
 
 **Acceptance:**
 
@@ -51,6 +52,7 @@ or be closed after the next agent green run on cloud.
 M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties,
 graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
 simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
-hex wrap, simultaneous schedule, multi-step `actionsPerTurn`, delayed
-`delayTurns`, and hidden simultaneous `commitReveal` also landed. Further ports
-only when a **new** missing mechanism appears — not a backlog.
+hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
+`actionsPerTurn`, delayed `delayTurns`, and hidden simultaneous `commitReveal`
+also landed. Further ports only when a **new** missing mechanism appears — not a
+backlog.

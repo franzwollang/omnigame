@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T11:05-05:00",
-  "turn": 14,
+  "updated_at": "2026-07-25T11:25-05:00",
+  "turn": 15,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after hidden simultaneous commitReveal"
+    "goal": "Hand off after hex/graph simultaneous"
   },
   "recent": [
-    "Synced b7a6 delayed-place tip onto 292d",
-    "Landed turn.commitReveal + commitPlace + Hidden Simultaneous TTT",
-    "observe hides opponent commit until joint reveal"
+    "Synced 292d hidden-simultaneous tip onto 35b4",
+    "Lifted simultaneous rectangle-only schema gate",
+    "Landed Simultaneous Hex/Graph Connect Lite + tests"
   ],
   "discoveries": [
-    "commitReveal extends simultaneous; joint resolve reused",
-    "stepPly under commitReveal commits both seats then reveals"
+    "Kernel joint-place already topology-aware; unlock was schema+presets",
+    "Graph mutual-win rounds draw; seed initial for solo-win transcripts"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick hex/graph simultaneous or ordered simultaneous",
+  "next_step": "Cloud agent: pick ordered simultaneous or next true new seam",
   "blockers": []
 }
