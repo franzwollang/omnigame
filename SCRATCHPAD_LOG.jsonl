@@ -43,3 +43,4 @@
 {"ts":"2026-07-25T18:10+00:00","focus":"in-turn phases","summary":"Landed turn.phases place→move + Place & Move Lite; 229 tests pass","next":"pick phases+attack / hex lift / or next true seam"}
 {"ts":"2026-07-25T13:25-05:00","focus":"next-missing-mechanism","summary":"place→fire in-turn phases + Place & Fire Lite; 237 tests green","next":"pick place→move→fire or next true seam"}
 {"ts":"2026-07-25T13:50-05:00","focus":"delayed-gravity","summary":"Synced 609c; landed delayed gravity resolution + Delayed Connect 4; hand off next mechanism","next":"pick simultaneous-move / place→move→fire / next true seam"}
+{"ts":"2026-07-25T19:15+00:00","focus":"simultaneous-move","summary":"Landed joint move resolve + Simultaneous Step Race; 260 tests green","next":"pick place→move→fire, diagonal/piece tables, or next true seam"}

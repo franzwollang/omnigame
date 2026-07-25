@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T13:50-05:00",
-  "turn": 22,
+  "updated_at": "2026-07-25T14:15-05:00",
+  "turn": 23,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after delayed gravity"
+    "goal": "Hand off after simultaneous move"
   },
   "recent": [
-    "Synced bb71 onto 609c tip",
-    "Landed delayed gravity + Delayed Connect 4",
-    "247 tests green; typecheck clean"
+    "Synced bb71 onto 3678 tip",
+    "Landed simultaneous move + Simultaneous Step Race",
+    "260 tests green; typecheck clean"
   ],
   "discoveries": [
-    "Delayed gravity = deferred settle, not fixed-cell queue",
-    "Rejected phases hex/graph + place→move→fire as larger/recombo"
+    "Joint move: pre-round canMove; same-dest conflict; no swap needed",
+    "Rejected place→move→fire as larger; deferred hex/graph joint move"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick simultaneous-move, place→move→fire, or next true seam",
+  "next_step": "Cloud agent: pick place→move→fire, diagonal/piece tables, or next true seam",
   "blockers": []
 }

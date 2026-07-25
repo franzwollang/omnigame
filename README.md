@@ -69,6 +69,7 @@ These are built from the same shared schema and operators.
 - **Delayed Connect 4** (delayed gravity: column intents settle at resolve time)
 - **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
 - **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
+- **Simultaneous Step Race** (`simultaneous` + `move` joint resolve; same-destination conflict)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -128,9 +129,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT cell
     reserve, or Delayed Connect 4 gravity settle-on-resolve)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite); `turn.resolveOrder = x_first | o_first` ordered same-cell priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite) or place→fire (Place & Fire Lite)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle (Simultaneous Step Race); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite) or place→fire (Place & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race / Simultaneous Step Race); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
@@ -139,7 +140,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, place→move→fire
-triple phases (dual-objective), simultaneous move, richer piece tables, and a
+triple phases (dual-objective), hex/graph simultaneous move, richer piece tables, and a
 larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
@@ -219,7 +220,7 @@ Design rule: constraints are **pure functions**; no hidden state mutation.
 Turn logic is declarative:
 
 - N players
-- schedule: alternating, simultaneous (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action rounds), or multi-step alternating
+- schedule: alternating, simultaneous place or move (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action place rounds), or multi-step alternating
 - phases: in-turn `turn.phases` (place→move, place→fire); game-long fleet placement → combat; place→move→fire / hex-graph phase lifts still expanding
 - action points / per-turn budgets
 
@@ -366,7 +367,7 @@ Near-term milestones:
 - **Compiler stages**: validate/normalize specs and expand macros into primitive operators + constraints
 - **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
 - **Observation support**: hit/miss + fog radius + fleet placement phase landed (Battleship-lite / Fog Connect Lite / Battleship Place)
-- **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
+- **Move foothold**: orthogonal step + reach_row (Step Race) landed; simultaneous joint move (Simultaneous Step Race) landed; richer piece tables / chase games still open
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
 - **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
 - **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"`) + **situational superko** (`ko: "situational"` + `board|side` history)

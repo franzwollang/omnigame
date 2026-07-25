@@ -8,17 +8,18 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Delayed gravity** landed — `placement.delayTurns` + gravity column/row
-intents (`PendingPlace.kind = column|row`) settle at resolve time + Delayed
-Connect 4 preset + tests. Distinct from Delayed TTT (fixed-cell queue). Pick
-the **next smallest** unlock the engine still lacks — not another
-recombination of covered primitives (see project-structure selection principle).
+**Simultaneous move** landed — `turn.schedule = simultaneous` +
+`input.mode = move` + `simultaneousMove` joint resolve + Simultaneous Step
+Race preset + tests. Distinct from place-only simultaneous and from
+alternating Step Race. Pick the **next smallest** unlock the engine still
+lacks — not another recombination of covered primitives (see project-structure
+selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
 - `turn.phases` place→move→fire (triple) — needs dual-objective routing
 - phases hex/graph lift (only if a new seam appears; kernel already topology-aware)
-- simultaneous move (joint move resolve; place-only today)
+- hex/graph simultaneous move (topology lift of joint move)
 - richer multi-phase game machines beyond fleet + in-turn phases
 - diagonal movement / richer piece tables
 
@@ -57,5 +58,6 @@ hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
 `actionsPerTurn` (rectangle + hex + graph), delayed `delayTurns` (direct cell +
 delayed gravity), hidden simultaneous `commitReveal`, ordered simultaneous
 `resolveOrder`, multi-action simultaneous (rectangle + hex + graph), in-turn
-`turn.phases` place→move, and place→fire also landed. Further ports only when a
-**new** missing mechanism appears — not a backlog.
+`turn.phases` place→move / place→fire, and simultaneous move (joint move
+resolve) also landed. Further ports only when a **new** missing mechanism
+appears — not a backlog.

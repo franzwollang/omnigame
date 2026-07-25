@@ -16,7 +16,7 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Delayed gravity landed (Delayed Connect 4).
+**Optimizing for this phase:** Simultaneous move landed (Simultaneous Step Race).
 Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
@@ -65,7 +65,7 @@ Working sandbox slice (see README “Current implementation status”):
   Double-Place Simultaneous TTT, Double-Place Simultaneous Hex,
   Double-Place Simultaneous Graph, Double Move TTT, Double Move Hex,
   Double Move Graph, Delayed TTT, Delayed Connect 4, Place & Move Lite,
-  Place & Fire Lite
+  Place & Fire Lite, Simultaneous Step Race
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -112,9 +112,12 @@ Working sandbox slice (see README “Current implementation status”):
 - **In-turn phases:** `turn.phases` (`["place","move"]` or `["place","fire"]`) +
   `GameState.turnPhaseIndex`; phase-routed legality; Place & Move Lite /
   Place & Fire Lite presets
+- **Simultaneous move:** `turn.schedule = simultaneous` + `input.mode = move` +
+  `simultaneousMove` joint resolve; same-destination conflict; reach_row win;
+  Simultaneous Step Race preset (rectangle; no multi-action / commitReveal)
 
 Not yet: full Go rules; place→move→fire triple phases (dual-objective); phases
-hex/graph lift; simultaneous move; richer piece tables.
+hex/graph lift; hex/graph simultaneous move; richer piece tables.
 
 ## Milestone exit criteria
 
