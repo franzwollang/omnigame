@@ -9,7 +9,7 @@ export type Capability =
 
 export type Slot =
 	| { type: "PlacementPolicy"; value: "direct" | "gravity" }
-	| { type: "EndCondition"; value: "nInARow" };
+	| { type: "EndCondition"; value: "nInARow" | "destroyHidden" };
 
 export type PhaseHook =
 	| "validateInput"
@@ -164,6 +164,22 @@ export const Contracts = {
 		requires: ["Adjacency"],
 		provides: [],
 		slots: [{ type: "EndCondition", value: "nInARow" }],
+		hooks: ["checkEnd"],
+		invariants: []
+	}),
+	ObservationHitMiss: (): FeatureContract => ({
+		id: "ObservationHitMiss",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["hidesOpponentFleet"]
+	}),
+	DestroyHidden: (): FeatureContract => ({
+		id: "DestroyHidden",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "destroyHidden" }],
 		hooks: ["checkEnd"],
 		invariants: []
 	})

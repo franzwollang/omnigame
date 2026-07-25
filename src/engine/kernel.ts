@@ -1,9 +1,8 @@
 /**
- * GameKernel ABI scaffold (M1).
+ * GameKernel ABI (M1+) with observation projection (M4).
  *
- * Wraps the existing pure reducer behind a stable boundary so sandbox, replay,
- * and agents can share one stepping surface. Stepping is Effect-backed at the
- * edge; legality still probes the reducer until a dedicated rules API lands.
+ * Wraps the pure reducer behind a stable boundary. Stepping is Effect-backed;
+ * legality probes the reducer / observation rules.
  */
 import { Effect } from "effect";
 import type { GameState, Player, Position } from "@/engine/types";
@@ -15,6 +14,11 @@ import {
 } from "@/engine/reducer";
 import { applyCaptureIfAny } from "@/engine/capture";
 import { setCell } from "@/engine/types";
+import {
+	observe,
+	type PlayerObservation,
+	type ShotResult
+} from "@/engine/observation";
 
 /** Numeric player ids per README GameKernel sketch (X=0, O=1). */
 export type PlayerId = 0 | 1;
@@ -23,11 +27,18 @@ export type Seed = number;
 
 export type KernelAction =
 	| { type: "place"; position: Position }
+	| { type: "fire"; position: Position }
 	| { type: "activateColumn"; col: number }
 	| { type: "popOutColumn"; col: number };
 
 export type KernelEvent =
 	| { type: "actionApplied"; action: KernelAction; player: Player }
+	| {
+			type: "shotResult";
+			position: Position;
+			result: ShotResult;
+			player: Player;
+	  }
 	| { type: "ignored"; action: KernelAction; reason: "illegal_or_noop" }
 	| { type: "terminal"; status: GameState["status"]; winner: Player | null };
 
@@ -41,6 +52,8 @@ export type StepResult = {
 	events: KernelEvent[];
 	terminal: boolean;
 	outcome?: GameOutcome;
+	/** Per-player views after the step (full or projected). */
+	observations: Record<PlayerId, PlayerObservation>;
 };
 
 export type GameKernel = {
@@ -48,6 +61,7 @@ export type GameKernel = {
 	initialState(seed?: Seed): GameState;
 	currentPlayer(state: GameState): PlayerId;
 	legalActions(state: GameState, player: PlayerId): KernelAction[];
+	observe(state: GameState, player: PlayerId): PlayerObservation;
 	/** Effect-backed step; sync helper available as `stepSync`. */
 	step(
 		state: GameState,
@@ -69,6 +83,8 @@ function formatAction(action: KernelAction): string {
 	switch (action.type) {
 		case "place":
 			return `place (${action.position.row},${action.position.col})`;
+		case "fire":
+			return `fire (${action.position.row},${action.position.col})`;
 		case "activateColumn":
 			return `column ${action.col}`;
 		case "popOutColumn":
@@ -81,6 +97,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 	switch (event.type) {
 		case "actionApplied":
 			return `${event.player}: ${formatAction(event.action)}`;
+		case "shotResult":
+			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
 		case "ignored":
 			return `ignored: ${formatAction(event.action)} (${event.reason})`;
 		case "terminal":
@@ -104,6 +122,17 @@ function outcomeOf(state: GameState): GameOutcome | undefined {
 	return { status: state.status, winner: state.winner };
 }
 
+function observationsFor(
+	config: GameConfig,
+	state: GameState,
+	lastShot?: { position: Position; result: ShotResult }
+): Record<PlayerId, PlayerObservation> {
+	return {
+		0: observe(config, state, "X", lastShot),
+		1: observe(config, state, "O", lastShot)
+	};
+}
+
 function applyStep(
 	config: GameConfig,
 	state: GameState,
@@ -115,12 +144,29 @@ function applyStep(
 			nextState: state,
 			events: [{ type: "ignored", action, reason: "illegal_or_noop" }],
 			terminal: state.status !== "playing",
-			outcome: outcomeOf(state)
+			outcome: outcomeOf(state),
+			observations: observationsFor(config, state)
 		};
 	}
+
 	const events: KernelEvent[] = [
 		{ type: "actionApplied", action, player: state.currentPlayer }
 	];
+
+	let lastShot: { position: Position; result: ShotResult } | undefined;
+	if (action.type === "fire") {
+		const marked = getCell(nextState.grid, action.position);
+		if (marked === "hit" || marked === "miss") {
+			lastShot = { position: action.position, result: marked };
+			events.push({
+				type: "shotResult",
+				position: action.position,
+				result: marked,
+				player: state.currentPlayer
+			});
+		}
+	}
+
 	const terminal = nextState.status !== "playing";
 	if (terminal) {
 		events.push({
@@ -133,7 +179,8 @@ function applyStep(
 		nextState,
 		events,
 		terminal,
-		outcome: outcomeOf(nextState)
+		outcome: outcomeOf(nextState),
+		observations: observationsFor(config, nextState, lastShot)
 	};
 }
 
@@ -158,6 +205,18 @@ function canPlaceCell(
 	return after !== placedCells;
 }
 
+function canFireCell(
+	state: GameState,
+	pos: Position,
+	player: Player
+): boolean {
+	if (getCell(state.grid, pos) !== null) return false;
+	const occupant =
+		state.hidden != null ? getCell(state.hidden, pos) : null;
+	if (occupant === player) return false;
+	return true;
+}
+
 function collectLegalActions(
 	config: GameConfig,
 	state: GameState,
@@ -169,6 +228,19 @@ function collectLegalActions(
 	const actions: KernelAction[] = [];
 	const inputMode = config.inputMode ?? "cell";
 	const overflow = config.overflow ?? "reject";
+	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
+
+	if (hitMiss) {
+		for (let row = 0; row < state.grid.height; row++) {
+			for (let col = 0; col < state.grid.width; col++) {
+				const position = { row, col };
+				if (canFireCell(state, position, state.currentPlayer)) {
+					actions.push({ type: "fire", position });
+				}
+			}
+		}
+		return actions;
+	}
 
 	if (inputMode === "column") {
 		for (let col = 0; col < state.grid.width; col++) {
@@ -212,7 +284,6 @@ export function createGameKernel(config: GameConfig): GameKernel {
 	return {
 		config,
 		initialState(_seed?: Seed) {
-			// Seeded RNG not yet threaded into placement; reserved for M2 replay.
 			return createInitialState(config);
 		},
 		currentPlayer(state) {
@@ -220,6 +291,9 @@ export function createGameKernel(config: GameConfig): GameKernel {
 		},
 		legalActions(state, player) {
 			return collectLegalActions(config, state, player);
+		},
+		observe(state, player) {
+			return observe(config, state, playerOf(player));
 		},
 		step,
 		stepSync(state, action, seed) {

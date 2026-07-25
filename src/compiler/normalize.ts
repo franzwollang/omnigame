@@ -27,13 +27,15 @@ export function flattenToGameConfig(config: Config): GameConfig {
 	return {
 		gridWidth: config.grid.width,
 		gridHeight: config.grid.height,
-		winLength: config.win.length,
-		adjacency: config.win.adjacency,
+		winLength: config.win?.length ?? 3,
+		adjacency: config.win?.adjacency ?? DEFAULT_ADJACENCY,
 		inputMode: config.input.mode,
 		placementMode: config.placement.mode,
 		gravityDirection: "down",
 		overflow: config.placement.overflow,
 		captureEnabled: Boolean(config.placement.capture?.enabled),
+		observationMode: config.observation.mode,
+		objectiveMode: config.objective.mode,
 		initial: config.initial
 	};
 }
@@ -48,6 +50,8 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	gravityDirection: "down",
 	overflow: "reject",
 	captureEnabled: false,
+	observationMode: "full",
+	objectiveMode: "n_in_a_row",
 	initial: []
 };
 

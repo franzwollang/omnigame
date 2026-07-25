@@ -71,6 +71,7 @@ export default function GamePage() {
 	const playSeed = currentConfig?.rng?.seed ?? 0;
 	const {
 		state: gameState,
+		viewState,
 		eventLog,
 		actionLog,
 		placeMove,
@@ -336,7 +337,7 @@ export default function GamePage() {
 			{/* Canvas area with results overlay */}
 			<div className="relative flex-1 min-w-0">
 				<SandboxCanvasLazy
-					gameState={gameState}
+					gameState={viewState}
 					onCellClick={placeMove}
 					onActivateColumn={activateColumn}
 					enablePopOutButtons={enablePopOut}

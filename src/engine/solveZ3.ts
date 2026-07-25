@@ -34,18 +34,22 @@ export async function solveZ3Config(cfg: Config): Promise<Z3Result> {
 	// overflow != reject -> placement.gravity
 	s.add(Z3.Implies(overflow.neq(Z3.Int.val(0)), placement.eq(Z3.Int.val(1))));
 	// capture+gravity allowed: capture runs after gravity resolves a cell
-	// adjacency: at least one direction enabled (fast pre-check)
-	const adjAny =
-		cfg.win.adjacency.horizontal ||
-		cfg.win.adjacency.vertical ||
-		cfg.win.adjacency.backDiagonal ||
-		cfg.win.adjacency.forwardDiagonal;
-	if (!adjAny)
-		return { ok: false, errors: ["Z3: no adjacency directions enabled"] };
-	// win length bounds (fast pre-check)
-	const maxDim = Math.max(cfg.grid.width, cfg.grid.height);
-	if (cfg.win.length < 2 || cfg.win.length > maxDim)
-		return { ok: false, errors: ["Z3: win length out of bounds"] };
+	// adjacency / win length only apply to n_in_a_row objectives
+	if (cfg.objective.mode === "n_in_a_row") {
+		if (!cfg.win) {
+			return { ok: false, errors: ["Z3: win required for n_in_a_row"] };
+		}
+		const adjAny =
+			cfg.win.adjacency.horizontal ||
+			cfg.win.adjacency.vertical ||
+			cfg.win.adjacency.backDiagonal ||
+			cfg.win.adjacency.forwardDiagonal;
+		if (!adjAny)
+			return { ok: false, errors: ["Z3: no adjacency directions enabled"] };
+		const maxDim = Math.max(cfg.grid.width, cfg.grid.height);
+		if (cfg.win.length < 2 || cfg.win.length > maxDim)
+			return { ok: false, errors: ["Z3: win length out of bounds"] };
+	}
 
 	const res = await s.check();
 	if (res !== "sat") {

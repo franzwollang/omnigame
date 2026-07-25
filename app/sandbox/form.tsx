@@ -216,6 +216,68 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 							</div>
 
 							<div className="space-y-2">
+								<p className="text-sm font-medium">Observation / objective</p>
+								<FormField
+									control={form.control}
+									name="observation.mode"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Observation mode</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value ?? "full"}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="full" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="full">full</SelectItem>
+														<SelectItem value="hit_miss">hit_miss</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												hit_miss projects per-player views (Battleship-lite).
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="objective.mode"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Objective</FormLabel>
+											<FormControl>
+												<Select
+													value={field.value ?? "n_in_a_row"}
+													onValueChange={field.onChange}
+												>
+													<SelectTrigger>
+														<SelectValue placeholder="n_in_a_row" />
+													</SelectTrigger>
+													<SelectContent>
+														<SelectItem value="n_in_a_row">
+															n_in_a_row
+														</SelectItem>
+														<SelectItem value="destroy_hidden">
+															destroy_hidden
+														</SelectItem>
+													</SelectContent>
+												</Select>
+											</FormControl>
+											<p className="text-xs text-muted-foreground">
+												destroy_hidden pairs with hit_miss observation.
+											</p>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+
+							<div className="space-y-2">
 								<p className="text-sm font-medium">Placement</p>
 								<FormField
 									control={form.control}
@@ -303,10 +365,19 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormControl>
 											<Input
 												type="number"
-												value={field.value}
-												onChange={(e) => field.onChange(Number(e.target.value))}
+												value={field.value ?? ""}
+												onChange={(e) =>
+													field.onChange(
+														e.target.value === ""
+															? undefined
+															: Number(e.target.value)
+													)
+												}
 											/>
 										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Used for n_in_a_row; ignored for destroy_hidden.
+										</p>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -321,7 +392,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<FormLabel>Mode</FormLabel>
 											<FormControl>
 												<Select
-													value={field.value}
+													value={field.value ?? "linear"}
 													onValueChange={field.onChange}
 												>
 													<SelectTrigger>
@@ -344,7 +415,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>
@@ -361,7 +432,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>
@@ -378,7 +449,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>
@@ -395,7 +466,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem className="flex flex-row gap-2 items-center space-y-0">
 											<FormControl>
 												<Checkbox
-													checked={field.value}
+													checked={Boolean(field.value)}
 													onCheckedChange={field.onChange}
 												/>
 											</FormControl>

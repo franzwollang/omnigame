@@ -31,6 +31,22 @@ describe("buildFeatureContracts", () => {
 			])
 		);
 
+		const battle = buildFeatureContracts(
+			examplePresets["battleship-lite"].config
+		);
+		expect(battle.map((c) => c.id).sort()).toEqual(
+			[
+				"BoardWritable",
+				"DestroyHidden",
+				"InputTargetCell",
+				"ObservationHitMiss",
+				"OverflowReject",
+				"PlacementDirect"
+			].sort()
+		);
+		expect(battle.map((c) => c.id)).not.toContain("NInARow");
+		expect(battle.map((c) => c.id)).not.toContain("AdjacencyProvided");
+
 		const pop = buildFeatureContracts(
 			examplePresets["connect-4-popout"].config
 		);

@@ -2,7 +2,8 @@
 // Pure functional: State -> Event -> State
 
 export type Player = "X" | "O";
-export type CellValue = Player | null;
+/** Public cell marks: player tokens, or hit/miss shot results (partial-info). */
+export type CellValue = Player | "hit" | "miss" | null;
 export type Position = { row: number; col: number };
 
 export type Grid = {
@@ -14,7 +15,10 @@ export type Grid = {
 export type GameStatus = "playing" | "won" | "draw";
 
 export type GameState = {
+	/** Public board (placements or shot results). */
 	grid: Grid;
+	/** Owner-only fleet layer for hit/miss games; absent in full-info games. */
+	hidden?: Grid;
 	currentPlayer: Player;
 	status: GameStatus;
 	winner: Player | null;
@@ -23,6 +27,11 @@ export type GameState = {
 
 export type PlaceMoveEvent = {
 	type: "place";
+	position: Position;
+};
+
+export type FireEvent = {
+	type: "fire";
 	position: Position;
 };
 
@@ -42,6 +51,7 @@ export type ResetEvent = {
 
 export type GameEvent =
 	| PlaceMoveEvent
+	| FireEvent
 	| ActivateColumnEvent
 	| PopOutColumnEvent
 	| ResetEvent;

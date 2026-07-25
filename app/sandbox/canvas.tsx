@@ -388,6 +388,55 @@ export default function SandboxCanvas({
 			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
 			const y = -(row - (gridHeight - 1) / 2) * totalCellSize;
 
+			if (value === "hit") {
+				const material = new THREE.LineBasicMaterial({
+					color: 0xdc2626,
+					linewidth: 2
+				});
+				const points1 = [
+					new THREE.Vector3(x - cellSize * 0.3, y + cellSize * 0.3, 0.001),
+					new THREE.Vector3(x + cellSize * 0.3, y - cellSize * 0.3, 0.001)
+				];
+				const points2 = [
+					new THREE.Vector3(x + cellSize * 0.3, y + cellSize * 0.3, 0.001),
+					new THREE.Vector3(x - cellSize * 0.3, y - cellSize * 0.3, 0.001)
+				];
+				marksGroup.add(
+					new THREE.Line(
+						new THREE.BufferGeometry().setFromPoints(points1),
+						material
+					),
+					new THREE.Line(
+						new THREE.BufferGeometry().setFromPoints(points2),
+						material
+					)
+				);
+				return;
+			}
+			if (value === "miss") {
+				const curve = new THREE.EllipseCurve(
+					x,
+					y,
+					cellSize * 0.12,
+					cellSize * 0.12,
+					0,
+					2 * Math.PI,
+					false,
+					0
+				);
+				const geometry = new THREE.BufferGeometry().setFromPoints(
+					curve.getPoints(16)
+				);
+				const material = new THREE.LineBasicMaterial({
+					color: 0x94a3b8,
+					linewidth: 2
+				});
+				const dot = new THREE.Line(geometry, material);
+				dot.position.z = 0.001;
+				marksGroup.add(dot);
+				return;
+			}
+
 			// If a token is assigned to this player, render its image/label
 			const token = tokenForPlayer(value);
 			if (token && token.asset?.type === "image") {

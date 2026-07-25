@@ -100,7 +100,12 @@ export function expandPlacementsToInitial(config: Config): MacroResult {
 		if (occupied.has(key)) continue;
 		const player = tokenPlayer.get(placement.tokenId);
 		if (!player) continue;
-		added.push({ row: placement.row, col: placement.col, player });
+		added.push({
+			row: placement.row,
+			col: placement.col,
+			player,
+			visibility: "public"
+		});
 		occupied.add(key);
 	}
 

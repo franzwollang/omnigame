@@ -95,9 +95,13 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 
 	const placeMove = useCallback(
 		(pos: Position) => {
-			applyAction({ type: "place", position: pos });
+			if ((config.observationMode ?? "full") === "hit_miss") {
+				applyAction({ type: "fire", position: pos });
+			} else {
+				applyAction({ type: "place", position: pos });
+			}
 		},
-		[applyAction]
+		[applyAction, config.observationMode]
 	);
 
 	const activateColumn = useCallback(
@@ -145,8 +149,25 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		return kernel.legalActions(state, kernel.currentPlayer(state));
 	}, [kernel, state]);
 
+	/** Current player's observation (full grid or projected hit/miss view). */
+	const observation = useMemo(
+		() => kernel.observe(state, kernel.currentPlayer(state)),
+		[kernel, state]
+	);
+
+	/** State with grid replaced by the current player's observation cells. */
+	const viewState: GameState = useMemo(
+		() => ({
+			...state,
+			grid: { ...state.grid, cells: observation.cells }
+		}),
+		[state, observation]
+	);
+
 	return {
 		state,
+		viewState,
+		observation,
 		kernel,
 		seed,
 		turnContext,

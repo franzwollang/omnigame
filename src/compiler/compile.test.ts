@@ -33,18 +33,20 @@ describe("compiler macros", () => {
 		raw.initial = [];
 		const { config, expansions } = expandMacros(raw);
 		expect(config.initial).toEqual([
-			{ row: 0, col: 0, player: "X" },
-			{ row: 1, col: 1, player: "O" }
+			{ row: 0, col: 0, player: "X", visibility: "public" },
+			{ row: 1, col: 1, player: "O", visibility: "public" }
 		]);
 		expect(expansions.map((e) => e.id)).toContain("placements→initial");
 	});
 
 	it("does not overwrite existing initial seeds", () => {
 		const raw = structuredClone(examplePresets["tic-tac-toe"].config);
-		raw.initial = [{ row: 0, col: 0, player: "O" }];
+		raw.initial = [{ row: 0, col: 0, player: "O", visibility: "public" }];
 		raw.placements = [{ row: 0, col: 0, tokenId: "X" }];
 		const { config } = expandMacros(raw);
-		expect(config.initial).toEqual([{ row: 0, col: 0, player: "O" }]);
+		expect(config.initial).toEqual([
+			{ row: 0, col: 0, player: "O", visibility: "public" }
+		]);
 	});
 });
 

@@ -16,9 +16,12 @@ export type ValidationResult = {
 export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	const features: FeatureContract[] = [];
 
-	// Base board + adjacency (objectives and capture need them)
 	features.push(Contracts.BoardWritable());
-	features.push(Contracts.AdjacencyProvided());
+
+	const needsAdjacency =
+		cfg.objective.mode === "n_in_a_row" ||
+		Boolean(cfg.placement.capture?.enabled);
+	if (needsAdjacency) features.push(Contracts.AdjacencyProvided());
 
 	// Input mode
 	if (cfg.input.mode === "cell") features.push(Contracts.InputTargetCell());
@@ -47,8 +50,15 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	// Capture
 	if (cfg.placement.capture?.enabled) features.push(Contracts.Capture());
 
-	// End condition (n-in-a-row is the only objective today)
-	features.push(Contracts.NInARow());
+	// Observation + objective
+	if (cfg.observation.mode === "hit_miss") {
+		features.push(Contracts.ObservationHitMiss());
+	}
+	if (cfg.objective.mode === "destroy_hidden") {
+		features.push(Contracts.DestroyHidden());
+	} else {
+		features.push(Contracts.NInARow());
+	}
 
 	return features;
 }

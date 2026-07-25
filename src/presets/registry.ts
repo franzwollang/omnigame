@@ -1,4 +1,4 @@
-import type { Config } from "@/schemas/config";
+import { zConfig, type Config, type ConfigInput } from "@/schemas/config";
 
 export interface ExamplePreset {
 	id: string;
@@ -9,9 +9,15 @@ export interface ExamplePreset {
 	thumbnail?: string; // Optional base64 image or path
 }
 
+function definePreset(
+	preset: Omit<ExamplePreset, "config"> & { config: ConfigInput }
+): ExamplePreset {
+	return { ...preset, config: zConfig.parse(preset.config) };
+}
+
 // Current examples registry
 export const examplePresets: Record<string, ExamplePreset> = {
-	"tic-tac-toe": {
+	"tic-tac-toe": definePreset({
 		id: "tic-tac-toe",
 		name: "Tic-Tac-Toe",
 		tags: ["classic", "3x3", "linear", "turn-based"],
@@ -51,8 +57,8 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	},
-	"connect-4": {
+	}),
+	"connect-4": definePreset({
 		id: "connect-4",
 		name: "Connect 4",
 		tags: ["classic", "7x6", "gravity", "column-activation"],
@@ -95,8 +101,8 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	},
-	gomoku: {
+	}),
+	gomoku: definePreset({
 		id: "gomoku",
 		name: "Gomoku",
 		tags: ["classic", "15x15", "n-in-a-row", "direct"],
@@ -135,8 +141,8 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	},
-	reversi: {
+	}),
+	reversi: definePreset({
 		id: "reversi",
 		name: "Capture / Flip Demo",
 		tags: ["capture", "8x8", "demo"],
@@ -185,8 +191,8 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 4, col: 4, player: "O" }
 			]
 		}
-	},
-	"connect-4-popout": {
+	}),
+	"connect-4-popout": definePreset({
 		id: "connect-4-popout",
 		name: "Connect 4 (Pop Out)",
 		tags: ["classic", "7x6", "gravity", "pop-out"],
@@ -230,8 +236,35 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
-	}
-	// Add more presets here as we create them
+	}),
+	"battleship-lite": definePreset({
+		id: "battleship-lite",
+		name: "Battleship Lite",
+		tags: ["observation", "hit-miss", "partial-info", "5x5"],
+		description:
+			"Minimal partial-info demo: fixed hidden fleets, fire for hit/miss, sink to win. Unlocks observation — not a full Battleship port.",
+		config: {
+			metadata: { name: "Battleship Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			objective: { mode: "destroy_hidden" },
+			tokens: [
+				{ id: "fleet-x", label: "X", players: ["X"] },
+				{ id: "fleet-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: [
+				{ row: 0, col: 0, player: "X", visibility: "owner" },
+				{ row: 0, col: 1, player: "X", visibility: "owner" },
+				{ row: 4, col: 3, player: "O", visibility: "owner" },
+				{ row: 4, col: 4, player: "O", visibility: "owner" }
+			]
+		}
+	})
 };
 
 // Helper to get all presets as array

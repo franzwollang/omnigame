@@ -39,6 +39,19 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "direct" as const, overflow: "reject" as const }),
+		observation: z
+			.object({
+				mode: z.enum(["full", "hit_miss"]).default("full")
+			})
+			.strict()
+			.default({ mode: "full" as const }),
+		objective: z
+			.object({
+				mode: z.enum(["n_in_a_row", "destroy_hidden"]).default("n_in_a_row")
+			})
+			.strict()
+			.default({ mode: "n_in_a_row" as const }),
+		// Required for n_in_a_row; unused when objective is destroy_hidden
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -52,7 +65,8 @@ export const zConfig = z
 					})
 					.strict()
 			})
-			.strict(),
+			.strict()
+			.optional(),
 		tokens: z
 			.array(
 				z
@@ -88,7 +102,9 @@ export const zConfig = z
 					.object({
 						row: z.number().int().nonnegative(),
 						col: z.number().int().nonnegative(),
-						player: z.enum(["X", "O"])
+						player: z.enum(["X", "O"]),
+						/** owner = hidden fleet cell (hit/miss); public = visible seed. */
+						visibility: z.enum(["public", "owner"]).default("public")
 					})
 					.strict()
 			)
@@ -99,6 +115,8 @@ export const zConfig = z
 		const gravityImplied =
 			cfg.placement.mode === "gravity" ||
 			cfg.placement.gravity?.enabled === true;
+		const hitMiss = cfg.observation.mode === "hit_miss";
+		const destroyHidden = cfg.objective.mode === "destroy_hidden";
 
 		// column input requires gravity placement (mode or enabled sugar)
 		if (cfg.input.mode === "column" && !gravityImplied) {
@@ -118,27 +136,74 @@ export const zConfig = z
 					"overflow !== 'reject' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
 		}
-		// adjacency must have at least one direction enabled
-		if (
-			!cfg.win.adjacency.horizontal &&
-			!cfg.win.adjacency.vertical &&
-			!cfg.win.adjacency.backDiagonal &&
-			!cfg.win.adjacency.forwardDiagonal
-		) {
+
+		if (hitMiss !== destroyHidden) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
-				path: ["win", "adjacency"],
-				message: "At least one adjacency direction must be enabled"
+				path: hitMiss ? ["objective", "mode"] : ["observation", "mode"],
+				message:
+					"observation.mode 'hit_miss' and objective.mode 'destroy_hidden' must be used together"
 			});
 		}
-		// win length must be <= max(width,height)
-		const maxDim = Math.max(cfg.grid.width, cfg.grid.height);
-		if (cfg.win.length < 2 || cfg.win.length > maxDim) {
-			ctx.addIssue({
-				code: z.ZodIssueCode.custom,
-				path: ["win", "length"],
-				message: `win.length must be between 2 and ${maxDim}`
-			});
+
+		if (hitMiss) {
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "hit_miss observation requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || cfg.placement.capture?.enabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"hit_miss observation requires direct placement without capture/gravity"
+				});
+			}
+			const owners = cfg.initial.filter((p) => p.visibility === "owner");
+			if (owners.length === 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["initial"],
+					message:
+						"hit_miss requires at least one initial seed with visibility = 'owner'"
+				});
+			}
+		}
+
+		if (cfg.objective.mode === "n_in_a_row") {
+			if (!cfg.win) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["win"],
+					message: "win is required when objective.mode = 'n_in_a_row'"
+				});
+			} else {
+				// adjacency must have at least one direction enabled
+				if (
+					!cfg.win.adjacency.horizontal &&
+					!cfg.win.adjacency.vertical &&
+					!cfg.win.adjacency.backDiagonal &&
+					!cfg.win.adjacency.forwardDiagonal
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["win", "adjacency"],
+						message: "At least one adjacency direction must be enabled"
+					});
+				}
+				// win length must be <= max(width,height)
+				const maxDim = Math.max(cfg.grid.width, cfg.grid.height);
+				if (cfg.win.length < 2 || cfg.win.length > maxDim) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["win", "length"],
+						message: `win.length must be between 2 and ${maxDim}`
+					});
+				}
+			}
 		}
 		// initial seeds must be in bounds
 		for (let i = 0; i < cfg.initial.length; i++) {
@@ -200,3 +265,5 @@ export const zConfig = z
 	});
 
 export type Config = z.infer<typeof zConfig>;
+/** Authoring/input shape (defaults applied on parse). */
+export type ConfigInput = z.input<typeof zConfig>;
