@@ -43,6 +43,7 @@ These are built from the same shared schema and operators.
 - **Battleship Lite** (hit/miss observation + destroy_hidden)
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
+- **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -89,7 +90,7 @@ Routing uses App Router with scroll-snap landing and URL replacement to reflect 
 
 OmniGame is actively evolving toward the “spec → compiler → kernel + IR” shape described below. The current sandbox already supports a useful (but intentionally small) slice of the primitive space:
 
-- **Topology**: rectangular grid only (`grid.topology = "rectangle"`); wrap is schema-locked to `false` until later
+- **Topology**: rectangular grid or odd-r hex (`grid.topology = "rectangle" | "hex_offset"`); wrap is schema-locked to `false` until later
 - **Inputs**: cell-click, column-activation, and piece move (`input.mode = "cell" | "column" | "move"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
@@ -98,13 +99,13 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row; `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity) or `hit_miss` (own fleet + public shots); Battleship-lite preset
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations) and shows recent kernel events + Replay
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 
-What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), liberties/territory, hex/graph topology, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), liberties/territory, general graph topology, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
