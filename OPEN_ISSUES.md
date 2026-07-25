@@ -8,18 +8,17 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Topology-aware movement** landed — `movement.ts` uses topology neighbors on
-`hex_offset` / `graph` (orthogonal); Simultaneous Hex/Graph Step Race + Hex
-Step Race presets + tests. Rectangle diagonal/king unchanged. Pick the **next
-smallest** unlock the engine still lacks — not another recombination of covered
-primitives (see project-structure selection principle).
+**place→move→fire + connect_or_destroy** landed — `turn.phases:
+["place","move","fire"]` with dual end routing (n-in-a-row after place/move,
+sink fleet after fire); Place, Move & Fire Lite preset + tests. Pick the
+**next smallest** unlock the engine still lacks — not another recombination of
+covered primitives (see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- `turn.phases` place→move→fire (triple) — needs dual-objective routing
-- phases hex/graph lift (only if a new seam appears; kernel already topology-aware)
 - longer-range / sliding / capture piece tables
 - richer multi-phase game machines beyond fleet + in-turn phases
+- phases hex/graph lift (only if a new seam appears; kernel already topology-aware)
 
 **Acceptance:**
 
@@ -56,7 +55,7 @@ hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
 `actionsPerTurn` (rectangle + hex + graph), delayed `delayTurns` (direct cell +
 delayed gravity), hidden simultaneous `commitReveal`, ordered simultaneous
 `resolveOrder`, multi-action simultaneous (rectangle + hex + graph), in-turn
-`turn.phases` place→move / place→fire, simultaneous move (joint move resolve),
-diagonal/king movement adjacency, and topology-aware movement (hex/graph move +
-simultaneous) also landed. Further ports only when a **new** missing mechanism
-appears — not a backlog.
+`turn.phases` place→move / place→fire / place→move→fire (`connect_or_destroy`),
+simultaneous move (joint move resolve), diagonal/king movement adjacency, and
+topology-aware movement (hex/graph move + simultaneous) also landed. Further
+ports only when a **new** missing mechanism appears — not a backlog.

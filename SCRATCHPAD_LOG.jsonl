@@ -46,3 +46,4 @@
 {"ts":"2026-07-25T19:15+00:00","focus":"simultaneous-move","summary":"Landed joint move resolve + Simultaneous Step Race; 260 tests green","next":"pick place→move→fire, diagonal/piece tables, or next true seam"}
 {"ts":"2026-07-25T14:25-05:00","focus":"next-missing-mechanism","summary":"landed diagonal/king piece-table adjacency; Diagonal Step Race","next":"pick place→move→fire, hex/graph simultaneous move, or longer-range pieces"}
 {"ts":"2026-07-25T14:50-05:00","focus":"next-missing-mechanism","summary":"landed topology-aware hex/graph movement + simultaneous step races","next":"pick place→move→fire or longer-range pieces"}
+{"ts":"2026-07-25T20:10+00:00","focus":"place→move→fire","summary":"Landed connect_or_destroy dual-objective + Place Move & Fire Lite; hand off next mechanism","next":"pick longer-range/sliding/capture or richer phase machines"}

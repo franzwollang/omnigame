@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Topology-aware movement landed (hex/graph move +
-simultaneous step races). Hand off to the next **missing mechanism** (see
+**Optimizing for this phase:** place→move→fire + `connect_or_destroy`
+dual-objective landed. Hand off to the next **missing mechanism** (see
 `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
@@ -112,9 +112,9 @@ Working sandbox slice (see README “Current implementation status”):
 - **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
   cell intents reserve an intersection (Delayed TTT); column/row gravity
   intents settle landing at resolve time (Delayed Connect 4)
-- **In-turn phases:** `turn.phases` (`["place","move"]` or `["place","fire"]`) +
-  `GameState.turnPhaseIndex`; phase-routed legality; Place & Move Lite /
-  Place & Fire Lite presets
+- **In-turn phases:** `turn.phases` (`["place","move"]`, `["place","fire"]`, or
+  `["place","move","fire"]` + `connect_or_destroy`) + `GameState.turnPhaseIndex`;
+  phase-routed legality; Place & Move / Place & Fire / Place, Move & Fire Lite
 - **Simultaneous move:** `turn.schedule = simultaneous` + `input.mode = move` +
   `simultaneousMove` joint resolve; same-destination conflict; reach_row win;
   Simultaneous Step Race / Hex / Graph (no multi-action / commitReveal)
@@ -122,8 +122,8 @@ Working sandbox slice (see README “Current implementation status”):
   `king` (range 1) on rectangle; Diagonal Step Race proves diagonal-only steps;
   hex/graph move uses topology neighbors (orthogonal only)
 
-Not yet: full Go rules; place→move→fire triple phases (dual-objective); phases
-hex/graph lift; longer-range / capture piece tables.
+Not yet: full Go rules; phases hex/graph lift; longer-range / capture piece
+tables; richer multi-phase machines beyond fleet + in-turn phases.
 
 ## Milestone exit criteria
 

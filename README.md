@@ -144,9 +144,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, place→move→fire
-triple phases (dual-objective), longer-range / capture piece tables, and a
-larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, longer-range /
+capture piece tables, richer multi-phase machines, and a larger set of reusable
+operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -226,7 +226,9 @@ Turn logic is declarative:
 
 - N players
 - schedule: alternating, simultaneous place or move (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action place rounds), or multi-step alternating
-- phases: in-turn `turn.phases` (place→move, place→fire); game-long fleet placement → combat; place→move→fire / hex-graph phase lifts still expanding
+- phases: in-turn `turn.phases` (place→move, place→fire, place→move→fire with
+  `connect_or_destroy`); game-long fleet placement → combat; hex-graph phase
+  lifts still expanding
 - action points / per-turn budgets
 
 ### 6) Observation primitive (high leverage; optional early, core later)
