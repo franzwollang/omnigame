@@ -1,24 +1,22 @@
 {
-  "updated_at": "2026-07-25T13:05+00:00",
-  "turn": 26,
+  "updated_at": "2026-07-25T08:15-05:00",
+  "turn": 4,
   "focus": {
-    "milestone": "post-M7",
-    "issue": "next-missing-mechanism",
-    "goal": "Pick next unlock: situational-superko, simultaneous, delayed, hex-wrap, or pop_out"
+    "milestone": null,
+    "issue": null,
+    "goal": "Post-merge: progression stack + Next CVE on main"
   },
   "recent": [
-    "Synced 4dc4 onto fbb4",
-    "Landed positional superko + Go Lite Superko + tests",
-    "Closed superko slice of next-missing-mechanism"
+    "Merged tip PR #25 (M0→positional superko) into main",
+    "Closed superseded PRs; CVE via #26 Next 14.2.35"
   ],
   "discoveries": [
-    "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
-    "Base new cron turns on latest progression branch, not main",
-    "Positional: ko=positional + positionHistory; immediate cycle → superko"
+    "Review: superko OK; PLANNING still says Not yet superko (doc drift)",
+    "Vitest needs newer Node locally (styleText); typecheck green on tip"
   ],
   "open_threads": [
-    "Next: situational-superko / simultaneous / delayed / hex-wrap / pop_out"
+    "Fix PLANNING superko contradiction; sandbox ko hint copy"
   ],
-  "next_step": "Choose next missing mechanism; implement schema+kernel+preset+tests",
+  "next_step": "Optional: trim PLANNING Not-yet line; decide next mechanism handoff",
   "blockers": []
 }
