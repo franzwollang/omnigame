@@ -25,10 +25,11 @@ export type NormalizeResult = {
 };
 
 function resolveKoRule(
-	ko: boolean | "point" | "positional" | undefined
+	ko: boolean | "point" | "positional" | "situational" | undefined
 ): KoRule {
 	if (ko === true || ko === "point") return "point";
 	if (ko === "positional") return "positional";
+	if (ko === "situational") return "situational";
 	return "none";
 }
 

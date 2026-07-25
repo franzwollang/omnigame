@@ -1,18 +1,28 @@
 /**
  * Liberty / group-capture helpers (M5 Go-lite foothold).
  * Orthogonal connectivity only — enough for group capture + area scoring.
- * Optional point ko or positional superko; suicide is illegal after opponent captures.
+ * Optional point ko, positional superko, or situational superko; suicide is
+ * illegal after opponent captures.
  */
 import type { CellValue, Grid, Player, Position } from "@/engine/types";
 import { getCell, setCell, toIndex } from "@/engine/types";
 import { step } from "@/engine/adjacency";
 
 /** Ko / superko rule selected by config. */
-export type KoRule = "none" | "point" | "positional";
+export type KoRule = "none" | "point" | "positional" | "situational";
 
 /** Stable hash of the public board for positional superko. */
 export function boardPositionHash(grid: Grid): string {
 	return grid.cells.map((c) => (c == null ? "." : c)).join("");
+}
+
+/** Board + side-to-move hash for situational superko. */
+export function situationHash(grid: Grid, sideToMove: Player): string {
+	return `${boardPositionHash(grid)}|${sideToMove}`;
+}
+
+export function usesSuperkoHistory(rule: KoRule): boolean {
+	return rule === "positional" || rule === "situational";
 }
 
 const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
@@ -156,7 +166,10 @@ export type LibertyPlaceOpts = {
 	/** Legacy: true ≡ point ko when koRule omitted. */
 	koEnabled?: boolean;
 	koPoint?: Position | null;
-	/** Prior board hashes when koRule = positional. */
+	/**
+	 * Prior hashes when koRule is positional (board) or situational
+	 * (board|side-to-move).
+	 */
 	positionHistory?: readonly string[];
 };
 
@@ -191,8 +204,8 @@ export function simulateLibertyPlace(
 }
 
 /**
- * Legal Go-lite placement: empty cell, point-ko / positional-superko rules,
- * and after place + opponent capture the placer's group still has ≥1 liberty.
+ * Legal Go-lite placement: empty cell, point-ko / superko rules, and after
+ * place + opponent capture the placer's group still has ≥1 liberty.
  */
 export function isLegalLibertyPlace(
 	grid: Grid,
@@ -213,9 +226,14 @@ export function isLegalLibertyPlace(
 	const simulated = simulateLibertyPlace(grid, pos, player, wrap);
 	if (!simulated) return false;
 
-	if (koRule === "positional") {
-		const hash = boardPositionHash({ ...grid, cells: simulated.cells });
+	if (usesSuperkoHistory(koRule)) {
+		const afterGrid: Grid = { ...grid, cells: simulated.cells };
 		const history = opts?.positionHistory ?? [];
+		const nextPlayer: Player = player === "X" ? "O" : "X";
+		const hash =
+			koRule === "situational"
+				? situationHash(afterGrid, nextPlayer)
+				: boardPositionHash(afterGrid);
 		if (history.includes(hash)) return false;
 	}
 

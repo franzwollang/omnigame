@@ -17,6 +17,8 @@ import {
 	boardPositionHash,
 	isLegalLibertyPlace,
 	koPointFromCapture,
+	situationHash,
+	usesSuperkoHistory,
 	type KoRule
 } from "@/engine/liberties";
 import { fleetDestroyed } from "@/engine/observation";
@@ -67,9 +69,9 @@ export type GameConfig = {
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
 	captureMode?: "flip" | "liberties";
-	/** none | point (simple ko) | positional (superko). */
+	/** none | point (simple ko) | positional | situational (superko). */
 	koRule?: KoRule;
-	/** Legacy alias: true when koRule is point or positional. */
+	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
 	observationMode?: "full" | "hit_miss" | "fog";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
@@ -138,8 +140,13 @@ export function createInitialState(config: GameConfig): GameState {
 	}
 
 	if (seeds.length === 0) {
-		if (resolveKoRule(config) === "positional") {
-			base.positionHistory = [boardPositionHash(base.grid)];
+		const koRule = resolveKoRule(config);
+		if (usesSuperkoHistory(koRule)) {
+			base.positionHistory = [
+				koRule === "situational"
+					? situationHash(base.grid, base.currentPlayer)
+					: boardPositionHash(base.grid)
+			];
 		}
 		return base;
 	}
@@ -180,8 +187,15 @@ export function createInitialState(config: GameConfig): GameState {
 	if (base.hidden && hiddenCells) {
 		base.hidden = { ...base.hidden, cells: hiddenCells };
 	}
-	if (resolveKoRule(config) === "positional") {
-		base.positionHistory = [boardPositionHash(base.grid)];
+	{
+		const koRule = resolveKoRule(config);
+		if (usesSuperkoHistory(koRule)) {
+			base.positionHistory = [
+				koRule === "situational"
+					? situationHash(base.grid, base.currentPlayer)
+					: boardPositionHash(base.grid)
+			];
+		}
 	}
 	return base;
 }
@@ -517,10 +531,13 @@ function handlePlace(
 	}
 	const newMoveCount = state.moveCount + 1;
 	const newGrid = { ...state.grid, cells: newCells };
-	if (libertyMode && koRule === "positional") {
+	if (libertyMode && usesSuperkoHistory(koRule)) {
+		const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
 		nextHistory = [
 			...(state.positionHistory ?? []),
-			boardPositionHash(newGrid)
+			koRule === "situational"
+				? situationHash(newGrid, nextPlayer)
+				: boardPositionHash(newGrid)
 		];
 	}
 

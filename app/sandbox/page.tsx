@@ -456,9 +456,11 @@ export default function GamePage() {
 					{enablePass && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Go Lite: place stones (liberties +{" "}
-							{currentConfig?.placement.capture?.ko === "positional"
-								? "positional superko"
-								: "simple ko"}
+							{currentConfig?.placement.capture?.ko === "situational"
+								? "situational superko"
+								: currentConfig?.placement.capture?.ko === "positional"
+									? "positional superko"
+									: "simple ko"}
 							); Pass twice to score
 						</p>
 					)}

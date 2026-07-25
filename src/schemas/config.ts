@@ -104,11 +104,13 @@ export const zConfig = z
 						 *   recapture of a single stone just captured
 						 * - "positional": positional superko — forbid any prior
 						 *   public-board position (cells hash)
+						 * - "situational": situational superko — forbid any prior
+						 *   (board, side-to-move) pair
 						 */
 						ko: z
 							.union([
 								z.boolean(),
-								z.enum(["point", "positional"])
+								z.enum(["point", "positional", "situational"])
 							])
 							.default(false)
 					})
@@ -254,7 +256,10 @@ export const zConfig = z
 		const libertyCapture = captureEnabled && captureMode === "liberties";
 		const koRaw = cfg.placement.capture?.ko;
 		const koOn =
-			koRaw === true || koRaw === "point" || koRaw === "positional";
+			koRaw === true ||
+			koRaw === "point" ||
+			koRaw === "positional" ||
+			koRaw === "situational";
 
 		if (koOn && !libertyCapture) {
 			ctx.addIssue({

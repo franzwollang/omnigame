@@ -701,7 +701,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 		name: "Go Lite",
 		tags: ["liberties", "territory", "area-control", "ko", "mechanism"],
 		description:
-			"Orthogonal group capture by liberties + simple (point) ko + pass-to-score area control. Unlocks liberties/territory/ko — not full Go (simplified scoring). See Go Lite Superko for positional history.",
+			"Orthogonal group capture by liberties + simple (point) ko + pass-to-score area control. Unlocks liberties/territory/ko — not full Go (simplified scoring). See Go Lite Superko / Situational Superko for history rules.",
 		config: {
 			metadata: { name: "Go Lite", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -744,7 +744,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Go Lite with positional superko: any prior public-board position is illegal to recreate. Unlocks history-aware legality beyond point ko.",
+			"Go Lite with positional superko: any prior public-board position is illegal to recreate (regardless of side-to-move). Unlocks history-aware legality beyond point ko.",
 		config: {
 			metadata: { name: "Go Lite Superko", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -757,6 +757,54 @@ export const examplePresets: Record<string, ExamplePreset> = {
 					enabled: true,
 					mode: "liberties",
 					ko: "positional"
+				},
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control" },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"go-lite-situational-superko": definePreset({
+		id: "go-lite-situational-superko",
+		name: "Go Lite Situational Superko",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"superko",
+			"situational",
+			"mechanism"
+		],
+		description:
+			"Go Lite with situational superko: forbids repeating a prior (board, side-to-move) pair. Same stones with a different player to move remain legal — unlike positional superko.",
+		config: {
+			metadata: { name: "Go Lite Situational Superko", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: {
+					enabled: true,
+					mode: "liberties",
+					ko: "situational"
 				},
 				overflow: "reject"
 			},

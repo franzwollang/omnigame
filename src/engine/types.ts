@@ -31,13 +31,13 @@ export type GameState = {
 	/**
 	 * Simple (point) ko: intersection forbidden for the next place only.
 	 * Set when a single stone was just captured; cleared otherwise / on reset.
-	 * Pass does not clear (Go-correct). Unused when koRule = positional.
+	 * Pass does not clear (Go-correct). Unused when koRule is positional/situational.
 	 */
 	koPoint?: Position | null;
 	/**
-	 * Positional superko: hashes of prior public-board positions (cells only).
-	 * Seeded with the initial board; appended after each successful place.
-	 * Pass does not append (board unchanged).
+	 * Superko history: positional = board-cell hashes; situational =
+	 * `board|sideToMove` hashes. Seeded with the initial situation; appended
+	 * after each successful place. Pass does not append.
 	 */
 	positionHistory?: string[];
 	/** Placement vs combat for fleet games; default combat when omitted. */

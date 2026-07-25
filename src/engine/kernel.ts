@@ -13,7 +13,7 @@ import {
 	type GameConfig
 } from "@/engine/reducer";
 import { applyCaptureIfAny } from "@/engine/capture";
-import { isLegalLibertyPlace, type KoRule } from "@/engine/liberties";
+import { isLegalLibertyPlace, usesSuperkoHistory, type KoRule } from "@/engine/liberties";
 import { setCell } from "@/engine/types";
 import {
 	observe,
@@ -491,8 +491,11 @@ function placeFailureReason(
 		) {
 			return null;
 		}
-		// Distinguish positional superko from suicide when the cell is empty
-		if (koRule === "positional" && getCell(state.grid, pos) === null) {
+		// Distinguish superko from suicide when the cell is empty
+		if (
+			usesSuperkoHistory(koRule) &&
+			getCell(state.grid, pos) === null
+		) {
 			const withoutHistory = isLegalLibertyPlace(
 				state.grid,
 				pos,
@@ -530,7 +533,7 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 		case "ko":
 			return "Immediate recapture of the last captured stone is forbidden";
 		case "superko":
-			return "Move would repeat a previous board position (positional superko)";
+			return "Move would repeat a previous board situation (superko)";
 		case "own_ship":
 			return "Cannot fire on your own ship";
 		case "column_full":
