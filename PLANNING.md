@@ -16,9 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Ordered simultaneous resolve landed
-(`turn.resolveOrder` + Ordered Simultaneous TTT). Hand off to the next
-**missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Multi-action simultaneous rounds landed
+(`actionsPerTurn` under simultaneous + Double-Place Simultaneous TTT). Hand
+off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -62,7 +62,8 @@ Working sandbox slice (see README “Current implementation status”):
   Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
   Step Race (Move + reach_row),
   Life Lite (manual tick + B3/S23), Toroidal TTT, Toroidal Hex Connect Lite,
-  Simultaneous TTT, Double Move TTT, Delayed TTT
+  Simultaneous TTT, Ordered Simultaneous TTT, Hidden Simultaneous TTT,
+  Double-Place Simultaneous TTT, Double Move TTT, Delayed TTT
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -99,10 +100,12 @@ Working sandbox slice (see README “Current implementation status”):
   Hidden Simultaneous TTT preset
 - **Multi-step turns:** `turn.actionsPerTurn` + `GameState.actionsRemaining`;
   handoff after budget; Double Move TTT preset
+- **Multi-action simultaneous:** `actionsPerTurn > 1` under simultaneous;
+  N places per seat per round; indexed-pair resolve; Double-Place Simultaneous TTT
 - **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
   intent queues then materializes after intervening places; Delayed TTT preset
 
-Not yet: full Go rules, multi-action simultaneous rounds.
+Not yet: full Go rules; hex/graph multi-action simultaneous; phases beyond fleet.
 
 ## Milestone exit criteria
 

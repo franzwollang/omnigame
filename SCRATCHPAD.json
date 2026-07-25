@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T11:55-05:00",
-  "turn": 16,
+  "updated_at": "2026-07-25T12:10-05:00",
+  "turn": 17,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after ordered simultaneous resolve"
+    "goal": "Hand off after multi-action simultaneous rounds"
   },
   "recent": [
-    "Synced 35b4 tip onto e81b",
-    "Landed turn.resolveOrder joint|x_first|o_first",
-    "Ordered Simultaneous TTT + simultaneous.test.ts suite"
+    "Synced e81b tip onto 1020",
+    "Landed actionsPerTurn under simultaneous",
+    "Double-Place Simultaneous TTT + multiActionSimultaneous tests"
   ],
   "discoveries": [
-    "Joint conflict places neither; ordered applies first seat then skips occupied",
-    "Ordered same-cell can win where joint conflict cannot"
+    "committedPlacements is Position[] per seat (N=1 = length 1)",
+    "Win-check after each indexed sub-step; moveCount +1 per round"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick multi-action simultaneous rounds or next true new seam",
+  "next_step": "Cloud agent: pick hex/graph multi-action simultaneous or next true new seam",
   "blockers": []
 }

@@ -8,17 +8,17 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Ordered simultaneous resolution** landed — `turn.resolveOrder =
-joint | x_first | o_first`; ordered modes apply seats sequentially so the
-earlier seat wins same-cell conflicts (joint still places neither). Ordered
-Simultaneous TTT preset + tests; library n-in-a-row / hex / graph families may
-sample resolveOrder. Pick the **next smallest** unlock the engine still lacks —
-not another recombination of covered primitives (see project-structure selection
-principle).
+**Multi-action simultaneous rounds** landed — `turn.actionsPerTurn > 1` under
+`schedule = simultaneous`; each seat submits N cells; indexed pairs resolve
+jointly (win-check per sub-step). `committedPlacements` is now `Position[]`
+per seat; Double-Place Simultaneous TTT + `multiActionSimultaneous.test.ts`;
+library n-in-a-row may sample `actionsPerTurn: 2` with simultaneous. Pick the
+**next smallest** unlock the engine still lacks — not another recombination of
+covered primitives (see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- multi-action simultaneous rounds (actionsPerRound under simultaneous)
+- hex/graph multi-action simultaneous (topology lift of the rectangle foothold)
 - delayed + gravity / multi-step composition (only if a new seam appears)
 - hidden simultaneous on hex/graph (composition only if a new observe/legal seam)
 - phases beyond fleet placement / combat
@@ -55,6 +55,7 @@ M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties,
 graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
 simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
 hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
-`actionsPerTurn`, delayed `delayTurns`, and hidden simultaneous `commitReveal`
-also landed. Further ports only when a **new** missing mechanism appears — not a
-backlog. Ordered simultaneous `resolveOrder` also landed (see Immediate).
+`actionsPerTurn`, delayed `delayTurns`, hidden simultaneous `commitReveal`,
+ordered simultaneous `resolveOrder`, and multi-action simultaneous rounds also
+landed. Further ports only when a **new** missing mechanism appears — not a
+backlog.
