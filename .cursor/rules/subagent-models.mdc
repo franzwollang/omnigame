@@ -1,0 +1,66 @@
+---
+description: Default model choices and delegation patterns for subagents in this repo
+alwaysApply: true
+---
+
+# Subagent Model Selection
+
+**Only Cursor models may be used for subagents in this repo.** Do not launch Claude,
+GPT, or Gemini subagents. Allowed slugs:
+
+| Slug | Role |
+|---|---|
+| `composer-2.5-fast` | Fast, cheap workhorse — exploration, well-scoped implementation, parallel variants |
+| `cursor-grok-4.5-high` | Harder reasoning, reviews, audits, red-teams, corpus consistency |
+
+Model *slugs* in the table below are agent-adjustable per the rule-governance rule when
+availability changes, but only within the Cursor family (`composer-*` / `cursor-grok-*`).
+Escalating from Composer to Grok needs a cited failure or an inherently hard task.
+
+Start at Composer; escalate to Grok only when Composer fails, the task is high-stakes
+(engine/kernel correctness, composition contracts, schema↔runtime parity), or the task
+is an explicit audit/red-team.
+
+| Task | Model | Why |
+|---|---|---|
+| Codebase exploration, file finding, "where is X" | `composer-2.5-fast` | Cheap, fast; exploration is retrieval, not deep reasoning |
+| Long-document skims (`README.md`, `PLANNING.md`, `OPEN_ISSUES.md`, large files), summarization | `composer-2.5-fast` | Retrieval/summary; escalate to Grok only if synthesis must reconcile conflicting design constraints |
+| General implementation (well-specified module, clear acceptance criteria) | `composer-2.5-fast` | Default coder for this stack |
+| Parallel best-of-N implementation variants | `composer-2.5-fast` | Cheap enough to run several attempts |
+| Hard features, tricky refactors, reducer/kernel correctness, composition contracts, win/capture logic | `cursor-grok-4.5-high` | Needs stronger reasoning; get it right the first time |
+| Auditing, red-teaming, reviewing design or code | `cursor-grok-4.5-high` | Dedicated critic stance (see below) |
+| Whole-corpus consistency passes (`README.md` vs `PLANNING.md` / `OPEN_ISSUES.md` vs engine/schema/UI) | `cursor-grok-4.5-high` | Cross-cutting judgment across many files |
+
+## Audit / red-team stance (required when using Grok for review)
+
+When launching an audit, red-team, Bugbot-style, or security-review subagent on
+`cursor-grok-4.5-high`, the prompt **must** instruct the reviewer to be:
+
+- **Critical but fair** — surface real defects, risks, and ambiguities; do not nitpick
+  style or invent problems to fill a quota.
+- **Evidence-based** — cite file paths, symbols, or behaviors; distinguish observed bugs
+  from speculative risks.
+- **Severity-ranked** — lead with highest-impact findings; mark severity
+  (blocker / major / minor / note).
+- **Actionable** — each finding should imply a concrete fix or decision; skip vague
+  “consider improving…” without a clear failure mode.
+- **Scope-respecting** — stay within the requested diff/area; do not expand into unrelated
+  redesigns unless a finding forces it.
+- **Honest about uncertainty** — say when something could not be verified (missing tests,
+  unreachable UI, etc.).
+
+Do not ask the auditor to be maximally adversarial or to “find something no matter what.”
+False positives waste more time than a slightly shorter review.
+
+## Delegation patterns for this repo
+
+- Broad context gathering: launch `explore` subagents on `composer-2.5-fast` (quick /
+  medium / very thorough); parallelize independent areas (e.g. one on `src/engine/`, one
+  on `app/sandbox/`, one on `references/`).
+- Narrow questions (one file, one symbol): do it directly; don't spawn a subagent.
+- Implementation subagents must be told: the relevant `PLANNING.md` milestone and/or
+  `OPEN_ISSUES.md` item, acceptance criteria, and which paths to touch. Point at
+  `README.md` / `docs/semantics.md` only for product vocabulary/reference. Subagents
+  don't see this conversation.
+- When reviewing engine/composition work, prefer an adversarial stance on **purity,
+  determinism, schema↔runtime honesty, and feature-contract safety**—not theatrical.

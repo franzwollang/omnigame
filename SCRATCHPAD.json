@@ -1,0 +1,21 @@
+{
+  "updated_at": "2026-07-24T23:50-05:00",
+  "turn": 3,
+  "focus": {
+    "milestone": "M0",
+    "issue": "effect-foothold",
+    "goal": "Honesty pass + install Effect foothold"
+  },
+  "recent": [
+    "Enshrined mechanism-first reference selection in project-structure",
+    "M5/OPEN_ISSUES no longer treat references/ as a checklist"
+  ],
+  "discoveries": [
+    "Expanding plain reducer for all knobs before Effect would double work"
+  ],
+  "open_threads": [
+    "Still open: Reversi label vs fix; XState keep/drop; Vitest; next hero game"
+  ],
+  "next_step": "User remaining clarifying Qs, or begin M0 (narrow schema + pnpm add effect)",
+  "blockers": []
+}

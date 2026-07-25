@@ -1,0 +1,55 @@
+---
+description: Which rule/workflow parameters agents may self-adjust, and what is protected
+alwaysApply: true
+---
+
+# Rule Governance: Self-Modification Boundaries
+
+Agents may tune designated operational parameters in `.cursor/rules/` when they observably
+cause friction. Everything else in the rules is fixed; **PROTECTED** items require the
+user's explicit approval in-conversation before any change.
+
+## Self-adjustment procedure (all conditions required)
+
+1. **Concrete friction, not speculation:** cite the specific instance this session where
+   the current value failed.
+2. **Within the allowed range** below. Out-of-range needs user approval.
+3. **Minimal edit:** change the one value; no drive-by rewording of surrounding rules.
+4. **Logged:** record `old -> new` and the reason in `SCRATCHPAD_LOG.jsonl` that turn (if
+   the log is in use), and state the change in the user-facing summary.
+5. **Once per parameter per session.** A second adjustment of the same parameter is a
+   design smell — raise it with the user instead.
+
+## Agent-adjustable parameters
+
+| Parameter (rule) | Default | Allowed range |
+|---|---|---|
+| Scratchpad size cap (project-state) | 4,000 chars | 2,000–8,000 |
+| Scratchpad compaction cadence (project-state) | 10 turns | 5–20 |
+| Scratchpad array cap (project-state) | 5 items | 3–8 |
+| Scratchpad item length (project-state) | 200 chars | 120–300 |
+| Checkpoint drift cadence (git-checkpoints) | ~8 turns | 3–15 |
+| Subagent model slugs (subagent-models) | per table | Cursor-family only (`composer-*`, `cursor-grok-*`); same cost tier or cheaper; escalate Composer→Grok only with a cited failure or inherently hard/audit task |
+
+Also freely maintainable without approval: fixing factual staleness in rules (file paths,
+scripts, stack facts) when the repo has verifiably changed.
+
+## PROTECTED — user approval required
+
+- `testing-integrity.mdc` in its entirety (never weaken tests to pass).
+- Append-only property of `OPEN_ISSUES_LOG.jsonl` and `SCRATCHPAD_LOG.jsonl`; never rewrite
+  or delete prior lines.
+- `OPEN_ISSUES.md` current-active-only convention (no history/tombstones in that file).
+- Distinct jobs of `PLANNING.md` vs `OPEN_ISSUES.md` vs `SCRATCHPAD.json` (do not collapse
+  them into one tracker).
+- Git safety: no push, no force-push, no `reset --hard`, no history rewriting, no branch
+  deletion; checkpoint authorization scope itself.
+- The divergence protocol (never let code and `README.md` vision diverge silently).
+- **Cursor-models-only** constraint for subagents (Composer + Grok); do not reintroduce
+  Claude/GPT/Gemini subagent defaults.
+- Creating, deleting, or renaming rule files and root state artifacts (`README.md` vision
+  sections, `PLANNING.md`, `OPEN_ISSUES.md`, `SCRATCHPAD.json`, logs) — except when the
+  user explicitly requests a rules retarget / cleanup.
+- This governance rule itself, including this list.
+
+When in doubt whether something is protected, treat it as protected and ask.

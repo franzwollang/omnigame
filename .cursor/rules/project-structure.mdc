@@ -1,0 +1,57 @@
+---
+description: OmniGame folder layout and where different kinds of work live
+alwaysApply: true
+---
+
+# Project Structure
+
+OmniGame is a composable 2D grid-game engine: topology, placement, constraints,
+effects, and objectives are first-class config—not per-game code forks.
+Product vocabulary and architecture live in `README.md`; formal composition notes
+in `docs/semantics.md`.
+
+## Top-level layout
+
+| Path | Purpose |
+|---|---|
+| `README.md` | Reference vision (spec → compiler → GameKernel + GameIR) |
+| `PLANNING.md` | Milestones, sequencing, coordination status board |
+| `OPEN_ISSUES.md` | Current open work + acceptance criteria |
+| `SCRATCHPAD.json` | Agent live session snapshot |
+| `docs/` | Semantics draft + long-form design notes (`scratchpad.md`) |
+| `app/` | Next.js routes: landing, about, sandbox, server actions |
+| `src/engine/` | Pure reducer, rules, capture, contracts, Z3, React hook |
+| `src/schemas/` | Zod game-config schema |
+| `src/presets/` | Built-in sandbox presets (TTT, Connect 4, Gomoku, Reversi, …) |
+| `src/components/` | shadcn/ui + shared UI (presets modal, theme) |
+| `src/lib/` | Small shared TS/style helpers |
+| `references/` | Design corpus of standalone games (not typechecked; not a checklist) |
+| `public/` | Logo, token assets |
+
+## Conventions
+
+- Prefer extending existing engine/schema/preset patterns over parallel systems.
+- Keep the **core pure** (`State → Event → State`); put IO (Three.js, forms, Z3,
+  persistence) at adapters/edges.
+- Specs should stay **named primitives + parameters**—no arbitrary user code in
+  configs (see README non-goals).
+- Roadmap → `PLANNING.md`; concrete open work → `OPEN_ISSUES.md`; session memory →
+  `SCRATCHPAD.json`. Do not use `README.md` as a task tracker.
+- Target module shape (directional, from README): `spec/`, `primitives/`,
+  `compiler/`, `kernel/`, `ir/`, `runtime/`, `agents/` — grow toward this; do not
+  invent a second architecture without updating planning.
+
+## Anchor / reference games — selection principle
+
+Do **not** treat `references/`, presets, or README examples as an exhaustive port
+checklist. Choose (or add) a reference/anchor game only when it forces a **new
+mechanism or abstraction** the engine lacks—e.g. observation, tick/scheduler,
+`Move` constraints, liberties/territory, hex/graph topology, simultaneous actions,
+phases, delayed actions.
+
+- **Reject / deprioritize** variants that only recombine covered primitives
+  (another n-in-a-row size, another gravity direction demo, another tick arcade
+  clone) unless they are trivial presets for the sandbox.
+- **Prefer** the smallest game that uniquely stresses the missing seam.
+- `references/` is a **design corpus**, not a backlog. Ports and new references
+  should name the mechanism they unlock in `OPEN_ISSUES.md` / `PLANNING.md`.

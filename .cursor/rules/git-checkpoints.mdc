@@ -1,0 +1,52 @@
+---
+description: Periodic checkpoint commits for agent-recoverable history
+alwaysApply: true
+---
+
+# Git Checkpoint Workflow
+
+This rule is the user's **standing authorization** to make periodic checkpoint commits
+without asking each time — **unless** a user rule in the conversation forbids commits
+except on explicit request. If such a user rule is active, do **not** checkpoint; ask or
+wait for an explicit commit request.
+
+Purpose: keep history granular enough that agents can diff against, check out, or revert
+to an earlier state if work paints itself into a corner — without committing on every turn.
+
+## When to checkpoint (only if commits are allowed)
+
+Commit when uncommitted changes exist AND any of these triggers fires:
+
+1. An `OPEN_ISSUES.md` item is resolved or a `PLANNING.md` milestone lands.
+2. The app/build returns to green after being broken.
+3. You are about to start a **risky operation**: multi-file refactor, engine/reducer or
+   schema changes, dependency updates, kernel/IR ABI changes.
+4. Accumulated drift: ~8 working turns since the last commit (adjustable 3–15 per the
+   rule-governance rule).
+5. The session is ending with substantive uncommitted work.
+
+At most one checkpoint commit per turn. Do not commit mid-edit states that would not
+typecheck/build; finish the file first.
+
+## Message convention
+
+- `checkpoint: <one-line summary>` — coherent state, build green or unchanged.
+- `wip: <one-line summary>` — intentionally incomplete or broken (say what in the body).
+- Body (optional, brief): issue touched, test/build note if relevant.
+
+## What gets committed
+
+Prefer staging intentional project files. Do **not** commit secrets, `.env`, or large
+generated noise. Avoid committing `dist/` and `node_modules/` unless the repo already
+tracks a specific generated path by convention. Continuity artifacts (`PLANNING.md`,
+`OPEN_ISSUES.md`, `SCRATCHPAD*`, logs) are intentionally trackable — keep them current
+before checkpointing when committing them.
+
+## Using and recovering from checkpoints
+
+- **Compare:** `git diff <sha> -- <path>`, `git show <sha>:<path>`, or a throwaway
+  worktree — never check out over a dirty tree.
+- **Undo:** prefer forward fixes; else `git revert <sha>` (history-preserving).
+- **PROTECTED (explicit user approval required):** `reset --hard`, `push --force`,
+  history rewriting (rebase/amend of existing commits), branch deletion, and any `push`
+  at all. Recovery must be additive, not destructive.

@@ -1,0 +1,35 @@
+---
+description: Maintain SCRATCHPAD.json for agent continuity across sessions
+alwaysApply: true
+---
+
+# Agent Scratchpad
+
+The file `SCRATCHPAD.json` at the repo root is a structured working-memory document for
+maintaining continuity across context compactions, topic tangents, and attention drift.
+It is **session memory**, not a substitute for `PLANNING.md` (roadmap) or
+`OPEN_ISSUES.md` (open work inventory).
+
+## When to Read It
+
+Read `SCRATCHPAD.json` at the start of every new conversation or after any context
+compaction. It contains the current state of work. If the file is missing, create it from
+the template in the project-state rule.
+
+## When to Update It
+
+Update `SCRATCHPAD.json` whenever:
+
+- A task is completed or a new task is started
+- The user redirects focus to a different topic
+- Important decisions are made that affect downstream work
+- You discover something worth remembering across sessions
+- Before ending a long session (capture current state)
+
+## Rules
+
+- Keep entries concise — memory aid, not narrative
+- Prefer updating existing keys over appending indefinitely
+- Follow hard limits in the project-state rule (size, array caps, item length, turn counter)
+- Optionally append one line to `SCRATCHPAD_LOG.jsonl` the same turn when something meaningful changed
+- The file should be readable cold by an agent with no prior context

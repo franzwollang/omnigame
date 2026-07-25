@@ -1,0 +1,44 @@
+---
+description: Source-of-truth and workflow discipline for OmniGame
+alwaysApply: true
+---
+
+# Repo Workflow
+
+This is **OmniGame**: a data-driven, pure-functional engine for 2D grid games.
+Games are typed JSON configs the engine interprets—not bespoke hardcoding per title.
+Live demo: [omnigame.vercel.app](https://omnigame.vercel.app/).
+
+## Documents (different jobs)
+
+| Artifact | Job |
+|---|---|
+| `README.md` | Durable product vision, architecture, non-goals (primary reference) |
+| `docs/semantics.md` | Formal composition / feature-contract semantics (draft) |
+| `docs/scratchpad.md` | Longer design notes + reference-game port requirements |
+| `PLANNING.md` | Planning & coordination — milestones, sequencing, status board |
+| `OPEN_ISSUES.md` | Current open work items + acceptance criteria |
+| `SCRATCHPAD.json` | Agent session snapshot (focus / next step) |
+| `app/` / `src/` | Implementation (Next.js UI + engine/schemas/presets) |
+| `references/` | Standalone reference games (design corpus; excluded from tsconfig) |
+
+See the **project-state** rule for write cadences and how continuity files overlap
+without replacing each other.
+
+## Stack (orient quickly)
+
+- **App:** Next.js 14 (App Router), React 18, TypeScript, Tailwind, shadcn/ui
+- **Engine:** pure reducers in `src/engine/`; Zod schemas in `src/schemas/`
+- **Sandbox:** JSON editor + form + Three.js canvas under `app/sandbox/`
+- **Optional tooling:** z3-solver (SMT checks), XState (declared; not yet wired)
+- **Package manager:** `pnpm` — `pnpm run dev` / `build` / `typecheck` / `lint`
+
+## Divergence protocol
+
+Never let the prototype and `README.md` (vision) diverge silently. When an
+implementation choice improves on or contradicts the documented vision:
+
+1. Implement it (if justified), and
+2. Record the mismatch as an `OPEN_ISSUES.md` entry (and/or update `README.md` /
+   `docs/semantics.md` if the user asked for a concept change). Plan any phased
+   rollout in `PLANNING.md`.

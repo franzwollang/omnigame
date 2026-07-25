@@ -1,0 +1,124 @@
+---
+description: Roles and write cadences for PLANNING, OPEN_ISSUES, SCRATCHPAD (README as reference)
+alwaysApply: true
+---
+
+# Project State & Continuity Artifacts
+
+Four artifacts coordinate work. They overlap in topic but **not** in job:
+
+| File | Job | Audience | Write pattern |
+|---|---|---|---|
+| `README.md` (+ `docs/semantics.md`) | Durable product/reference vision | humans + agents | edit when design intent changes (usually user-driven) |
+| `PLANNING.md` | Planning & general coordination — milestones, sequencing, status board | humans + agents | edit in place |
+| `OPEN_ISSUES.md` | Current open work items only — concrete gaps with acceptance criteria | humans + agents | edit in place |
+| `SCRATCHPAD.json` | Live agent session snapshot — focus, next step, short memory | agents (primary) | overwrite in place |
+
+Append-only logs (git-tracked when present):
+
+| File | Role | Cadence |
+|---|---|---|
+| `OPEN_ISSUES_LOG.jsonl` | History of issue opens/edits/resolutions | append ≤1/turn when issues change |
+| `SCRATCHPAD_LOG.jsonl` | Trail of session work behind the scratchpad | append ≤1/turn when useful |
+
+**Do not collapse these into one file.** Put durable vision in `README.md` /
+`docs/semantics.md`, roadmap/coordination in `PLANNING.md`, actionable open work
+in `OPEN_ISSUES.md`, and ephemeral “what now” state in `SCRATCHPAD.json`.
+Cross-link (e.g. planning cites an issue title; scratchpad cites a milestone id)
+instead of copying bodies.
+
+Longer design notes may live in `docs/scratchpad.md`; that file is **not** a
+substitute for `PLANNING.md` / `OPEN_ISSUES.md` / `SCRATCHPAD.json`.
+
+---
+
+## README.md — reference, not a tracker
+
+- Source for *what the product is*, architecture, MVP scope, and non-goals.
+- Not a task list, milestone board, or session memory.
+- Implementation that contradicts vision: note in `OPEN_ISSUES.md` (and/or update
+  README if the user asked).
+
+---
+
+## PLANNING.md — planning & coordination
+
+Owns the **roadmap shape**, not the detailed bug/task inventory.
+
+- Milestone sequence, exit criteria, and a **status board** near the top
+  (`not started` / `in progress` / `blocked` / `done`).
+- Sequencing, dependencies, and “what we are optimizing for this phase.”
+- Reference open issues by title/section; **do not** restate full issue text.
+- When a milestone’s exit criteria are met: mark `done` and resolve the related
+  `OPEN_ISSUES.md` items in the same turn (via the open-issues protocol below).
+
+Statuses live on the board, not scattered as narrative progress paragraphs.
+
+---
+
+## OPEN_ISSUES.md — current open work only
+
+Contains **only issues that are open right now**. No resolved lists, no “recently fixed”
+notes, no long progress narratives. History lives in `OPEN_ISSUES_LOG.jsonl`.
+
+- **Content:** remaining work, motivation, pointers (`README.md` sections, file paths),
+  and acceptance criteria.
+- **Resolving:** remove or uncheck/delete the entry and append a one-line resolution note
+  to `OPEN_ISSUES_LOG.jsonl` the same turn. No tombstones.
+- **If an entry accumulates “done so far” prose:** move that to the log and trim the entry
+  back to what remains.
+- Prefer the file’s existing section structure (e.g. Immediate / later phases). Add new
+  items under the right section.
+
+Suggested log line:
+
+```json
+{"ts":"2026-07-24T23:40-05:00","summary":"closed schema-engine gravity parity","added":[],"edited":[],"resolved":[{"id":"gravity-dirs","note":"up/left/right scan paths implemented + tests"}]}
+```
+
+---
+
+## SCRATCHPAD.json — session continuity (not a plan)
+
+Minimal agent-facing snapshot so work survives compaction/resume. **Not** a substitute
+for `PLANNING.md` or `OPEN_ISSUES.md`.
+
+Hard limits (agent-adjustable within rule-governance ranges):
+
+- Total size ≤ **4,000 characters**
+- Arrays (`recent`, `discoveries`, `open_threads`, `blockers`) ≤ **5 items**, newest last
+- Each string ≤ **200 characters**
+- Increment `turn` every write; compact every 10 turns and when over size — promote durable
+  content out to `OPEN_ISSUES.md` / `PLANNING.md` / logs; drop stale fluff
+
+### Template
+
+```json
+{
+  "updated_at": "2026-07-24T23:40-05:00",
+  "turn": 2,
+  "focus": { "milestone": "M0", "issue": "Schema↔engine parity", "goal": "Implement advertised gravity directions" },
+  "recent": ["retargeted cursor rules from Civic Lab to OmniGame"],
+  "discoveries": [],
+  "open_threads": ["Effect.ts vs stay-on-Zod decision pending"],
+  "next_step": "answer planning clarifying questions with user",
+  "blockers": []
+}
+```
+
+| Key | Purpose |
+|---|---|
+| `focus.milestone` | `PLANNING.md` milestone id when applicable |
+| `focus.issue` | Active `OPEN_ISSUES.md` item label (or `null`) |
+| `focus.goal` | Immediate objective in one phrase |
+| `next_step` | Single next action on resume |
+
+---
+
+## SCRATCHPAD_LOG.jsonl
+
+Append at most once per turn when something meaningful changed. Never rewrite prior lines.
+
+```json
+{"ts":"2026-07-24T23:40-05:00","focus":"continuity artifacts","summary":"seeded PLANNING/OPEN_ISSUES for OmniGame","next":"clarify milestone priority with user"}
+```
