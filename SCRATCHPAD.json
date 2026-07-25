@@ -1,19 +1,19 @@
 {
-  "updated_at": "2026-07-25T10:20-05:00",
-  "turn": 11,
+  "updated_at": "2026-07-25T10:40-05:00",
+  "turn": 12,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after simultaneous schedule"
+    "goal": "Hand off after multi-step actionsPerTurn"
   },
   "recent": [
-    "Synced d7b9 hex wrap onto d670",
-    "Landed simultaneous schedule + Simultaneous TTT",
-    "stepJoint / simultaneousPlace + same-cell conflict"
+    "Synced d670 simultaneous onto b103",
+    "Landed turn.actionsPerTurn + Double Move TTT",
+    "actionsRemaining budget; win mid-turn; tests"
   ],
   "discoveries": [
-    "Single place is noop under simultaneous; joint only",
-    "UCT/MCTS tree deferred for joint — random seat pick"
+    "Multi-step = alternating budget; not a new schedule slot",
+    "Illegal place leaves actionsRemaining unchanged"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"

@@ -32,3 +32,4 @@
 {"ts":"2026-07-25T09:30-05:00","focus":"horizontal pop-out","summary":"pop_out_right/left + popOutRow + Connect 4 Right Pop Out","next":"pick next mechanism: hex wrap / simultaneous / delayed"}
 {"ts":"2026-07-25T14:50+00:00","focus":"hex-wrap","summary":"Landed grid.wrap for hex_offset + Toroidal Hex Connect Lite; handed off next mechanism","next":"pick simultaneous or delayed actions"}
 {"ts":"2026-07-25T10:20-05:00","focus":"simultaneous schedule","summary":"Landed turn.schedule=simultaneous joint place + Simultaneous TTT","next":"Cloud agent: pick delayed-actions or hidden simultaneous"}
+{"ts":"2026-07-25T10:40-05:00","focus":"next-missing-mechanism","summary":"multi-step actionsPerTurn + Double Move TTT after syncing d670","next":"delayed actions or hidden simultaneous"}

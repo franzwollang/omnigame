@@ -16,8 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Simultaneous schedule landed (Simultaneous TTT).
-Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Multi-step turns landed (Double Move TTT /
+`actionsPerTurn`). Hand off to the next **missing mechanism** (see
+`OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -60,7 +61,8 @@ Working sandbox slice (see README “Current implementation status”):
   Connect 4 Up Pop Out, Connect 4 Right Pop Out, Gomoku, Capture / Flip Demo,
   Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
   Step Race (Move + reach_row),
-  Life Lite (manual tick + B3/S23), Toroidal TTT, Toroidal Hex Connect Lite
+  Life Lite (manual tick + B3/S23), Toroidal TTT, Toroidal Hex Connect Lite,
+  Simultaneous TTT, Double Move TTT
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -89,8 +91,10 @@ Working sandbox slice (see README “Current implementation status”):
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 - **Simultaneous schedule:** `turn.schedule = "simultaneous"` + `simultaneousPlace` /
   `stepJoint`; same-cell conflict places neither; Simultaneous TTT preset
+- **Multi-step turns:** `turn.actionsPerTurn` + `GameState.actionsRemaining`;
+  handoff after budget; Double Move TTT preset
 
-Not yet: full Go rules, delayed/multi-step turns, hex/graph simultaneous.
+Not yet: full Go rules, delayed (queued) actions, hidden/hex/graph simultaneous.
 
 ## Milestone exit criteria
 
