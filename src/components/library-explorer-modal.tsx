@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Config } from "@/schemas/config";
 import {
+	buildConfigSharePath,
+	buildExploreSharePath,
 	exploreLibrary,
 	playableSamples,
 	type ExploreSummary,
@@ -22,6 +24,10 @@ interface LibraryExplorerModalProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	onLoadConfig: (config: Config) => void;
+	/** Optional initial explore seed (e.g. from URL). */
+	initialSeed?: number;
+	/** Optional initial sample count. */
+	initialCount?: number;
 }
 
 const KIND_ORDER: PlayabilityKind[] = [
@@ -30,6 +36,8 @@ const KIND_ORDER: PlayabilityKind[] = [
 	"unplayable",
 	"invalid"
 ];
+
+const COHERENT_FRACTION = 0.35;
 
 function kindBadgeVariant(
 	kind: PlayabilityKind
@@ -56,43 +64,98 @@ function sampleLabel(sample: SampledConfig): string {
 	return name;
 }
 
+function topologyHint(sample: SampledConfig): string | null {
+	const topo = sample.config?.grid?.topology;
+	return topo ?? null;
+}
+
 export function LibraryExplorerModal({
 	open,
 	onOpenChange,
-	onLoadConfig
+	onLoadConfig,
+	initialSeed,
+	initialCount
 }: LibraryExplorerModalProps) {
-	const [seed, setSeed] = useState(42);
-	const [count, setCount] = useState(24);
+	const [seed, setSeed] = useState(initialSeed ?? 42);
+	const [count, setCount] = useState(initialCount ?? 48);
 	const [summary, setSummary] = useState<ExploreSummary | null>(null);
 	const [filter, setFilter] = useState<PlayabilityKind | "all">("all");
+	const [sortPlayableFirst, setSortPlayableFirst] = useState(true);
+	const [copiedId, setCopiedId] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (initialSeed != null) setSeed(initialSeed);
+	}, [initialSeed]);
+
+	useEffect(() => {
+		if (initialCount != null) setCount(initialCount);
+	}, [initialCount]);
 
 	const runExplore = () => {
 		const next = exploreLibrary({
 			seed,
 			count,
-			coherentFraction: 0.35,
+			coherentFraction: COHERENT_FRACTION,
 			maxPlayoutSteps: 28
 		});
 		setSummary(next);
 		setFilter("all");
+		setCopiedId(null);
 	};
 
 	const visible = useMemo(() => {
 		if (!summary) return [];
-		if (filter === "all") return summary.samples;
-		return summary.samples.filter((s) => s.playability.kind === filter);
-	}, [summary, filter]);
+		let list =
+			filter === "all"
+				? [...summary.samples]
+				: summary.samples.filter((s) => s.playability.kind === filter);
+		if (sortPlayableFirst) {
+			const rank = (k: PlayabilityKind) => KIND_ORDER.indexOf(k);
+			list.sort((a, b) => {
+				const kr = rank(a.playability.kind) - rank(b.playability.kind);
+				if (kr !== 0) return kr;
+				return (
+					(b.playability.score ?? 0) - (a.playability.score ?? 0) ||
+					a.index - b.index
+				);
+			});
+		}
+		return list;
+	}, [summary, filter, sortPlayableFirst]);
 
 	const playables = summary ? playableSamples(summary) : [];
 
+	const copyShare = async (sample: SampledConfig, mode: "find" | "explore") => {
+		if (!summary || !sample.config) return;
+		const path =
+			mode === "find"
+				? buildConfigSharePath(sample.config)
+				: buildExploreSharePath({
+						seed: summary.seed,
+						index: sample.index,
+						count: summary.count,
+						coherentFraction: COHERENT_FRACTION
+					});
+		const url =
+			typeof window !== "undefined"
+				? `${window.location.origin}${path}`
+				: path;
+		try {
+			await navigator.clipboard.writeText(url);
+			setCopiedId(`${sample.id}:${mode}`);
+		} catch {
+			setCopiedId(null);
+		}
+	};
+
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="flex max-h-[85vh] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
+			<DialogContent className="flex max-h-[90vh] w-full max-w-3xl flex-col gap-0 overflow-hidden p-0">
 				<DialogHeader className="shrink-0 border-b px-5 py-4">
 					<DialogTitle>Library explorer</DialogTitle>
 					<p className="text-sm text-muted-foreground">
-						Sample random configs and see how rare playable hybrids are
-						(Library of Babel framing). Load a playable find into the sandbox.
+						Sample random configs (including graph boards), score playable
+						finds, and share links back into the sandbox.
 					</p>
 				</DialogHeader>
 
@@ -111,17 +174,27 @@ export function LibraryExplorerModal({
 						<input
 							type="number"
 							min={1}
-							max={100}
+							max={200}
 							className="h-8 w-20 rounded border bg-background px-2 text-foreground"
 							value={count}
 							onChange={(e) =>
-								setCount(Math.min(100, Math.max(1, Number(e.target.value) || 1)))
+								setCount(
+									Math.min(200, Math.max(1, Number(e.target.value) || 1))
+								)
 							}
 						/>
 					</label>
 					<Button size="sm" onClick={runExplore}>
 						Sample
 					</Button>
+					<label className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+						<input
+							type="checkbox"
+							checked={sortPlayableFirst}
+							onChange={(e) => setSortPlayableFirst(e.target.checked)}
+						/>
+						Rank by score
+					</label>
 					{summary && (
 						<div className="flex flex-wrap gap-1.5 font-mono text-xs">
 							{(
@@ -159,7 +232,7 @@ export function LibraryExplorerModal({
 					{!summary ? (
 						<p className="text-sm text-muted-foreground">
 							Click Sample to draw configs. Most will be invalid or noise;
-							playable ones can be loaded into the composer.
+							playable ones show a score and can be loaded or shared.
 						</p>
 					) : visible.length === 0 ? (
 						<p className="text-sm text-muted-foreground">
@@ -170,6 +243,8 @@ export function LibraryExplorerModal({
 							{visible.map((sample) => {
 								const kind = sample.playability.kind;
 								const canLoad = kind === "playable" && sample.config;
+								const topo = topologyHint(sample);
+								const score = sample.playability.score;
 								return (
 									<li
 										key={sample.id}
@@ -180,7 +255,15 @@ export function LibraryExplorerModal({
 												<span className="truncate text-sm font-medium">
 													{sampleLabel(sample)}
 												</span>
-												<Badge variant={kindBadgeVariant(kind)}>{kind}</Badge>
+												<Badge variant={kindBadgeVariant(kind)}>
+													{kind}
+												</Badge>
+												{score != null && (
+													<Badge variant="outline">score {score}</Badge>
+												)}
+												{topo && (
+													<Badge variant="secondary">{topo}</Badge>
+												)}
 											</div>
 											<p className="mt-0.5 font-mono text-xs text-muted-foreground line-clamp-2">
 												{sample.playability.reasons[0] ?? "—"}
@@ -193,17 +276,27 @@ export function LibraryExplorerModal({
 											</p>
 										</div>
 										{canLoad && (
-											<Button
-												size="sm"
-												variant="outline"
-												className="shrink-0"
-												onClick={() => {
-													onLoadConfig(sample.config!);
-													onOpenChange(false);
-												}}
-											>
-												Load
-											</Button>
+											<div className="flex shrink-0 flex-col gap-1 sm:flex-row">
+												<Button
+													size="sm"
+													variant="outline"
+													onClick={() => {
+														onLoadConfig(sample.config!);
+														onOpenChange(false);
+													}}
+												>
+													Load
+												</Button>
+												<Button
+													size="sm"
+													variant="ghost"
+													onClick={() => copyShare(sample, "find")}
+												>
+													{copiedId === `${sample.id}:find`
+														? "Copied"
+														: "Share"}
+												</Button>
+											</div>
 										)}
 									</li>
 								);
@@ -212,19 +305,17 @@ export function LibraryExplorerModal({
 					)}
 				</div>
 
-				{summary && playables.length > 0 && (
+				{summary && (
 					<div className="shrink-0 border-t px-5 py-3">
-						<p className="mb-2 font-mono text-xs text-muted-foreground">
+						<p className="font-mono text-xs text-muted-foreground">
 							{playables.length} playable / {summary.count} sampled
+							{playables[0]?.playability.score != null
+								? ` · top score ${playables[0].playability.score}`
+								: ""}
 							{filter !== "all" ? ` · filter=${filter}` : ""}
+							{" · "}
+							share uses ?find=… or ?librarySeed=&libraryIndex=
 						</p>
-						<div className="flex flex-wrap gap-1">
-							{KIND_ORDER.map((k) => (
-								<span key={k} className="sr-only">
-									{k}
-								</span>
-							))}
-						</div>
 					</div>
 				)}
 			</DialogContent>

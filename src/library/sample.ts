@@ -177,14 +177,122 @@ function sampleFog(rng: SamplerRng, seed: number): ConfigInput {
 	return cfg;
 }
 
-type CoherentFamily = "n_in_a_row" | "gravity" | "hex" | "flip" | "fog";
+type GraphNode = { row: number; col: number; x: number; y: number };
+type GraphEdge = [string, string];
+
+function nodeKey(n: { row: number; col: number }): string {
+	return `${n.row},${n.col}`;
+}
+
+/** Build a connected undirected graph (spanning tree + optional chords). */
+function buildConnectedGraph(
+	rng: SamplerRng,
+	nodeCount: number
+): { nodes: GraphNode[]; edges: GraphEdge[]; width: number; height: number } {
+	const width = Math.max(3, Math.ceil(Math.sqrt(nodeCount)) + 1);
+	const height = Math.max(3, Math.ceil(nodeCount / width) + 1);
+	const slots: Array<{ row: number; col: number }> = [];
+	for (let r = 0; r < height; r++) {
+		for (let c = 0; c < width; c++) {
+			slots.push({ row: r, col: c });
+		}
+	}
+	// Shuffle slots and take nodeCount unique embeddings
+	for (let i = slots.length - 1; i > 0; i--) {
+		const j = Math.floor(rng() * (i + 1)) % (i + 1);
+		const tmp = slots[i]!;
+		slots[i] = slots[j]!;
+		slots[j] = tmp;
+	}
+	const chosen = slots.slice(0, nodeCount);
+	const nodes: GraphNode[] = chosen.map((s) => ({
+		row: s.row,
+		col: s.col,
+		x: s.col,
+		y: s.row
+	}));
+
+	const edges: GraphEdge[] = [];
+	const used = new Set<string>();
+	const edgeKey = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
+
+	// Spanning tree: grow from node 0
+	const connected = [0];
+	const remaining = Array.from({ length: nodeCount - 1 }, (_, i) => i + 1);
+	while (remaining.length > 0) {
+		const ri = Math.floor(rng() * remaining.length) % remaining.length;
+		const next = remaining.splice(ri, 1)[0]!;
+		const parent = pick(rng, connected);
+		const a = nodeKey(nodes[parent]!);
+		const b = nodeKey(nodes[next]!);
+		const ek = edgeKey(a, b);
+		if (!used.has(ek)) {
+			used.add(ek);
+			edges.push([a, b]);
+		}
+		connected.push(next);
+	}
+
+	// Extra chords for richer win paths
+	const extra = int(rng, 1, Math.max(1, Math.floor(nodeCount / 2)));
+	for (let i = 0; i < extra; i++) {
+		const aIdx = int(rng, 0, nodeCount - 1);
+		let bIdx = int(rng, 0, nodeCount - 1);
+		if (bIdx === aIdx) bIdx = (bIdx + 1) % nodeCount;
+		const a = nodeKey(nodes[aIdx]!);
+		const b = nodeKey(nodes[bIdx]!);
+		const ek = edgeKey(a, b);
+		if (!used.has(ek)) {
+			used.add(ek);
+			edges.push([a, b]);
+		}
+	}
+
+	return { nodes, edges, width, height };
+}
+
+/** Coherent graph n-in-a-row (composite adjacency over explicit edges). */
+function sampleGraph(rng: SamplerRng, seed: number): ConfigInput {
+	const nodeCount = int(rng, 5, 9);
+	const { nodes, edges, width, height } = buildConnectedGraph(rng, nodeCount);
+	const length = int(rng, 3, Math.min(4, nodeCount));
+	const cfg = baseMeta(`Sample graph ${nodeCount}n`, seed);
+	cfg.grid = {
+		width,
+		height,
+		topology: "graph",
+		wrap: false,
+		nodes,
+		edges
+	};
+	cfg.win = {
+		length,
+		adjacency: {
+			mode: "composite",
+			horizontal: false,
+			vertical: false,
+			backDiagonal: false,
+			forwardDiagonal: false
+		}
+	};
+	return cfg;
+}
+
+type CoherentFamily =
+	| "n_in_a_row"
+	| "gravity"
+	| "hex"
+	| "flip"
+	| "fog"
+	| "graph";
 
 const COHERENT_FAMILIES: readonly CoherentFamily[] = [
 	"n_in_a_row",
 	"gravity",
 	"hex",
 	"flip",
-	"fog"
+	"fog",
+	"graph"
 ];
 
 function sampleCoherent(rng: SamplerRng, seed: number): ConfigInput {
@@ -200,6 +308,8 @@ function sampleCoherent(rng: SamplerRng, seed: number): ConfigInput {
 			return sampleFlip(rng, seed);
 		case "fog":
 			return sampleFog(rng, seed);
+		case "graph":
+			return sampleGraph(rng, seed);
 	}
 }
 
@@ -220,14 +330,43 @@ function sampleNoise(rng: SamplerRng, seed: number): unknown {
 		"none"
 	] as const);
 	const observation = pick(rng, ["full", "hit_miss", "fog"] as const);
-	const topology = pick(rng, ["rectangle", "hex_offset"] as const);
+	const topology = pick(rng, ["rectangle", "hex_offset", "graph"] as const);
 	const schedule = pick(rng, ["alternating", "manual_tick"] as const);
 	const captureOn = rng() > 0.5;
 	const captureMode = pick(rng, ["flip", "liberties"] as const);
 
+	const grid: Record<string, unknown> = {
+		width,
+		height,
+		topology,
+		wrap: false
+	};
+	// Occasionally emit graph nodes/edges (often broken — Babel noise)
+	if (topology === "graph") {
+		if (rng() > 0.35) {
+			const n = int(rng, 2, 6);
+			const nodes = Array.from({ length: n }, (_, i) => ({
+				row: int(rng, 0, height - 1),
+				col: int(rng, 0, width - 1),
+				x: i,
+				y: 0
+			}));
+			grid.nodes = nodes;
+			if (rng() > 0.3) {
+				grid.edges = Array.from({ length: int(rng, 0, n) }, () => {
+					const a = nodes[int(rng, 0, n - 1)]!;
+					const b = nodes[int(rng, 0, n - 1)]!;
+					return [`${a.row},${a.col}`, `${b.row},${b.col}`];
+				});
+			}
+			// else: omit edges → invalid
+		}
+		// else: omit nodes → invalid
+	}
+
 	const raw: Record<string, unknown> = {
 		metadata: { name: `Noise ${seed}`, version: 1 },
-		grid: { width, height, topology, wrap: false },
+		grid,
 		turn: { mode: "turn", schedule },
 		rng: { seed },
 		tokens: DEFAULT_TOKENS,

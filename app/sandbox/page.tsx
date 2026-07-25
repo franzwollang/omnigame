@@ -31,6 +31,7 @@ import {
 import { PresetsModal } from "@/components/presets-modal";
 import { LibraryExplorerModal } from "@/components/library-explorer-modal";
 import { examplePresets, type ExamplePreset } from "@/presets/registry";
+import { parseSandboxShare } from "@/library";
 import { Maximize2, Minimize2 } from "lucide-react";
 
 const SandboxEditorLazy = dynamic(() => import("./editor"), {
@@ -64,6 +65,12 @@ export default function GamePage() {
 	const [currentConfig, setCurrentConfig] = useState<Config | null>(null);
 	const [presetsModalOpen, setPresetsModalOpen] = useState(false);
 	const [libraryModalOpen, setLibraryModalOpen] = useState(false);
+	const [libraryShareSeed, setLibraryShareSeed] = useState<number | undefined>();
+	const [libraryShareCount, setLibraryShareCount] = useState<
+		number | undefined
+	>();
+	const [shareNotice, setShareNotice] = useState<string | null>(null);
+	const shareLoadedRef = useRef(false);
 	const [fullscreenMode, setFullscreenMode] = useState<"form" | "json" | null>(
 		null
 	);
@@ -255,6 +262,40 @@ export default function GamePage() {
 		reset();
 	};
 
+	// Deep-link: /sandbox?find=… or ?librarySeed=&libraryIndex=
+	useEffect(() => {
+		if (shareLoadedRef.current) return;
+		if (typeof window === "undefined") return;
+		const params = new URLSearchParams(window.location.search);
+		if (
+			!params.has("find") &&
+			!(params.has("librarySeed") && params.has("libraryIndex"))
+		) {
+			return;
+		}
+		shareLoadedRef.current = true;
+		const decoded = parseSandboxShare(params);
+		if (!decoded) {
+			setShareNotice("Could not resolve shared library find from URL.");
+			return;
+		}
+		handleLoadLibraryConfig(decoded.config);
+		if (decoded.kind === "explore") {
+			setLibraryShareSeed(decoded.params.seed);
+			if (decoded.params.count != null) {
+				setLibraryShareCount(decoded.params.count);
+			}
+			setLibraryModalOpen(true);
+			setShareNotice(
+				`Loaded explore find #${decoded.params.index} (seed ${decoded.params.seed}).`
+			);
+		} else {
+			setShareNotice(
+				`Loaded shared find “${decoded.config.metadata.name}”.`
+			);
+		}
+	}, [form]);
+
 	const highlight = (code: string) =>
 		Prism.highlight(code, Prism.languages.json, "json");
 
@@ -273,6 +314,18 @@ export default function GamePage() {
 					configuration—entities, rules, and transitions—using a deterministic
 					render loop built on Three.js.
 				</p>
+				{shareNotice && (
+					<p className="mt-2 font-mono text-xs text-muted-foreground">
+						{shareNotice}{" "}
+						<button
+							type="button"
+							className="underline"
+							onClick={() => setShareNotice(null)}
+						>
+							dismiss
+						</button>
+					</p>
+				)}
 				<div className="mt-4 flex gap-2">
 					<Button
 						variant="outline"
@@ -598,6 +651,8 @@ export default function GamePage() {
 				open={libraryModalOpen}
 				onOpenChange={setLibraryModalOpen}
 				onLoadConfig={handleLoadLibraryConfig}
+				initialSeed={libraryShareSeed}
+				initialCount={libraryShareCount}
 			/>
 		</div>
 	);

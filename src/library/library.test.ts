@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 import { examplePresets } from "@/presets/registry";
 import {
 	assessPlayability,
+	buildConfigSharePath,
+	buildExploreSharePath,
+	createSamplerRng,
+	decodeConfigShare,
+	encodeConfigShare,
 	exploreLibrary,
+	parseSandboxShare,
 	playableSamples,
+	resolveExploreShare,
 	sampleRawConfig,
-	createSamplerRng
+	scorePlayable
 } from "@/library";
 
 describe("library explorer (M7)", () => {
@@ -14,13 +21,15 @@ describe("library explorer (M7)", () => {
 			"tic-tac-toe",
 			"connect-4",
 			"hex-connect-lite",
-			"reversi"
+			"reversi",
+			"graph-connect-lite"
 		] as const) {
 			const preset = examplePresets[id];
 			expect(preset, id).toBeDefined();
 			const report = assessPlayability(preset!.config, { seed: 42 });
 			expect(report.kind, id).toBe("playable");
 			expect(report.openingLegal ?? 0).toBeGreaterThan(0);
+			expect(report.score ?? 0).toBeGreaterThan(0);
 		}
 	});
 
@@ -83,6 +92,9 @@ describe("library explorer (M7)", () => {
 		expect(a.samples.map((s) => s.playability.kind)).toEqual(
 			b.samples.map((s) => s.playability.kind)
 		);
+		expect(a.samples.map((s) => s.playability.score)).toEqual(
+			b.samples.map((s) => s.playability.score)
+		);
 	});
 
 	it("exploreLibrary surfaces a mix; coherent fraction yields some playable", () => {
@@ -105,6 +117,13 @@ describe("library explorer (M7)", () => {
 		for (const s of playables) {
 			expect(s.config).toBeDefined();
 			expect(s.playability.kind).toBe("playable");
+			expect(s.playability.score).toBeTypeOf("number");
+		}
+		// Sorted highest score first
+		for (let i = 1; i < playables.length; i++) {
+			expect(playables[i - 1]!.playability.score ?? 0).toBeGreaterThanOrEqual(
+				playables[i]!.playability.score ?? 0
+			);
 		}
 	});
 
@@ -122,5 +141,98 @@ describe("library explorer (M7)", () => {
 			}
 		}
 		expect(invalidish).toBeGreaterThan(5);
+	});
+
+	it("coherent graph family samples compile and can be playable", () => {
+		const rng = createSamplerRng(42);
+		let sawGraph = false;
+		let playableGraph = 0;
+		for (let i = 0; i < 48; i++) {
+			const raw = sampleRawConfig(rng, { seed: 5000 + i, coherent: true });
+			const topo = (raw as { grid?: { topology?: string } }).grid?.topology;
+			if (topo !== "graph") continue;
+			sawGraph = true;
+			const report = assessPlayability(raw, { seed: 5000 + i });
+			expect(["playable", "noise", "unplayable", "invalid"]).toContain(
+				report.kind
+			);
+			if (report.kind === "playable") playableGraph += 1;
+		}
+		expect(sawGraph).toBe(true);
+		expect(playableGraph).toBeGreaterThan(0);
+	});
+
+	it("scorePlayable rewards branching, progress, and termination", () => {
+		const low = scorePlayable({
+			openingLegal: 2,
+			random: {
+				stepsTaken: 2,
+				terminated: false,
+				playersMoved: new Set(["X"])
+			},
+			greedy: {
+				stepsTaken: 2,
+				terminated: false,
+				playersMoved: new Set(["X"])
+			}
+		});
+		const high = scorePlayable({
+			openingLegal: 20,
+			random: {
+				stepsTaken: 20,
+				terminated: true,
+				playersMoved: new Set(["X", "O"])
+			},
+			greedy: {
+				stepsTaken: 12,
+				terminated: true,
+				playersMoved: new Set(["X", "O"])
+			}
+		});
+		expect(high).toBeGreaterThan(low);
+		expect(high).toBeLessThanOrEqual(100);
+	});
+});
+
+describe("library share links", () => {
+	it("round-trips config find encoding", () => {
+		const config = examplePresets["tic-tac-toe"]!.config;
+		const encoded = encodeConfigShare(config);
+		const decoded = decodeConfigShare(encoded);
+		expect(decoded).toEqual(config);
+		const path = buildConfigSharePath(config);
+		expect(path.startsWith("/sandbox?find=")).toBe(true);
+		const parsed = parseSandboxShare(path.replace("/sandbox?", ""));
+		expect(parsed?.kind).toBe("config");
+		expect(parsed?.config.metadata.name).toBe("Tic-Tac-Toe");
+	});
+
+	it("resolves explore pointer to the same playable sample", () => {
+		const summary = exploreLibrary({
+			seed: 11,
+			count: 20,
+			coherentFraction: 0.5,
+			maxPlayoutSteps: 28
+		});
+		const playable = summary.samples.find(
+			(s) => s.playability.kind === "playable" && s.config
+		);
+		expect(playable).toBeDefined();
+		const resolved = resolveExploreShare({
+			seed: 11,
+			index: playable!.index,
+			count: 20,
+			coherentFraction: 0.5
+		});
+		expect(resolved).toEqual(playable!.config);
+		const path = buildExploreSharePath({
+			seed: 11,
+			index: playable!.index,
+			count: 20,
+			coherentFraction: 0.5
+		});
+		const parsed = parseSandboxShare(path.replace("/sandbox?", ""));
+		expect(parsed?.kind).toBe("explore");
+		expect(parsed?.config).toEqual(playable!.config);
 	});
 });

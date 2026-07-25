@@ -24,6 +24,11 @@ export type PlayabilityReport = {
 	terminated: boolean;
 	/** Opening legal-action count when compile succeeded. */
 	openingLegal?: number;
+	/**
+	 * 0–100 quality heuristic when kind=playable (branching, progress,
+	 * termination, dual-agent probe). Omitted for non-playable.
+	 */
+	score?: number;
 };
 
 export type SampledConfig = {

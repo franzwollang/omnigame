@@ -96,13 +96,17 @@ export function exploreLibrary(
 	};
 }
 
-/** Playable samples only (for UI "load into sandbox"). */
+/** Playable samples only, highest score first (for UI "load into sandbox"). */
 export function playableSamples(
 	summary: ExploreSummary
 ): SampledConfig[] {
-	return summary.samples.filter(
-		(s) => s.playability.kind === "playable" && s.config
-	);
+	return summary.samples
+		.filter((s) => s.playability.kind === "playable" && s.config)
+		.sort(
+			(a, b) =>
+				(b.playability.score ?? 0) - (a.playability.score ?? 0) ||
+				a.index - b.index
+		);
 }
 
 function clamp01(n: number): number {
