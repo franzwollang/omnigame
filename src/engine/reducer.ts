@@ -57,8 +57,8 @@ export type GameConfig = {
 	adjacency: AdjacencyConfig;
 	inputMode?: "cell" | "column" | "move";
 	placementMode?: "direct" | "gravity";
-	/** Only `"down"` is implemented; other directions deferred. */
-	gravityDirection?: "down";
+	/** Vertical gravity axis. Left/right need row input — deferred. */
+	gravityDirection?: "down" | "up";
 	/** Bottom pop-out (Connect 4 Pop Out). `pop_out_top` deferred. */
 	overflow?: "reject" | "pop_out_bottom";
 	captureEnabled?: boolean;
@@ -556,19 +556,24 @@ function handleActivateColumn(
 	const width = state.grid.width;
 	if (col < 0 || col >= width) return state;
 
-	// Only supported gravity down for now
 	const direction = config.gravityDirection ?? "down";
-	if (direction !== "down") {
-		// Future directions can be added
-		return state;
-	}
 
-	// Find first empty from bottom row to top
+	// Settle toward the gravity exit: down → first empty from bottom;
+	// up → first empty from top. Left/right deferred (need row input).
 	let targetRow = -1;
-	for (let row = height - 1; row >= 0; row--) {
-		if (getCell(state.grid, { row, col }) === null) {
-			targetRow = row;
-			break;
+	if (direction === "down") {
+		for (let row = height - 1; row >= 0; row--) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetRow = row;
+				break;
+			}
+		}
+	} else {
+		for (let row = 0; row < height; row++) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetRow = row;
+				break;
+			}
 		}
 	}
 	if (targetRow === -1) {

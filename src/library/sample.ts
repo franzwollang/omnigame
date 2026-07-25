@@ -83,13 +83,17 @@ function sampleGravity(rng: SamplerRng, seed: number): ConfigInput {
 	const width = int(rng, 4, 7);
 	const height = int(rng, 4, 6);
 	const length = int(rng, 3, Math.min(4, width, height));
+	const direction = rng() > 0.5 ? ("up" as const) : ("down" as const);
 	const cfg = baseMeta(`Sample gravity ${width}x${height}`, seed);
 	cfg.grid = { width, height, topology: "rectangle", wrap: false };
 	cfg.input = { mode: "column" };
+	// pop_out_bottom only pairs with gravity down
+	const overflow =
+		direction === "down" && rng() > 0.7 ? "pop_out_bottom" : "reject";
 	cfg.placement = {
 		mode: "gravity",
-		gravity: { enabled: true, direction: "down", wrap: false },
-		overflow: rng() > 0.7 ? "pop_out_bottom" : "reject"
+		gravity: { enabled: true, direction, wrap: false },
+		overflow
 	};
 	cfg.win = {
 		length,

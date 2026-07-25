@@ -57,6 +57,20 @@ describe("GameKernel scaffold", () => {
 		expect(result.events.some((e) => e.type === "actionApplied")).toBe(true);
 	});
 
+	it("lists column activations for Connect 4 gravity-up", () => {
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["connect-4-up"].config
+		);
+		expect(gameConfig.gravityDirection).toBe("up");
+		let state = kernel.initialState();
+		expect(kernel.legalActions(state, 0)).toHaveLength(7);
+
+		const drop: KernelAction = { type: "activateColumn", col: 3 };
+		const result = kernel.stepSync(state, drop);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 0, col: 3 })).toBe("X");
+	});
+
 	it("includes pop-out actions when overflow is enabled", () => {
 		const { kernel } = compileConfig(
 			examplePresets["connect-4-popout"].config
@@ -134,6 +148,17 @@ describe("GameKernel scaffold", () => {
 		const cells = highlightCellsForActions(state, legal);
 		expect(cells).toHaveLength(7);
 		expect(cells.every((c) => c.row === 0)).toBe(true);
+	});
+
+	it("highlightCellsForActions uses bottom entry for gravity-up", () => {
+		const { kernel } = compileConfig(examplePresets["connect-4-up"].config);
+		const state = kernel.initialState();
+		const legal = kernel.legalActions(state, 0);
+		const cells = highlightCellsForActions(state, legal, {
+			gravityDirection: "up"
+		});
+		expect(cells).toHaveLength(7);
+		expect(cells.every((c) => c.row === 5)).toBe(true);
 	});
 
 	it("emits a terminal event on win and formats event lines", () => {

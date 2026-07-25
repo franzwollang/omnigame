@@ -50,10 +50,7 @@ export function expandGravityEnabled(config: Config): MacroResult {
 		next.placement.gravity = { ...gravity, enabled: true };
 		changed = true;
 	} else {
-		if (next.placement.gravity.direction !== "down") {
-			next.placement.gravity.direction = "down";
-			changed = true;
-		}
+		// Preserve explicit direction (down|up); only fill wrap/enabled defaults.
 		if (next.placement.gravity.wrap !== false) {
 			next.placement.gravity.wrap = false;
 			changed = true;
@@ -67,7 +64,7 @@ export function expandGravityEnabled(config: Config): MacroResult {
 	if (changed) {
 		expansions.push({
 			id: "gravity.enabled→placement.mode",
-			note: "Expanded gravity.enabled into placement.mode=gravity + down/wrap primitives"
+			note: "Expanded gravity.enabled into placement.mode=gravity + direction/wrap primitives"
 		});
 	}
 

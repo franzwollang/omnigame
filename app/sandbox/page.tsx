@@ -115,9 +115,10 @@ export default function GamePage() {
 	const highlightCells = useMemo(
 		() =>
 			highlightCellsForActions(gameState, legalActionsList, {
-				selectedFrom
+				selectedFrom,
+				gravityDirection: engineConfig.gravityDirection ?? "down"
 			}),
-		[gameState, legalActionsList, selectedFrom]
+		[gameState, legalActionsList, selectedFrom, engineConfig.gravityDirection]
 	);
 
 	useEffect(() => {

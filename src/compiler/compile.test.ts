@@ -118,6 +118,15 @@ describe("normalizeConfig / compile", () => {
 		);
 	});
 
+	it("preserves gravity direction up through macros and flatten", () => {
+		const raw = structuredClone(examplePresets["connect-4-up"].config);
+		const result = compile(raw);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.normalized.placement.gravity?.direction).toBe("up");
+		expect(result.gameConfig.gravityDirection).toBe("up");
+	});
+
 	it("placements macro seeds the kernel board", () => {
 		const cfg = structuredClone(examplePresets["tic-tac-toe"].config);
 		cfg.placements = [{ row: 1, col: 1, tokenId: "X" }];

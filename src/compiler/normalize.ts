@@ -39,7 +39,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		adjacency: config.win?.adjacency ?? DEFAULT_ADJACENCY,
 		inputMode: config.input.mode,
 		placementMode: config.placement.mode,
-		gravityDirection: "down",
+		gravityDirection: config.placement.gravity?.direction ?? "down",
 		overflow: config.placement.overflow,
 		captureEnabled: Boolean(config.placement.capture?.enabled),
 		captureMode: config.placement.capture?.mode ?? "flip",

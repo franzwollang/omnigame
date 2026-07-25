@@ -510,17 +510,21 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<FormItem>
 											<FormLabel>Gravity direction</FormLabel>
 											<FormControl>
-												<Select value={field.value ?? "down"} disabled>
+												<Select
+													value={field.value ?? "down"}
+													onValueChange={field.onChange}
+												>
 													<SelectTrigger>
 														<SelectValue placeholder="down" />
 													</SelectTrigger>
 													<SelectContent>
 														<SelectItem value="down">down</SelectItem>
+														<SelectItem value="up">up</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												Only down is implemented (up/left/right → M1+).
+												Vertical axis only (left/right need row input — deferred).
 											</p>
 											<FormMessage />
 										</FormItem>

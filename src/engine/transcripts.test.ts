@@ -38,7 +38,7 @@ describe("schema honesty (M0)", () => {
 				...base,
 				placement: {
 					mode: "gravity",
-					gravity: { enabled: true, direction: "up", wrap: false },
+					gravity: { enabled: true, direction: "left", wrap: false },
 					overflow: "reject"
 				}
 			}).success
@@ -52,6 +52,16 @@ describe("schema honesty (M0)", () => {
 				}
 			}).success
 		).toBe(false);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "up", wrap: false },
+					overflow: "pop_out_bottom"
+				}
+			}).success
+		).toBe(false);
 		// wrap + non-rectangle still rejected
 		expect(
 			zConfig.safeParse({
@@ -61,12 +71,22 @@ describe("schema honesty (M0)", () => {
 		).toBe(false);
 	});
 
-	it("accepts rectangle wrap and all shipped presets", () => {
+	it("accepts rectangle wrap, gravity-up, and all shipped presets", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		expect(
 			zConfig.safeParse({
 				...base,
 				grid: { ...base.grid, wrap: true }
+			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "up", wrap: false },
+					overflow: "reject"
+				}
 			}).success
 		).toBe(true);
 		for (const preset of Object.values(examplePresets)) {
@@ -131,6 +151,43 @@ describe("transcript: Connect 4 gravity drop", () => {
 		]);
 		expect(state.status).toBe("won");
 		expect(state.winner).toBe("X");
+	});
+});
+
+describe("transcript: Connect 4 gravity-up", () => {
+	const config: GameConfig = {
+		gridWidth: 7,
+		gridHeight: 6,
+		winLength: 4,
+		adjacency: adjacencyAll,
+		inputMode: "column",
+		placementMode: "gravity",
+		gravityDirection: "up"
+	};
+
+	it("rises to the top and stacks downward", () => {
+		let state = createInitialState(config);
+		state = reduce(state, { type: "activateColumn", col: 3 }, config);
+		expect(getCell(state.grid, { row: 0, col: 3 })).toBe("X");
+		state = reduce(state, { type: "activateColumn", col: 3 }, config);
+		expect(getCell(state.grid, { row: 1, col: 3 })).toBe("O");
+		expect(state.currentPlayer).toBe("X");
+	});
+
+	it("vertical four-in-a-column wins toward the top", () => {
+		const state = play(config, [
+			{ type: "activateColumn", col: 0 }, // X → row 0
+			{ type: "activateColumn", col: 1 }, // O
+			{ type: "activateColumn", col: 0 }, // X → row 1
+			{ type: "activateColumn", col: 1 }, // O
+			{ type: "activateColumn", col: 0 }, // X → row 2
+			{ type: "activateColumn", col: 1 }, // O
+			{ type: "activateColumn", col: 0 } // X → row 3 wins
+		]);
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 3, col: 0 })).toBe("X");
 	});
 });
 

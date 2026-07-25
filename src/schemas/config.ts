@@ -85,8 +85,8 @@ export const zConfig = z
 				gravity: z
 					.object({
 						enabled: z.boolean().default(false),
-						// non-down directions deferred to M1+
-						direction: z.literal("down").default("down"),
+						// left/right need row input — deferred
+						direction: z.enum(["down", "up"]).default("down"),
 						wrap: z.literal(false).default(false)
 					})
 					.optional(),
@@ -598,6 +598,18 @@ export const zConfig = z
 				path: ["placement", "overflow"],
 				message:
 					"overflow !== 'reject' requires placement.mode = 'gravity' (or gravity.enabled)"
+			});
+		}
+		// pop_out_bottom is the exit-side symmetric to gravity down
+		if (
+			cfg.placement.overflow === "pop_out_bottom" &&
+			cfg.placement.gravity?.direction === "up"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "overflow"],
+				message:
+					"overflow 'pop_out_bottom' requires gravity direction 'down' (pop_out_top deferred)"
 			});
 		}
 

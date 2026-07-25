@@ -256,8 +256,15 @@ function applyStep(
 	};
 }
 
-function columnHasSpace(state: GameState, col: number): boolean {
-	return getCell(state.grid, { row: 0, col }) === null;
+function columnHasSpace(
+	state: GameState,
+	col: number,
+	direction: "down" | "up" = "down"
+): boolean {
+	// Entry side must be clear: top for down gravity, bottom for up.
+	const entryRow =
+		direction === "down" ? 0 : state.grid.height - 1;
+	return getCell(state.grid, { row: entryRow, col }) === null;
 }
 
 function canPlaceCell(
@@ -376,8 +383,9 @@ function collectLegalActions(
 	}
 
 	if (inputMode === "column") {
+		const direction = config.gravityDirection ?? "down";
 		for (let col = 0; col < state.grid.width; col++) {
-			if (columnHasSpace(state, col)) {
+			if (columnHasSpace(state, col, direction)) {
 				actions.push({ type: "activateColumn", col });
 			}
 		}
@@ -398,11 +406,14 @@ function collectLegalActions(
 	}
 
 	if (overflow === "pop_out_bottom") {
-		const height = state.grid.height;
-		for (let col = 0; col < state.grid.width; col++) {
-			const bottom = getCell(state.grid, { row: height - 1, col });
-			if (bottom === state.currentPlayer) {
-				actions.push({ type: "popOutColumn", col });
+		// Pop-out from bottom only pairs with gravity down.
+		if ((config.gravityDirection ?? "down") === "down") {
+			const height = state.grid.height;
+			for (let col = 0; col < state.grid.width; col++) {
+				const bottom = getCell(state.grid, { row: height - 1, col });
+				if (bottom === state.currentPlayer) {
+					actions.push({ type: "popOutColumn", col });
+				}
 			}
 		}
 	}
@@ -625,7 +636,13 @@ export function explainKernelAction(
 					detail: detailFor("mode_mismatch", action)
 				};
 			}
-			if (!columnHasSpace(state, action.col)) {
+			if (
+				!columnHasSpace(
+					state,
+					action.col,
+					config.gravityDirection ?? "down"
+				)
+			) {
 				return {
 					legal: false,
 					reason: "column_full",
@@ -635,7 +652,10 @@ export function explainKernelAction(
 			break;
 		}
 		case "popOutColumn": {
-			if (overflow !== "pop_out_bottom") {
+			if (
+				overflow !== "pop_out_bottom" ||
+				(config.gravityDirection ?? "down") !== "down"
+			) {
 				return {
 					legal: false,
 					reason: "not_applicable",
@@ -726,14 +746,18 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 
 /**
  * Board cells to highlight for a legal-action set (overlay / heatmap).
- * Column actions highlight the landing / bottom cell.
+ * Column actions highlight the entry-side empty cell (top for down, bottom for up).
  */
 export function highlightCellsForActions(
 	state: GameState,
 	actions: readonly KernelAction[],
-	opts?: { selectedFrom?: Position | null }
+	opts?: {
+		selectedFrom?: Position | null;
+		gravityDirection?: "down" | "up";
+	}
 ): Position[] {
 	const selected = opts?.selectedFrom ?? null;
+	const direction = opts?.gravityDirection ?? "down";
 	const out: Position[] = [];
 	const seen = new Set<string>();
 	const push = (p: Position) => {
@@ -762,11 +786,20 @@ export function highlightCellsForActions(
 				}
 				break;
 			case "activateColumn": {
-				// Highlight top-most empty cell in column (drop entry).
-				for (let row = 0; row < state.grid.height; row++) {
-					if (getCell(state.grid, { row, col: action.col }) === null) {
-						push({ row, col: action.col });
-						break;
+				// Highlight entry-side empty cell (where the disc enters).
+				if (direction === "down") {
+					for (let row = 0; row < state.grid.height; row++) {
+						if (getCell(state.grid, { row, col: action.col }) === null) {
+							push({ row, col: action.col });
+							break;
+						}
+					}
+				} else {
+					for (let row = state.grid.height - 1; row >= 0; row--) {
+						if (getCell(state.grid, { row, col: action.col }) === null) {
+							push({ row, col: action.col });
+							break;
+						}
 					}
 				}
 				break;
