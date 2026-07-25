@@ -8,16 +8,16 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**place→move→fire + connect_or_destroy** landed — `turn.phases:
-["place","move","fire"]` with dual end routing (n-in-a-row after place/move,
-sink fleet after fire); Place, Move & Fire Lite preset + tests. Pick the
+**Sliding movement** landed — `movement.range` 1..8 on rectangle (blocker-aware
+ray walk) + Slide Race preset + tests. Hex/graph stay at range 1. Pick the
 **next smallest** unlock the engine still lacks — not another recombination of
 covered primitives (see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- longer-range / sliding / capture piece tables
+- capture-by-replacement (or capture piece tables) on move
 - richer multi-phase game machines beyond fleet + in-turn phases
+- hex/graph sliding (only if a new seam appears; range>1 deferred there)
 - phases hex/graph lift (only if a new seam appears; kernel already topology-aware)
 
 **Acceptance:**
@@ -56,6 +56,7 @@ hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
 delayed gravity), hidden simultaneous `commitReveal`, ordered simultaneous
 `resolveOrder`, multi-action simultaneous (rectangle + hex + graph), in-turn
 `turn.phases` place→move / place→fire / place→move→fire (`connect_or_destroy`),
-simultaneous move (joint move resolve), diagonal/king movement adjacency, and
-topology-aware movement (hex/graph move + simultaneous) also landed. Further
-ports only when a **new** missing mechanism appears — not a backlog.
+simultaneous move (joint move resolve), diagonal/king movement adjacency,
+topology-aware movement (hex/graph move + simultaneous), and sliding
+`movement.range` > 1 (Slide Race) also landed. Further ports only when a **new**
+missing mechanism appears — not a backlog.

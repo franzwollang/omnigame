@@ -1,23 +1,22 @@
 {
-  "updated_at": "2026-07-25T15:10-05:00",
-  "turn": 26,
+  "updated_at": "2026-07-25T15:22-05:00",
+  "turn": 27,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after place→move→fire dual-objective"
+    "goal": "Hand off after sliding movement.range"
   },
   "recent": [
-    "Synced 6541 tip onto bad2",
-    "Landed place→move→fire + connect_or_destroy",
-    "283 tests green incl. inTurnPhasesTriple"
+    "Synced bad2 tip onto 6bcc",
+    "Landed movement.range slide 1..8 + Slide Race",
+    "288 tests green; typecheck clean"
   ],
   "discoveries": [
-    "Dual end needs ConnectOrDestroy contract (not two EndCondition slots)",
-    "hit_miss legalActions must emit move under turnPhases"
+    "Range>1 = blocker-aware ray walk; hex/graph stay range 1"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick longer-range/sliding/capture pieces or richer phase machines",
+  "next_step": "Cloud agent: pick capture-by-replacement or richer phase machines",
   "blockers": []
 }

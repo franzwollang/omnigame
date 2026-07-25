@@ -16,9 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** place→move→fire + `connect_or_destroy`
-dual-objective landed. Hand off to the next **missing mechanism** (see
-`OPEN_ISSUES.md`).
+**Optimizing for this phase:** Sliding `movement.range` landed (Slide Race).
+Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -66,7 +65,8 @@ Working sandbox slice (see README “Current implementation status”):
   Double-Place Simultaneous TTT, Double-Place Simultaneous Hex,
   Double-Place Simultaneous Graph, Double Move TTT, Double Move Hex,
   Double Move Graph, Delayed TTT, Delayed Connect 4, Place & Move Lite,
-  Place & Fire Lite, Simultaneous Step Race, Diagonal Step Race
+  Place & Fire Lite, Simultaneous Step Race, Diagonal Step Race, Slide Race,
+  Place, Move & Fire Lite
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -75,9 +75,10 @@ Working sandbox slice (see README “Current implementation status”):
 - Client Zod + contract validation in sandbox; Z3 server action optional/experimental
 - Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
 - Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
-- Move foothold (`src/engine/movement.ts`): range-1 `orthogonal` | `diagonal` |
-  `king` + `reach_row`; Step Race / Diagonal Step Race; topology-aware
-  orthogonal move on hex_offset / graph (Hex Step Race)
+- Move foothold (`src/engine/movement.ts`): `orthogonal` | `diagonal` |
+  `king` + sliding `range` 1..8 (rectangle) + `reach_row`; Step Race /
+  Diagonal Step Race / Slide Race; topology-aware orthogonal move on
+  hex_offset / graph (Hex Step Race; range 1)
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
 - Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
@@ -119,10 +120,12 @@ Working sandbox slice (see README “Current implementation status”):
   `simultaneousMove` joint resolve; same-destination conflict; reach_row win;
   Simultaneous Step Race / Hex / Graph (no multi-action / commitReveal)
 - **Piece-table adjacency:** `movement.adjacency` = `orthogonal` | `diagonal` |
-  `king` (range 1) on rectangle; Diagonal Step Race proves diagonal-only steps;
+  `king` on rectangle; Diagonal Step Race proves diagonal-only steps;
   hex/graph move uses topology neighbors (orthogonal only)
+- **Sliding range:** `movement.range` 1..8 on rectangle (blocker-aware ray walk);
+  Slide Race preset; hex/graph remain range 1
 
-Not yet: full Go rules; phases hex/graph lift; longer-range / capture piece
+Not yet: full Go rules; phases hex/graph lift; capture-by-replacement piece
 tables; richer multi-phase machines beyond fleet + in-turn phases.
 
 ## Milestone exit criteria
