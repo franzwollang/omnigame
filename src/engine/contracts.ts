@@ -11,8 +11,9 @@ export type Slot =
 	| { type: "PlacementPolicy"; value: "direct" | "gravity" | "move" }
 	| {
 			type: "EndCondition";
-			value: "nInARow" | "destroyHidden" | "reachRow";
-	  };
+			value: "nInARow" | "destroyHidden" | "reachRow" | "none";
+	  }
+	| { type: "Schedule"; value: "alternating" | "manualTick" };
 
 export type PhaseHook =
 	| "validateInput"
@@ -201,5 +202,21 @@ export const Contracts = {
 		slots: [{ type: "EndCondition", value: "reachRow" }],
 		hooks: ["checkEnd"],
 		invariants: ["winsOnTargetRow"]
+	}),
+	OpenEnded: (): FeatureContract => ({
+		id: "OpenEnded",
+		requires: [],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "none" }],
+		hooks: [],
+		invariants: ["noAutomaticTerminal"]
+	}),
+	SchedulerManualTick: (): FeatureContract => ({
+		id: "SchedulerManualTick",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "Schedule", value: "manualTick" }],
+		hooks: ["applyEffects"],
+		invariants: ["globalSynchronousUpdate"]
 	})
 };

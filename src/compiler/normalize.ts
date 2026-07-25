@@ -36,6 +36,13 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		captureEnabled: Boolean(config.placement.capture?.enabled),
 		observationMode: config.observation.mode,
 		objectiveMode: config.objective.mode,
+		turnSchedule: config.turn.schedule,
+		scheduler: config.scheduler
+			? {
+					rules: config.scheduler.rules,
+					neighborhood: config.scheduler.neighborhood
+				}
+			: undefined,
 		movement: config.movement
 			? {
 					adjacency: config.movement.adjacency,
@@ -59,6 +66,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	captureEnabled: false,
 	observationMode: "full",
 	objectiveMode: "n_in_a_row",
+	turnSchedule: "alternating",
 	initial: []
 };
 

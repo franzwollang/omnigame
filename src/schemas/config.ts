@@ -12,8 +12,25 @@ export const zConfig = z
 				wrap: z.literal(false)
 			})
 			.strict(),
-		// realtime deferred to M1+; only turn-based is supported
-		turn: z.object({ mode: z.literal("turn") }).strict(),
+		// realtime deferred; manual_tick unlocks discrete Life-style generations
+		turn: z
+			.object({
+				mode: z.literal("turn"),
+				/** alternating = classic turns; manual_tick = global scheduler step. */
+				schedule: z
+					.enum(["alternating", "manual_tick"])
+					.default("alternating")
+			})
+			.strict()
+			.default({ mode: "turn" as const, schedule: "alternating" as const }),
+		/** Discrete world-step rules; required when turn.schedule = "manual_tick". */
+		scheduler: z
+			.object({
+				rules: z.literal("life_b3s23"),
+				neighborhood: z.literal("moore").default("moore")
+			})
+			.strict()
+			.optional(),
 		// seed consumed by Effect RNG helpers; engine stepping not yet seeded
 		rng: z.object({ seed: z.number() }).strict(),
 		input: z
@@ -57,7 +74,7 @@ export const zConfig = z
 		objective: z
 			.object({
 				mode: z
-					.enum(["n_in_a_row", "destroy_hidden", "reach_row"])
+					.enum(["n_in_a_row", "destroy_hidden", "reach_row", "none"])
 					.default("n_in_a_row"),
 				/** Target home rows for reach_row (e.g. X→0, O→height-1). */
 				targetRows: z
@@ -70,7 +87,7 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row; unused for destroy_hidden / reach_row
+		// Required for n_in_a_row; unused for destroy_hidden / reach_row / none
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -138,6 +155,60 @@ export const zConfig = z
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
 		const reachRow = cfg.objective.mode === "reach_row";
 		const moveInput = cfg.input.mode === "move";
+		const manualTick = cfg.turn.schedule === "manual_tick";
+
+		// Manual tick / Life scheduler foothold
+		if (manualTick) {
+			if (!cfg.scheduler) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["scheduler"],
+					message: "turn.schedule 'manual_tick' requires a scheduler block"
+				});
+			}
+			if (cfg.objective.mode !== "none") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message: "manual_tick requires objective.mode = 'none'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "manual_tick requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || cfg.placement.capture?.enabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"manual_tick requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "manual_tick is incompatible with hit_miss observation"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "manual_tick is incompatible with move input"
+				});
+			}
+		} else if (cfg.scheduler) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["scheduler"],
+				message: "scheduler requires turn.schedule = 'manual_tick'"
+			});
+		}
 
 		// column input requires gravity placement (mode or enabled sugar)
 		if (cfg.input.mode === "column" && !gravityImplied) {

@@ -304,6 +304,39 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 0, col: 2, player: "O", visibility: "public" }
 			]
 		}
+	}),
+	"life-lite": definePreset({
+		id: "life-lite",
+		name: "Life Lite",
+		tags: ["scheduler", "tick", "life", "b3s23", "mechanism"],
+		description:
+			"Conway B3/S23 on a small grid with a manual tick action. Unlocks discrete scheduler — not a full Life port or realtime loop.",
+		config: {
+			metadata: { name: "Life Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "manual_tick" },
+			scheduler: { rules: "life_b3s23", neighborhood: "moore" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "none" },
+			tokens: [
+				{
+					id: "cell-alive",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				}
+			],
+			placements: [],
+			// Horizontal blinker centered on 5×5
+			initial: [
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "X", visibility: "public" }
+			]
+		}
 	})
 };
 

@@ -78,11 +78,13 @@ export default function GamePage() {
 		placeMove,
 		activateColumn,
 		popOutColumn,
+		tick,
 		reset,
 		replayFromTranscript
 	} = useGameEngine(engineConfig, playSeed);
 	const enablePopOut =
 		currentConfig?.placement.overflow === "pop_out_bottom";
+	const enableTick = currentConfig?.turn.schedule === "manual_tick";
 	const recentEventLines = useMemo(
 		() => eventLog.slice(-8).map(formatKernelEvent),
 		[eventLog]
@@ -248,16 +250,30 @@ export default function GamePage() {
 								? ` · ${gameState.currentPlayer} to move`
 								: ""}
 						</p>
-						<Button
-							variant="outline"
-							size="sm"
-							className="h-7 shrink-0 px-2 text-xs"
-							disabled={actionLog.length === 0}
-							onClick={() => replayFromTranscript()}
-							title="Re-run seed + action log through GameIR"
-						>
-							Replay ({actionLog.length})
-						</Button>
+						<div className="flex shrink-0 items-center gap-1">
+							<Button
+								variant="outline"
+								size="sm"
+								className="h-7 px-2 text-xs"
+								disabled={actionLog.length === 0}
+								onClick={() => replayFromTranscript()}
+								title="Re-run seed + action log through GameIR"
+							>
+								Replay ({actionLog.length})
+							</Button>
+							{enableTick && (
+								<Button
+									variant="outline"
+									size="sm"
+									className="h-7 px-2 text-xs"
+									disabled={gameState.status !== "playing"}
+									onClick={() => tick()}
+									title="Advance one Life generation"
+								>
+									Tick
+								</Button>
+							)}
+						</div>
 					</div>
 					{recentEventLines.length === 0 ? (
 						<p className="font-mono text-xs text-muted-foreground">
@@ -269,6 +285,11 @@ export default function GamePage() {
 								<li key={`${i}-${line}`}>{line}</li>
 							))}
 						</ul>
+					)}
+					{enableTick && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							Life Lite: place cells, then Tick for B3/S23 step
+						</p>
 					)}
 					{currentConfig?.input.mode === "move" && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">

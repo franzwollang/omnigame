@@ -55,6 +55,19 @@ describe("buildFeatureContracts", () => {
 		expect(race.map((c) => c.id)).not.toContain("PlacementDirect");
 		expect(checkContracts(race)).toEqual([]);
 
+		const life = buildFeatureContracts(examplePresets["life-lite"].config);
+		expect(life.map((c) => c.id).sort()).toEqual(
+			[
+				"BoardWritable",
+				"InputTargetCell",
+				"OpenEnded",
+				"OverflowReject",
+				"PlacementDirect",
+				"SchedulerManualTick"
+			].sort()
+		);
+		expect(checkContracts(life)).toEqual([]);
+
 		const pop = buildFeatureContracts(
 			examplePresets["connect-4-popout"].config
 		);

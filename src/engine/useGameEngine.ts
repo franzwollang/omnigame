@@ -151,6 +151,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		[applyAction]
 	);
 
+	const tick = useCallback(() => {
+		applyAction({ type: "tick" });
+	}, [applyAction]);
+
 	const reset = useCallback(() => {
 		const next = kernel.initialState(seedRef.current);
 		stateRef.current = next;
@@ -217,6 +221,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		placeMove,
 		activateColumn,
 		popOutColumn,
+		tick,
 		reset,
 		replayFromTranscript
 	};

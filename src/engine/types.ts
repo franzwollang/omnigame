@@ -51,6 +51,10 @@ export type PopOutColumnEvent = {
 	col: number;
 };
 
+export type TickEvent = {
+	type: "tick";
+};
+
 export type ResetEvent = {
 	type: "reset";
 };
@@ -61,6 +65,7 @@ export type GameEvent =
 	| FireEvent
 	| ActivateColumnEvent
 	| PopOutColumnEvent
+	| TickEvent
 	| ResetEvent;
 
 // Helper to convert row/col to flat index

@@ -31,7 +31,8 @@ export type KernelAction =
 	| { type: "move"; from: Position; to: Position }
 	| { type: "fire"; position: Position }
 	| { type: "activateColumn"; col: number }
-	| { type: "popOutColumn"; col: number };
+	| { type: "popOutColumn"; col: number }
+	| { type: "tick" };
 
 export type KernelEvent =
 	| { type: "actionApplied"; action: KernelAction; player: Player }
@@ -41,6 +42,7 @@ export type KernelEvent =
 			result: ShotResult;
 			player: Player;
 	  }
+	| { type: "tickApplied"; generation: number }
 	| { type: "ignored"; action: KernelAction; reason: "illegal_or_noop" }
 	| { type: "terminal"; status: GameState["status"]; winner: Player | null };
 
@@ -93,6 +95,8 @@ function formatAction(action: KernelAction): string {
 			return `column ${action.col}`;
 		case "popOutColumn":
 			return `pop-out ${action.col}`;
+		case "tick":
+			return "tick";
 	}
 }
 
@@ -103,6 +107,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: ${formatAction(event.action)}`;
 		case "shotResult":
 			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
+		case "tickApplied":
+			return `tick → generation ${event.generation}`;
 		case "ignored":
 			return `ignored: ${formatAction(event.action)} (${event.reason})`;
 		case "terminal":
@@ -171,6 +177,10 @@ function applyStep(
 		}
 	}
 
+	if (action.type === "tick") {
+		events.push({ type: "tickApplied", generation: nextState.moveCount });
+	}
+
 	const terminal = nextState.status !== "playing";
 	if (terminal) {
 		events.push({
@@ -233,6 +243,20 @@ function collectLegalActions(
 	const inputMode = config.inputMode ?? "cell";
 	const overflow = config.overflow ?? "reject";
 	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
+	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
+
+	if (manualTick) {
+		actions.push({ type: "tick" });
+		for (let row = 0; row < state.grid.height; row++) {
+			for (let col = 0; col < state.grid.width; col++) {
+				const position = { row, col };
+				if (canPlaceCell(state, position, config)) {
+					actions.push({ type: "place", position });
+				}
+			}
+		}
+		return actions;
+	}
 
 	if (hitMiss) {
 		for (let row = 0; row < state.grid.height; row++) {

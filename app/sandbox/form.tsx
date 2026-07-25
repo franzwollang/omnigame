@@ -141,8 +141,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								</div>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								Wrap edges and realtime turns are deferred to M1+ (schema
-								rejects unsupported values).
+								Wrap edges and realtime turns are deferred. Use
+								manual_tick + Life Lite for discrete generations.
 							</p>
 							<FormField
 								control={form.control}
@@ -160,6 +160,37 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												</SelectContent>
 											</Select>
 										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.schedule"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Schedule</FormLabel>
+										<FormControl>
+											<Select
+												value={field.value ?? "alternating"}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="alternating" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="alternating">
+														alternating
+													</SelectItem>
+													<SelectItem value="manual_tick">
+														manual_tick
+													</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											manual_tick requires scheduler + objective none.
+										</p>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -269,12 +300,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="reach_row">
 															reach_row
 														</SelectItem>
+														<SelectItem value="none">none</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												destroy_hidden pairs with hit_miss; reach_row with
-												move input.
+												destroy_hidden↔hit_miss; reach_row↔move; none↔tick.
 											</p>
 											<FormMessage />
 										</FormItem>

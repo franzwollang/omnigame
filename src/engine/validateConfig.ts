@@ -61,8 +61,14 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.DestroyHidden());
 	} else if (cfg.objective.mode === "reach_row") {
 		features.push(Contracts.ReachRow());
+	} else if (cfg.objective.mode === "none") {
+		features.push(Contracts.OpenEnded());
 	} else {
 		features.push(Contracts.NInARow());
+	}
+
+	if (cfg.turn.schedule === "manual_tick") {
+		features.push(Contracts.SchedulerManualTick());
 	}
 
 	return features;

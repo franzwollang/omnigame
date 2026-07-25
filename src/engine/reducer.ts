@@ -13,6 +13,10 @@ import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
 import { fleetDestroyed } from "@/engine/observation";
 import { canMove, type MovementConfig } from "@/engine/movement";
+import {
+	applyLifeStep,
+	type SchedulerConfig
+} from "@/engine/scheduler";
 
 export type InitialSeed = {
 	row: number;
@@ -34,7 +38,10 @@ export type GameConfig = {
 	overflow?: "reject" | "pop_out_bottom";
 	captureEnabled?: boolean;
 	observationMode?: "full" | "hit_miss";
-	objectiveMode?: "n_in_a_row" | "destroy_hidden" | "reach_row";
+	objectiveMode?: "n_in_a_row" | "destroy_hidden" | "reach_row" | "none";
+	/** Classic alternating turns vs discrete global tick (Life Lite). */
+	turnSchedule?: "alternating" | "manual_tick";
+	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
 	targetRows?: { X: number; O: number };
@@ -123,11 +130,28 @@ export function reduce(
 			return handleActivateColumn(state, event.col, config);
 		case "popOutColumn":
 			return handlePopOutColumn(state, event.col, config);
+		case "tick":
+			return handleTick(state, config);
 		case "reset":
 			return createInitialState(config);
 		default:
 			return state;
 	}
+}
+
+function handleTick(state: GameState, config: GameConfig): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "manual_tick") return state;
+	if (state.status !== "playing") return state;
+	const scheduler = config.scheduler;
+	if (!scheduler) return state;
+
+	const newGrid = applyLifeStep(state.grid, scheduler.rules);
+	return {
+		...state,
+		grid: newGrid,
+		moveCount: state.moveCount + 1
+		// Tick is a neutral global step — do not flip currentPlayer
+	};
 }
 
 function handleMove(
@@ -277,9 +301,18 @@ function handlePlace(
 		);
 	}
 	const newMoveCount = state.moveCount + 1;
+	const newGrid = { ...state.grid, cells: newCells };
+
+	// Open-ended demos (Life Lite): place seeds without win/turn flip
+	if ((config.objectiveMode ?? "n_in_a_row") === "none") {
+		return {
+			...state,
+			grid: newGrid,
+			moveCount: newMoveCount
+		};
+	}
 
 	// Check win condition using config
-	const newGrid = { ...state.grid, cells: newCells };
 	const winner = checkWinner(
 		newGrid,
 		state.currentPlayer,
