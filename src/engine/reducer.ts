@@ -123,10 +123,10 @@ export type GameConfig = {
 	 */
 	resolveOrder?: "joint" | "x_first" | "o_first";
 	/**
-	 * Ordered in-turn action types (e.g. place then move) before handoff.
-	 * When set, GameState.turnPhaseIndex tracks the active phase.
+	 * Ordered in-turn action types (e.g. place then move, or place then fire)
+	 * before handoff. When set, GameState.turnPhaseIndex tracks the active phase.
 	 */
-	turnPhases?: Array<"place" | "move">;
+	turnPhases?: Array<"place" | "move" | "fire">;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -775,6 +775,12 @@ function handleFire(
 	if (state.status !== "playing") return state;
 	// Placement phase: only place actions are legal
 	if ((state.phase ?? "combat") === "placement") return state;
+	// In-turn phases: only fire during the fire phase
+	const phases = config.turnPhases;
+	if (phases && phases.length > 0) {
+		const phase = phases[state.turnPhaseIndex ?? 0];
+		if (phase !== "fire") return state;
+	}
 	if (
 		pos.row < 0 ||
 		pos.row >= state.grid.height ||
@@ -783,7 +789,7 @@ function handleFire(
 	) {
 		return state;
 	}
-	// Already shot
+	// Already shot / public spotter occupying cell
 	if (getCell(state.grid, pos) !== null) return state;
 
 	const occupant =
@@ -813,10 +819,12 @@ function handleFire(
 		}
 	}
 
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
 		...next,
-		currentPlayer: nextPlayer
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
 	};
 }
 
@@ -882,8 +890,12 @@ function handlePlace(
 ): GameState {
 	// Simultaneous games must use simultaneousPlace (joint resolve)
 	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
-	// Hit/miss with fleet: place onto hidden during placement phase
-	if ((config.observationMode ?? "full") === "hit_miss") {
+	// Hit/miss with fleet: place onto hidden during placement phase.
+	// Hit/miss with in-turn phases (place→fire): public spotters — fall through.
+	if (
+		(config.observationMode ?? "full") === "hit_miss" &&
+		!(config.turnPhases && config.turnPhases.length > 0)
+	) {
 		return handleFleetPlace(state, pos, config);
 	}
 	// Move games relocate existing pieces
@@ -917,6 +929,15 @@ function handlePlace(
 
 	// Guard: cell must be empty
 	if (getCell(state.grid, pos) !== null) return state;
+
+	// Place→fire: do not stack public spotters on hidden fleet cells
+	if (
+		(config.observationMode ?? "full") === "hit_miss" &&
+		state.hidden != null
+	) {
+		const under = getCell(state.hidden, pos);
+		if (under === "X" || under === "O") return state;
+	}
 
 	const delayTurns = resolveDelayTurns(config);
 	if (delayTurns > 0) {
@@ -1011,6 +1032,21 @@ function handlePlace(
 			currentPlayer: nextPlayer,
 			moveCount: newMoveCount,
 			consecutivePasses: 0,
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
+		};
+	}
+
+	// Place→fire (destroy_hidden): place only advances in-turn phase; win on fire
+	if ((config.objectiveMode ?? "n_in_a_row") === "destroy_hidden") {
+		const turn = withPhaseOrTurnAdvanced(state, config);
+		return {
+			...state,
+			grid: newGrid,
+			currentPlayer: turn.currentPlayer,
+			actionsRemaining: turn.actionsRemaining,
+			turnPhaseIndex: turn.turnPhaseIndex,
+			moveCount: newMoveCount,
 			koPoint: nextKoPoint,
 			positionHistory: nextHistory
 		};

@@ -368,6 +368,15 @@ function canPlaceCell(
 	) {
 		return false;
 	}
+	// Place→fire: public spotters cannot cover hidden fleet cells
+	if (
+		(config.observationMode ?? "full") === "hit_miss" &&
+		(config.turnPhases?.length ?? 0) > 0 &&
+		state.hidden != null
+	) {
+		const under = getCell(state.hidden, pos);
+		if (under === "X" || under === "O") return false;
+	}
 	if (!config.captureEnabled) return true;
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
@@ -484,6 +493,36 @@ function collectLegalActions(
 				if (canPlaceFleetCell(state, position, state.currentPlayer, fleet)) {
 					actions.push({ type: "place", position });
 				}
+			}
+			return actions;
+		}
+		// In-turn place→fire: legal actions follow turnPhases[turnPhaseIndex]
+		const turnPhases = config.turnPhases;
+		if (turnPhases && turnPhases.length > 0) {
+			const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
+			if (phase === "place") {
+				for (const position of allActivePositions(
+					state.grid,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (canPlaceCell(state, position, config)) {
+						actions.push({ type: "place", position });
+					}
+				}
+				return actions;
+			}
+			if (phase === "fire") {
+				for (const position of allActivePositions(
+					state.grid,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (canFireCell(state, position, state.currentPlayer)) {
+						actions.push({ type: "fire", position });
+					}
+				}
+				return actions;
 			}
 			return actions;
 		}
@@ -843,7 +882,7 @@ export function explainKernelAction(
 		return { legal: true };
 	}
 
-	// In-turn phases: place/move must match the active phase
+	// In-turn phases: place/move/fire must match the active phase
 	const turnPhases = config.turnPhases;
 	if (turnPhases && turnPhases.length > 0) {
 		const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
@@ -855,6 +894,13 @@ export function explainKernelAction(
 			};
 		}
 		if (action.type === "move" && phase !== "move") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "fire" && phase !== "fire") {
 			return {
 				legal: false,
 				reason: "wrong_phase",

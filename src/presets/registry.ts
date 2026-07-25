@@ -1265,6 +1265,46 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"place-fire-lite": definePreset({
+		id: "place-fire-lite",
+		name: "Place & Fire Lite",
+		tags: [
+			"phases",
+			"place",
+			"fire",
+			"hit-miss",
+			"5x5",
+			"destroy-hidden",
+			"mechanism"
+		],
+		description:
+			"Each turn: place one public spotter, then fire one shot. Fixed hidden fleets; sink to win. Unlocks turn.phases + fire — not fleet setup or place→move→fire.",
+		config: {
+			metadata: { name: "Place & Fire Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "alternating",
+				phases: ["place", "fire"]
+			},
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			objective: { mode: "destroy_hidden" },
+			tokens: [
+				{ id: "fleet-x", label: "X", players: ["X"] },
+				{ id: "fleet-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: [
+				{ row: 0, col: 0, player: "X", visibility: "owner" },
+				{ row: 0, col: 1, player: "X", visibility: "owner" },
+				{ row: 4, col: 3, player: "O", visibility: "owner" },
+				{ row: 4, col: 4, player: "O", visibility: "owner" }
+			]
+		}
+	}),
 	"step-race": definePreset({
 		id: "step-race",
 		name: "Step Race",

@@ -79,11 +79,12 @@ export const zConfig = z
 					.default("joint")
 					.optional(),
 				/**
-				 * Ordered in-turn action types before handoff (v1: place → move).
-				 * Distinct from actionsPerTurn (N copies of one action type).
+				 * Ordered in-turn action types before handoff
+				 * (place → move, or place → fire). Distinct from
+				 * actionsPerTurn (N copies of one action type).
 				 */
 				phases: z
-					.array(z.enum(["place", "move"]))
+					.array(z.enum(["place", "move", "fire"]))
 					.min(2)
 					.max(3)
 					.optional()
@@ -843,9 +844,11 @@ export const zConfig = z
 			}
 		}
 
-		// In-turn phase sequence (place → move) — distinct from actionsPerTurn
+		// In-turn phase sequence (place→move or place→fire) — distinct from actionsPerTurn
 		if (inTurnPhases) {
 			const phases = cfg.turn.phases!;
+			const hasMove = phases.includes("move");
+			const hasFire = phases.includes("fire");
 			if (cfg.turn.schedule !== "alternating") {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -877,19 +880,51 @@ export const zConfig = z
 						"turn.phases is incompatible with simultaneous / commitReveal"
 				});
 			}
-			if (phases[0] !== "place" || !phases.includes("move")) {
+			if (phases[0] !== "place") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message: "turn.phases must start with 'place'"
+				});
+			}
+			if (!hasMove && !hasFire) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
 					message:
-						"turn.phases v1 must start with 'place' and include 'move' (e.g. ['place','move'])"
+						"turn.phases must include 'move' or 'fire' after place (e.g. ['place','move'] or ['place','fire'])"
 				});
 			}
-			if (cfg.objective.mode !== "n_in_a_row") {
+			if (hasMove && hasFire) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"turn.phases place→move→fire is deferred; use ['place','move'] or ['place','fire']"
+				});
+			}
+			if (hasMove && cfg.objective.mode !== "n_in_a_row") {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["objective", "mode"],
-					message: "turn.phases requires objective.mode = 'n_in_a_row'"
+					message:
+						"turn.phases with 'move' requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (hasFire && !hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"turn.phases with 'fire' requires observation.mode = 'hit_miss'"
+				});
+			}
+			if (hasFire && cfg.objective.mode !== "destroy_hidden") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message:
+						"turn.phases with 'fire' requires objective.mode = 'destroy_hidden'"
 				});
 			}
 			if (cfg.input.mode !== "cell") {
@@ -897,14 +932,21 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["input", "mode"],
 					message:
-						"turn.phases requires input.mode = 'cell' (place phase); move phase uses movement"
+						"turn.phases requires input.mode = 'cell' (place/fire phases); move phase uses movement"
 				});
 			}
-			if (!cfg.movement) {
+			if (hasMove && !cfg.movement) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["movement"],
 					message: "turn.phases with 'move' requires a movement block"
+				});
+			}
+			if (hasFire && cfg.movement) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement"],
+					message: "turn.phases place→fire does not use a movement block"
 				});
 			}
 			if (gravityImplied || captureEnabled) {
@@ -915,11 +957,12 @@ export const zConfig = z
 						"turn.phases requires direct placement without capture/gravity"
 				});
 			}
-			if (hitMiss) {
+			if (hasMove && hitMiss) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["observation", "mode"],
-					message: "turn.phases is incompatible with hit_miss observation"
+					message:
+						"turn.phases place→move is incompatible with hit_miss observation"
 				});
 			}
 			if (fog) {
@@ -933,7 +976,8 @@ export const zConfig = z
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["fleet"],
-					message: "turn.phases is incompatible with fleet placement"
+					message:
+						"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire)"
 				});
 			}
 			if (hexBoard || graphBoard) {

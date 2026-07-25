@@ -258,6 +258,17 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				return;
 			}
 			if ((config.observationMode ?? "full") === "hit_miss") {
+				const turnPhases = config.turnPhases;
+				if (turnPhases && turnPhases.length > 0) {
+					const phase =
+						turnPhases[stateRef.current.turnPhaseIndex ?? 0] ?? "place";
+					if (phase === "place") {
+						applyAction({ type: "place", position: pos });
+					} else if (phase === "fire") {
+						applyAction({ type: "fire", position: pos });
+					}
+					return;
+				}
 				const phase = stateRef.current.phase ?? "combat";
 				if (phase === "placement") {
 					applyAction({ type: "place", position: pos });

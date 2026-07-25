@@ -358,7 +358,7 @@ export const Contracts = {
 		invariants: ["intentBeforeResolve", "pendingCellsReserved"]
 	}),
 	/**
-	 * Ordered in-turn phase sequence (e.g. place then move before handoff).
+	 * Ordered in-turn phase sequence (e.g. place→move or place→fire before handoff).
 	 * Distinct from ScheduleMultiStep (N copies of one action type).
 	 */
 	ScheduleInTurnPhases: (): FeatureContract => ({
