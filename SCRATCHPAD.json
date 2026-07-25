@@ -1,24 +1,24 @@
 {
-  "updated_at": "2026-07-25T05:45-05:00",
-  "turn": 19,
+  "updated_at": "2026-07-25T06:05-05:00",
+  "turn": 20,
   "focus": {
     "milestone": "post-M7",
-    "issue": "observation-placement-phase",
-    "goal": "Placement-phase / multi-ship Battleship depth"
+    "issue": "library-explorer-depth",
+    "goal": "Deeper library search UX or graph sampling"
   },
   "recent": [
-    "Synced b701 onto 4234",
-    "Hunt agent: observe-based fire (target + parity)",
-    "MCTS/UCT hit_miss delegates to hunt; sandbox option"
+    "Synced 4234 onto fcfd",
+    "fleet.ships placement→combat + Battleship Place",
+    "Closed observation-placement-phase"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "Fog bootstrap: full vision until player has own pieces"
+    "Fleet: player finishes whole fleet before opponent; then combat"
   ],
   "open_threads": [
-    "Next: placement-phase Battleship or library-explorer-depth"
+    "Next: library-explorer-depth (graph sample / scoring / share)"
   ],
-  "next_step": "Schema + kernel placement phase / multi-ship for Battleship depth",
+  "next_step": "Deepen library explorer: graph sampling, better playability, or share links",
   "blockers": []
 }

@@ -83,7 +83,8 @@ A set of features 𝔽 conflicts iff one holds:
 - Placement policies: direct vs gravity (line-scan → resolved cell)
 - Effects: capture (flips or liberty group removal), overflow policies
 - End conditions: n-in-a-row, destroy-hidden, reach-row, area-control (two passes → score)
-- Observation: full (identity) or hit/miss (project own fleet + public shots)
+- Observation: full (identity), hit/miss (project own fleet + public shots), fog (radius mask)
+- Fleet placement phase: `fleet.ships` → place contiguous ships on hidden, then combat fire
 
 These are consumed by phase Hooks to ensure consistent semantics.
 

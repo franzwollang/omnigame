@@ -16,9 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Hit/miss hunt agent landed (`src/agents/hunt.ts`,
-sandbox + MCTS/UCT delegate). Hand off to placement-phase / multi-ship
-Battleship depth; optional library depth.
+**Optimizing for this phase:** Fleet placement phase landed (`fleet.ships`,
+Battleship Place). Hand off to library-explorer-depth or another missing
+mechanism.
 
 ## Decisions (locked)
 
@@ -57,7 +57,8 @@ Working sandbox slice (see README “Current implementation status”):
 - Direct + gravity placement (schema/engine: gravity **down** only)
 - Capture (flip demo); n-in-a-row wins
 - Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo,
-  Battleship Lite (hit/miss observation), Step Race (Move + reach_row),
+  Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
+  Step Race (Move + reach_row),
   Life Lite (manual tick + B3/S23)
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
@@ -76,8 +77,7 @@ Working sandbox slice (see README “Current implementation status”):
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: hit/miss-aware agents, placement-phase / multi-ship Battleship,
-ko/full Go rules, fog radius, deeper library explorer UX.
+Not yet: ko/full Go rules, deeper library explorer UX.
 
 ## Milestone exit criteria
 
@@ -119,7 +119,7 @@ presets play through it; `gravity.enabled` and `placements→initial` macros.
 
 **Done:** `observation.mode` / `objective.mode` in schema; hidden fleet layer;
 `fire` action; per-player `observe()` on kernel steps; Battleship-lite preset +
-tests. Full placement-phase / multi-ship Battleship deferred.
+tests. Fleet placement phase (`fleet.ships` + Battleship Place) landed post-M7.
 
 ### M5 — Anchor / reference ports
 
