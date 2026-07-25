@@ -10,26 +10,16 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 Select anchors by **missing mechanism**, not by exhausting `references/` (see
 project-structure rule). Covered: observation (Battleship-lite), Move/reach_row
-(Step Race), tick/scheduler (Life Lite).
+(Step Race), tick/scheduler (Life Lite), hex topology (Hex Connect Lite).
 
-**Next candidates** (pick one per turn): liberties/territory, hex/graph
-(`topology-beyond-rectangle`).
+**Next candidates** (pick one per turn): liberties/territory (Go-lite group
+capture + area scoring).
 
 **Acceptance:**
 
 - [ ] Next port names the mechanism it unlocks in PLANNING / this issue
 - [ ] Shipped as preset + transcript/simulation tests through compiler→kernel
 - [ ] Not a forked per-game engine
-
-### topology-beyond-rectangle
-
-Hex and/or general graph boards while keeping grid ergonomics.
-
-**Acceptance:**
-
-- [ ] Schema admits at least one non-rectangle topology
-- [ ] Kernel/legalActions/win or movement path works on that topology
-- [ ] Preset or transcript test proves the mechanism
 
 ### debug-and-agents
 

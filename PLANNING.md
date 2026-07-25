@@ -17,7 +17,7 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M7 | Infinite library / config explorer | `not started` |
 
 **Optimizing for this phase:** M5 — mechanism-first anchors. Move + Life Lite
-(tick/scheduler) landed; next pick unlocks something new (liberties, hex, …).
+(tick) + Hex Connect Lite (`hex_offset`) landed; next pick: liberties/territory.
 
 ## Decisions (locked)
 
@@ -69,8 +69,9 @@ Working sandbox slice (see README “Current implementation status”):
 - Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
 - Move foothold (`src/engine/movement.ts`): orthogonal step + `reach_row`; Step Race preset
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
+- Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
 
-Not yet: hex/graph topology, liberties/territory, library explorer,
+Not yet: liberties/territory, general graph topology, library explorer,
 placement-phase / multi-ship Battleship, agents.
 
 ## Milestone exit criteria
@@ -121,8 +122,8 @@ tests. Full placement-phase / multi-ship Battleship deferred.
   principle in `.cursor/rules/project-structure.mdc`). Not “finish `references/`.”
 - Each port has transcript/simulation tests for the mechanism it claims to prove.
 
-**In progress:** Step Race unlocked `Move` + `reach_row` (orthogonal step).
-Remaining mechanism slots: tick/scheduler, liberties/territory, hex/graph.
+**In progress:** Step Race (Move), Life Lite (tick), Hex Connect Lite
+(`hex_offset`) landed. Remaining mechanism slot: liberties/territory.
 
 ### M6 — Debug tooling + agents
 

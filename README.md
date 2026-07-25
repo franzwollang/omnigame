@@ -331,7 +331,8 @@ Near-term milestones:
 - **Observation support**: hit/miss + Battleship-lite landed; fog radius / placement phase still open
 - **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
-- **Anchor games**: mechanism-first ports only (next: liberties/territory or hex) — not exhausting `references/`
+- **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
+- **Anchor games**: mechanism-first ports only (next: liberties/territory) — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
 - **Baseline agents**: random/greedy/tiny MCTS to prove bot play with clean interfaces
 

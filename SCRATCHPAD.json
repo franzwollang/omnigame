@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-07-25T03:05-05:00",
-  "turn": 11,
+  "updated_at": "2026-07-25T03:30-05:00",
+  "turn": 12,
   "focus": {
     "milestone": "M5",
     "issue": "reference-game-ports",
-    "goal": "Next mechanism after tick (liberties or hex)"
+    "goal": "Next mechanism: liberties/territory (Go-lite)"
   },
   "recent": [
-    "Synced 4ffa (M0–M5 Move) onto d519",
-    "M5 tick/scheduler: Life Lite + B3/S23 + Tick UI"
+    "Synced d519 (M0–M5 Move+tick) onto 0db6",
+    "M5 hex_offset + Hex Connect Lite preset + tests"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
-    "Base new cron turns on latest progression branch, not main"
+    "Base new cron turns on latest progression branch, not main",
+    "Math.SQRT3 unavailable in this vitest/node — use Math.sqrt(3)"
   ],
   "open_threads": [
-    "M5 next: liberties/territory vs hex (topology-beyond-rectangle)"
+    "M5 next: liberties/territory (Go-lite) — topology-beyond-rectangle closed"
   ],
-  "next_step": "Pick liberties or hex; implement via compiler→kernel + preset",
+  "next_step": "Implement liberties/group capture + Go-lite preset via compiler→kernel",
   "blockers": []
 }
