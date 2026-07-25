@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T03:30-05:00",
-  "turn": 12,
+  "updated_at": "2026-07-25T03:45-05:00",
+  "turn": 13,
   "focus": {
-    "milestone": "M5",
-    "issue": "reference-game-ports",
-    "goal": "Next mechanism: liberties/territory (Go-lite)"
+    "milestone": "M6",
+    "issue": "debug-and-agents",
+    "goal": "Legal-move / why-illegal / event trace foothold"
   },
   "recent": [
-    "Synced d519 (M0–M5 Move+tick) onto 0db6",
-    "M5 hex_offset + Hex Connect Lite preset + tests"
+    "Synced 0db6 (M0–M5 hex) onto ccf0",
+    "M5 liberties + Go Lite preset + tests; M5→M6 handoff"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "Math.SQRT3 unavailable in this vitest/node — use Math.sqrt(3)"
+    "capture.mode flip|liberties keeps Reversi intact"
   ],
   "open_threads": [
-    "M5 next: liberties/territory (Go-lite) — topology-beyond-rectangle closed"
+    "M6 next: debug overlays + kernel agents; graph topology still later"
   ],
-  "next_step": "Implement liberties/group capture + Go-lite preset via compiler→kernel",
+  "next_step": "M6: legal-move overlay / why-illegal from kernel.legalActions",
   "blockers": []
 }

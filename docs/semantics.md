@@ -39,11 +39,16 @@ Examples (informal):
   - Req: TargetLine, CellsWritable; Prov: ResolvedCell
   - Slot: {PlacementPolicy=gravity}; Hooks: applyPlacement
   - Pre: exists empty cell along scan; Post: writes exactly one cell
-- Capture (Reversi)
+- Capture (Reversi flip)
   - Req: ResolvedCell, Adjacency, CellsWritable; Hooks: applyEffects
   - Pre: ≥1 flippable path; Post: flips captured opponent stones only
+- LibertyCapture (Go-lite)
+  - Req: ResolvedCell, CellsWritable; Hooks: applyEffects
+  - Pre: empty cell + no suicide after opponent removals; Post: removes 0-liberty opponent groups
 - WinCheck (n-in-a-row)
   - Req: Adjacency; Slot: {EndCondition}; Hooks: checkEnd
+- AreaControl
+  - Slot: {EndCondition=areaControl}; Hooks: checkEnd (two consecutive passes → stone+territory score)
 
 ## 4. Composition
 
@@ -76,8 +81,8 @@ A set of features 𝔽 conflicts iff one holds:
 
 - Adjacency decomposition: enabled directions + linear/composite traversal
 - Placement policies: direct vs gravity (line-scan → resolved cell)
-- Effects: capture (flips), overflow policies
-- End conditions: n-in-a-row, destroy-hidden (sink all opponent fleet cells)
+- Effects: capture (flips or liberty group removal), overflow policies
+- End conditions: n-in-a-row, destroy-hidden, reach-row, area-control (two passes → score)
 - Observation: full (identity) or hit/miss (project own fleet + public shots)
 
 These are consumed by phase Hooks to ensure consistent semantics.

@@ -44,6 +44,7 @@ These are built from the same shared schema and operators.
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
+- **Go Lite** (liberties group capture + pass-to-score area control)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -105,7 +106,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations) and shows recent kernel events + Replay
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 
-What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), liberties/territory, general graph topology, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), general graph topology, ko/full Go rules, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -332,7 +333,8 @@ Near-term milestones:
 - **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
 - **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
-- **Anchor games**: mechanism-first ports only (next: liberties/territory) — not exhausting `references/`
+- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed (no ko)
+- **Anchor games**: mechanism-first ports only — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
 - **Baseline agents**: random/greedy/tiny MCTS to prove bot play with clean interfaces
 

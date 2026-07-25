@@ -12,12 +12,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M2 | GameIR + deterministic replay | `done` |
 | M3 | Compiler / normalize / macro expansion | `done` |
 | M4 | Observation primitive + Battleship-lite | `done` |
-| M5 | Anchor / reference-game ports | `in progress` |
+| M5 | Anchor / reference-game ports | `done` |
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** M5 — mechanism-first anchors. Move + Life Lite
-(tick) + Hex Connect Lite (`hex_offset`) landed; next pick: liberties/territory.
+**Optimizing for this phase:** M5 mechanism ports for observation, Move, tick,
+hex, and liberties/territory landed. Hand off to M6 debug tooling + agents.
 
 ## Decisions (locked)
 
@@ -70,9 +70,10 @@ Working sandbox slice (see README “Current implementation status”):
 - Move foothold (`src/engine/movement.ts`): orthogonal step + `reach_row`; Step Race preset
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
+- Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 
-Not yet: liberties/territory, general graph topology, library explorer,
-placement-phase / multi-ship Battleship, agents.
+Not yet: general graph topology, library explorer,
+placement-phase / multi-ship Battleship, agents, ko/full Go rules.
 
 ## Milestone exit criteria
 
@@ -123,7 +124,9 @@ tests. Full placement-phase / multi-ship Battleship deferred.
 - Each port has transcript/simulation tests for the mechanism it claims to prove.
 
 **In progress:** Step Race (Move), Life Lite (tick), Hex Connect Lite
-(`hex_offset`) landed. Remaining mechanism slot: liberties/territory.
+(`hex_offset`), Go Lite (liberties + area_control) landed. Planned M5
+mechanism slots covered; optional later anchors still allowed by selection
+principle. Hand off to M6.
 
 ### M6 — Debug tooling + agents
 
