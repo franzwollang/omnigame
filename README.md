@@ -38,6 +38,7 @@ These are built from the same shared schema and operators.
 - **Tic‑Tac‑Toe**
 - **Connect 4**
 - **Connect 4 (Up)** (gravity rises toward the top)
+- **Connect 4 (Right)** (row activation; discs slide right)
 - **Connect 4 (Pop Out)**
 - **Gomoku (5‑in‑a‑row)**
 - **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
@@ -99,11 +100,11 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Topology**: rectangular grid, odd-r hex (`hex_offset`), or explicit adjacency
   graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
   **rectangle** boards (hex/graph wrap deferred); Toroidal TTT preset
-- **Inputs**: cell-click, column-activation, and piece move (`input.mode = "cell" | "column" | "move"`)
+- **Inputs**: cell-click, column-activation, row-activation, and piece move (`input.mode = "cell" | "column" | "row" | "move"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
-  - gravity placement **down | up** (`placement.mode = "gravity"`, `gravity.direction`; left/right deferred — need row input)
-  - overflow: `reject` | `pop_out_bottom` (bottom pop-out; requires gravity down; `pop_out_top` deferred)
+  - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
+  - overflow: `reject` | `pop_out_bottom` (bottom pop-out; requires gravity down; `pop_out_top` / horizontal pop-out deferred)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
@@ -115,8 +116,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: ko/full Go rules, gravity left/right
-(row input), hex/graph wrap, simultaneous/delayed actions, and a larger set of
+What’s **roadmap**, not fully realized yet: ko/full Go rules, hex/graph wrap,
+simultaneous/delayed actions, `pop_out_top` / horizontal pop-out, and a larger set of
 reusable operators/constraints.
 
 ## Technical vision (expanded)

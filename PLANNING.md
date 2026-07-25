@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Gravity `direction: "up"` landed (Connect 4 Up).
-Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Gravity `left|right` + row input landed
+(Connect 4 Right). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -52,10 +52,11 @@ Near-term focus = sandbox composer + library explorer (graph sampling, scores, s
 
 Working sandbox slice (see README “Current implementation status”):
 
-- Rectangular grid; cell / column input
-- Direct + gravity placement (schema/engine: gravity **down** only)
+- Rectangular grid; cell / column / row input
+- Direct + gravity placement (down | up | left | right; column ↔ vertical, row ↔ horizontal)
 - Capture (flip demo); n-in-a-row wins
-- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo,
+- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Up, Connect 4 Right, Connect 4 Pop Out,
+  Gomoku, Capture / Flip Demo,
   Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
   Step Race (Move + reach_row),
   Life Lite (manual tick + B3/S23)
@@ -77,7 +78,8 @@ Working sandbox slice (see README “Current implementation status”):
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: ko/full Go rules, non-down gravity, hex/graph wrap, simultaneous/delayed actions.
+Not yet: ko/full Go rules, hex/graph wrap, simultaneous/delayed actions,
+`pop_out_top` / horizontal pop-out.
 
 ## Milestone exit criteria
 

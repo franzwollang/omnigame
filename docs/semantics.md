@@ -8,7 +8,7 @@ This document sketches a minimal formal model to reason about feature compositio
 - Grid: G = (W, H, cells) with cells ∈ (P ∪ {∅})^{W×H}
 - Status: S ∈ {playing, won(p), draw}
 - State: σ = (G, p∈P, S, m∈ℕ)  // grid, current player, game status, move count
-- Events: ε ∈ { place(r,c), activateColumn(c), reset }
+- Events: ε ∈ { place(r,c), activateColumn(c), activateRow(r), reset }
 
 ## 2. Small-step Transition Relation
 
