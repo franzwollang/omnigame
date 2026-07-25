@@ -22,7 +22,12 @@ import {
 	applyLifeStep,
 	type SchedulerConfig
 } from "@/engine/scheduler";
-import type { GridTopology } from "@/engine/topology";
+import {
+	isActivePosition,
+	type GraphTopologyData,
+	type GridTopology
+} from "@/engine/topology";
+import { getCell as readCell } from "@/engine/types";
 
 export type InitialSeed = {
 	row: number;
@@ -36,6 +41,8 @@ export type GameConfig = {
 	gridHeight: number;
 	/** Board topology; default rectangle. */
 	topology?: GridTopology;
+	/** Compiled adjacency when topology = graph. */
+	graph?: GraphTopologyData;
 	winLength: number;
 	adjacency: AdjacencyConfig;
 	inputMode?: "cell" | "column" | "move";
@@ -69,6 +76,14 @@ function emptyGrid(width: number, height: number): Grid {
 		height,
 		cells: Array(width * height).fill(null) as CellValue[]
 	};
+}
+
+function isBoardFull(grid: Grid, config: GameConfig): boolean {
+	const topology = config.topology ?? "rectangle";
+	if (topology === "graph" && config.graph) {
+		return config.graph.active.every((pos) => readCell(grid, pos) !== null);
+	}
+	return grid.cells.every((c) => c !== null);
 }
 
 // Create initial game state from config
@@ -316,6 +331,12 @@ function handlePlace(
 		return state;
 	}
 
+	// Guard: graph boards only place on declared nodes
+	const topology = config.topology ?? "rectangle";
+	if (!isActivePosition(pos, topology, config.graph)) {
+		return state;
+	}
+
 	// Guard: cell must be empty
 	if (getCell(state.grid, pos) !== null) return state;
 
@@ -388,7 +409,8 @@ function handlePlace(
 		state.currentPlayer,
 		config.winLength,
 		config.adjacency,
-		config.topology ?? "rectangle"
+		config.topology ?? "rectangle",
+		config.graph
 	);
 	if (winner) {
 		return {
@@ -400,8 +422,8 @@ function handlePlace(
 		};
 	}
 
-	// Check draw (all cells filled)
-	const isFull = newCells.every((c) => c !== null);
+	// Check draw (all playable cells filled)
+	const isFull = isBoardFull(newGrid, config);
 	if (isFull) {
 		return {
 			...state,
@@ -493,7 +515,8 @@ function handlePopOutColumn(
 		state.currentPlayer,
 		config.winLength,
 		config.adjacency,
-		config.topology ?? "rectangle"
+		config.topology ?? "rectangle",
+		config.graph
 	);
 	if (winner) {
 		return {
@@ -505,7 +528,7 @@ function handlePopOutColumn(
 		};
 	}
 
-	const isFull = newCells.every((c) => c !== null);
+	const isFull = isBoardFull(newGrid, config);
 	if (isFull) {
 		return {
 			...state,

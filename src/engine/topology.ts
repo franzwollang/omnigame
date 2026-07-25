@@ -1,14 +1,93 @@
 /**
  * Board topology helpers.
- * Rectangle uses row/col deltas; hex_offset uses odd-r (pointy-top) via cube coords.
+ * Rectangle uses row/col deltas; hex_offset uses odd-r (pointy-top) via cube coords;
+ * graph uses an explicit adjacency list over embedded {row,col} nodes.
  */
 import type { Grid, Position } from "@/engine/types";
 import type { AdjacencyConfig } from "@/engine/rules";
 import { inBounds } from "@/engine/adjacency";
 
-export type GridTopology = "rectangle" | "hex_offset";
+export type GridTopology = "rectangle" | "hex_offset" | "graph";
 
 export type Cube = { q: number; r: number; s: number };
+
+/** Compiled graph board: playable nodes + undirected neighbor map. */
+export type GraphTopologyData = {
+	active: Position[];
+	/** Optional canvas layout (same length/order as active when present). */
+	layout?: Array<{ x: number; y: number }>;
+	/** key = "row,col" → neighbor positions */
+	neighborsOf: Map<string, Position[]>;
+};
+
+export function posKey(pos: Position): string {
+	return `${pos.row},${pos.col}`;
+}
+
+export function parsePosKey(key: string): Position | null {
+	const m = /^(\d+),(\d+)$/.exec(key);
+	if (!m) return null;
+	return { row: Number(m[1]), col: Number(m[2]) };
+}
+
+/** Build undirected adjacency from authoring nodes/edges. */
+export function buildGraphTopologyData(
+	nodes: Array<{ row: number; col: number; x?: number; y?: number }>,
+	edges: Array<[string, string]>
+): GraphTopologyData {
+	const active = nodes.map((n) => ({ row: n.row, col: n.col }));
+	const layout =
+		nodes.every((n) => typeof n.x === "number" && typeof n.y === "number")
+			? nodes.map((n) => ({ x: n.x as number, y: n.y as number }))
+			: undefined;
+	const neighborsOf = new Map<string, Position[]>();
+	for (const n of active) {
+		neighborsOf.set(posKey(n), []);
+	}
+	const push = (from: string, to: Position) => {
+		const list = neighborsOf.get(from);
+		if (!list) return;
+		if (!list.some((p) => p.row === to.row && p.col === to.col)) {
+			list.push(to);
+		}
+	};
+	for (const [a, b] of edges) {
+		const pa = parsePosKey(a);
+		const pb = parsePosKey(b);
+		if (!pa || !pb) continue;
+		if (!neighborsOf.has(a) || !neighborsOf.has(b)) continue;
+		push(a, pb);
+		push(b, pa);
+	}
+	return { active, layout, neighborsOf };
+}
+
+export function isActivePosition(
+	pos: Position,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): boolean {
+	if (topology !== "graph") return true;
+	if (!graph) return false;
+	return graph.neighborsOf.has(posKey(pos));
+}
+
+export function allActivePositions(
+	grid: Grid,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	if (topology === "graph") {
+		return graph?.active.slice() ?? [];
+	}
+	const out: Position[] = [];
+	for (let row = 0; row < grid.height; row++) {
+		for (let col = 0; col < grid.width; col++) {
+			out.push({ row, col });
+		}
+	}
+	return out;
+}
 
 /** odd-r offset → cube */
 export function offsetToCube(pos: Position): Cube {
@@ -57,8 +136,12 @@ const HEX_AXIS_BY_FLAG = {
 export function neighbors(
 	grid: Grid,
 	pos: Position,
-	topology: GridTopology = "rectangle"
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
 ): Position[] {
+	if (topology === "graph") {
+		return graph?.neighborsOf.get(posKey(pos))?.slice() ?? [];
+	}
 	if (topology === "hex_offset") {
 		const c = offsetToCube(pos);
 		const out: Position[] = [];
@@ -91,8 +174,14 @@ export type WinAdjFunc = (pos: Position) => Position[];
 /** Directional step functions for n-in-a-row along enabled axes. */
 export function getWinAdjFuncs(
 	adjacency: AdjacencyConfig,
-	topology: GridTopology = "rectangle"
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
 ): WinAdjFunc[] {
+	if (topology === "graph") {
+		return [
+			(pos) => graph?.neighborsOf.get(posKey(pos))?.slice() ?? []
+		];
+	}
 	if (topology === "hex_offset") {
 		const funcs: WinAdjFunc[] = [];
 		const pushAxis = (dirs: readonly Cube[]) => {
@@ -148,4 +237,62 @@ export function hexBoardExtent(
 	const w = size * Math.sqrt(3) * (width + 0.5);
 	const h = size * (1.5 * (height - 1) + 2);
 	return { width: w, height: h };
+}
+
+/** Bounding box for graph layout coords (defaults to row/col embedding). */
+export function graphBoardExtent(
+	graph: GraphTopologyData,
+	scale: number
+): { width: number; height: number } {
+	const pts =
+		graph.layout ??
+		graph.active.map((p) => ({ x: p.col, y: p.row }));
+	if (pts.length === 0) return { width: scale * 2, height: scale * 2 };
+	let minX = Infinity;
+	let maxX = -Infinity;
+	let minY = Infinity;
+	let maxY = -Infinity;
+	for (const p of pts) {
+		minX = Math.min(minX, p.x);
+		maxX = Math.max(maxX, p.x);
+		minY = Math.min(minY, p.y);
+		maxY = Math.max(maxY, p.y);
+	}
+	const pad = 1;
+	return {
+		width: (maxX - minX + pad * 2) * scale,
+		height: (maxY - minY + pad * 2) * scale
+	};
+}
+
+export function graphNodeCenter(
+	pos: Position,
+	graph: GraphTopologyData,
+	scale: number
+): { x: number; y: number } | null {
+	const idx = graph.active.findIndex(
+		(p) => p.row === pos.row && p.col === pos.col
+	);
+	if (idx < 0) return null;
+	const pts =
+		graph.layout ??
+		graph.active.map((p) => ({ x: p.col, y: p.row }));
+	let minX = Infinity;
+	let maxX = -Infinity;
+	let minY = Infinity;
+	let maxY = -Infinity;
+	for (const p of pts) {
+		minX = Math.min(minX, p.x);
+		maxX = Math.max(maxX, p.x);
+		minY = Math.min(minY, p.y);
+		maxY = Math.max(maxY, p.y);
+	}
+	const pad = 1;
+	const cx = (minX + maxX) / 2;
+	const cy = (minY + maxY) / 2;
+	const p = pts[idx];
+	return {
+		x: (p.x - cx) * scale,
+		y: (p.y - cy) * scale
+	};
 }

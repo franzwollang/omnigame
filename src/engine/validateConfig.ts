@@ -26,6 +26,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.grid.topology === "hex_offset") {
 		features.push(Contracts.TopologyHex());
 	}
+	if (cfg.grid.topology === "graph") {
+		features.push(Contracts.TopologyGraph());
+	}
 
 	// Input mode
 	if (cfg.input.mode === "cell") features.push(Contracts.InputTargetCell());

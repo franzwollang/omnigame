@@ -5,6 +5,7 @@
 import type { Config } from "@/schemas/config";
 import type { GameConfig } from "@/engine/reducer";
 import { expandMacros, type MacroExpansion } from "@/compiler/macros";
+import { buildGraphTopologyData } from "@/engine/topology";
 
 const DEFAULT_ADJACENCY = {
 	mode: "linear" as const,
@@ -24,10 +25,15 @@ export type NormalizeResult = {
 
 /** Flatten a (possibly already expanded) Config into GameConfig. */
 export function flattenToGameConfig(config: Config): GameConfig {
+	const graph =
+		config.grid.topology === "graph" && config.grid.nodes && config.grid.edges
+			? buildGraphTopologyData(config.grid.nodes, config.grid.edges)
+			: undefined;
 	return {
 		gridWidth: config.grid.width,
 		gridHeight: config.grid.height,
 		topology: config.grid.topology,
+		graph,
 		winLength: config.win?.length ?? 3,
 		adjacency: config.win?.adjacency ?? DEFAULT_ADJACENCY,
 		inputMode: config.input.mode,

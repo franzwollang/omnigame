@@ -242,5 +242,13 @@ export const Contracts = {
 		slots: [],
 		hooks: ["validateInput"],
 		invariants: ["oddROffsetHex"]
+	}),
+	TopologyGraph: (): FeatureContract => ({
+		id: "TopologyGraph",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["explicitAdjacencyGraph"]
 	})
 };

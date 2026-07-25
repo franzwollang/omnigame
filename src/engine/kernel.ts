@@ -21,6 +21,10 @@ import {
 	type ShotResult
 } from "@/engine/observation";
 import { canMove, legalDestinations } from "@/engine/movement";
+import {
+	allActivePositions,
+	isActivePosition
+} from "@/engine/topology";
 
 /** Numeric player ids per README GameKernel sketch (X=0, O=1). */
 export type PlayerId = 0 | 1;
@@ -244,6 +248,8 @@ function canPlaceCell(
 	pos: Position,
 	config: GameConfig
 ): boolean {
+	const topology = config.topology ?? "rectangle";
+	if (!isActivePosition(pos, topology, config.graph)) return false;
 	if (getCell(state.grid, pos) !== null) return false;
 	if (!config.captureEnabled) return true;
 	const captureMode = config.captureMode ?? "flip";
@@ -288,24 +294,26 @@ function collectLegalActions(
 
 	if (manualTick) {
 		actions.push({ type: "tick" });
-		for (let row = 0; row < state.grid.height; row++) {
-			for (let col = 0; col < state.grid.width; col++) {
-				const position = { row, col };
-				if (canPlaceCell(state, position, config)) {
-					actions.push({ type: "place", position });
-				}
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (canPlaceCell(state, position, config)) {
+				actions.push({ type: "place", position });
 			}
 		}
 		return actions;
 	}
 
 	if (hitMiss) {
-		for (let row = 0; row < state.grid.height; row++) {
-			for (let col = 0; col < state.grid.width; col++) {
-				const position = { row, col };
-				if (canFireCell(state, position, state.currentPlayer)) {
-					actions.push({ type: "fire", position });
-				}
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (canFireCell(state, position, state.currentPlayer)) {
+				actions.push({ type: "fire", position });
 			}
 		}
 		return actions;
@@ -314,14 +322,15 @@ function collectLegalActions(
 	if (inputMode === "move") {
 		const movement = config.movement;
 		if (!movement) return actions;
-		for (let row = 0; row < state.grid.height; row++) {
-			for (let col = 0; col < state.grid.width; col++) {
-				const from = { row, col };
-				if (getCell(state.grid, from) !== state.currentPlayer) continue;
-				for (const to of legalDestinations(state.grid, from, movement)) {
-					if (canMove(state.grid, from, to, state.currentPlayer, movement)) {
-						actions.push({ type: "move", from, to });
-					}
+		for (const from of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (getCell(state.grid, from) !== state.currentPlayer) continue;
+			for (const to of legalDestinations(state.grid, from, movement)) {
+				if (canMove(state.grid, from, to, state.currentPlayer, movement)) {
+					actions.push({ type: "move", from, to });
 				}
 			}
 		}
@@ -335,12 +344,13 @@ function collectLegalActions(
 			}
 		}
 	} else {
-		for (let row = 0; row < state.grid.height; row++) {
-			for (let col = 0; col < state.grid.width; col++) {
-				const position = { row, col };
-				if (canPlaceCell(state, position, config)) {
-					actions.push({ type: "place", position });
-				}
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (canPlaceCell(state, position, config)) {
+				actions.push({ type: "place", position });
 			}
 		}
 	}
@@ -367,6 +377,8 @@ function placeFailureReason(
 	pos: Position,
 	config: GameConfig
 ): IllegalReason | null {
+	const topology = config.topology ?? "rectangle";
+	if (!isActivePosition(pos, topology, config.graph)) return "not_applicable";
 	if (getCell(state.grid, pos) !== null) return "cell_occupied";
 	if (!config.captureEnabled) return null;
 	const captureMode = config.captureMode ?? "flip";

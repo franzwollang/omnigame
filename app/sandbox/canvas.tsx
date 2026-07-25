@@ -10,8 +10,11 @@ import {
 import type { GameState, Position } from "@/engine/types";
 import { getCell } from "@/engine/types";
 import {
+	graphBoardExtent,
+	graphNodeCenter,
 	hexBoardExtent,
 	hexOffsetCenter,
+	type GraphTopologyData,
 	type GridTopology
 } from "@/engine/topology";
 
@@ -23,6 +26,8 @@ type Props = {
 	inputMode?: "cell" | "column" | "move";
 	enablePopOutButtons?: boolean;
 	topology?: GridTopology;
+	/** Compiled graph adjacency/layout when topology = graph. */
+	graph?: GraphTopologyData;
 	/** Legal-move overlay cells (M6). */
 	highlightCells?: Position[];
 	/** Selected piece for move-mode (M6). */
@@ -45,8 +50,14 @@ function cellWorldPos(
 	gridHeight: number,
 	topology: GridTopology,
 	cellSize: number,
-	totalCellSize: number
+	totalCellSize: number,
+	graph?: GraphTopologyData
 ): { x: number; y: number } {
+	if (topology === "graph" && graph) {
+		const scale = cellSize * 1.15;
+		const c = graphNodeCenter({ row, col }, graph, scale);
+		if (c) return { x: c.x, y: -c.y };
+	}
 	if (topology === "hex_offset") {
 		const size = cellSize * 0.55;
 		const { width: bw, height: bh } = hexBoardExtent(
@@ -85,6 +96,7 @@ export default function SandboxCanvas({
 	inputMode = "cell",
 	enablePopOutButtons = false,
 	topology = "rectangle",
+	graph,
 	highlightCells = [],
 	selectedCell = null,
 	showLegalOverlay = true,
@@ -107,6 +119,8 @@ export default function SandboxCanvas({
 	const popLabelGroupRef = useRef<THREE.Group | null>(null);
 	const isHexRef = useRef(topology === "hex_offset");
 	isHexRef.current = topology === "hex_offset";
+	const graphRef = useRef(graph);
+	graphRef.current = graph;
 
 	// Keep click handler ref up to date
 	useEffect(() => {
@@ -154,16 +168,24 @@ export default function SandboxCanvas({
 		const spacing = 0.1;
 		const totalCellSize = cellSize + spacing;
 		const isHex = topology === "hex_offset";
+		const isGraph = topology === "graph" && Boolean(graph);
 		const hexSize = cellSize * 0.55;
+		const graphScale = cellSize * 1.15;
 		const hexExtent = isHex
 			? hexBoardExtent(gridWidth, gridHeight, hexSize)
 			: null;
+		const graphExtent =
+			isGraph && graph ? graphBoardExtent(graph, graphScale) : null;
 		const planeWidth = isHex
 			? hexExtent!.width
-			: gridWidth * totalCellSize;
+			: isGraph
+				? Math.max(graphExtent!.width, cellSize * 3)
+				: gridWidth * totalCellSize;
 		const planeHeight = isHex
 			? hexExtent!.height
-			: gridHeight * totalCellSize;
+			: isGraph
+				? Math.max(graphExtent!.height, cellSize * 3)
+				: gridHeight * totalCellSize;
 
 		// Board plane
 		const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
@@ -183,8 +205,8 @@ export default function SandboxCanvas({
 		edgeLines.position.z = 0.0002;
 		scene.add(edgeLines);
 
-		// Grid lines for rectangular grids (manual); hex uses cell outlines
-		if (!isHex) {
+		// Grid lines for rectangular grids (manual); hex/graph use cell outlines
+		if (!isHex && !isGraph) {
 			const lineMaterial = new THREE.LineBasicMaterial({ color: 0xcbd5e1 });
 			const positions: number[] = [];
 			// Vertical lines
@@ -206,44 +228,102 @@ export default function SandboxCanvas({
 			scene.add(gridLines);
 		}
 
-		// Render cells as clickable meshes
-		const cellMeshes: THREE.Mesh[] = [];
-		const hexShape = isHex ? createHexShape(hexSize * 0.95) : null;
-		for (let row = 0; row < gridHeight; row++) {
-			for (let col = 0; col < gridWidth; col++) {
-				const cellGeo = isHex
-					? new THREE.ShapeGeometry(hexShape!)
-					: new THREE.PlaneGeometry(cellSize, cellSize);
-				const cellMat = new THREE.MeshBasicMaterial({
-					color: isHex ? 0xe2e8f0 : 0xf8fafc,
-					transparent: true,
-					opacity: isHex ? 0.85 : 0.01,
-					side: THREE.DoubleSide
-				});
-				const cellMesh = new THREE.Mesh(cellGeo, cellMat);
-				const { x, y } = cellWorldPos(
-					row,
-					col,
+		// Graph edges (visual only)
+		if (isGraph && graph) {
+			const edgePositions: number[] = [];
+			const seen = new Set<string>();
+			for (const node of graph.active) {
+				const from = cellWorldPos(
+					node.row,
+					node.col,
 					gridWidth,
 					gridHeight,
 					topology,
 					cellSize,
-					totalCellSize
+					totalCellSize,
+					graph
 				);
-				cellMesh.position.set(x, y, 0.0003);
-				cellMesh.userData = { row, col };
-				scene.add(cellMesh);
-				cellMeshes.push(cellMesh);
-
-				if (isHex) {
-					const edgeGeo = new THREE.EdgesGeometry(cellGeo);
-					const outline = new THREE.LineSegments(
+				const keyFrom = `${node.row},${node.col}`;
+				for (const n of graph.neighborsOf.get(keyFrom) ?? []) {
+					const a = keyFrom;
+					const b = `${n.row},${n.col}`;
+					const undirected = a < b ? `${a}|${b}` : `${b}|${a}`;
+					if (seen.has(undirected)) continue;
+					seen.add(undirected);
+					const to = cellWorldPos(
+						n.row,
+						n.col,
+						gridWidth,
+						gridHeight,
+						topology,
+						cellSize,
+						totalCellSize,
+						graph
+					);
+					edgePositions.push(from.x, from.y, 0.00015, to.x, to.y, 0.00015);
+				}
+			}
+			if (edgePositions.length > 0) {
+				const edgeGeo = new THREE.BufferGeometry();
+				edgeGeo.setAttribute(
+					"position",
+					new THREE.Float32BufferAttribute(edgePositions, 3)
+				);
+				scene.add(
+					new THREE.LineSegments(
 						edgeGeo,
 						new THREE.LineBasicMaterial({ color: 0x94a3b8 })
-					);
-					outline.position.set(x, y, 0.0004);
-					scene.add(outline);
-				}
+					)
+				);
+			}
+		}
+
+		// Render cells as clickable meshes
+		const cellMeshes: THREE.Mesh[] = [];
+		const hexShape = isHex ? createHexShape(hexSize * 0.95) : null;
+		const nodeRadius = cellSize * 0.28;
+		const cellsToRender: Position[] = isGraph && graph
+			? graph.active
+			: Array.from({ length: gridHeight * gridWidth }, (_, i) => ({
+					row: Math.floor(i / gridWidth),
+					col: i % gridWidth
+				}));
+		for (const { row, col } of cellsToRender) {
+			const cellGeo = isHex
+				? new THREE.ShapeGeometry(hexShape!)
+				: isGraph
+					? new THREE.CircleGeometry(nodeRadius, 28)
+					: new THREE.PlaneGeometry(cellSize, cellSize);
+			const cellMat = new THREE.MeshBasicMaterial({
+				color: isHex || isGraph ? 0xe2e8f0 : 0xf8fafc,
+				transparent: true,
+				opacity: isHex || isGraph ? 0.9 : 0.01,
+				side: THREE.DoubleSide
+			});
+			const cellMesh = new THREE.Mesh(cellGeo, cellMat);
+			const { x, y } = cellWorldPos(
+				row,
+				col,
+				gridWidth,
+				gridHeight,
+				topology,
+				cellSize,
+				totalCellSize,
+				graph
+			);
+			cellMesh.position.set(x, y, 0.0003);
+			cellMesh.userData = { row, col };
+			scene.add(cellMesh);
+			cellMeshes.push(cellMesh);
+
+			if (isHex || isGraph) {
+				const edgeGeo = new THREE.EdgesGeometry(cellGeo);
+				const outline = new THREE.LineSegments(
+					edgeGeo,
+					new THREE.LineBasicMaterial({ color: 0x64748b })
+				);
+				outline.position.set(x, y, 0.0004);
+				scene.add(outline);
 			}
 		}
 		cellMeshesRef.current = cellMeshes;
@@ -431,7 +511,7 @@ export default function SandboxCanvas({
 			});
 			controls.dispose();
 		};
-	}, [gameState.grid.width, gameState.grid.height, topology]);
+	}, [gameState.grid.width, gameState.grid.height, topology, graph]);
 
 	// Render X/O marks and token placements, plus optional pop-out buttons
 	useEffect(() => {
@@ -477,7 +557,8 @@ export default function SandboxCanvas({
 				gridHeight,
 				topology,
 				cellSize,
-				totalCellSize
+				totalCellSize,
+				graph
 			);
 
 			if (value === "hit") {
@@ -625,7 +706,8 @@ export default function SandboxCanvas({
 				gridHeight,
 				topology,
 				cellSize,
-				totalCellSize
+				totalCellSize,
+				graph
 			);
 			if (token.asset?.type === "image") {
 				let tex = textureCacheRef.current.get(token.asset.url);
@@ -673,7 +755,8 @@ export default function SandboxCanvas({
 		tokens,
 		placements,
 		enablePopOutButtons,
-		topology
+		topology,
+		graph
 	]);
 
 	// CSS2D DOM pop-out buttons
@@ -721,6 +804,7 @@ export default function SandboxCanvas({
 				? `${selectedCell.row},${selectedCell.col}`
 				: null;
 		const isHex = isHexRef.current;
+		const isGraph = Boolean(graphRef.current);
 		for (const mesh of meshes) {
 			const { row, col } = mesh.userData as { row: number; col: number };
 			const key = `${row},${col}`;
@@ -731,11 +815,11 @@ export default function SandboxCanvas({
 				mat.transparent = true;
 			} else if (legalKeys.has(key)) {
 				mat.color.setHex(0x22c55e);
-				mat.opacity = isHex ? 0.55 : 0.28;
+				mat.opacity = isHex || isGraph ? 0.55 : 0.28;
 				mat.transparent = true;
 			} else {
-				mat.color.setHex(isHex ? 0xe2e8f0 : 0xf8fafc);
-				mat.opacity = isHex ? 0.85 : 0.01;
+				mat.color.setHex(isHex || isGraph ? 0xe2e8f0 : 0xf8fafc);
+				mat.opacity = isHex || isGraph ? 0.9 : 0.01;
 				mat.transparent = true;
 			}
 			mat.needsUpdate = true;

@@ -381,6 +381,71 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"graph-connect-lite": definePreset({
+		id: "graph-connect-lite",
+		name: "Graph Connect Lite",
+		tags: ["graph", "topology", "n-in-a-row", "mechanism"],
+		description:
+			"N-in-a-row along an irregular adjacency graph (bridge + triangle). Unlocks graph topology — not expressible as a uniform rectangle/hex lattice.",
+		config: {
+			metadata: { name: "Graph Connect Lite", version: 1 },
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				// Layout (y-down): top bar + hub + bottom triangle — missing lattice edges
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 0, col: 2, x: 2, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 0, x: 0.25, y: 2 },
+					{ row: 2, col: 2, x: 1.75, y: 2 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,1", "0,2"],
+					["0,1", "1,1"],
+					["1,1", "2,0"],
+					["1,1", "2,2"],
+					["2,0", "2,2"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "composite",
+					horizontal: false,
+					vertical: false,
+					backDiagonal: false,
+					forwardDiagonal: false
+				}
+			},
+			tokens: [
+				{
+					id: "graph-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"go-lite": definePreset({
 		id: "go-lite",
 		name: "Go Lite",

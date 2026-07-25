@@ -479,6 +479,7 @@ export default function GamePage() {
 					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
 					inputMode={currentConfig?.input.mode ?? "cell"}
 					topology={currentConfig?.grid.topology ?? "rectangle"}
+					graph={engineConfig.graph}
 					highlightCells={highlightCells}
 					selectedCell={selectedFrom}
 					showLegalOverlay={showLegalOverlay}

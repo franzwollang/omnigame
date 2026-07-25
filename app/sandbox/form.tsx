@@ -107,6 +107,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												<SelectItem value="hex_offset">
 													hex_offset (odd-r)
 												</SelectItem>
+												<SelectItem value="graph">
+													graph (adjacency list)
+												</SelectItem>
 											</SelectContent>
 										</Select>
 										<FormMessage />

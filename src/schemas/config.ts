@@ -7,10 +7,40 @@ export const zConfig = z
 			.object({
 				width: z.number().int().positive(),
 				height: z.number().int().positive(),
-				/** rectangle = classic grid; hex_offset = odd-r pointy-top hex. */
-				topology: z.enum(["rectangle", "hex_offset"]).default("rectangle"),
+				/**
+				 * rectangle = classic grid; hex_offset = odd-r pointy-top hex;
+				 * graph = explicit adjacency over embedded {row,col} nodes.
+				 */
+				topology: z
+					.enum(["rectangle", "hex_offset", "graph"])
+					.default("rectangle"),
 				// wrap deferred; only false is accepted today
-				wrap: z.literal(false)
+				wrap: z.literal(false),
+				/** Playable nodes when topology = graph (inactive slots stay empty). */
+				nodes: z
+					.array(
+						z
+							.object({
+								row: z.number().int().nonnegative(),
+								col: z.number().int().nonnegative(),
+								/** Optional canvas layout (y-down authoring space). */
+								x: z.number().optional(),
+								y: z.number().optional()
+							})
+							.strict()
+					)
+					.min(2)
+					.optional(),
+				/** Undirected edges as "row,col" endpoint pairs. */
+				edges: z
+					.array(
+						z.tuple([
+							z.string().regex(/^\d+,\d+$/),
+							z.string().regex(/^\d+,\d+$/)
+						])
+					)
+					.min(1)
+					.optional()
 			})
 			.strict(),
 		// realtime deferred; manual_tick unlocks discrete Life-style generations
@@ -172,6 +202,7 @@ export const zConfig = z
 		const moveInput = cfg.input.mode === "move";
 		const manualTick = cfg.turn.schedule === "manual_tick";
 		const hexBoard = cfg.grid.topology === "hex_offset";
+		const graphBoard = cfg.grid.topology === "graph";
 		const captureEnabled = Boolean(cfg.placement.capture?.enabled);
 		const captureMode = cfg.placement.capture?.mode ?? "flip";
 		const libertyCapture = captureEnabled && captureMode === "liberties";
@@ -277,6 +308,127 @@ export const zConfig = z
 					message: "hex_offset is incompatible with move input"
 				});
 			}
+		}
+
+		// Graph foothold: explicit adjacency; same restricted surface as hex
+		if (graphBoard) {
+			if (!cfg.grid.nodes || cfg.grid.nodes.length < 2) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "nodes"],
+					message: "graph topology requires grid.nodes (≥ 2)"
+				});
+			}
+			if (!cfg.grid.edges || cfg.grid.edges.length < 1) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "edges"],
+					message: "graph topology requires grid.edges (≥ 1)"
+				});
+			}
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message: "graph requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "graph requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message: "graph requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "graph is incompatible with hit_miss observation"
+				});
+			}
+			if (manualTick) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "graph is incompatible with manual_tick"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "graph is incompatible with move input"
+				});
+			}
+			if (cfg.win && cfg.win.adjacency.mode !== "composite") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["win", "adjacency", "mode"],
+					message: "graph requires win.adjacency.mode = 'composite' (path win)"
+				});
+			}
+
+			const nodeKeys = new Set<string>();
+			if (cfg.grid.nodes) {
+				for (let i = 0; i < cfg.grid.nodes.length; i++) {
+					const n = cfg.grid.nodes[i];
+					if (
+						n.row < 0 ||
+						n.col < 0 ||
+						n.row >= cfg.grid.height ||
+						n.col >= cfg.grid.width
+					) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["grid", "nodes", i],
+							message: "graph node out of grid bounds"
+						});
+					}
+					const key = `${n.row},${n.col}`;
+					if (nodeKeys.has(key)) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["grid", "nodes", i],
+							message: "duplicate graph node position"
+						});
+					} else {
+						nodeKeys.add(key);
+					}
+				}
+			}
+			if (cfg.grid.edges) {
+				for (let i = 0; i < cfg.grid.edges.length; i++) {
+					const [a, b] = cfg.grid.edges[i];
+					if (a === b) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["grid", "edges", i],
+							message: "graph edge cannot be a self-loop"
+						});
+					}
+					if (!nodeKeys.has(a) || !nodeKeys.has(b)) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["grid", "edges", i],
+							message: "graph edge endpoints must be declared nodes"
+						});
+					}
+				}
+			}
+		} else if (cfg.grid.nodes || cfg.grid.edges) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["grid", "topology"],
+				message: "grid.nodes / grid.edges require topology = 'graph'"
+			});
 		}
 
 		// Manual tick / Life scheduler foothold
@@ -465,8 +617,9 @@ export const zConfig = z
 					message: "win is required when objective.mode = 'n_in_a_row'"
 				});
 			} else {
-				// adjacency must have at least one direction enabled
+				// adjacency must have at least one direction enabled (lattice only)
 				if (
+					!graphBoard &&
 					!cfg.win.adjacency.horizontal &&
 					!cfg.win.adjacency.vertical &&
 					!cfg.win.adjacency.backDiagonal &&
@@ -478,9 +631,11 @@ export const zConfig = z
 						message: "At least one adjacency direction must be enabled"
 					});
 				}
-				// win length must be <= max(width,height)
-				const maxDim = Math.max(cfg.grid.width, cfg.grid.height);
-				if (cfg.win.length < 2 || cfg.win.length > maxDim) {
+				// win length must be <= max(width,height) — or node count on graphs
+				const maxDim = graphBoard
+					? (cfg.grid.nodes?.length ?? 0)
+					: Math.max(cfg.grid.width, cfg.grid.height);
+				if (maxDim > 0 && (cfg.win.length < 2 || cfg.win.length > maxDim)) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["win", "length"],
@@ -503,6 +658,17 @@ export const zConfig = z
 					path: ["initial", i],
 					message: "initial seed out of grid bounds"
 				});
+			} else if (graphBoard && cfg.grid.nodes) {
+				const onNode = cfg.grid.nodes.some(
+					(n) => n.row === p.row && n.col === p.col
+				);
+				if (!onNode) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["initial", i],
+						message: "initial seed must land on a graph node"
+					});
+				}
 			}
 		}
 

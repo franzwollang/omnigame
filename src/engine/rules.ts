@@ -1,9 +1,11 @@
-// Win detection with decomposed adjacency (rectangle or hex_offset)
+// Win detection with decomposed adjacency (rectangle, hex_offset, or graph)
 
 import type { Grid, Player, Position } from "./types";
 import { inBounds } from "@/engine/adjacency";
 import {
+	allActivePositions,
 	getWinAdjFuncs,
+	type GraphTopologyData,
 	type GridTopology,
 	type WinAdjFunc
 } from "@/engine/topology";
@@ -50,7 +52,7 @@ function recursiveCheck(
 				adjFunc,
 				winLength,
 				currentLength + 1,
-				memo
+				new Set(memo)
 			)
 		) {
 			return true;
@@ -66,22 +68,20 @@ export function checkWinner(
 	player: Player,
 	winLength: number,
 	adjacencyConfig: AdjacencyConfig,
-	topology: GridTopology = "rectangle"
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
 ): boolean {
-	const adjFuncs = getWinAdjFuncs(adjacencyConfig, topology);
+	const adjFuncs = getWinAdjFuncs(adjacencyConfig, topology, graph);
 	if (adjFuncs.length === 0) return false;
 
 	const playerCells: Position[] = [];
-	for (let row = 0; row < grid.height; row++) {
-		for (let col = 0; col < grid.width; col++) {
-			const pos = { row, col };
-			if (getCell(grid, pos) === player) {
-				playerCells.push(pos);
-			}
+	for (const pos of allActivePositions(grid, topology, graph)) {
+		if (getCell(grid, pos) === player) {
+			playerCells.push(pos);
 		}
 	}
 
-	if (adjacencyConfig.mode === "linear") {
+	if (adjacencyConfig.mode === "linear" && topology !== "graph") {
 		for (const adjFunc of adjFuncs) {
 			for (const startPos of playerCells) {
 				if (recursiveCheck(grid, player, startPos, adjFunc, winLength)) {
@@ -92,6 +92,7 @@ export function checkWinner(
 		return false;
 	}
 
+	// composite (and all graph wins): any path through neighbor edges
 	const compositeAdj: WinAdjFunc = (pos) => adjFuncs.flatMap((f) => f(pos));
 	for (const startPos of playerCells) {
 		if (recursiveCheck(grid, player, startPos, compositeAdj, winLength)) {
