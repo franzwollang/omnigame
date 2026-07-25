@@ -40,3 +40,4 @@
 {"ts":"2026-07-25T12:10-05:00","focus":"multi-action simultaneous","summary":"Landed actionsPerTurn under simultaneous + Double-Place Simultaneous TTT; hand off next mechanism","next":"pick hex/graph multi-action simultaneous or next true new seam"}
 {"ts":"2026-07-25T12:25-05:00","focus":"hex/graph multi-action simultaneous","summary":"Lifted schema gate; Double-Place Simultaneous Hex/Graph + tests; library sample","next":"pick alternating multi-step hex/graph or next true new seam"}
 {"ts":"2026-07-25T12:45-05:00","focus":"hex/graph alternating multi-step","summary":"Lifted schema gate; Double Move Hex/Graph + tests; library sample","next":"pick delayed+gravity / hidden simultaneous hex/graph / next true new seam"}
+{"ts":"2026-07-25T18:10+00:00","focus":"in-turn phases","summary":"Landed turn.phases place→move + Place & Move Lite; 229 tests pass","next":"pick phases+attack / hex lift / or next true seam"}

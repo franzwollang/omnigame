@@ -169,7 +169,7 @@ describe("kernel: turn.phases place→move", () => {
 			to: { row: 0, col: 1 }
 		});
 		expect(moveEarly.legal).toBe(false);
-		expect(moveEarly.reason).toBe("wrong_phase");
+		if (!moveEarly.legal) expect(moveEarly.reason).toBe("wrong_phase");
 
 		state = kernel.stepSync(state, {
 			type: "place",
@@ -180,7 +180,7 @@ describe("kernel: turn.phases place→move", () => {
 			position: { row: 0, col: 0 }
 		});
 		expect(placeWhileMove.legal).toBe(false);
-		expect(placeWhileMove.reason).toBe("wrong_phase");
+		if (!placeWhileMove.legal) expect(placeWhileMove.reason).toBe("wrong_phase");
 	});
 
 	it("wins on place when the placed stone completes n-in-a-row", () => {

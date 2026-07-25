@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T12:45-05:00",
-  "turn": 19,
+  "updated_at": "2026-07-25T13:10-05:00",
+  "turn": 20,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after hex/graph alternating multi-step"
+    "goal": "Hand off after turn.phases place→move"
   },
   "recent": [
-    "Synced progression-ec3e onto a5b2",
-    "Lifted alternating actionsPerTurn>1 for hex/graph",
-    "Double Move Hex/Graph presets + tests + library sample"
+    "Synced progression-a5b2 onto ef83",
+    "Landed turn.phases place→move + Place & Move Lite",
+    "229 tests green"
   ],
   "discoveries": [
-    "Kernel multi-step budget already topology-aware",
-    "Same schema gate pattern as hex/graph simultaneous lift"
+    "actionsPerTurn ≠ phases: former repeats one type; latter sequences types",
+    "Rejected delayed+gravity / hidden-sim hex as recombinations"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick delayed+gravity, hidden simultaneous hex/graph, or next true new seam",
+  "next_step": "Cloud agent: pick phases+attack, phases hex/graph, or next true seam",
   "blockers": []
 }
