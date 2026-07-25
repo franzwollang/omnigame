@@ -1,22 +1,21 @@
 {
-  "updated_at": "2026-07-25T08:15-05:00",
-  "turn": 4,
+  "updated_at": "2026-07-25T08:25-05:00",
+  "turn": 6,
   "focus": {
     "milestone": null,
-    "issue": null,
-    "goal": "Post-merge: progression stack + Next CVE on main"
+    "issue": "next-missing-mechanism",
+    "goal": "Cloud agents unblocked; pick next mechanism"
   },
   "recent": [
-    "Merged tip PR #25 (M0→positional superko) into main",
-    "Closed superseded PRs; CVE via #26 Next 14.2.35"
+    "Pushed pnpm 10.5.2 lockfile + engines Node 20.19+",
+    "PLANNING/OPEN_ISSUES honest on superko; sandbox ko hint fixed"
   ],
   "discoveries": [
-    "Review: superko OK; PLANNING still says Not yet superko (doc drift)",
-    "Vitest needs newer Node locally (styleText); typecheck green on tip"
+    "CVE bump had rewritten lockfile with pnpm 9 vs packageManager 10.5.2"
   ],
   "open_threads": [
-    "Fix PLANNING superko contradiction; sandbox ko hint copy"
+    "No GitHub Actions yet; cloud agents should honor packageManager + engines"
   ],
-  "next_step": "Optional: trim PLANNING Not-yet line; decide next mechanism handoff",
+  "next_step": "Cloud agent: implement next-missing-mechanism from OPEN_ISSUES",
   "blockers": []
 }

@@ -25,3 +25,5 @@
 {"ts":"2026-07-25T07:45-05:00","focus":"simple-ko","summary":"point ko foothold on liberties/Go Lite; hand off next missing mechanism","next":"pick superko, simultaneous, delayed, hex-wrap, or pop_out"}
 {"ts":"2026-07-25T13:05+00:00","focus":"positional superko","summary":"Landed capture.ko=positional + positionHistory + Go Lite Superko; hand off next mechanism","next":"pick situational-superko / simultaneous / delayed / hex-wrap / pop_out"}
 {"ts":"2026-07-25T08:15-05:00","focus":"PR merge","summary":"Merged #25 tip stack + #26 Next CVE; closed #1-3; open PRs clear","next":"optional PLANNING superko doc fix"}
+{"ts":"2026-07-25T08:18-05:00","focus":"tooling","summary":"Regenerated lockfile v9; 140 tests pass; PLANNING superko drift + sandbox ko hint fixed","next":"use pnpm 10.5.2 for installs; pick next mechanism"}
+{"ts":"2026-07-25T08:25-05:00","focus":"tooling push","summary":"Commit/push lockfile v9, engines, docs for cloud agents","next":"next-missing-mechanism"}

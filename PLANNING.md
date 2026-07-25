@@ -75,12 +75,14 @@ Working sandbox slice (see README “Current implementation status”):
 - **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle); Toroidal TTT preset
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 - **Simple (point) ko:** `placement.capture.ko` + `GameState.koPoint`; illegal reason `"ko"`
+- **Positional superko:** `capture.ko = "positional"` + `GameState.positionHistory`;
+  illegal reason `"superko"`; Go Lite Superko preset
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: superko/full Go rules, hex/graph wrap, simultaneous/delayed actions,
-`pop_out_top` / horizontal pop-out.
+Not yet: situational superko / full Go rules, hex/graph wrap, simultaneous/delayed
+actions, `pop_out_top` / horizontal pop-out.
 
 ## Milestone exit criteria
 
