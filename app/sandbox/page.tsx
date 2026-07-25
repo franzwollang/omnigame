@@ -372,6 +372,7 @@ export default function GamePage() {
 					enablePopOutButtons={enablePopOut}
 					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
 					inputMode={currentConfig?.input.mode ?? "cell"}
+					topology={currentConfig?.grid.topology ?? "rectangle"}
 					tokens={currentConfig?.tokens ?? []}
 					placements={currentConfig?.placements ?? []}
 				/>

@@ -7,8 +7,9 @@ export const zConfig = z
 			.object({
 				width: z.number().int().positive(),
 				height: z.number().int().positive(),
-				topology: z.literal("rectangle"),
-				// wrap deferred to M1+ GameKernel; only false is accepted today
+				/** rectangle = classic grid; hex_offset = odd-r pointy-top hex. */
+				topology: z.enum(["rectangle", "hex_offset"]).default("rectangle"),
+				// wrap deferred; only false is accepted today
 				wrap: z.literal(false)
 			})
 			.strict(),
@@ -156,6 +157,54 @@ export const zConfig = z
 		const reachRow = cfg.objective.mode === "reach_row";
 		const moveInput = cfg.input.mode === "move";
 		const manualTick = cfg.turn.schedule === "manual_tick";
+		const hexBoard = cfg.grid.topology === "hex_offset";
+
+		// Hex foothold: direct cell placement + n-in-a-row only (no gravity/column/move/tick/capture)
+		if (hexBoard) {
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message: "hex_offset requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "hex_offset requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || cfg.placement.capture?.enabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"hex_offset requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "hex_offset is incompatible with hit_miss observation"
+				});
+			}
+			if (manualTick) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "hex_offset is incompatible with manual_tick"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "hex_offset is incompatible with move input"
+				});
+			}
+		}
 
 		// Manual tick / Life scheduler foothold
 		if (manualTick) {

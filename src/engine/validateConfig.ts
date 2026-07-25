@@ -22,6 +22,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		cfg.objective.mode === "n_in_a_row" ||
 		Boolean(cfg.placement.capture?.enabled);
 	if (needsAdjacency) features.push(Contracts.AdjacencyProvided());
+	if (cfg.grid.topology === "hex_offset") {
+		features.push(Contracts.TopologyHex());
+	}
 
 	// Input mode
 	if (cfg.input.mode === "cell") features.push(Contracts.InputTargetCell());

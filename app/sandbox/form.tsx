@@ -87,6 +87,32 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									)}
 								/>
 							</div>
+							<FormField
+								control={form.control}
+								name="grid.topology"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Topology</FormLabel>
+										<Select
+											onValueChange={field.onChange}
+											value={field.value ?? "rectangle"}
+										>
+											<FormControl>
+												<SelectTrigger>
+													<SelectValue placeholder="rectangle" />
+												</SelectTrigger>
+											</FormControl>
+											<SelectContent>
+												<SelectItem value="rectangle">rectangle</SelectItem>
+												<SelectItem value="hex_offset">
+													hex_offset (odd-r)
+												</SelectItem>
+											</SelectContent>
+										</Select>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 
 							{/* Tokens */}
 							<div className="space-y-2">

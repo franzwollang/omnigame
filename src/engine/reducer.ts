@@ -17,6 +17,7 @@ import {
 	applyLifeStep,
 	type SchedulerConfig
 } from "@/engine/scheduler";
+import type { GridTopology } from "@/engine/topology";
 
 export type InitialSeed = {
 	row: number;
@@ -28,6 +29,8 @@ export type InitialSeed = {
 export type GameConfig = {
 	gridWidth: number;
 	gridHeight: number;
+	/** Board topology; default rectangle. */
+	topology?: GridTopology;
 	winLength: number;
 	adjacency: AdjacencyConfig;
 	inputMode?: "cell" | "column" | "move";
@@ -317,7 +320,8 @@ function handlePlace(
 		newGrid,
 		state.currentPlayer,
 		config.winLength,
-		config.adjacency
+		config.adjacency,
+		config.topology ?? "rectangle"
 	);
 	if (winner) {
 		return {
@@ -421,7 +425,8 @@ function handlePopOutColumn(
 		newGrid,
 		state.currentPlayer,
 		config.winLength,
-		config.adjacency
+		config.adjacency,
+		config.topology ?? "rectangle"
 	);
 	if (winner) {
 		return {

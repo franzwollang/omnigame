@@ -27,6 +27,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 	return {
 		gridWidth: config.grid.width,
 		gridHeight: config.grid.height,
+		topology: config.grid.topology,
 		winLength: config.win?.length ?? 3,
 		adjacency: config.win?.adjacency ?? DEFAULT_ADJACENCY,
 		inputMode: config.input.mode,
@@ -57,6 +58,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 const DEFAULT_GAME_CONFIG: GameConfig = {
 	gridWidth: 3,
 	gridHeight: 3,
+	topology: "rectangle",
 	winLength: 3,
 	adjacency: DEFAULT_ADJACENCY,
 	inputMode: "cell",

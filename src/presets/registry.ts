@@ -337,6 +337,49 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 2, col: 3, player: "X", visibility: "public" }
 			]
 		}
+	}),
+	"hex-connect-lite": definePreset({
+		id: "hex-connect-lite",
+		name: "Hex Connect Lite",
+		tags: ["hex", "topology", "n-in-a-row", "mechanism"],
+		description:
+			"N-in-a-row on an odd-r hex board (pointy-top offset). Unlocks hex_offset topology — not a full hex strategy game.",
+		config: {
+			metadata: { name: "Hex Connect Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			tokens: [
+				{
+					id: "hex-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
 	})
 };
 

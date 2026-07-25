@@ -9,6 +9,11 @@ import {
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { GameState, Position } from "@/engine/types";
 import { getCell } from "@/engine/types";
+import {
+	hexBoardExtent,
+	hexOffsetCenter,
+	type GridTopology
+} from "@/engine/topology";
 
 type Props = {
 	gameState: GameState;
@@ -17,6 +22,7 @@ type Props = {
 	onPopOutColumn?: (col: number) => void;
 	inputMode?: "cell" | "column" | "move";
 	enablePopOutButtons?: boolean;
+	topology?: GridTopology;
 	// token rendering
 	tokens?: {
 		id: string;
@@ -27,6 +33,45 @@ type Props = {
 	placements?: { row: number; col: number; tokenId: string }[];
 };
 
+function cellWorldPos(
+	row: number,
+	col: number,
+	gridWidth: number,
+	gridHeight: number,
+	topology: GridTopology,
+	cellSize: number,
+	totalCellSize: number
+): { x: number; y: number } {
+	if (topology === "hex_offset") {
+		const size = cellSize * 0.55;
+		const { width: bw, height: bh } = hexBoardExtent(
+			gridWidth,
+			gridHeight,
+			size
+		);
+		const c = hexOffsetCenter(row, col, size);
+		return { x: c.x - bw / 2 + size * Math.sqrt(3) * 0.5, y: -(c.y - bh / 2 + size) };
+	}
+	return {
+		x: (col - (gridWidth - 1) / 2) * totalCellSize,
+		y: -(row - (gridHeight - 1) / 2) * totalCellSize
+	};
+}
+
+function createHexShape(radius: number): THREE.Shape {
+	const shape = new THREE.Shape();
+	for (let i = 0; i < 6; i++) {
+		// pointy-top: start at -90° + i*60°
+		const angle = (Math.PI / 180) * (60 * i - 30);
+		const x = radius * Math.cos(angle);
+		const y = radius * Math.sin(angle);
+		if (i === 0) shape.moveTo(x, y);
+		else shape.lineTo(x, y);
+	}
+	shape.closePath();
+	return shape;
+}
+
 export default function SandboxCanvas({
 	gameState,
 	onCellClick,
@@ -34,6 +79,7 @@ export default function SandboxCanvas({
 	onPopOutColumn,
 	inputMode = "cell",
 	enablePopOutButtons = false,
+	topology = "rectangle",
 	tokens = [],
 	placements = []
 }: Props) {
@@ -97,8 +143,17 @@ export default function SandboxCanvas({
 		const cellSize = 0.9;
 		const spacing = 0.1;
 		const totalCellSize = cellSize + spacing;
-		const planeWidth = gridWidth * totalCellSize;
-		const planeHeight = gridHeight * totalCellSize;
+		const isHex = topology === "hex_offset";
+		const hexSize = cellSize * 0.55;
+		const hexExtent = isHex
+			? hexBoardExtent(gridWidth, gridHeight, hexSize)
+			: null;
+		const planeWidth = isHex
+			? hexExtent!.width
+			: gridWidth * totalCellSize;
+		const planeHeight = isHex
+			? hexExtent!.height
+			: gridHeight * totalCellSize;
 
 		// Board plane
 		const planeGeometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
@@ -118,8 +173,8 @@ export default function SandboxCanvas({
 		edgeLines.position.z = 0.0002;
 		scene.add(edgeLines);
 
-		// Grid lines for rectangular grids (manual)
-		{
+		// Grid lines for rectangular grids (manual); hex uses cell outlines
+		if (!isHex) {
 			const lineMaterial = new THREE.LineBasicMaterial({ color: 0xcbd5e1 });
 			const positions: number[] = [];
 			// Vertical lines
@@ -143,22 +198,42 @@ export default function SandboxCanvas({
 
 		// Render cells as clickable meshes
 		const cellMeshes: THREE.Mesh[] = [];
+		const hexShape = isHex ? createHexShape(hexSize * 0.95) : null;
 		for (let row = 0; row < gridHeight; row++) {
 			for (let col = 0; col < gridWidth; col++) {
-				const cellGeo = new THREE.PlaneGeometry(cellSize, cellSize);
+				const cellGeo = isHex
+					? new THREE.ShapeGeometry(hexShape!)
+					: new THREE.PlaneGeometry(cellSize, cellSize);
 				const cellMat = new THREE.MeshBasicMaterial({
-					color: 0xf8fafc,
+					color: isHex ? 0xe2e8f0 : 0xf8fafc,
 					transparent: true,
-					opacity: 0.01,
+					opacity: isHex ? 0.85 : 0.01,
 					side: THREE.DoubleSide
 				});
 				const cellMesh = new THREE.Mesh(cellGeo, cellMat);
-				const x = (col - (gridWidth - 1) / 2) * totalCellSize;
-				const y = -(row - (gridHeight - 1) / 2) * totalCellSize;
+				const { x, y } = cellWorldPos(
+					row,
+					col,
+					gridWidth,
+					gridHeight,
+					topology,
+					cellSize,
+					totalCellSize
+				);
 				cellMesh.position.set(x, y, 0.0003);
 				cellMesh.userData = { row, col };
 				scene.add(cellMesh);
 				cellMeshes.push(cellMesh);
+
+				if (isHex) {
+					const edgeGeo = new THREE.EdgesGeometry(cellGeo);
+					const outline = new THREE.LineSegments(
+						edgeGeo,
+						new THREE.LineBasicMaterial({ color: 0x94a3b8 })
+					);
+					outline.position.set(x, y, 0.0004);
+					scene.add(outline);
+				}
 			}
 		}
 		cellMeshesRef.current = cellMeshes;
@@ -346,7 +421,7 @@ export default function SandboxCanvas({
 			});
 			controls.dispose();
 		};
-	}, [gameState.grid.width, gameState.grid.height]);
+	}, [gameState.grid.width, gameState.grid.height, topology]);
 
 	// Render X/O marks and token placements, plus optional pop-out buttons
 	useEffect(() => {
@@ -385,8 +460,15 @@ export default function SandboxCanvas({
 			if (!value) return;
 			const row = Math.floor(index / gridWidth);
 			const col = index % gridWidth;
-			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
-			const y = -(row - (gridHeight - 1) / 2) * totalCellSize;
+			const { x, y } = cellWorldPos(
+				row,
+				col,
+				gridWidth,
+				gridHeight,
+				topology,
+				cellSize,
+				totalCellSize
+			);
 
 			if (value === "hit") {
 				const material = new THREE.LineBasicMaterial({
@@ -526,8 +608,15 @@ export default function SandboxCanvas({
 		placements.forEach((p) => {
 			const token = tokenById.get(p.tokenId);
 			if (!token) return;
-			const x = (p.col - (gridWidth - 1) / 2) * totalCellSize;
-			const y = -(p.row - (gridHeight - 1) / 2) * totalCellSize;
+			const { x, y } = cellWorldPos(
+				p.row,
+				p.col,
+				gridWidth,
+				gridHeight,
+				topology,
+				cellSize,
+				totalCellSize
+			);
 			if (token.asset?.type === "image") {
 				let tex = textureCacheRef.current.get(token.asset.url);
 				if (!tex) {
@@ -573,7 +662,8 @@ export default function SandboxCanvas({
 		gameState.grid.height,
 		tokens,
 		placements,
-		enablePopOutButtons
+		enablePopOutButtons,
+		topology
 	]);
 
 	// CSS2D DOM pop-out buttons

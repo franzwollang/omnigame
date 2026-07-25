@@ -218,5 +218,13 @@ export const Contracts = {
 		slots: [{ type: "Schedule", value: "manualTick" }],
 		hooks: ["applyEffects"],
 		invariants: ["globalSynchronousUpdate"]
+	}),
+	TopologyHex: (): FeatureContract => ({
+		id: "TopologyHex",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["oddROffsetHex"]
 	})
 };
