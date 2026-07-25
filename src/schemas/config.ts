@@ -67,7 +67,16 @@ export const zConfig = z
 				 * Hidden simultaneous: each seat commits privately; joint resolve when both
 				 * have committed. Requires schedule = simultaneous. Default false = open joint.
 				 */
-				commitReveal: z.boolean().optional()
+				commitReveal: z.boolean().optional(),
+				/**
+				 * Simultaneous conflict resolution. `joint` = both-or-neither (default);
+				 * `x_first` / `o_first` = apply seats in order, earlier seat wins same-cell.
+				 * Requires schedule = simultaneous when not joint.
+				 */
+				resolveOrder: z
+					.enum(["joint", "x_first", "o_first"])
+					.default("joint")
+					.optional()
 			})
 			.strict()
 			.default({ mode: "turn" as const, schedule: "alternating" as const }),
@@ -666,6 +675,16 @@ export const zConfig = z
 				path: ["turn", "commitReveal"],
 				message:
 					"turn.commitReveal requires turn.schedule = 'simultaneous'"
+			});
+		} else if (
+			cfg.turn.resolveOrder !== undefined &&
+			cfg.turn.resolveOrder !== "joint"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["turn", "resolveOrder"],
+				message:
+					"turn.resolveOrder other than 'joint' requires turn.schedule = 'simultaneous'"
 			});
 		}
 

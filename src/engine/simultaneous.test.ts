@@ -376,3 +376,153 @@ describe("kernel: simultaneous on hex/graph topologies", () => {
 		expect(result.nextState.moveCount).toBe(1);
 	});
 });
+
+describe("kernel: ordered simultaneous resolve", () => {
+	it("accepts resolveOrder and rejects without simultaneous", () => {
+		const ok = zConfig.safeParse(
+			examplePresets["ordered-simultaneous-ttt"].config
+		);
+		expect(ok.success).toBe(true);
+
+		const bad = zConfig.safeParse({
+			...examplePresets["tic-tac-toe"].config,
+			turn: {
+				mode: "turn",
+				schedule: "alternating",
+				resolveOrder: "x_first"
+			}
+		});
+		expect(bad.success).toBe(false);
+	});
+
+	it("normalizes resolveOrder and wires ScheduleOrderedResolve", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["ordered-simultaneous-ttt"].config
+		);
+		expect(gameConfig.resolveOrder).toBe("x_first");
+		expect(gameConfig.turnSchedule).toBe("simultaneous");
+		const v = validateConfig(examplePresets["ordered-simultaneous-ttt"].config);
+		expect(v.ok).toBe(true);
+	});
+
+	it("x_first same-cell conflict places X only", () => {
+		const { kernel } = compileConfig(
+			examplePresets["ordered-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState();
+		const result = kernel.stepSync(state, {
+			type: "simultaneousPlace",
+			placements: {
+				X: { row: 1, col: 1 },
+				O: { row: 1, col: 1 }
+			}
+		});
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe("X");
+		expect(state.moveCount).toBe(1);
+		expect(state.status).toBe("playing");
+	});
+
+	it("o_first same-cell conflict places O only", () => {
+		const cfg = {
+			...examplePresets["ordered-simultaneous-ttt"].config,
+			turn: {
+				mode: "turn" as const,
+				schedule: "simultaneous" as const,
+				resolveOrder: "o_first" as const
+			}
+		};
+		const { kernel } = compileConfig(cfg);
+		const result = kernel.stepSync(kernel.initialState(), {
+			type: "simultaneousPlace",
+			placements: {
+				X: { row: 0, col: 0 },
+				O: { row: 0, col: 0 }
+			}
+		});
+		expect(getCell(result.nextState.grid, { row: 0, col: 0 })).toBe("O");
+		expect(result.nextState.moveCount).toBe(1);
+	});
+
+	it("ordered same-cell can win where joint conflict cannot", () => {
+		const seeded = {
+			...examplePresets["ordered-simultaneous-ttt"].config,
+			initial: [
+				{ row: 0, col: 0, player: "X" as const, visibility: "public" as const },
+				{ row: 0, col: 1, player: "X" as const, visibility: "public" as const }
+			]
+		};
+		const { kernel: ordered } = compileConfig(seeded);
+		const orderedResult = ordered.stepSync(ordered.initialState(), {
+			type: "simultaneousPlace",
+			placements: {
+				X: { row: 0, col: 2 },
+				O: { row: 0, col: 2 }
+			}
+		});
+		expect(orderedResult.nextState.status).toBe("won");
+		expect(orderedResult.nextState.winner).toBe("X");
+		expect(getCell(orderedResult.nextState.grid, { row: 0, col: 2 })).toBe(
+			"X"
+		);
+
+		const jointCfg = {
+			...seeded,
+			turn: { mode: "turn" as const, schedule: "simultaneous" as const }
+		};
+		const { kernel: joint } = compileConfig(jointCfg);
+		const jointResult = joint.stepSync(joint.initialState(), {
+			type: "simultaneousPlace",
+			placements: {
+				X: { row: 0, col: 2 },
+				O: { row: 0, col: 2 }
+			}
+		});
+		expect(getCell(jointResult.nextState.grid, { row: 0, col: 2 })).toBeNull();
+		expect(jointResult.nextState.status).toBe("playing");
+	});
+
+	it("places both when cells differ under ordered resolve", () => {
+		const { kernel } = compileConfig(
+			examplePresets["ordered-simultaneous-ttt"].config
+		);
+		const result = kernel.stepSync(kernel.initialState(), {
+			type: "simultaneousPlace",
+			placements: {
+				X: { row: 0, col: 0 },
+				O: { row: 2, col: 2 }
+			}
+		});
+		expect(getCell(result.nextState.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(result.nextState.grid, { row: 2, col: 2 })).toBe("O");
+	});
+
+	it("replays ordered simultaneousPlace faithfully", () => {
+		const { kernel } = compileConfig(
+			examplePresets["ordered-simultaneous-ttt"].config
+		);
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: { row: 1, col: 1 },
+					O: { row: 1, col: 1 }
+				}
+			},
+			{
+				type: "simultaneousPlace",
+				placements: {
+					X: { row: 0, col: 0 },
+					O: { row: 2, col: 2 }
+				}
+			}
+		];
+		const live = actions.reduce(
+			(s, a) => kernel.stepSync(s, a).nextState,
+			kernel.initialState()
+		);
+		const replayed = replayActions(kernel, actions);
+		expect(replayed.grid.cells).toEqual(live.grid.cells);
+		expect(getCell(replayed.grid, { row: 1, col: 1 })).toBe("X");
+	});
+});

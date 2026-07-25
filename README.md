@@ -57,6 +57,7 @@ These are built from the same shared schema and operators.
 - **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
 - **Toroidal TTT** (`grid.wrap` rectangle)
 - **Simultaneous TTT** (`turn.schedule = simultaneous` joint place; same-cell conflict)
+- **Ordered Simultaneous TTT** (`turn.resolveOrder = x_first`; earlier seat wins same-cell)
 - **Simultaneous Hex Connect Lite** (simultaneous + `hex_offset` composition)
 - **Simultaneous Graph Connect Lite** (simultaneous + `graph` composition)
 - **Hidden Simultaneous TTT** (`turn.commitReveal`; private commits then reveal)
@@ -120,7 +121,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
     `pop_out_right` (paired with gravity direction; horizontal uses `popOutRow`)
   - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating (Double Move TTT); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating (Double Move TTT); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite); `turn.resolveOrder = x_first | o_first` ordered same-cell priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
@@ -130,9 +131,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, ordered simultaneous
-resolution / multi-action simultaneous rounds, and a larger set of reusable
-operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, multi-action
+simultaneous rounds, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -211,7 +211,7 @@ Design rule: constraints are **pure functions**; no hidden state mutation.
 Turn logic is declarative:
 
 - N players
-- schedule: alternating, simultaneous, or ordered simultaneous resolution
+- schedule: alternating, simultaneous (`resolveOrder` joint | x_first | o_first), or multi-action simultaneous rounds (roadmap)
 - phases: place → move → attack (etc.)
 - action points / per-turn budgets
 

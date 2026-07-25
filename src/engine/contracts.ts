@@ -279,13 +279,32 @@ export const Contracts = {
 		hooks: ["applyEffects"],
 		invariants: ["globalSynchronousUpdate"]
 	}),
-	ScheduleSimultaneous: (): FeatureContract => ({
+	ScheduleSimultaneous: (
+		resolveOrder: "joint" | "x_first" | "o_first" = "joint"
+	): FeatureContract => ({
 		id: "ScheduleSimultaneous",
 		requires: ["CellsWritable", "ResolvedCell"],
 		provides: [],
 		slots: [{ type: "Schedule", value: "simultaneous" }],
 		hooks: ["validateInput", "applyEffects"],
-		invariants: ["jointPlacePerRound", "sameCellConflictNeitherPlaces"]
+		invariants: [
+			"jointPlacePerRound",
+			resolveOrder === "joint"
+				? "sameCellConflictNeitherPlaces"
+				: "sameCellConflictFirstSeatWins"
+		]
+	}),
+	/**
+	 * Ordered simultaneous resolve (resolveOrder = x_first | o_first). Keeps
+	 * Schedule = simultaneous; earlier seat wins same-cell conflicts.
+	 */
+	ScheduleOrderedResolve: (): FeatureContract => ({
+		id: "ScheduleOrderedResolve",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: ["sequentialApplyWithinRound", "sameCellConflictFirstSeatWins"]
 	}),
 	/**
 	 * Hidden simultaneous (commit-then-reveal). Keeps Schedule = simultaneous;

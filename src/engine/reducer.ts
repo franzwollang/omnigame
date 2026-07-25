@@ -109,6 +109,11 @@ export type GameConfig = {
 	 * Requires turnSchedule = simultaneous.
 	 */
 	commitReveal?: boolean;
+	/**
+	 * Simultaneous same-cell resolution: joint (both-or-neither) or ordered
+	 * seat priority (`x_first` / `o_first`). Default joint.
+	 */
+	resolveOrder?: "joint" | "x_first" | "o_first";
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -385,7 +390,8 @@ function handleTick(state: GameState, config: GameConfig): GameState {
 
 /**
  * Simultaneous schedule: both players submit a place; resolve in one step.
- * Same-cell conflict → neither stone is placed (round still advances).
+ * Joint (`resolveOrder=joint`): same-cell conflict → neither places (round advances).
+ * Ordered (`x_first` / `o_first`): apply seats in order; earlier seat wins same-cell.
  * If both complete a winning line in the same round → draw.
  */
 function handleSimultaneousPlace(
@@ -400,6 +406,7 @@ function handleSimultaneousPlace(
 
 	const topology = config.topology ?? "rectangle";
 	const wrap = config.gridWrap === true;
+	const resolveOrder = config.resolveOrder ?? "joint";
 
 	const validPos = (pos: Position): boolean => {
 		if (
@@ -422,17 +429,32 @@ function handleSimultaneousPlace(
 		placements.X.col === placements.O.col;
 
 	let newGrid = state.grid;
-	if (!conflict) {
-		let cells = setCell(state.grid, placements.X, "X");
-		cells = setCell({ ...state.grid, cells }, placements.O, "O");
-		newGrid = { ...state.grid, cells };
+	if (resolveOrder === "joint") {
+		if (!conflict) {
+			let cells = setCell(state.grid, placements.X, "X");
+			cells = setCell({ ...state.grid, cells }, placements.O, "O");
+			newGrid = { ...state.grid, cells };
+		}
+	} else {
+		const first: Player = resolveOrder === "x_first" ? "X" : "O";
+		const second: Player = first === "X" ? "O" : "X";
+		let cells = setCell(state.grid, placements[first], first);
+		let afterFirst: typeof state.grid = { ...state.grid, cells };
+		if (getCell(afterFirst, placements[second]) === null) {
+			cells = setCell(afterFirst, placements[second], second);
+			newGrid = { ...state.grid, cells };
+		} else {
+			newGrid = afterFirst;
+		}
 	}
 
 	const newMoveCount = state.moveCount + 1;
 	// Reveal clears any private commits from a commit-reveal round.
 	const clearedCommits = { committedPlacements: undefined as undefined };
 
-	if (!conflict) {
+	// Joint skips win checks on conflict (board unchanged). Ordered always checks.
+	const shouldCheckWin = resolveOrder !== "joint" || !conflict;
+	if (shouldCheckWin) {
 		const xWins = Boolean(
 			checkWinner(
 				newGrid,
@@ -509,7 +531,7 @@ function handleSimultaneousPlace(
 
 /**
  * Hidden simultaneous: record a private commit. When both seats have committed,
- * resolve via the same joint-place rules (conflict / win / draw).
+ * resolve via handleSimultaneousPlace (joint or ordered resolveOrder).
  */
 function handleCommitPlace(
 	state: GameState,

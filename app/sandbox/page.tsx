@@ -96,6 +96,7 @@ export default function GamePage() {
 		pendingPlacements,
 		simultaneousSeat,
 		commitReveal,
+		resolveOrder,
 		lastIllegal,
 		legalActionsList,
 		kernel,
@@ -392,6 +393,10 @@ export default function GamePage() {
 								? enableSimultaneous
 									? ` · simultaneous${
 											commitReveal ? " commit-reveal" : ""
+										}${
+											resolveOrder !== "joint"
+												? ` · ${resolveOrder}`
+												: ""
 										}${simultaneousSeat ? ` · ${simultaneousSeat} choosing` : ""}`
 									: ` · ${gameState.currentPlayer} to move${
 											gameState.actionsRemaining != null
@@ -507,19 +512,28 @@ export default function GamePage() {
 									Hidden simultaneous: commit a cell for{" "}
 									{simultaneousSeat ?? "X"} (own commit visible only to
 									that seat); board reveals when both committed; same
-									cell → neither places
+									cell →{" "}
+									{resolveOrder === "joint"
+										? "neither places"
+										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
 								</>
 							) : (
 								<>
-									Simultaneous: click a cell for{" "}
-									{simultaneousSeat ?? "X"}
+									Simultaneous
+									{resolveOrder !== "joint"
+										? ` (${resolveOrder})`
+										: ""}
+									: click a cell for {simultaneousSeat ?? "X"}
 									{pendingPlacements.X
 										? ` (X@${pendingPlacements.X.row},${pendingPlacements.X.col})`
 										: ""}
 									{pendingPlacements.O
 										? ` (O@${pendingPlacements.O.row},${pendingPlacements.O.col})`
 										: ""}
-									; same cell → neither places
+									; same cell →{" "}
+									{resolveOrder === "joint"
+										? "neither places"
+										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
 								</>
 							)}
 						</p>

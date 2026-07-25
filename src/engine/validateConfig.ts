@@ -99,9 +99,13 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.SchedulerManualTick());
 	}
 	if (cfg.turn.schedule === "simultaneous") {
-		features.push(Contracts.ScheduleSimultaneous());
+		const resolveOrder = cfg.turn.resolveOrder ?? "joint";
+		features.push(Contracts.ScheduleSimultaneous(resolveOrder));
 		if (cfg.turn.commitReveal === true) {
 			features.push(Contracts.ScheduleCommitReveal());
+		}
+		if (resolveOrder === "x_first" || resolveOrder === "o_first") {
+			features.push(Contracts.ScheduleOrderedResolve());
 		}
 	}
 	if ((cfg.turn.actionsPerTurn ?? 1) > 1) {

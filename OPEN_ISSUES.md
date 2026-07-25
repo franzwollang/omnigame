@@ -8,18 +8,20 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Hex/graph simultaneous** landed — schema allows `turn.schedule = simultaneous`
-on `hex_offset` | `graph`; Simultaneous Hex Connect Lite + Simultaneous Graph
-Connect Lite presets + tests; library hex/graph families may sample joint-place.
-Rectangle simultaneous / commitReveal unchanged. Pick the **next smallest**
-unlock the engine still lacks — not another recombination of covered primitives
-(see project-structure selection principle).
+**Ordered simultaneous resolution** landed — `turn.resolveOrder =
+joint | x_first | o_first`; ordered modes apply seats sequentially so the
+earlier seat wins same-cell conflicts (joint still places neither). Ordered
+Simultaneous TTT preset + tests; library n-in-a-row / hex / graph families may
+sample resolveOrder. Pick the **next smallest** unlock the engine still lacks —
+not another recombination of covered primitives (see project-structure selection
+principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- ordered simultaneous resolution / multi-action simultaneous rounds
+- multi-action simultaneous rounds (actionsPerRound under simultaneous)
 - delayed + gravity / multi-step composition (only if a new seam appears)
 - hidden simultaneous on hex/graph (composition only if a new observe/legal seam)
+- phases beyond fleet placement / combat
 
 **Acceptance:**
 
@@ -55,4 +57,4 @@ simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
 hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
 `actionsPerTurn`, delayed `delayTurns`, and hidden simultaneous `commitReveal`
 also landed. Further ports only when a **new** missing mechanism appears — not a
-backlog.
+backlog. Ordered simultaneous `resolveOrder` also landed (see Immediate).

@@ -45,6 +45,9 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const simultaneous =
 		(config.turnSchedule ?? "alternating") === "simultaneous";
 	const commitReveal = simultaneous && config.commitReveal === true;
+	const resolveOrder = simultaneous
+		? (config.resolveOrder ?? "joint")
+		: "joint";
 
 	const [state, setState] = useState<GameState>(() =>
 		kernel.initialState(seed)
@@ -378,6 +381,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		pendingPlacements,
 		simultaneousSeat,
 		commitReveal,
+		resolveOrder,
 		legalActions,
 		legalActionsList,
 		dispatchAction: applyAction,

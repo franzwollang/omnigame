@@ -99,6 +99,58 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"ordered-simultaneous-ttt": definePreset({
+		id: "ordered-simultaneous-ttt",
+		name: "Ordered Simultaneous TTT",
+		tags: [
+			"simultaneous",
+			"resolveOrder",
+			"ordered",
+			"3x3",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Simultaneous places resolve X-first: on same-cell conflict X wins the cell (joint would place neither). Unlocks turn.resolveOrder.",
+		config: {
+			metadata: { name: "Ordered Simultaneous TTT", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				resolveOrder: "x_first"
+			},
+			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"hidden-simultaneous-ttt": definePreset({
 		id: "hidden-simultaneous-ttt",
 		name: "Hidden Simultaneous TTT",

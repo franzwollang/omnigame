@@ -75,6 +75,20 @@ function sampleNInARow(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: rng() > 0.3
 		}
 	};
+	// Occasionally compose with simultaneous (optionally ordered resolve)
+	if (rng() > 0.72) {
+		const resolveOrder =
+			rng() > 0.55
+				? ("joint" as const)
+				: rng() > 0.5
+					? ("x_first" as const)
+					: ("o_first" as const);
+		cfg.turn = {
+			mode: "turn",
+			schedule: "simultaneous",
+			...(resolveOrder !== "joint" ? { resolveOrder } : {})
+		};
+	}
 	return cfg;
 }
 
@@ -147,7 +161,17 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 	};
 	// Occasionally compose with simultaneous joint-place (hex adjacency + schedule)
 	if (rng() > 0.7) {
-		cfg.turn = { mode: "turn", schedule: "simultaneous" };
+		const resolveOrder =
+			rng() > 0.6
+				? ("joint" as const)
+				: rng() > 0.5
+					? ("x_first" as const)
+					: ("o_first" as const);
+		cfg.turn = {
+			mode: "turn",
+			schedule: "simultaneous",
+			...(resolveOrder !== "joint" ? { resolveOrder } : {})
+		};
 	}
 	return cfg;
 }
@@ -306,7 +330,17 @@ function sampleGraph(rng: SamplerRng, seed: number): ConfigInput {
 	};
 	// Occasionally compose with simultaneous (active-node joint place)
 	if (rng() > 0.7) {
-		cfg.turn = { mode: "turn", schedule: "simultaneous" };
+		const resolveOrder =
+			rng() > 0.6
+				? ("joint" as const)
+				: rng() > 0.5
+					? ("x_first" as const)
+					: ("o_first" as const);
+		cfg.turn = {
+			mode: "turn",
+			schedule: "simultaneous",
+			...(resolveOrder !== "joint" ? { resolveOrder } : {})
+		};
 	}
 	return cfg;
 }

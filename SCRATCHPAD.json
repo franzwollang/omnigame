@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T11:25-05:00",
-  "turn": 15,
+  "updated_at": "2026-07-25T11:55-05:00",
+  "turn": 16,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after hex/graph simultaneous"
+    "goal": "Hand off after ordered simultaneous resolve"
   },
   "recent": [
-    "Synced 292d hidden-simultaneous tip onto 35b4",
-    "Lifted simultaneous rectangle-only schema gate",
-    "Landed Simultaneous Hex/Graph Connect Lite + tests"
+    "Synced 35b4 tip onto e81b",
+    "Landed turn.resolveOrder joint|x_first|o_first",
+    "Ordered Simultaneous TTT + simultaneous.test.ts suite"
   ],
   "discoveries": [
-    "Kernel joint-place already topology-aware; unlock was schema+presets",
-    "Graph mutual-win rounds draw; seed initial for solo-win transcripts"
+    "Joint conflict places neither; ordered applies first seat then skips occupied",
+    "Ordered same-cell can win where joint conflict cannot"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick ordered simultaneous or next true new seam",
+  "next_step": "Cloud agent: pick multi-action simultaneous rounds or next true new seam",
   "blockers": []
 }

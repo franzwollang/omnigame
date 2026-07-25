@@ -64,6 +64,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
 		commitReveal: config.turn.commitReveal === true,
+		resolveOrder: config.turn.resolveOrder ?? "joint",
 		scheduler: config.scheduler
 			? {
 					rules: config.scheduler.rules,
@@ -107,6 +108,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	actionsPerTurn: 1,
 	delayTurns: 0,
 	commitReveal: false,
+	resolveOrder: "joint",
 	initial: []
 };
 

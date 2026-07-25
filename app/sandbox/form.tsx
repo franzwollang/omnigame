@@ -253,7 +253,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											manual_tick needs scheduler + objective none;
 											simultaneous needs cell + n-in-a-row (joint place)
 											on rectangle, hex_offset, or graph. Optional
-											commitReveal hides picks until both commit.
+											commitReveal hides picks until both commit;
+											resolveOrder sets same-cell priority.
 										</p>
 										<FormMessage />
 									</FormItem>
@@ -284,6 +285,35 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<p className="text-xs text-muted-foreground">
 											Requires schedule = simultaneous. Each seat commits
 											privately; board updates when both have committed.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.resolveOrder"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Resolve order</FormLabel>
+										<FormControl>
+											<Select
+												value={field.value ?? "joint"}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="joint" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="joint">joint</SelectItem>
+													<SelectItem value="x_first">x_first</SelectItem>
+													<SelectItem value="o_first">o_first</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Simultaneous same-cell: joint places neither;
+											x_first / o_first give the earlier seat the cell.
 										</p>
 										<FormMessage />
 									</FormItem>
