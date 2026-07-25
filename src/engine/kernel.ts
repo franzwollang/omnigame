@@ -335,6 +335,13 @@ function canPlaceCell(
 	const topology = config.topology ?? "rectangle";
 	if (!isActivePosition(pos, topology, config.graph)) return false;
 	if (getCell(state.grid, pos) !== null) return false;
+	if (
+		(state.pendingPlaces ?? []).some(
+			(p) => p.position.row === pos.row && p.position.col === pos.col
+		)
+	) {
+		return false;
+	}
 	if (!config.captureEnabled) return true;
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";

@@ -140,9 +140,17 @@ describe("kernel: delayed place queue + resolve", () => {
 	});
 
 	it("flushes remaining pending when the board has no free cells", () => {
-		const { kernel } = compileConfig(examplePresets["delayed-ttt"].config);
+		// Long delay so stones do not land until the board is fully reserved,
+		// then the free-cell flush materializes the queue.
+		const raw = {
+			...examplePresets["delayed-ttt"].config,
+			placement: {
+				...examplePresets["delayed-ttt"].config.placement,
+				delayTurns: 8
+			}
+		};
+		const { kernel } = compileConfig(raw);
 		let state = kernel.initialState();
-		// Fill all 9 cells as intents; last place should flush the final pending.
 		const order = [
 			[0, 0],
 			[0, 1],
@@ -155,10 +163,12 @@ describe("kernel: delayed place queue + resolve", () => {
 			[2, 2]
 		] as const;
 		for (const [row, col] of order) {
-			state = kernel.stepSync(state, {
+			const result = kernel.stepSync(state, {
 				type: "place",
 				position: { row, col }
-			}).nextState;
+			});
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
 		}
 		expect(state.pendingPlaces ?? []).toHaveLength(0);
 		expect(state.grid.cells.every((c) => c !== null)).toBe(true);
@@ -166,7 +176,9 @@ describe("kernel: delayed place queue + resolve", () => {
 	});
 
 	it("stepPly + GameIR replay stay deterministic", () => {
-		const { kernel } = compileConfig(examplePresets["delayed-ttt"].config);
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["delayed-ttt"].config
+		);
 		let state = kernel.initialState();
 		const actions: KernelAction[] = [];
 		const picks = [
@@ -184,17 +196,19 @@ describe("kernel: delayed place queue + resolve", () => {
 			state = result!.nextState;
 			actions.push({ type: "place", position });
 		}
-		const replayed = replayActions(kernel, actions, 0);
-		expect(replayed.grid.cells).toEqual(state.grid.cells);
-		expect(replayed.pendingPlaces).toEqual(state.pendingPlaces);
-		expect(replayed.currentPlayer).toBe(state.currentPlayer);
+		const replayed = replayActions(gameConfig, actions, 0);
+		expect(replayed.faithful).toBe(true);
+		expect(replayed.finalState.grid.cells).toEqual(state.grid.cells);
+		expect(replayed.finalState.pendingPlaces).toEqual(state.pendingPlaces);
+		expect(replayed.finalState.currentPlayer).toBe(state.currentPlayer);
 	});
 
 	it("preset validates and compiles with PlacementDelayed contract", () => {
 		const cfg = examplePresets["delayed-ttt"].config;
 		const v = validateConfig(cfg);
 		expect(v.ok).toBe(true);
-		const game = compileToGameConfig(cfg);
+		expect(cfg.placement.delayTurns).toBe(1);
+		const game = compileToGameConfig(cfg).gameConfig;
 		expect(game.delayTurns).toBe(1);
 	});
 });
