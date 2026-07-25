@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `not started` |
 | M7 | Infinite library / config explorer | `not started` |
 
-**Optimizing for this phase:** M5 — mechanism-first anchors. Move + reach_row
-(Step Race) landed; next pick unlocks something new (tick, liberties, hex, …).
+**Optimizing for this phase:** M5 — mechanism-first anchors. Move + Life Lite
+(tick/scheduler) landed; next pick unlocks something new (liberties, hex, …).
 
 ## Decisions (locked)
 
@@ -57,7 +57,8 @@ Working sandbox slice (see README “Current implementation status”):
 - Direct + gravity placement (schema/engine: gravity **down** only)
 - Capture (flip demo); n-in-a-row wins
 - Presets: Tic-Tac-Toe, Connect 4, Connect 4 Pop Out, Gomoku, Capture / Flip Demo,
-  Battleship Lite (hit/miss observation), Step Race (Move + reach_row)
+  Battleship Lite (hit/miss observation), Step Race (Move + reach_row),
+  Life Lite (manual tick + B3/S23)
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -67,8 +68,9 @@ Working sandbox slice (see README “Current implementation status”):
 - Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
 - Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
 - Move foothold (`src/engine/movement.ts`): orthogonal step + `reach_row`; Step Race preset
+- Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 
-Not yet: hex/graph topology, tick/scheduler, liberties/territory, library explorer,
+Not yet: hex/graph topology, liberties/territory, library explorer,
 placement-phase / multi-ship Battleship, agents.
 
 ## Milestone exit criteria

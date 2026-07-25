@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-07-25T02:50-05:00",
-  "turn": 10,
+  "updated_at": "2026-07-25T03:05-05:00",
+  "turn": 11,
   "focus": {
     "milestone": "M5",
     "issue": "reference-game-ports",
-    "goal": "Next mechanism after Move (tick / liberties / hex)"
+    "goal": "Next mechanism after tick (liberties or hex)"
   },
   "recent": [
-    "Synced 0181 (M0–M4) onto 4ffa",
-    "M5 foothold: Move + reach_row + Step Race preset/tests"
+    "Synced 4ffa (M0–M5 Move) onto d519",
+    "M5 tick/scheduler: Life Lite + B3/S23 + Tick UI"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main"
   ],
   "open_threads": [
-    "M5 next: tick (Life Lite) vs liberties vs hex topology"
+    "M5 next: liberties/territory vs hex (topology-beyond-rectangle)"
   ],
-  "next_step": "Pick tick/scheduler or hex/liberties; implement via compiler→kernel",
+  "next_step": "Pick liberties or hex; implement via compiler→kernel + preset",
   "blockers": []
 }

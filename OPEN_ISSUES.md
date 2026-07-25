@@ -9,11 +9,11 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 ### reference-game-ports
 
 Select anchors by **missing mechanism**, not by exhausting `references/` (see
-project-structure rule). Observation (Battleship-lite) and Move/reach_row
-(Step Race) are covered.
+project-structure rule). Covered: observation (Battleship-lite), Move/reach_row
+(Step Race), tick/scheduler (Life Lite).
 
-**Next candidates** (pick one per turn): tick/scheduler, liberties/territory,
-hex/graph (`topology-beyond-rectangle`).
+**Next candidates** (pick one per turn): liberties/territory, hex/graph
+(`topology-beyond-rectangle`).
 
 **Acceptance:**
 

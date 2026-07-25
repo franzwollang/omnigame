@@ -42,6 +42,7 @@ These are built from the same shared schema and operators.
 - **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
 - **Battleship Lite** (hit/miss observation + destroy_hidden)
 - **Step Race** (orthogonal `Move` + reach_row objective)
+- **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -95,14 +96,15 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   - gravity placement **down only** (`placement.mode = "gravity"`, `gravity.direction = "down"`)
   - overflow: `reject` | `pop_out_bottom` (bottom pop-out column action)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row; `destroy_hidden` (hit/miss); `reach_row` (Step Race)
+- **Objectives**: n-in-a-row; `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity) or `hit_miss` (own fleet + public shots); Battleship-lite preset
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations) and shows recent kernel events + Replay
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 
-What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), tick/scheduler, liberties/territory, hex/graph topology, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: richer observation models (fog radius, placement phase), liberties/territory, hex/graph topology, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -327,7 +329,8 @@ Near-term milestones:
 - **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
 - **Observation support**: hit/miss + Battleship-lite landed; fog radius / placement phase still open
 - **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
-- **Anchor games**: mechanism-first ports (tick, liberties, hex, …) — not exhaust `references/`
+- **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
+- **Anchor games**: mechanism-first ports only (next: liberties/territory or hex) — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
 - **Baseline agents**: random/greedy/tiny MCTS to prove bot play with clean interfaces
 
