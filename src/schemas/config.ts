@@ -46,14 +46,14 @@ export const zConfig = z
 					.optional()
 			})
 			.strict(),
-		// realtime deferred; manual_tick = Life generations; simultaneous = joint place
+		// realtime deferred; manual_tick = Life generations; simultaneous = joint place/move
 		turn: z
 			.object({
 				mode: z.literal("turn"),
 				/**
 				 * alternating = classic turns;
 				 * manual_tick = global scheduler step;
-				 * simultaneous = both players submit a place per round (joint resolve).
+				 * simultaneous = both players submit a place or move per round (joint resolve).
 				 */
 				schedule: z
 					.enum(["alternating", "manual_tick", "simultaneous"])
@@ -61,7 +61,7 @@ export const zConfig = z
 				/**
 				 * Actions before schedule handoff: under alternating, successful
 				 * places before the opponent's turn; under simultaneous, places
-				 * each seat submits per joint round. Default 1.
+				 * each seat submits per joint round (move rounds are always 1). Default 1.
 				 */
 				actionsPerTurn: z.number().int().min(1).max(8).optional(),
 				/**
@@ -613,29 +613,62 @@ export const zConfig = z
 			});
 		}
 
-		// Simultaneous joint-place foothold (both players place each round)
+		// Simultaneous joint place (cell + n-in-a-row) or joint move (move + reach_row)
 		if (simultaneous) {
-			if (cfg.objective.mode !== "n_in_a_row") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message: "simultaneous requires objective.mode = 'n_in_a_row'"
-				});
-			}
-			if (cfg.input.mode !== "cell") {
+			const simMove = moveInput;
+			const simPlace = cfg.input.mode === "cell";
+			if (!simMove && !simPlace) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["input", "mode"],
-					message: "simultaneous requires input.mode = 'cell'"
+					message:
+						"simultaneous requires input.mode = 'cell' (joint place) or 'move' (joint move)"
 				});
 			}
-			if (gravityImplied || captureEnabled) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["placement"],
-					message:
-						"simultaneous requires direct placement without capture/gravity"
-				});
+			if (simPlace) {
+				if (cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"simultaneous place requires objective.mode = 'n_in_a_row'"
+					});
+				}
+				if (gravityImplied || captureEnabled) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["placement"],
+						message:
+							"simultaneous requires direct placement without capture/gravity"
+					});
+				}
+			}
+			if (simMove) {
+				// reach_row pairing enforced below with moveInput !== reachRow
+				if (cfg.grid.topology !== "rectangle") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["grid", "topology"],
+						message:
+							"simultaneous move requires topology = 'rectangle' (hex/graph deferred)"
+					});
+				}
+				if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "actionsPerTurn"],
+						message:
+							"simultaneous move does not support actionsPerTurn > 1"
+					});
+				}
+				if (cfg.turn.commitReveal === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "commitReveal"],
+						message:
+							"simultaneous move is incompatible with commitReveal (deferred)"
+					});
+				}
 			}
 			if (hitMiss) {
 				ctx.addIssue({
@@ -649,13 +682,6 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["observation", "mode"],
 					message: "simultaneous is incompatible with fog observation"
-				});
-			}
-			if (moveInput) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "simultaneous is incompatible with move input"
 				});
 			}
 			if (cfg.fleet) {
@@ -673,9 +699,10 @@ export const zConfig = z
 						"placement.delayTurns > 0 requires turn.schedule = 'alternating' (not simultaneous)"
 				});
 			}
-			// Multi-action simultaneous (actionsPerTurn > 1) is allowed on
+			// Multi-action simultaneous place (actionsPerTurn > 1) is allowed on
 			// rectangle | hex_offset | graph — same topologies as single-action
-			// simultaneous. Alternating multi-step uses the same topologies.
+			// simultaneous place. Alternating multi-step uses the same topologies.
+			// Simultaneous move is single-action only (see above).
 		} else if (cfg.turn.commitReveal === true) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,

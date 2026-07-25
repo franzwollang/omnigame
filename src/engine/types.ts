@@ -196,6 +196,15 @@ export type SimultaneousPlaceEvent = {
 	};
 };
 
+/** Joint move round: both seats submit one {from,to} relocation. */
+export type SimultaneousMoveEvent = {
+	type: "simultaneousMove";
+	moves: {
+		X: { from: Position; to: Position };
+		O: { from: Position; to: Position };
+	};
+};
+
 /** Hidden simultaneous: one seat's private commit (player required). */
 export type CommitPlaceEvent = {
 	type: "commitPlace";
@@ -218,6 +227,7 @@ export type GameEvent =
 	| TickEvent
 	| PassEvent
 	| SimultaneousPlaceEvent
+	| SimultaneousMoveEvent
 	| CommitPlaceEvent
 	| ResetEvent;
 

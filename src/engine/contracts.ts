@@ -288,10 +288,26 @@ export const Contracts = {
 		slots: [{ type: "Schedule", value: "simultaneous" }],
 		hooks: ["validateInput", "applyEffects"],
 		invariants: [
-			"jointPlacePerRound",
+			"jointActionPerRound",
 			resolveOrder === "joint"
-				? "sameCellConflictNeitherPlaces"
+				? "sameCellConflictNeitherApplies"
 				: "sameCellConflictFirstSeatWins"
+		]
+	}),
+	/**
+	 * Simultaneous move (input.mode = move under simultaneous). Keeps Schedule =
+	 * simultaneous; each seat submits one {from,to}; same-dest conflict rules
+	 * mirror joint place.
+	 */
+	ScheduleSimultaneousMove: (): FeatureContract => ({
+		id: "ScheduleSimultaneousMove",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: [
+			"jointMovePerRound",
+			"sameDestinationConflictNeitherOrFirst"
 		]
 	}),
 	/**

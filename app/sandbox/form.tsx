@@ -198,11 +198,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								</div>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								manual_tick + Life Lite, simultaneous joint place,
-								commitReveal for hidden simultaneous, resolveOrder for
-								ordered same-cell priority, actionsPerTurn for
-								multi-step, delayTurns for queued places, or phases
-								for place→move / place→fire within a turn.
+								manual_tick + Life Lite, simultaneous joint place or
+								joint move, commitReveal for hidden simultaneous,
+								resolveOrder for ordered same-cell priority,
+								actionsPerTurn for multi-step, delayTurns for queued
+								places, or phases for place→move / place→fire within a
+								turn.
 							</p>
 							<FormField
 								control={form.control}
@@ -254,9 +255,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<p className="text-xs text-muted-foreground">
 											manual_tick needs scheduler + objective none;
 											simultaneous needs cell + n-in-a-row (joint place)
-											on rectangle, hex_offset, or graph. Optional
-											commitReveal hides picks until both commit;
-											resolveOrder sets same-cell priority.
+											on rectangle/hex/graph, or move + reach_row (joint
+											move) on rectangle. Optional commitReveal hides
+											place picks until both commit; resolveOrder sets
+											same-cell / same-destination priority.
 										</p>
 										<FormMessage />
 									</FormItem>

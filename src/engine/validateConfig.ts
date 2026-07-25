@@ -101,6 +101,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.turn.schedule === "simultaneous") {
 		const resolveOrder = cfg.turn.resolveOrder ?? "joint";
 		features.push(Contracts.ScheduleSimultaneous(resolveOrder));
+		if (cfg.input.mode === "move") {
+			features.push(Contracts.ScheduleSimultaneousMove());
+		}
 		if (cfg.turn.commitReveal === true) {
 			features.push(Contracts.ScheduleCommitReveal());
 		}

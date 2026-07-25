@@ -45,6 +45,11 @@ export function actionKey(action: KernelAction): string {
 			const os = asPlacementList(action.placements.O);
 			return `joint:${xs.map((p) => `${p.row},${p.col}`).join("+")}|${os.map((p) => `${p.row},${p.col}`).join("+")}`;
 		}
+		case "simultaneousMove": {
+			const fmt = (m: { from: { row: number; col: number }; to: { row: number; col: number } }) =>
+				`${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`;
+			return `jointMove:${fmt(action.moves.X)}|${fmt(action.moves.O)}`;
+		}
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
 	}

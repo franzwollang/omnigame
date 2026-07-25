@@ -96,6 +96,7 @@ export default function GamePage() {
 		actionLog,
 		selectedFrom,
 		pendingPlacements,
+		pendingMoves,
 		simultaneousSeat,
 		commitReveal,
 		resolveOrder,
@@ -131,6 +132,8 @@ export default function GamePage() {
 	const enableTick = currentConfig?.turn.schedule === "manual_tick";
 	const enableSimultaneous =
 		currentConfig?.turn.schedule === "simultaneous";
+	const enableSimultaneousMove =
+		enableSimultaneous && currentConfig?.input.mode === "move";
 	const enablePass = currentConfig?.objective.mode === "area_control";
 	const eventLines = useMemo(
 		() => eventLog.map(formatKernelEvent),
@@ -562,7 +565,26 @@ export default function GamePage() {
 					)}
 					{enableSimultaneous && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
-							{commitReveal ? (
+							{enableSimultaneousMove ? (
+								<>
+									Simultaneous move
+									{resolveOrder !== "joint"
+										? ` (${resolveOrder})`
+										: ""}
+									: select {simultaneousSeat ?? "X"}&apos;s piece then
+									destination
+									{pendingMoves.X
+										? ` (X ${pendingMoves.X.from.row},${pendingMoves.X.from.col}→${pendingMoves.X.to.row},${pendingMoves.X.to.col})`
+										: ""}
+									{pendingMoves.O
+										? ` (O ${pendingMoves.O.from.row},${pendingMoves.O.from.col}→${pendingMoves.O.to.row},${pendingMoves.O.to.col})`
+										: ""}
+									; same destination →{" "}
+									{resolveOrder === "joint"
+										? "neither moves"
+										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+								</>
+							) : commitReveal ? (
 								<>
 									Hidden simultaneous
 									{actionsPerRound > 1

@@ -59,6 +59,13 @@ export type KernelAction =
 			};
 	  }
 	| {
+			type: "simultaneousMove";
+			moves: {
+				X: { from: Position; to: Position };
+				O: { from: Position; to: Position };
+			};
+	  }
+	| {
 			type: "commitPlace";
 			player: Player;
 			position: Position;
@@ -191,6 +198,11 @@ function formatAction(action: KernelAction): string {
 			const oPart = os.map((p) => `(${p.row},${p.col})`).join("+");
 			return `joint place X${xPart} O${oPart}`;
 		}
+		case "simultaneousMove": {
+			const fmt = (m: { from: Position; to: Position }) =>
+				`(${m.from.row},${m.from.col})→(${m.to.row},${m.to.col})`;
+			return `joint move X${fmt(action.moves.X)} O${fmt(action.moves.O)}`;
+		}
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
 	}
@@ -276,7 +288,7 @@ function applyStep(
 	}
 
 	const actor: Player | "simultaneous" =
-		action.type === "simultaneousPlace"
+		action.type === "simultaneousPlace" || action.type === "simultaneousMove"
 			? "simultaneous"
 			: action.type === "commitPlace"
 				? action.player
@@ -461,6 +473,27 @@ function collectLegalActions(
 		const commitReveal = config.commitReveal === true;
 		const acting = playerOf(player);
 		const budget = config.actionsPerTurn ?? 1;
+
+		// Simultaneous move: per-seat {from,to}; compose via stepJoint.
+		if (inputMode === "move") {
+			const movement = config.movement;
+			if (!movement) return [];
+			const wrap = config.gridWrap === true;
+			for (const from of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (getCell(state.grid, from) !== acting) continue;
+				for (const to of legalDestinations(state.grid, from, movement, wrap)) {
+					if (canMove(state.grid, from, to, acting, movement, wrap)) {
+						actions.push({ type: "move", from, to });
+					}
+				}
+			}
+			return actions;
+		}
+
 		if (commitReveal) {
 			const own = state.committedPlacements?.[acting] ?? [];
 			// Budget full this round → no further actions until reveal.
@@ -481,7 +514,7 @@ function collectLegalActions(
 			}
 			return actions;
 		}
-		// Open simultaneous: per-player place choices; compose via stepJoint.
+		// Open simultaneous place: per-player place choices; compose via stepJoint.
 		for (const position of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
@@ -828,10 +861,17 @@ export function explainKernelAction(
 		};
 	}
 
-	// Joint action: all constituent places must be individually legal on the
+	// Joint place: all constituent places must be individually legal on the
 	// pre-round board, lengths must match actionsPerTurn, no within-seat dups.
 	if (action.type === "simultaneousPlace") {
 		if (!simultaneous) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if ((config.inputMode ?? "cell") === "move") {
 			return {
 				legal: false,
 				reason: "mode_mismatch",
@@ -870,6 +910,48 @@ export function explainKernelAction(
 			legal: false,
 			reason: "cell_occupied",
 			detail: detailFor("cell_occupied", action)
+		};
+	}
+
+	// Joint move: both seat moves must be legal on the pre-round board.
+	if (action.type === "simultaneousMove") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const movement = config.movement;
+		if (!movement) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const wrap = config.gridWrap === true;
+		const xOk = canMove(
+			state.grid,
+			action.moves.X.from,
+			action.moves.X.to,
+			"X",
+			movement,
+			wrap
+		);
+		const oOk = canMove(
+			state.grid,
+			action.moves.O.from,
+			action.moves.O.to,
+			"O",
+			movement,
+			wrap
+		);
+		if (xOk && oOk) return { legal: true };
+		return {
+			legal: false,
+			reason: "invalid_destination",
+			detail: detailFor("invalid_destination", action)
 		};
 	}
 
@@ -1178,7 +1260,10 @@ export function explainKernelAction(
 					detail: detailFor("mode_mismatch", action)
 				};
 			}
-			if (getCell(state.grid, action.from) !== state.currentPlayer) {
+			const acting = simultaneous
+				? playerOf(player)
+				: state.currentPlayer;
+			if (getCell(state.grid, action.from) !== acting) {
 				return {
 					legal: false,
 					reason: "no_own_piece",
@@ -1190,7 +1275,7 @@ export function explainKernelAction(
 					state.grid,
 					action.from,
 					action.to,
-					state.currentPlayer,
+					acting,
 					config.movement,
 					config.gridWrap === true
 				)
@@ -1251,6 +1336,17 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 				aO.every((p, i) => positionsEqual(p, bO[i]!))
 			);
 		}
+		case "simultaneousMove": {
+			if (b.type !== "simultaneousMove") return false;
+			const moveEq = (
+				m: { from: Position; to: Position },
+				n: { from: Position; to: Position }
+			) =>
+				positionsEqual(m.from, n.from) && positionsEqual(m.to, n.to);
+			return (
+				moveEq(a.moves.X, b.moves.X) && moveEq(a.moves.O, b.moves.O)
+			);
+		}
 		case "commitPlace":
 			return (
 				b.type === "commitPlace" &&
@@ -1270,6 +1366,21 @@ export function jointPlaceFromActions(
 	return {
 		type: "simultaneousPlace",
 		placements: { X: action0.position, O: action1.position }
+	};
+}
+
+/** Build a joint move action from two per-player move actions. */
+export function jointMoveFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "move" || action1.type !== "move") return null;
+	return {
+		type: "simultaneousMove",
+		moves: {
+			X: { from: action0.from, to: action0.to },
+			O: { from: action1.from, to: action1.to }
+		}
 	};
 }
 
@@ -1409,7 +1520,9 @@ export function createGameKernel(config: GameConfig): GameKernel {
 		joint: { 0: KernelAction; 1: KernelAction },
 		seed?: Seed
 	): Effect.Effect<StepResult> => {
-		const built = jointPlaceFromActions(joint[0], joint[1]);
+		const built =
+			jointPlaceFromActions(joint[0], joint[1]) ??
+			jointMoveFromActions(joint[0], joint[1]);
 		if (!built) {
 			return Effect.sync(() => ({
 				nextState: state,

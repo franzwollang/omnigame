@@ -476,6 +476,8 @@ export function reduce(
 			return handlePass(state, config);
 		case "simultaneousPlace":
 			return handleSimultaneousPlace(state, event.placements, config);
+		case "simultaneousMove":
+			return handleSimultaneousMove(state, event.moves, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
 		case "reset":
@@ -727,6 +729,160 @@ function handleSimultaneousPlace(
 	};
 }
 
+export type SimultaneousMovePair = {
+	from: Position;
+	to: Position;
+};
+
+/**
+ * Apply one simultaneous move pair onto `grid` (joint or ordered).
+ * Same destination under joint → neither moves. Ordered applies first seat
+ * then second against the updated board (second may become illegal).
+ */
+function applySimultaneousMovePair(
+	grid: Grid,
+	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
+	resolveOrder: "joint" | "x_first" | "o_first"
+): { grid: Grid; conflict: boolean; applied: { X: boolean; O: boolean } } {
+	const sameDest = positionsEqual(moves.X.to, moves.O.to);
+
+	if (resolveOrder === "joint") {
+		if (sameDest) {
+			return { grid, conflict: true, applied: { X: false, O: false } };
+		}
+		// Atomic: clear both origins, then land both destinations.
+		let cells = setCell(grid, moves.X.from, null);
+		cells = setCell({ ...grid, cells }, moves.O.from, null);
+		cells = setCell({ ...grid, cells }, moves.X.to, "X");
+		cells = setCell({ ...grid, cells }, moves.O.to, "O");
+		return {
+			grid: { ...grid, cells },
+			conflict: false,
+			applied: { X: true, O: true }
+		};
+	}
+
+	const first: Player = resolveOrder === "x_first" ? "X" : "O";
+	const second: Player = first === "X" ? "O" : "X";
+	let next = grid;
+	const applied = { X: false, O: false };
+
+	const tryApply = (seat: Player) => {
+		const m = moves[seat];
+		if (getCell(next, m.from) !== seat) return;
+		if (getCell(next, m.to) !== null) return;
+		let cells = setCell(next, m.from, null);
+		cells = setCell({ ...next, cells }, m.to, seat);
+		next = { ...next, cells };
+		applied[seat] = true;
+	};
+
+	tryApply(first);
+	tryApply(second);
+	return { grid: next, conflict: sameDest, applied };
+}
+
+/**
+ * Simultaneous schedule + move input: both seats submit one {from,to}.
+ * Each move validated with canMove on the pre-round board. Same destination
+ * under joint → neither; ordered → first seat wins the cell when both claim it.
+ * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
+ */
+function handleSimultaneousMove(
+	state: GameState,
+	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") !== "move") return state;
+	const movement = config.movement;
+	if (!movement) return state;
+
+	const wrap = config.gridWrap === true;
+	const resolveOrder = config.resolveOrder ?? "joint";
+
+	if (
+		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, wrap) ||
+		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, wrap)
+	) {
+		return state;
+	}
+
+	const applied = applySimultaneousMovePair(state.grid, moves, resolveOrder);
+	const workingGrid = applied.grid;
+	const nextBase: GameState = {
+		...state,
+		grid: workingGrid,
+		moveCount: state.moveCount + 1
+	};
+
+	const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
+	if (!shouldCheckWin) return nextBase;
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
+		const xTarget = config.targetRows?.X;
+		const oTarget = config.targetRows?.O;
+		const xWins =
+			applied.applied.X &&
+			xTarget != null &&
+			moves.X.to.row === xTarget &&
+			getCell(workingGrid, moves.X.to) === "X";
+		const oWins =
+			applied.applied.O &&
+			oTarget != null &&
+			moves.O.to.row === oTarget &&
+			getCell(workingGrid, moves.O.to) === "O";
+		if (xWins && oWins) {
+			return { ...nextBase, status: "draw", winner: null };
+		}
+		if (xWins) {
+			return { ...nextBase, status: "won", winner: "X" };
+		}
+		if (oWins) {
+			return { ...nextBase, status: "won", winner: "O" };
+		}
+		return nextBase;
+	}
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
+		const topology = config.topology ?? "rectangle";
+		const xWins = Boolean(
+			checkWinner(
+				workingGrid,
+				"X",
+				config.winLength,
+				config.adjacency,
+				topology,
+				config.graph,
+				wrap
+			)
+		);
+		const oWins = Boolean(
+			checkWinner(
+				workingGrid,
+				"O",
+				config.winLength,
+				config.adjacency,
+				topology,
+				config.graph,
+				wrap
+			)
+		);
+		if (xWins && oWins) {
+			return { ...nextBase, status: "draw", winner: null };
+		}
+		if (xWins) {
+			return { ...nextBase, status: "won", winner: "X" };
+		}
+		if (oWins) {
+			return { ...nextBase, status: "won", winner: "O" };
+		}
+	}
+
+	return nextBase;
+}
+
 /**
  * Hidden simultaneous: record a private commit. When both seats have committed
  * their full per-round budget (`actionsPerTurn`), resolve via
@@ -790,6 +946,8 @@ function handleMove(
 	to: Position,
 	config: GameConfig
 ): GameState {
+	// Simultaneous games must use simultaneousMove (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
 	const phases = config.turnPhases;
 	const phaseIdx = state.turnPhaseIndex ?? 0;
 	const inTurnMovePhase = Boolean(phases && phases[phaseIdx] === "move");
