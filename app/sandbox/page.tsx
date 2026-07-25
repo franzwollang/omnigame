@@ -29,6 +29,7 @@ import {
 	DialogTitle
 } from "@/components/ui/dialog";
 import { PresetsModal } from "@/components/presets-modal";
+import { LibraryExplorerModal } from "@/components/library-explorer-modal";
 import { examplePresets, type ExamplePreset } from "@/presets/registry";
 import { Maximize2, Minimize2 } from "lucide-react";
 
@@ -62,6 +63,7 @@ export default function GamePage() {
 	const [schemaErrors, setSchemaErrors] = useState<string[]>([]);
 	const [currentConfig, setCurrentConfig] = useState<Config | null>(null);
 	const [presetsModalOpen, setPresetsModalOpen] = useState(false);
+	const [libraryModalOpen, setLibraryModalOpen] = useState(false);
 	const [fullscreenMode, setFullscreenMode] = useState<"form" | "json" | null>(
 		null
 	);
@@ -245,6 +247,13 @@ export default function GamePage() {
 		setPresetsModalOpen(false);
 	};
 
+	const handleLoadLibraryConfig = (config: Config) => {
+		const newJson = JSON.stringify(config, null, 2);
+		setJsonText(newJson);
+		form.reset(config);
+		reset();
+	};
+
 	const highlight = (code: string) =>
 		Prism.highlight(code, Prism.languages.json, "json");
 
@@ -263,13 +272,21 @@ export default function GamePage() {
 					configuration—entities, rules, and transitions—using a deterministic
 					render loop built on Three.js.
 				</p>
-				<div className="mt-4">
+				<div className="mt-4 flex gap-2">
 					<Button
 						variant="outline"
-						className="w-full"
+						className="flex-1"
 						onClick={() => setPresetsModalOpen(true)}
 					>
 						Browse presets
+					</Button>
+					<Button
+						variant="outline"
+						className="flex-1"
+						onClick={() => setLibraryModalOpen(true)}
+						title="Sample random configs; load playable finds"
+					>
+						Library
 					</Button>
 				</div>
 
@@ -557,6 +574,11 @@ export default function GamePage() {
 				open={presetsModalOpen}
 				onOpenChange={setPresetsModalOpen}
 				onSelectPreset={handleSelectPreset}
+			/>
+			<LibraryExplorerModal
+				open={libraryModalOpen}
+				onOpenChange={setLibraryModalOpen}
+				onLoadConfig={handleLoadLibraryConfig}
 			/>
 		</div>
 	);
