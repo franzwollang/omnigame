@@ -1,81 +1,106 @@
-// React hook to manage game engine state
+// React hook: sandbox play through GameKernel (M1)
 
-import { useState, useCallback, useEffect } from "react";
-import type { GameState, GameEvent, Position } from "./types";
-import { reduce, createInitialState, type GameConfig } from "./reducer";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import type { GameState, Position } from "./types";
+import type { GameConfig } from "./reducer";
+import {
+	createGameKernel,
+	formatKernelEvent,
+	type GameKernel,
+	type KernelAction,
+	type KernelEvent
+} from "@/engine/kernel";
 import {
 	createInitialTurnContext,
-	nextPhase,
 	type TurnContext
 } from "@/engine/turnMachine";
 
+export { formatKernelEvent };
+
+const EVENT_LOG_CAP = 40;
+
+function turnContextFor(state: GameState): TurnContext {
+	if (state.status !== "playing") return { phase: "ended" };
+	return { phase: "awaitInput" };
+}
+
 export function useGameEngine(config: GameConfig) {
-	const [state, setState] = useState<GameState>(() =>
-		createInitialState(config)
-	);
+	const kernel: GameKernel = useMemo(() => createGameKernel(config), [config]);
+
+	const [state, setState] = useState<GameState>(() => kernel.initialState());
+	const [lastEvents, setLastEvents] = useState<KernelEvent[]>([]);
+	const [eventLog, setEventLog] = useState<KernelEvent[]>([]);
 	const [turnContext, setTurnContext] = useState<TurnContext>(() =>
 		createInitialTurnContext()
 	);
+	const stateRef = useRef(state);
+	stateRef.current = state;
 
-	// Reinit when config changes
+	// Reinit when kernel/config changes
 	useEffect(() => {
-		setState(createInitialState(config));
-		setTurnContext(createInitialTurnContext());
-	}, [
-		config.gridWidth,
-		config.gridHeight,
-		config.winLength,
-		config.adjacency.mode,
-		config.adjacency.horizontal,
-		config.adjacency.vertical,
-		config.adjacency.backDiagonal,
-		config.adjacency.forwardDiagonal,
-		config.inputMode,
-		config.placementMode,
-		config.gravityDirection,
-		config.overflow,
-		config.captureEnabled,
-		config.initial ? config.initial.length : 0
-	]);
+		const next = kernel.initialState();
+		stateRef.current = next;
+		setState(next);
+		setLastEvents([]);
+		setEventLog([]);
+		setTurnContext(turnContextFor(next));
+	}, [kernel]);
 
-	const dispatch = useCallback(
-		(event: GameEvent) => {
-			// Advance turn machine first (non-blocking for now)
-			setTurnContext((prevCtx) => nextPhase(prevCtx, { type: event.type }));
-			setState((prev) => reduce(prev, event, config));
+	const applyAction = useCallback(
+		(action: KernelAction) => {
+			const result = kernel.stepSync(stateRef.current, action);
+			stateRef.current = result.nextState;
+			setState(result.nextState);
+			setLastEvents(result.events);
+			setEventLog((log) =>
+				[...log, ...result.events].slice(-EVENT_LOG_CAP)
+			);
+			setTurnContext(turnContextFor(result.nextState));
 		},
-		[config]
+		[kernel]
 	);
 
 	const placeMove = useCallback(
 		(pos: Position) => {
-			dispatch({ type: "place", position: pos });
+			applyAction({ type: "place", position: pos });
 		},
-		[dispatch]
+		[applyAction]
 	);
-
-	const reset = useCallback(() => {
-		dispatch({ type: "reset" });
-	}, [dispatch]);
 
 	const activateColumn = useCallback(
 		(col: number) => {
-			dispatch({ type: "activateColumn", col });
+			applyAction({ type: "activateColumn", col });
 		},
-		[dispatch]
+		[applyAction]
 	);
 
 	const popOutColumn = useCallback(
 		(col: number) => {
-			dispatch({ type: "popOutColumn", col });
+			applyAction({ type: "popOutColumn", col });
 		},
-		[dispatch]
+		[applyAction]
 	);
+
+	const reset = useCallback(() => {
+		const next = kernel.initialState();
+		stateRef.current = next;
+		setState(next);
+		setLastEvents([]);
+		setEventLog([]);
+		setTurnContext(turnContextFor(next));
+	}, [kernel]);
+
+	const legalActions = useCallback(() => {
+		return kernel.legalActions(state, kernel.currentPlayer(state));
+	}, [kernel, state]);
 
 	return {
 		state,
+		kernel,
 		turnContext,
-		dispatch,
+		lastEvents,
+		eventLog,
+		legalActions,
 		placeMove,
 		activateColumn,
 		popOutColumn,

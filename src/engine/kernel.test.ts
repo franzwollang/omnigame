@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { toGameConfig } from "@/engine/toGameConfig";
 import {
 	createGameKernel,
+	formatKernelEvent,
 	playerIdOf,
 	type KernelAction
 } from "@/engine/kernel";
@@ -123,5 +124,31 @@ describe("GameKernel scaffold", () => {
 			reason: "illegal_or_noop"
 		});
 		expect(again.nextState).toBe(first.nextState);
+	});
+
+	it("emits a terminal event on win and formats event lines", () => {
+		const kernel = createGameKernel(
+			toGameConfig(examplePresets["tic-tac-toe"].config)
+		);
+		let state = kernel.initialState();
+		const moves: KernelAction[] = [
+			{ type: "place", position: { row: 0, col: 0 } },
+			{ type: "place", position: { row: 1, col: 0 } },
+			{ type: "place", position: { row: 0, col: 1 } },
+			{ type: "place", position: { row: 1, col: 1 } }
+		];
+		for (const action of moves) {
+			state = kernel.stepSync(state, action).nextState;
+		}
+		const win = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 0, col: 2 }
+		});
+		expect(win.events.map((e) => e.type)).toEqual([
+			"actionApplied",
+			"terminal"
+		]);
+		expect(formatKernelEvent(win.events[0]!)).toBe("X: place (0,2)");
+		expect(formatKernelEvent(win.events[1]!)).toBe("terminal: X wins");
 	});
 });

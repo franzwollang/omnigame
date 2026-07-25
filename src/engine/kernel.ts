@@ -65,6 +65,31 @@ export function playerOf(id: PlayerId): Player {
 	return id === 0 ? "X" : "O";
 }
 
+function formatAction(action: KernelAction): string {
+	switch (action.type) {
+		case "place":
+			return `place (${action.position.row},${action.position.col})`;
+		case "activateColumn":
+			return `column ${action.col}`;
+		case "popOutColumn":
+			return `pop-out ${action.col}`;
+	}
+}
+
+/** Human-readable kernel event line for sandbox / debug UI. */
+export function formatKernelEvent(event: KernelEvent): string {
+	switch (event.type) {
+		case "actionApplied":
+			return `${event.player}: ${formatAction(event.action)}`;
+		case "ignored":
+			return `ignored: ${formatAction(event.action)} (${event.reason})`;
+		case "terminal":
+			return event.status === "won"
+				? `terminal: ${event.winner} wins`
+				: `terminal: draw`;
+	}
+}
+
 function isNoop(before: GameState, after: GameState): boolean {
 	return (
 		before.moveCount === after.moveCount &&

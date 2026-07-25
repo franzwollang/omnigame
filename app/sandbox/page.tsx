@@ -14,6 +14,7 @@ import SandboxCanvas from "./canvas";
 import dynamic from "next/dynamic";
 import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
+import { formatKernelEvent } from "@/engine/kernel";
 import { toGameConfig } from "@/engine/toGameConfig";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,6 +69,7 @@ export default function GamePage() {
 	);
 	const {
 		state: gameState,
+		eventLog,
 		placeMove,
 		activateColumn,
 		popOutColumn,
@@ -75,6 +77,10 @@ export default function GamePage() {
 	} = useGameEngine(engineConfig);
 	const enablePopOut =
 		currentConfig?.placement.overflow === "pop_out_bottom";
+	const recentEventLines = useMemo(
+		() => eventLog.slice(-8).map(formatKernelEvent),
+		[eventLog]
+	);
 
 	const initialJson = useMemo(() => {
 		const preset = examplePresets["tic-tac-toe"];
@@ -219,6 +225,26 @@ export default function GamePage() {
 					>
 						Browse presets
 					</Button>
+				</div>
+
+				<div className="mt-4 space-y-1">
+					<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+						Kernel events
+						{gameState.status === "playing"
+							? ` · ${gameState.currentPlayer} to move`
+							: ""}
+					</p>
+					{recentEventLines.length === 0 ? (
+						<p className="font-mono text-xs text-muted-foreground">
+							No steps yet — play from the board.
+						</p>
+					) : (
+						<ul className="max-h-28 space-y-0.5 overflow-y-auto font-mono text-xs text-muted-foreground">
+							{recentEventLines.map((line, i) => (
+								<li key={`${i}-${line}`}>{line}</li>
+							))}
+						</ul>
+					)}
 				</div>
 
 				<Tabs
