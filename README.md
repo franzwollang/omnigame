@@ -70,6 +70,7 @@ These are built from the same shared schema and operators.
 - **Delayed Connect 4** (delayed gravity: column intents settle at resolve time)
 - **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
 - **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
+- **Place, Move & Fire Lite** (`turn.phases: ["place","move","fire"]` + `connect_or_destroy`)
 - **Simultaneous Step Race** (`simultaneous` + `move` joint resolve; same-destination conflict)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
@@ -134,7 +135,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   (Step Race / Diagonal Step Race / Simultaneous Step Race); hex_offset / graph
   use topology neighbors (orthogonal) — Hex Step Race / Simultaneous Hex/Graph
   Step Race
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite) or place→fire (Place & Fire Lite)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
