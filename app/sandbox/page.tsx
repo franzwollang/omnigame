@@ -16,6 +16,7 @@ import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
 import { formatKernelEvent } from "@/engine/kernel";
 import { toGameConfig } from "@/engine/toGameConfig";
+import { validateConfig } from "@/engine/validateConfig";
 import { Button } from "@/components/ui/button";
 import {
 	Dialog,
@@ -67,14 +68,17 @@ export default function GamePage() {
 		() => toGameConfig(currentConfig),
 		[currentConfig]
 	);
+	const playSeed = currentConfig?.rng?.seed ?? 0;
 	const {
 		state: gameState,
 		eventLog,
+		actionLog,
 		placeMove,
 		activateColumn,
 		popOutColumn,
-		reset
-	} = useGameEngine(engineConfig);
+		reset,
+		replayFromTranscript
+	} = useGameEngine(engineConfig, playSeed);
 	const enablePopOut =
 		currentConfig?.placement.overflow === "pop_out_bottom";
 	const recentEventLines = useMemo(
@@ -111,6 +115,13 @@ export default function GamePage() {
 		try {
 			const parsed = JSON.parse(jsonText) as unknown;
 			setJsonError(null);
+			// Zod shape + feature contracts (client). Z3 SMT stays optional/server-only.
+			const structural = validateConfig(parsed);
+			if (!structural.ok) {
+				setSchemaErrors(structural.errors);
+				setCurrentConfig(null);
+				return;
+			}
 			const result = zConfig.safeParse(parsed);
 			if (!result.success) {
 				const msgs = result.error.issues.map(
@@ -228,12 +239,24 @@ export default function GamePage() {
 				</div>
 
 				<div className="mt-4 space-y-1">
-					<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-						Kernel events
-						{gameState.status === "playing"
-							? ` · ${gameState.currentPlayer} to move`
-							: ""}
-					</p>
+					<div className="flex items-center justify-between gap-2">
+						<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+							Kernel events
+							{gameState.status === "playing"
+								? ` · ${gameState.currentPlayer} to move`
+								: ""}
+						</p>
+						<Button
+							variant="outline"
+							size="sm"
+							className="h-7 shrink-0 px-2 text-xs"
+							disabled={actionLog.length === 0}
+							onClick={() => replayFromTranscript()}
+							title="Re-run seed + action log through GameIR"
+						>
+							Replay ({actionLog.length})
+						</Button>
+					</div>
 					{recentEventLines.length === 0 ? (
 						<p className="font-mono text-xs text-muted-foreground">
 							No steps yet — play from the board.
