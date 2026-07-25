@@ -99,6 +99,47 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"double-move-ttt": definePreset({
+		id: "double-move-ttt",
+		name: "Double Move TTT",
+		tags: ["multi-step", "actionsPerTurn", "3x3", "n-in-a-row", "mechanism"],
+		description:
+			"Each player places two stones per turn before handoff. Win checked after each stone. Unlocks turn.actionsPerTurn multi-step budget.",
+		config: {
+			metadata: { name: "Double Move TTT", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 },
+			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"toroidal-ttt": definePreset({
 		id: "toroidal-ttt",
 		name: "Toroidal TTT",

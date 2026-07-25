@@ -61,6 +61,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		fogMetric: config.observation.metric,
 		objectiveMode: config.objective.mode,
 		turnSchedule: config.turn.schedule,
+		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		scheduler: config.scheduler
 			? {
 					rules: config.scheduler.rules,
@@ -101,6 +102,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	fogMetric: "chebyshev",
 	objectiveMode: "n_in_a_row",
 	turnSchedule: "alternating",
+	actionsPerTurn: 1,
 	initial: []
 };
 

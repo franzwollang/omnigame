@@ -379,7 +379,11 @@ export default function GamePage() {
 							{gameState.status === "playing"
 								? enableSimultaneous
 									? ` · simultaneous${simultaneousSeat ? ` · ${simultaneousSeat} choosing` : ""}`
-									: ` · ${gameState.currentPlayer} to move`
+									: ` · ${gameState.currentPlayer} to move${
+											gameState.actionsRemaining != null
+												? ` · ${gameState.actionsRemaining} left`
+												: ""
+										}`
 								: ""}
 						</p>
 						<div className="flex shrink-0 flex-wrap items-center justify-end gap-1">

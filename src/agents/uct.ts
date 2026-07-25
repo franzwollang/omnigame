@@ -50,6 +50,7 @@ function stateFingerprint(state: GameState): string {
 		state.currentPlayer,
 		state.moveCount,
 		state.winner ?? "",
+		state.actionsRemaining ?? "",
 		state.consecutivePasses ?? "",
 		state.koPoint
 			? `${state.koPoint.row},${state.koPoint.col}`

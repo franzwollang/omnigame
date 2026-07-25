@@ -101,6 +101,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.turn.schedule === "simultaneous") {
 		features.push(Contracts.ScheduleSimultaneous());
 	}
+	if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+		features.push(Contracts.ScheduleMultiStep());
+	}
 
 	return features;
 }

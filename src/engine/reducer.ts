@@ -93,6 +93,11 @@ export type GameConfig = {
 		| "none";
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
+	/**
+	 * Successful actions before handoff (alternating). Default 1.
+	 * When > 1, GameState.actionsRemaining tracks the remaining budget.
+	 */
+	actionsPerTurn?: number;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -118,6 +123,39 @@ function resolveKoRule(config: GameConfig): KoRule {
 	return config.koEnabled ? "point" : "none";
 }
 
+function resolveActionsPerTurn(config: GameConfig): number {
+	const n = config.actionsPerTurn ?? 1;
+	return n < 1 ? 1 : n;
+}
+
+/**
+ * After a successful non-terminal action: spend one action from the turn
+ * budget, or hand off to the opponent and reset the budget.
+ */
+function withTurnAdvanced(
+	state: GameState,
+	config: GameConfig
+): Pick<GameState, "currentPlayer" | "actionsRemaining"> {
+	const budget = resolveActionsPerTurn(config);
+	if (budget <= 1) {
+		return {
+			currentPlayer: state.currentPlayer === "X" ? "O" : "X",
+			actionsRemaining: undefined
+		};
+	}
+	const remaining = state.actionsRemaining ?? budget;
+	if (remaining > 1) {
+		return {
+			currentPlayer: state.currentPlayer,
+			actionsRemaining: remaining - 1
+		};
+	}
+	return {
+		currentPlayer: state.currentPlayer === "X" ? "O" : "X",
+		actionsRemaining: budget
+	};
+}
+
 function isBoardFull(grid: Grid, config: GameConfig): boolean {
 	const topology = config.topology ?? "rectangle";
 	if (topology === "graph" && config.graph) {
@@ -129,6 +167,7 @@ function isBoardFull(grid: Grid, config: GameConfig): boolean {
 // Create initial game state from config
 export function createInitialState(config: GameConfig): GameState {
 	const placement = usesPlacementPhase(config.fleet);
+	const actionsPerTurn = resolveActionsPerTurn(config);
 	const base: GameState = {
 		grid: emptyGrid(config.gridWidth, config.gridHeight),
 		currentPlayer: "X",
@@ -138,7 +177,8 @@ export function createInitialState(config: GameConfig): GameState {
 		consecutivePasses: 0,
 		koPoint: null,
 		phase: placement ? "placement" : "combat",
-		fleetProgress: placement ? initialFleetProgressMap() : undefined
+		fleetProgress: placement ? initialFleetProgressMap() : undefined,
+		actionsRemaining: actionsPerTurn > 1 ? actionsPerTurn : undefined
 	};
 
 	const seeds = config.initial ?? [];
@@ -732,13 +772,14 @@ function handlePlace(
 		};
 	}
 
-	// Effect: advance turn
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	// Effect: advance turn (multi-step keeps currentPlayer until budget spent)
+	const turn = withTurnAdvanced(state, config);
 
 	return {
 		...state,
 		grid: newGrid,
-		currentPlayer: nextPlayer,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
 		moveCount: newMoveCount,
 		koPoint: nextKoPoint,
 		positionHistory: nextHistory

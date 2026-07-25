@@ -199,7 +199,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 							</div>
 							<p className="text-xs text-muted-foreground">
 								Wrap edges and realtime turns are deferred. Use
-								manual_tick + Life Lite, or simultaneous joint place.
+								manual_tick + Life Lite, simultaneous joint place, or
+								actionsPerTurn for multi-step alternating turns.
 							</p>
 							<FormField
 								control={form.control}
@@ -251,6 +252,34 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<p className="text-xs text-muted-foreground">
 											manual_tick needs scheduler + objective none;
 											simultaneous needs cell + n-in-a-row (joint place).
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.actionsPerTurn"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Actions per turn</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												min={1}
+												max={8}
+												value={field.value ?? 1}
+												onChange={(e) => {
+													const n = Number(e.target.value);
+													field.onChange(
+														Number.isFinite(n) && n > 0 ? n : 1
+													);
+												}}
+											/>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											&gt;1 keeps the current player until the budget is
+											spent (alternating + cell + n-in-a-row only).
 										</p>
 										<FormMessage />
 									</FormItem>

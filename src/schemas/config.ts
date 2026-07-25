@@ -57,7 +57,12 @@ export const zConfig = z
 				 */
 				schedule: z
 					.enum(["alternating", "manual_tick", "simultaneous"])
-					.default("alternating")
+					.default("alternating"),
+				/**
+				 * Multi-step turns: successful actions before handoff (alternating only).
+				 * Default 1 = classic single-action turns. >1 keeps currentPlayer until budget spent.
+				 */
+				actionsPerTurn: z.number().int().min(1).max(8).optional()
 			})
 			.strict()
 			.default({ mode: "turn" as const, schedule: "alternating" as const }),
@@ -255,6 +260,8 @@ export const zConfig = z
 		const moveInput = cfg.input.mode === "move";
 		const manualTick = cfg.turn.schedule === "manual_tick";
 		const simultaneous = cfg.turn.schedule === "simultaneous";
+		const actionsPerTurn = cfg.turn.actionsPerTurn ?? 1;
+		const multiStep = actionsPerTurn > 1;
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
 		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
@@ -630,6 +637,84 @@ export const zConfig = z
 					path: ["grid", "topology"],
 					message:
 						"simultaneous foothold requires topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
+			if (multiStep) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message:
+						"actionsPerTurn > 1 requires turn.schedule = 'alternating' (not simultaneous)"
+				});
+			}
+		}
+
+		// Multi-step turns foothold (actionsPerTurn > 1 on alternating)
+		if (multiStep) {
+			if (cfg.turn.schedule !== "alternating") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message:
+						"actionsPerTurn > 1 requires turn.schedule = 'alternating'"
+				});
+			}
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message: "actionsPerTurn > 1 requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "actionsPerTurn > 1 requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"actionsPerTurn > 1 requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "actionsPerTurn > 1 is incompatible with hit_miss observation"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "actionsPerTurn > 1 is incompatible with fog observation"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "actionsPerTurn > 1 is incompatible with move input"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "actionsPerTurn > 1 is incompatible with fleet placement"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"actionsPerTurn foothold requires topology = 'rectangle' (hex/graph deferred)"
 				});
 			}
 		}

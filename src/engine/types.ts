@@ -26,6 +26,11 @@ export type GameState = {
 	status: GameStatus;
 	winner: Player | null;
 	moveCount: number;
+	/**
+	 * Multi-step turns: actions left in the current player's turn budget.
+	 * Present when `actionsPerTurn > 1`; decremented on success; reset on handoff.
+	 */
+	actionsRemaining?: number;
 	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */
 	consecutivePasses?: number;
 	/**

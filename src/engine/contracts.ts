@@ -287,6 +287,18 @@ export const Contracts = {
 		hooks: ["validateInput", "applyEffects"],
 		invariants: ["jointPlacePerRound", "sameCellConflictNeitherPlaces"]
 	}),
+	/**
+	 * Multi-step alternating turns (actionsPerTurn > 1). Keeps Schedule free —
+	 * schedule remains alternating; this owns the nextTurn budget invariant.
+	 */
+	ScheduleMultiStep: (): FeatureContract => ({
+		id: "ScheduleMultiStep",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["nextTurn"],
+		invariants: ["actionsPerTurnBudgetBeforeHandoff"]
+	}),
 	TopologyHex: (): FeatureContract => ({
 		id: "TopologyHex",
 		requires: ["CellsWritable"],
