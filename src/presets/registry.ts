@@ -708,6 +708,59 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"delayed-connect-4": definePreset({
+		id: "delayed-connect-4",
+		name: "Delayed Connect 4",
+		tags: [
+			"delayed",
+			"gravity",
+			"delayTurns",
+			"7x6",
+			"n-in-a-row",
+			"mechanism"
+		],
+		description:
+			"Column drops queue as gravity intents and settle after one intervening place. Landing cell is computed at resolve time. Unlocks delayed gravity resolution.",
+		config: {
+			metadata: { name: "Delayed Connect 4", version: 1 },
+			grid: { width: 7, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "column" },
+			tokens: [
+				{
+					id: "disc-red",
+					label: "R",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disc-red.png" }
+				},
+				{
+					id: "disc-yellow",
+					label: "Y",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disc-yellow.png" }
+				}
+			],
+			placement: {
+				mode: "gravity",
+				gravity: { enabled: true, direction: "down", wrap: false },
+				overflow: "reject",
+				delayTurns: 1
+			},
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"toroidal-ttt": definePreset({
 		id: "toroidal-ttt",
 		name: "Toroidal TTT",

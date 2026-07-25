@@ -42,6 +42,8 @@ type Props = {
 	 * When omitted, all cells are treated as visible.
 	 */
 	fogVisible?: boolean[];
+	/** Gravity direction — used to preview delayed column/row intents. */
+	gravityDirection?: "down" | "up" | "left" | "right";
 	// token rendering
 	tokens?: {
 		id: string;
@@ -113,6 +115,7 @@ export default function SandboxCanvas({
 	selectedCell = null,
 	showLegalOverlay = true,
 	fogVisible,
+	gravityDirection = "down",
 	tokens = [],
 	placements = []
 }: Props) {
@@ -725,9 +728,56 @@ export default function SandboxCanvas({
 			}
 		});
 
-		// Delayed-place intents: faint ghost marks on reserved pending cells
+		// Delayed-place intents: faint ghost marks on reserved pending cells /
+		// gravity entry cells for column/row intents
 		for (const pending of gameState.pendingPlaces ?? []) {
-			const { row, col } = pending.position;
+			let row: number;
+			let col: number;
+			if (pending.kind === "column") {
+				col = pending.col;
+				// Preview at current settle landing (or entry if somehow full)
+				const height = gridHeight;
+				if (gravityDirection === "up") {
+					row = 0;
+					for (let r = 0; r < height; r++) {
+						if (getCell(gameState.grid, { row: r, col }) === null) {
+							row = r;
+							break;
+						}
+					}
+				} else {
+					row = height - 1;
+					for (let r = height - 1; r >= 0; r--) {
+						if (getCell(gameState.grid, { row: r, col }) === null) {
+							row = r;
+							break;
+						}
+					}
+				}
+			} else if (pending.kind === "row") {
+				row = pending.row;
+				const width = gridWidth;
+				if (gravityDirection === "left") {
+					col = 0;
+					for (let c = 0; c < width; c++) {
+						if (getCell(gameState.grid, { row, col: c }) === null) {
+							col = c;
+							break;
+						}
+					}
+				} else {
+					col = width - 1;
+					for (let c = width - 1; c >= 0; c--) {
+						if (getCell(gameState.grid, { row, col: c }) === null) {
+							col = c;
+							break;
+						}
+					}
+				}
+			} else {
+				row = pending.position.row;
+				col = pending.position.col;
+			}
 			const { x, y } = cellWorldPos(
 				row,
 				col,
@@ -852,7 +902,8 @@ export default function SandboxCanvas({
 		placements,
 		enablePopOutButtons,
 		topology,
-		graph
+		graph,
+		gravityDirection
 	]);
 
 	// CSS2D DOM pop-out buttons

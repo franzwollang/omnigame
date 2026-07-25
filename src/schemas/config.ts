@@ -165,8 +165,8 @@ export const zConfig = z
 					.default("reject"),
 				/**
 				 * Delayed (queued) place: intent lands after this many intervening
-				 * successful places (0 = immediate). Foothold: rectangle cell
-				 * n-in-a-row direct alternating only.
+				 * successful places (0 = immediate). Supports direct cell place or
+				 * gravity column/row (landing settled at resolve time).
 				 */
 				delayTurns: z.number().int().min(0).max(8).optional()
 			})
@@ -789,19 +789,26 @@ export const zConfig = z
 						"placement.delayTurns > 0 requires objective.mode = 'n_in_a_row'"
 				});
 			}
-			if (cfg.input.mode !== "cell") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "placement.delayTurns > 0 requires input.mode = 'cell'"
-				});
-			}
-			if (gravityImplied || captureEnabled) {
+			const gravityDelayed =
+				gravityImplied &&
+				(cfg.input.mode === "column" || cfg.input.mode === "row") &&
+				!captureEnabled;
+			const directDelayed =
+				cfg.input.mode === "cell" && !gravityImplied && !captureEnabled;
+			if (!gravityDelayed && !directDelayed) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],
 					message:
-						"placement.delayTurns > 0 requires direct placement without capture/gravity"
+						"placement.delayTurns > 0 requires direct cell place, or gravity with column/row input (no capture)"
+				});
+			}
+			if (cfg.placement.overflow !== "reject") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "overflow"],
+					message:
+						"placement.delayTurns > 0 is incompatible with pop-out overflow"
 				});
 			}
 			if (hitMiss) {

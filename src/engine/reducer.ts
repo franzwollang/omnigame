@@ -12,6 +12,7 @@ import type {
 import {
 	asPlacementList,
 	getCell,
+	isCellPending,
 	listHasPosition,
 	positionsEqual,
 	setCell,
@@ -167,8 +168,104 @@ function isPendingReserved(
 	pos: Position
 ): boolean {
 	return (pending ?? []).some(
-		(p) => p.position.row === pos.row && p.position.col === pos.col
+		(p) =>
+			isCellPending(p) &&
+			p.position.row === pos.row &&
+			p.position.col === pos.col
 	);
+}
+
+function pendingColumnCount(
+	pending: PendingPlace[] | undefined,
+	col: number
+): number {
+	return (pending ?? []).filter((p) => p.kind === "column" && p.col === col)
+		.length;
+}
+
+function pendingRowCount(
+	pending: PendingPlace[] | undefined,
+	row: number
+): number {
+	return (pending ?? []).filter((p) => p.kind === "row" && p.row === row)
+		.length;
+}
+
+function emptyCellsInColumn(cells: CellValue[], width: number, height: number, col: number): number {
+	let n = 0;
+	for (let row = 0; row < height; row++) {
+		if (cells[toIndex({ row, col }, width)] === null) n += 1;
+	}
+	return n;
+}
+
+function emptyCellsInRow(cells: CellValue[], width: number, row: number): number {
+	let n = 0;
+	for (let col = 0; col < width; col++) {
+		if (cells[toIndex({ row, col }, width)] === null) n += 1;
+	}
+	return n;
+}
+
+/** First empty settle row for vertical gravity, or null if column full. */
+function settleColumnRow(
+	cells: CellValue[],
+	width: number,
+	height: number,
+	col: number,
+	direction: "down" | "up"
+): number | null {
+	if (direction === "down") {
+		for (let row = height - 1; row >= 0; row--) {
+			if (cells[toIndex({ row, col }, width)] === null) return row;
+		}
+	} else {
+		for (let row = 0; row < height; row++) {
+			if (cells[toIndex({ row, col }, width)] === null) return row;
+		}
+	}
+	return null;
+}
+
+/** First empty settle col for horizontal gravity, or null if row full. */
+function settleRowCol(
+	cells: CellValue[],
+	width: number,
+	row: number,
+	direction: "left" | "right"
+): number | null {
+	if (direction === "right") {
+		for (let col = width - 1; col >= 0; col--) {
+			if (cells[toIndex({ row, col }, width)] === null) return col;
+		}
+	} else {
+		for (let col = 0; col < width; col++) {
+			if (cells[toIndex({ row, col }, width)] === null) return col;
+		}
+	}
+	return null;
+}
+
+function columnHasPendingSpace(
+	cells: CellValue[],
+	width: number,
+	height: number,
+	pending: PendingPlace[] | undefined,
+	col: number
+): boolean {
+	return (
+		emptyCellsInColumn(cells, width, height, col) >
+		pendingColumnCount(pending, col)
+	);
+}
+
+function rowHasPendingSpace(
+	cells: CellValue[],
+	width: number,
+	pending: PendingPlace[] | undefined,
+	row: number
+): boolean {
+	return emptyCellsInRow(cells, width, row) > pendingRowCount(pending, row);
 }
 
 function countFreeCells(
@@ -184,16 +281,19 @@ function countFreeCells(
 			const idx = toIndex(pos, grid.width);
 			if (cells[idx] === null && !isPendingReserved(pending, pos)) free += 1;
 		}
-		return free;
-	}
-	for (let row = 0; row < grid.height; row++) {
-		for (let col = 0; col < grid.width; col++) {
-			const pos = { row, col };
-			const idx = toIndex(pos, grid.width);
-			if (cells[idx] === null && !isPendingReserved(pending, pos)) free += 1;
+	} else {
+		for (let row = 0; row < grid.height; row++) {
+			for (let col = 0; col < grid.width; col++) {
+				const pos = { row, col };
+				const idx = toIndex(pos, grid.width);
+				if (cells[idx] === null && !isPendingReserved(pending, pos)) free += 1;
+			}
 		}
 	}
-	return free;
+	const gravityPending = pending.filter(
+		(p) => p.kind === "column" || p.kind === "row"
+	).length;
+	return Math.max(0, free - gravityPending);
 }
 
 /**
@@ -1104,26 +1204,51 @@ function handlePlace(
 
 /**
  * Delayed place: queue an intent now; materialize after `delayTurns` more places.
- * Pending cells are reserved. When no free cells remain, flush remaining pending.
+ * Cell intents reserve that intersection. Column/row intents reserve a slot and
+ * settle via gravity on the board at resolve time.
  */
-function handleDelayedPlace(
+function handleDelayedIntent(
 	state: GameState,
-	pos: Position,
+	intent: Omit<PendingPlace, "player" | "resolveAt">,
 	config: GameConfig,
 	delayTurns: number
 ): GameState {
-	if (isPendingReserved(state.pendingPlaces, pos)) return state;
+	const width = state.grid.width;
+	const height = state.grid.height;
+	const cells0 = state.grid.cells;
+
+	if (intent.kind === "cell") {
+		if (isPendingReserved(state.pendingPlaces, intent.position)) return state;
+		if (getCell(state.grid, intent.position) !== null) return state;
+	} else if (intent.kind === "column") {
+		if (
+			!columnHasPendingSpace(
+				cells0,
+				width,
+				height,
+				state.pendingPlaces,
+				intent.col
+			)
+		) {
+			return state;
+		}
+	} else if (
+		!rowHasPendingSpace(cells0, width, state.pendingPlaces, intent.row)
+	) {
+		return state;
+	}
 
 	const wrap = config.gridWrap === true;
 	const topology = config.topology ?? "rectangle";
+	const direction = config.gravityDirection ?? "down";
 	const newMoveCount = state.moveCount + 1;
 	let pending: PendingPlace[] = [
 		...(state.pendingPlaces ?? []),
 		{
 			player: state.currentPlayer,
-			position: { row: pos.row, col: pos.col },
-			resolveAt: newMoveCount + delayTurns
-		}
+			resolveAt: newMoveCount + delayTurns,
+			...intent
+		} as PendingPlace
 	];
 	let cells = [...state.grid.cells];
 	const resolvedOrder: Player[] = [];
@@ -1132,12 +1257,37 @@ function handleDelayedPlace(
 		const keep: PendingPlace[] = [];
 		for (const p of pending) {
 			if (forceAll || p.resolveAt <= newMoveCount) {
-				const idx = toIndex(p.position, state.grid.width);
-				if (cells[idx] === null) {
-					cells[idx] = p.player;
-					resolvedOrder.push(p.player);
+				if (p.kind === "cell") {
+					const idx = toIndex(p.position, width);
+					if (cells[idx] === null) {
+						cells[idx] = p.player;
+						resolvedOrder.push(p.player);
+					}
+				} else if (p.kind === "column") {
+					const vert =
+						direction === "up" || direction === "down" ? direction : "down";
+					const targetRow = settleColumnRow(
+						cells,
+						width,
+						height,
+						p.col,
+						vert
+					);
+					if (targetRow !== null) {
+						cells[toIndex({ row: targetRow, col: p.col }, width)] = p.player;
+						resolvedOrder.push(p.player);
+					}
+				} else {
+					const horiz =
+						direction === "left" || direction === "right"
+							? direction
+							: "right";
+					const targetCol = settleRowCol(cells, width, p.row, horiz);
+					if (targetCol !== null) {
+						cells[toIndex({ row: p.row, col: targetCol }, width)] = p.player;
+						resolvedOrder.push(p.player);
+					}
 				}
-				// else fizzle (should not happen under reservation)
 			} else {
 				keep.push(p);
 			}
@@ -1200,6 +1350,20 @@ function handleDelayedPlace(
 	};
 }
 
+function handleDelayedPlace(
+	state: GameState,
+	pos: Position,
+	config: GameConfig,
+	delayTurns: number
+): GameState {
+	return handleDelayedIntent(
+		state,
+		{ kind: "cell", position: { row: pos.row, col: pos.col } },
+		config,
+		delayTurns
+	);
+}
+
 function handleActivateColumn(
 	state: GameState,
 	col: number,
@@ -1213,25 +1377,26 @@ function handleActivateColumn(
 	const direction = config.gravityDirection ?? "down";
 	if (direction !== "down" && direction !== "up") return state;
 
+	const delayTurns = resolveDelayTurns(config);
+	if (delayTurns > 0) {
+		return handleDelayedIntent(
+			state,
+			{ kind: "column", col },
+			config,
+			delayTurns
+		);
+	}
+
 	// Settle toward the gravity exit: down → first empty from bottom;
 	// up → first empty from top.
-	let targetRow = -1;
-	if (direction === "down") {
-		for (let row = height - 1; row >= 0; row--) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetRow = row;
-				break;
-			}
-		}
-	} else {
-		for (let row = 0; row < height; row++) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetRow = row;
-				break;
-			}
-		}
-	}
-	if (targetRow === -1) {
+	const targetRow = settleColumnRow(
+		state.grid.cells,
+		width,
+		height,
+		col,
+		direction
+	);
+	if (targetRow === null) {
 		// Column full
 		return state;
 	}
@@ -1252,25 +1417,20 @@ function handleActivateRow(
 	const direction = config.gravityDirection ?? "down";
 	if (direction !== "left" && direction !== "right") return state;
 
+	const delayTurns = resolveDelayTurns(config);
+	if (delayTurns > 0) {
+		return handleDelayedIntent(
+			state,
+			{ kind: "row", row },
+			config,
+			delayTurns
+		);
+	}
+
 	// Settle toward the gravity exit: right → first empty from right;
 	// left → first empty from left.
-	let targetCol = -1;
-	if (direction === "right") {
-		for (let col = width - 1; col >= 0; col--) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetCol = col;
-				break;
-			}
-		}
-	} else {
-		for (let col = 0; col < width; col++) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetCol = col;
-				break;
-			}
-		}
-	}
-	if (targetCol === -1) {
+	const targetCol = settleRowCol(state.grid.cells, width, row, direction);
+	if (targetCol === null) {
 		// Row full
 		return state;
 	}

@@ -4,7 +4,7 @@
  * live state matches a prior tree node.
  */
 import type { GameState } from "@/engine/types";
-import { asPlacementList } from "@/engine/types";
+import { asPlacementList, pendingFingerprint } from "@/engine/types";
 import type {
 	GameKernel,
 	KernelAction,
@@ -59,10 +59,7 @@ function stateFingerprint(state: GameState): string {
 		state.actionsRemaining ?? "",
 		state.turnPhaseIndex ?? "",
 		(state.pendingPlaces ?? [])
-			.map(
-				(p) =>
-					`${p.player}@${p.position.row},${p.position.col}@${p.resolveAt}`
-			)
+			.map((p) => pendingFingerprint(p))
 			.join(";"),
 		state.committedPlacements
 			? `cX:${(state.committedPlacements.X ?? []).map((p) => `${p.row},${p.col}`).join("+")}|cO:${(state.committedPlacements.O ?? []).map((p) => `${p.row},${p.col}`).join("+")}`

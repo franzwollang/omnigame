@@ -724,6 +724,9 @@ export default function GamePage() {
 					selectedCell={selectedFrom}
 					showLegalOverlay={showLegalOverlay}
 					fogVisible={observation.visible}
+					gravityDirection={
+						currentConfig?.placement.gravity?.direction ?? "down"
+					}
 					tokens={currentConfig?.tokens ?? []}
 					placements={currentConfig?.placements ?? []}
 				/>

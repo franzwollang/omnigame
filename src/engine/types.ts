@@ -17,13 +17,47 @@ export type GameStatus = "playing" | "won" | "draw";
 /** hit_miss: placement = lay fleet; combat = fire. Other modes omit / combat. */
 export type GamePhase = "placement" | "combat";
 
-/** Queued place intent for delayed placement (`placement.delayTurns` > 0). */
-export type PendingPlace = {
-	player: Player;
-	position: Position;
-	/** Absolute `moveCount` at which this place materializes. */
-	resolveAt: number;
-};
+/**
+ * Queued place intent for delayed placement (`placement.delayTurns` > 0).
+ * - `cell`: reserve a fixed intersection (direct place)
+ * - `column` / `row`: gravity intent; landing cell is settled at resolve time
+ */
+export type PendingPlace =
+	| {
+			player: Player;
+			/** Absolute `moveCount` at which this place materializes. */
+			resolveAt: number;
+			kind: "cell";
+			position: Position;
+	  }
+	| {
+			player: Player;
+			resolveAt: number;
+			kind: "column";
+			col: number;
+	  }
+	| {
+			player: Player;
+			resolveAt: number;
+			kind: "row";
+			row: number;
+	  };
+
+export function isCellPending(
+	p: PendingPlace
+): p is Extract<PendingPlace, { kind: "cell" }> {
+	return p.kind === "cell";
+}
+
+export function pendingFingerprint(p: PendingPlace): string {
+	if (p.kind === "cell") {
+		return `${p.player}@cell:${p.position.row},${p.position.col}@${p.resolveAt}`;
+	}
+	if (p.kind === "column") {
+		return `${p.player}@col:${p.col}@${p.resolveAt}`;
+	}
+	return `${p.player}@row:${p.row}@${p.resolveAt}`;
+}
 
 export type GameState = {
 	/** Public board (placements or shot results). */
@@ -42,7 +76,8 @@ export type GameState = {
 	actionsRemaining?: number;
 	/**
 	 * Delayed places: queued intents that materialize after intervening places.
-	 * Cells in this list are reserved (illegal to place on) until resolved/fizzled.
+	 * Cell intents reserve that intersection; column/row intents reserve a slot
+	 * on that line until resolved/fizzled.
 	 */
 	pendingPlaces?: PendingPlace[];
 	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */

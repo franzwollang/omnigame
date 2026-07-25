@@ -17,7 +17,7 @@ describe("schema: placement.delayTurns", () => {
 		expect(ok.success).toBe(true);
 	});
 
-	it("rejects delayTurns with simultaneous, multi-step, or gravity", () => {
+	it("rejects delayTurns with simultaneous, multi-step, or capture", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		const withSim = zConfig.safeParse({
 			...base,
@@ -33,17 +33,24 @@ describe("schema: placement.delayTurns", () => {
 		});
 		expect(withMulti.success).toBe(false);
 
-		const withGravity = zConfig.safeParse({
+		const withCapture = zConfig.safeParse({
 			...base,
-			input: { mode: "column" },
 			placement: {
-				mode: "gravity",
-				gravity: { enabled: true, direction: "down", wrap: false },
-				overflow: "reject",
-				delayTurns: 1
+				...base.placement,
+				delayTurns: 1,
+				capture: { mode: "flip", enabled: true }
 			}
 		});
-		expect(withGravity.success).toBe(false);
+		expect(withCapture.success).toBe(false);
+	});
+
+	it("accepts delayTurns with gravity column input", () => {
+		const base = examplePresets["connect-4"].config;
+		const ok = zConfig.safeParse({
+			...base,
+			placement: { ...base.placement, delayTurns: 1 }
+		});
+		expect(ok.success).toBe(true);
 	});
 
 	it("rejects hex under delayed place foothold", () => {
@@ -76,6 +83,7 @@ describe("kernel: delayed place queue + resolve", () => {
 		expect(state.pendingPlaces).toHaveLength(1);
 		expect(state.pendingPlaces?.[0]).toMatchObject({
 			player: "X",
+			kind: "cell",
 			position: { row: 0, col: 0 },
 			resolveAt: 2
 		});

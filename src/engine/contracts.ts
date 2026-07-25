@@ -347,7 +347,8 @@ export const Contracts = {
 	}),
 	/**
 	 * Delayed (queued) place: intent is recorded now; stone materializes after
-	 * delayTurns intervening places. Keeps PlacementPolicy = direct.
+	 * delayTurns intervening places. Direct cell intents reserve that cell;
+	 * gravity column/row intents reserve a slot and settle at resolve time.
 	 */
 	PlacementDelayed: (): FeatureContract => ({
 		id: "PlacementDelayed",
@@ -355,7 +356,11 @@ export const Contracts = {
 		provides: [],
 		slots: [],
 		hooks: ["applyPlacement", "applyEffects"],
-		invariants: ["intentBeforeResolve", "pendingCellsReserved"]
+		invariants: [
+			"intentBeforeResolve",
+			"pendingCellsReserved",
+			"pendingGravitySettlesOnResolve"
+		]
 	}),
 	/**
 	 * Ordered in-turn phase sequence (e.g. place→move or place→fire before handoff).

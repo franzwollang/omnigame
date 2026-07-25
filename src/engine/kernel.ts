@@ -9,6 +9,7 @@ import type { GameState, Player, Position } from "@/engine/types";
 import {
 	asPlacementList,
 	getCell,
+	isCellPending,
 	listHasPosition,
 	positionsEqual
 } from "@/engine/types";
@@ -333,8 +334,21 @@ function resolveKoRule(config: GameConfig): KoRule {
 function columnHasSpace(
 	state: GameState,
 	col: number,
-	direction: "down" | "up" = "down"
+	direction: "down" | "up" = "down",
+	config?: GameConfig
 ): boolean {
+	const delayTurns = config?.delayTurns ?? 0;
+	if (delayTurns > 0) {
+		// Slot reservation: empty cells in column must exceed pending column intents
+		let empty = 0;
+		for (let row = 0; row < state.grid.height; row++) {
+			if (getCell(state.grid, { row, col }) === null) empty += 1;
+		}
+		const reserved = (state.pendingPlaces ?? []).filter(
+			(p) => p.kind === "column" && p.col === col
+		).length;
+		return empty > reserved;
+	}
 	// Entry side must be clear: top for down gravity, bottom for up.
 	const entryRow =
 		direction === "down" ? 0 : state.grid.height - 1;
@@ -344,8 +358,20 @@ function columnHasSpace(
 function rowHasSpace(
 	state: GameState,
 	row: number,
-	direction: "left" | "right" = "right"
+	direction: "left" | "right" = "right",
+	config?: GameConfig
 ): boolean {
+	const delayTurns = config?.delayTurns ?? 0;
+	if (delayTurns > 0) {
+		let empty = 0;
+		for (let col = 0; col < state.grid.width; col++) {
+			if (getCell(state.grid, { row, col }) === null) empty += 1;
+		}
+		const reserved = (state.pendingPlaces ?? []).filter(
+			(p) => p.kind === "row" && p.row === row
+		).length;
+		return empty > reserved;
+	}
 	// Entry side must be clear: left for right gravity, right for left.
 	const entryCol =
 		direction === "right" ? 0 : state.grid.width - 1;
@@ -363,7 +389,10 @@ function canPlaceCell(
 	if (getCell(state.grid, pos) !== null) return false;
 	if (
 		(state.pendingPlaces ?? []).some(
-			(p) => p.position.row === pos.row && p.position.col === pos.col
+			(p) =>
+				isCellPending(p) &&
+				p.position.row === pos.row &&
+				p.position.col === pos.col
 		)
 	) {
 		return false;
@@ -603,7 +632,7 @@ function collectLegalActions(
 		const vertical =
 			direction === "down" || direction === "up" ? direction : "down";
 		for (let col = 0; col < state.grid.width; col++) {
-			if (columnHasSpace(state, col, vertical)) {
+			if (columnHasSpace(state, col, vertical, config)) {
 				actions.push({ type: "activateColumn", col });
 			}
 		}
@@ -612,7 +641,7 @@ function collectLegalActions(
 		const horizontal =
 			direction === "left" || direction === "right" ? direction : "right";
 		for (let row = 0; row < state.grid.height; row++) {
-			if (rowHasSpace(state, row, horizontal)) {
+			if (rowHasSpace(state, row, horizontal, config)) {
 				actions.push({ type: "activateRow", row });
 			}
 		}
@@ -677,7 +706,10 @@ function placeFailureReason(
 	if (getCell(state.grid, pos) !== null) return "cell_occupied";
 	if (
 		(state.pendingPlaces ?? []).some(
-			(p) => p.position.row === pos.row && p.position.col === pos.col
+			(p) =>
+				isCellPending(p) &&
+				p.position.row === pos.row &&
+				p.position.col === pos.col
 		)
 	) {
 		return "cell_occupied";
@@ -1048,7 +1080,7 @@ export function explainKernelAction(
 				const direction = config.gravityDirection ?? "down";
 				const vertical =
 					direction === "down" || direction === "up" ? direction : "down";
-				if (!columnHasSpace(state, action.col, vertical)) {
+				if (!columnHasSpace(state, action.col, vertical, config)) {
 					return {
 						legal: false,
 						reason: "column_full",
@@ -1072,7 +1104,7 @@ export function explainKernelAction(
 					direction === "left" || direction === "right"
 						? direction
 						: "right";
-				if (!rowHasSpace(state, action.row, horizontal)) {
+				if (!rowHasSpace(state, action.row, horizontal, config)) {
 					return {
 						legal: false,
 						reason: "row_full",

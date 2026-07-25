@@ -372,7 +372,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
 											&gt;0 queues the place; stone lands after that many
-											intervening places (cell reserved meanwhile).
+											intervening places. Cell mode reserves the cell;
+											gravity column/row settles landing at resolve time.
 										</p>
 										<FormMessage />
 									</FormItem>
