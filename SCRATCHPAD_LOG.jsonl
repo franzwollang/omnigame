@@ -29,3 +29,4 @@
 {"ts":"2026-07-25T08:25-05:00","focus":"tooling push","summary":"Commit/push lockfile v9, engines, docs for cloud agents","next":"next-missing-mechanism"}
 {"ts":"2026-07-25T08:45-05:00","focus":"pop_out_top","summary":"implemented pop_out_top mechanism + Connect 4 Up Pop Out; docs/handoff updated","next":"next-missing-mechanism pick (situational superko / hex wrap / horizontal pop-out / simultaneous)"}
 {"ts":"2026-07-25T09:05-05:00","focus":"situational-superko","summary":"Landed situational superko; hand off next-missing-mechanism","next":"pick hex wrap / horizontal pop-out / simultaneous / delayed"}
+{"ts":"2026-07-25T09:30-05:00","focus":"horizontal pop-out","summary":"pop_out_right/left + popOutRow + Connect 4 Right Pop Out","next":"pick next mechanism: hex wrap / simultaneous / delayed"}

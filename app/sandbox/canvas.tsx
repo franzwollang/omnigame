@@ -24,10 +24,11 @@ type Props = {
 	onActivateColumn?: (col: number) => void;
 	onActivateRow?: (row: number) => void;
 	onPopOutColumn?: (col: number) => void;
+	onPopOutRow?: (row: number) => void;
 	inputMode?: "cell" | "column" | "row" | "move";
 	enablePopOutButtons?: boolean;
 	/** Which board edge hosts pop-out buttons (exit side). */
-	popOutSide?: "top" | "bottom";
+	popOutSide?: "top" | "bottom" | "left" | "right";
 	topology?: GridTopology;
 	/** Compiled graph adjacency/layout when topology = graph. */
 	graph?: GraphTopologyData;
@@ -102,6 +103,7 @@ export default function SandboxCanvas({
 	onActivateColumn,
 	onActivateRow,
 	onPopOutColumn,
+	onPopOutRow,
 	inputMode = "cell",
 	enablePopOutButtons = false,
 	popOutSide = "bottom",
@@ -125,6 +127,7 @@ export default function SandboxCanvas({
 	const onActivateColumnRef = useRef<typeof onActivateColumn>(onActivateColumn);
 	const onActivateRowRef = useRef<typeof onActivateRow>(onActivateRow);
 	const onPopOutColumnRef = useRef<typeof onPopOutColumn>(onPopOutColumn);
+	const onPopOutRowRef = useRef<typeof onPopOutRow>(onPopOutRow);
 	const inputModeRef = useRef(inputMode);
 	const popButtonsGroupRef = useRef<THREE.Group | null>(null);
 	const labelRendererRef = useRef<CSS2DRenderer | null>(null);
@@ -143,8 +146,9 @@ export default function SandboxCanvas({
 		onActivateColumnRef.current = onActivateColumn;
 		onActivateRowRef.current = onActivateRow;
 		onPopOutColumnRef.current = onPopOutColumn;
+		onPopOutRowRef.current = onPopOutRow;
 		inputModeRef.current = inputMode;
-	}, [onActivateColumn, onActivateRow, onPopOutColumn, inputMode]);
+	}, [onActivateColumn, onActivateRow, onPopOutColumn, onPopOutRow, inputMode]);
 
 	useEffect(() => {
 		const canvasEl = canvasRef.current;
@@ -445,19 +449,30 @@ export default function SandboxCanvas({
 			// Check pop-out buttons first if enabled
 			if (
 				enablePopOutButtons &&
-				onPopOutColumnRef.current &&
-				popButtonsGroupRef.current
+				popButtonsGroupRef.current &&
+				(onPopOutColumnRef.current || onPopOutRowRef.current)
 			) {
 				const popIntersects = raycasterRef.current.intersectObjects(
 					popButtonsGroupRef.current.children,
 					true
 				);
 				if (popIntersects.length > 0) {
-					const { col } = (popIntersects[0].object.userData || {}) as {
-						col: number;
+					const data = (popIntersects[0].object.userData || {}) as {
+						col?: number;
+						row?: number;
 					};
-					if (typeof col === "number") {
-						onPopOutColumnRef.current(col);
+					if (
+						typeof data.col === "number" &&
+						onPopOutColumnRef.current
+					) {
+						onPopOutColumnRef.current(data.col);
+						return;
+					}
+					if (
+						typeof data.row === "number" &&
+						onPopOutRowRef.current
+					) {
+						onPopOutRowRef.current(data.row);
 						return;
 					}
 				}
@@ -787,25 +802,48 @@ export default function SandboxCanvas({
 		const cellSize = 0.9;
 		const spacing = 0.1;
 		const totalCellSize = cellSize + spacing;
+		const planeWidth = gridWidth * totalCellSize;
 		const planeHeight = gridHeight * totalCellSize;
-		// Place buttons on the exit side (top for pop_out_top, bottom for pop_out_bottom)
-		const y =
-			popOutSide === "top"
-				? planeHeight / 2 + spacing * 0.5
-				: -(planeHeight / 2 + spacing * 0.5);
-		for (let col = 0; col < gridWidth; col++) {
-			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
-			const btn = document.createElement("button");
-			btn.className =
-				"rounded-full px-2 py-1 text-xs bg-zinc-800/90 text-zinc-100 border border-zinc-600 shadow pointer-events-auto hover:bg-zinc-700";
-			btn.textContent = "Pop";
-			btn.onclick = (e) => {
-				e.stopPropagation();
-				if (onPopOutColumnRef.current) onPopOutColumnRef.current(col);
-			};
-			const obj = new CSS2DObject(btn);
-			obj.position.set(x, y, 0);
-			group.add(obj);
+		const horizontal = popOutSide === "left" || popOutSide === "right";
+		if (horizontal) {
+			const x =
+				popOutSide === "left"
+					? -(planeWidth / 2 + spacing * 0.5)
+					: planeWidth / 2 + spacing * 0.5;
+			for (let row = 0; row < gridHeight; row++) {
+				const y = ((gridHeight - 1) / 2 - row) * totalCellSize;
+				const btn = document.createElement("button");
+				btn.className =
+					"rounded-full px-2 py-1 text-xs bg-zinc-800/90 text-zinc-100 border border-zinc-600 shadow pointer-events-auto hover:bg-zinc-700";
+				btn.textContent = "Pop";
+				btn.onclick = (e) => {
+					e.stopPropagation();
+					if (onPopOutRowRef.current) onPopOutRowRef.current(row);
+				};
+				const obj = new CSS2DObject(btn);
+				obj.position.set(x, y, 0);
+				group.add(obj);
+			}
+		} else {
+			// Place buttons on the exit side (top for pop_out_top, bottom for pop_out_bottom)
+			const y =
+				popOutSide === "top"
+					? planeHeight / 2 + spacing * 0.5
+					: -(planeHeight / 2 + spacing * 0.5);
+			for (let col = 0; col < gridWidth; col++) {
+				const x = (col - (gridWidth - 1) / 2) * totalCellSize;
+				const btn = document.createElement("button");
+				btn.className =
+					"rounded-full px-2 py-1 text-xs bg-zinc-800/90 text-zinc-100 border border-zinc-600 shadow pointer-events-auto hover:bg-zinc-700";
+				btn.textContent = "Pop";
+				btn.onclick = (e) => {
+					e.stopPropagation();
+					if (onPopOutColumnRef.current) onPopOutColumnRef.current(col);
+				};
+				const obj = new CSS2DObject(btn);
+				obj.position.set(x, y, 0);
+				group.add(obj);
+			}
 		}
 	}, [
 		enablePopOutButtons,

@@ -116,9 +116,15 @@ export const zConfig = z
 					})
 					.strict()
 					.optional(),
-				// horizontal pop-out (pop_out_left / pop_out_right) deferred
+				// pop_out_* paired with gravity direction (see refine below)
 				overflow: z
-					.enum(["reject", "pop_out_bottom", "pop_out_top"])
+					.enum([
+						"reject",
+						"pop_out_bottom",
+						"pop_out_top",
+						"pop_out_left",
+						"pop_out_right"
+					])
 					.default("reject")
 			})
 			.strict()
@@ -679,7 +685,7 @@ export const zConfig = z
 					"overflow !== 'reject' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
 		}
-		// pop_out_bottom ↔ gravity down; pop_out_top ↔ gravity up
+		// pop_out_* ↔ matching gravity direction
 		if (
 			cfg.placement.overflow === "pop_out_bottom" &&
 			cfg.placement.gravity?.direction !== undefined &&
@@ -689,7 +695,7 @@ export const zConfig = z
 				code: z.ZodIssueCode.custom,
 				path: ["placement", "overflow"],
 				message:
-					"overflow 'pop_out_bottom' requires gravity direction 'down' (horizontal pop-out deferred)"
+					"overflow 'pop_out_bottom' requires gravity direction 'down'"
 			});
 		}
 		if (
@@ -700,7 +706,29 @@ export const zConfig = z
 				code: z.ZodIssueCode.custom,
 				path: ["placement", "overflow"],
 				message:
-					"overflow 'pop_out_top' requires gravity direction 'up' (horizontal pop-out deferred)"
+					"overflow 'pop_out_top' requires gravity direction 'up'"
+			});
+		}
+		if (
+			cfg.placement.overflow === "pop_out_right" &&
+			cfg.placement.gravity?.direction !== "right"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "overflow"],
+				message:
+					"overflow 'pop_out_right' requires gravity direction 'right'"
+			});
+		}
+		if (
+			cfg.placement.overflow === "pop_out_left" &&
+			cfg.placement.gravity?.direction !== "left"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "overflow"],
+				message:
+					"overflow 'pop_out_left' requires gravity direction 'left'"
 			});
 		}
 

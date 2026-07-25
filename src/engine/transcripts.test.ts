@@ -96,7 +96,7 @@ describe("schema honesty (M0)", () => {
 		).toBe(false);
 	});
 
-	it("accepts rectangle wrap, gravity axes, pop_out_top, and all shipped presets", () => {
+	it("accepts rectangle wrap, gravity axes, pop_out variants, and all shipped presets", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		expect(
 			zConfig.safeParse({
@@ -135,6 +135,40 @@ describe("schema honesty (M0)", () => {
 				}
 			}).success
 		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "right", wrap: false },
+					overflow: "pop_out_right"
+				}
+			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "left", wrap: false },
+					overflow: "pop_out_left"
+				}
+			}).success
+		).toBe(true);
+		// mismatched horizontal pairings rejected
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "right", wrap: false },
+					overflow: "pop_out_left"
+				}
+			}).success
+		).toBe(false);
 		for (const preset of Object.values(examplePresets)) {
 			const parsed = zConfig.safeParse(preset.config);
 			expect(parsed.success, preset.id).toBe(true);

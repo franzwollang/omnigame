@@ -136,6 +136,22 @@ export const Contracts = {
 		hooks: ["applyEffects"],
 		invariants: []
 	}),
+	OverflowPopOutRight: (): FeatureContract => ({
+		id: "OverflowPopOutRight",
+		requires: ["TargetLine"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: []
+	}),
+	OverflowPopOutLeft: (): FeatureContract => ({
+		id: "OverflowPopOutLeft",
+		requires: ["TargetLine"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: []
+	}),
 	/** Base board always present: cells can be written by placement features. */
 	BoardWritable: (): FeatureContract => ({
 		id: "BoardWritable",

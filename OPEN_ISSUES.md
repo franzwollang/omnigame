@@ -8,19 +8,17 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-Situational **superko** landed — `capture.ko = "situational"` +
-`(board|sideToMove)` history hashes + illegal reason `"superko"` + Go Lite
-Situational Superko preset + tests. Point/positional ko and `pop_out_top`
-unchanged. Pick the **next smallest** unlock the engine still lacks — not
-another recombination of covered primitives (see project-structure selection
-principle).
+Horizontal **pop-out** landed — `overflow = "pop_out_right" | "pop_out_left"` +
+`popOutRow` action + Connect 4 Right Pop Out preset + tests. Vertical
+`popOutColumn` / situational superko unchanged. Pick the **next smallest**
+unlock the engine still lacks — not another recombination of covered primitives
+(see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
 - simultaneous / hidden simultaneous actions
 - delayed actions / multi-step turns
 - hex/graph wrap (follow-on to rectangle wrap)
-- horizontal pop-out (`pop_out_left` / `pop_out_right`)
 
 **Acceptance:**
 
@@ -52,6 +50,6 @@ or be closed after the next agent green run on cloud.
 
 M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties,
 graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
-simple ko, positional superko, `pop_out_top`, and situational superko also
-landed. Further ports only when a **new** missing mechanism appears — not a
-backlog.
+simple ko, positional/situational superko, `pop_out_top`, and horizontal
+pop-out also landed. Further ports only when a **new** missing mechanism
+appears — not a backlog.

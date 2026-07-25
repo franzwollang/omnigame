@@ -121,6 +121,53 @@ describe("GameKernel scaffold", () => {
 		expect(getCell(state.grid, { row: 5, col: 0 })).toBe(null);
 	});
 
+	it("includes right pop-out actions for gravity-right overflow", () => {
+		const { kernel } = compileConfig(
+			examplePresets["connect-4-right-popout"].config
+		);
+		let state = kernel.initialState();
+		state = kernel.stepSync(state, { type: "activateRow", row: 2 }).nextState;
+		state = kernel.stepSync(state, { type: "activateRow", row: 3 }).nextState;
+		// X's piece sits at rightmost col of row 2 under gravity right
+		expect(getCell(state.grid, { row: 2, col: 6 })).toBe("X");
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.some((a) => a.type === "popOutRow" && a.row === 2)).toBe(
+			true
+		);
+		state = kernel.stepSync(state, { type: "popOutRow", row: 2 }).nextState;
+		expect(getCell(state.grid, { row: 2, col: 6 })).toBe(null);
+		expect(getCell(state.grid, { row: 2, col: 0 })).toBe(null);
+	});
+
+	it("shifts row toward exit when popping from right", () => {
+		const { kernel } = compileConfig(
+			examplePresets["connect-4-right-popout"].config
+		);
+		let state = kernel.initialState();
+		// Fill row 2: X, O, X slide right
+		state = kernel.stepSync(state, { type: "activateRow", row: 2 }).nextState;
+		state = kernel.stepSync(state, { type: "activateRow", row: 2 }).nextState;
+		state = kernel.stepSync(state, { type: "activateRow", row: 2 }).nextState;
+		expect(getCell(state.grid, { row: 2, col: 6 })).toBe("X");
+		expect(getCell(state.grid, { row: 2, col: 5 })).toBe("O");
+		expect(getCell(state.grid, { row: 2, col: 4 })).toBe("X");
+		// O cannot pop X's exit piece
+		const oExplain = kernel.explainAction(state, 1, {
+			type: "popOutRow",
+			row: 2
+		});
+		expect(oExplain.legal).toBe(false);
+		if (!oExplain.legal) {
+			expect(oExplain.reason).toBe("no_own_piece");
+		}
+		state = kernel.stepSync(state, { type: "activateRow", row: 3 }).nextState;
+		// X pops right of row 2 → O slides to col 6, X to col 5
+		state = kernel.stepSync(state, { type: "popOutRow", row: 2 }).nextState;
+		expect(getCell(state.grid, { row: 2, col: 6 })).toBe("O");
+		expect(getCell(state.grid, { row: 2, col: 5 })).toBe("X");
+		expect(getCell(state.grid, { row: 2, col: 4 })).toBe(null);
+	});
+
 	it("shifts column toward exit when popping from top", () => {
 		const { kernel } = compileConfig(
 			examplePresets["connect-4-up-popout"].config

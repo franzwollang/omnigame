@@ -41,6 +41,7 @@ These are built from the same shared schema and operators.
 - **Connect 4 (Right)** (row activation; discs slide right)
 - **Connect 4 (Pop Out)**
 - **Connect 4 (Up Pop Out)** (gravity up + top pop-out)
+- **Connect 4 (Right Pop Out)** (row gravity + right pop-out / `popOutRow`)
 - **Gomoku (5‑in‑a‑row)**
 - **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
 - **Battleship Lite** (hit/miss observation + destroy_hidden)
@@ -107,7 +108,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
   - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
-  - overflow: `reject` | `pop_out_bottom` | `pop_out_top` (bottom ↔ gravity down; top ↔ gravity up; horizontal pop-out deferred)
+  - overflow: `reject` | `pop_out_bottom` | `pop_out_top` | `pop_out_left` |
+    `pop_out_right` (paired with gravity direction; horizontal uses `popOutRow`)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
@@ -119,9 +121,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: situational superko / full Go rules, hex/graph wrap,
-simultaneous/delayed actions, horizontal pop-out, and a larger set of
-reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, hex/graph wrap,
+simultaneous/delayed actions, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

@@ -184,6 +184,13 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		[applyAction]
 	);
 
+	const popOutRow = useCallback(
+		(row: number) => {
+			applyAction({ type: "popOutRow", row });
+		},
+		[applyAction]
+	);
+
 	const tick = useCallback(() => {
 		applyAction({ type: "tick" });
 	}, [applyAction]);
@@ -268,6 +275,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		activateColumn,
 		activateRow,
 		popOutColumn,
+		popOutRow,
 		tick,
 		pass,
 		reset,

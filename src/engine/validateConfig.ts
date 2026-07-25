@@ -57,6 +57,10 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 			features.push(Contracts.OverflowPopOutBottom());
 		} else if (cfg.placement.overflow === "pop_out_top") {
 			features.push(Contracts.OverflowPopOutTop());
+		} else if (cfg.placement.overflow === "pop_out_right") {
+			features.push(Contracts.OverflowPopOutRight());
+		} else if (cfg.placement.overflow === "pop_out_left") {
+			features.push(Contracts.OverflowPopOutLeft());
 		}
 	}
 

@@ -33,6 +33,8 @@ export function actionKey(action: KernelAction): string {
 			return `row:${action.row}`;
 		case "popOutColumn":
 			return `pop:${action.col}`;
+		case "popOutRow":
+			return `popRow:${action.row}`;
 		case "tick":
 			return "tick";
 		case "pass":

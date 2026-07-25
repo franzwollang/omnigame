@@ -42,6 +42,7 @@ export type KernelAction =
 	| { type: "activateColumn"; col: number }
 	| { type: "activateRow"; row: number }
 	| { type: "popOutColumn"; col: number }
+	| { type: "popOutRow"; row: number }
 	| { type: "tick" }
 	| { type: "pass" };
 
@@ -138,7 +139,9 @@ function formatAction(action: KernelAction): string {
 		case "activateRow":
 			return `row ${action.row}`;
 		case "popOutColumn":
-			return `pop-out ${action.col}`;
+			return `pop-out col ${action.col}`;
+		case "popOutRow":
+			return `pop-out row ${action.row}`;
 		case "tick":
 			return "tick";
 		case "pass":
@@ -453,6 +456,22 @@ function collectLegalActions(
 				const exit = getCell(state.grid, { row: exitRow, col });
 				if (exit === state.currentPlayer) {
 					actions.push({ type: "popOutColumn", col });
+				}
+			}
+		}
+	}
+
+	if (overflow === "pop_out_right" || overflow === "pop_out_left") {
+		const direction = config.gravityDirection ?? "down";
+		const fromRight = overflow === "pop_out_right" && direction === "right";
+		const fromLeft = overflow === "pop_out_left" && direction === "left";
+		if (fromRight || fromLeft) {
+			const width = state.grid.width;
+			const exitCol = fromRight ? width - 1 : 0;
+			for (let row = 0; row < state.grid.height; row++) {
+				const exit = getCell(state.grid, { row, col: exitCol });
+				if (exit === state.currentPlayer) {
+					actions.push({ type: "popOutRow", row });
 				}
 			}
 		}
@@ -778,6 +797,32 @@ export function explainKernelAction(
 			}
 			break;
 		}
+		case "popOutRow": {
+			const direction = config.gravityDirection ?? "down";
+			const fromRight =
+				overflow === "pop_out_right" && direction === "right";
+			const fromLeft = overflow === "pop_out_left" && direction === "left";
+			if (!fromRight && !fromLeft) {
+				return {
+					legal: false,
+					reason: "not_applicable",
+					detail: detailFor("not_applicable", action)
+				};
+			}
+			const exitCol = fromRight ? state.grid.width - 1 : 0;
+			const exit = getCell(state.grid, {
+				row: action.row,
+				col: exitCol
+			});
+			if (exit !== state.currentPlayer) {
+				return {
+					legal: false,
+					reason: "no_own_piece",
+					detail: detailFor("no_own_piece", action)
+				};
+			}
+			break;
+		}
 		case "move": {
 			if (inputMode !== "move" || !config.movement) {
 				return {
@@ -842,7 +887,8 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "popOutColumn":
 			return b.type === a.type && a.col === b.col;
 		case "activateRow":
-			return b.type === "activateRow" && a.row === b.row;
+		case "popOutRow":
+			return b.type === a.type && a.row === b.row;
 		case "tick":
 		case "pass":
 			return true;
@@ -928,7 +974,16 @@ export function highlightCellsForActions(
 				break;
 			}
 			case "popOutColumn":
-				push({ row: state.grid.height - 1, col: action.col });
+				push({
+					row: direction === "up" ? 0 : state.grid.height - 1,
+					col: action.col
+				});
+				break;
+			case "popOutRow":
+				push({
+					row: action.row,
+					col: direction === "left" ? 0 : state.grid.width - 1
+				});
 				break;
 			default:
 				break;

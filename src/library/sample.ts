@@ -95,13 +95,17 @@ function sampleGravity(rng: SamplerRng, seed: number): ConfigInput {
 	const cfg = baseMeta(`Sample gravity ${width}x${height}`, seed);
 	cfg.grid = { width, height, topology: "rectangle", wrap: false };
 	cfg.input = { mode: axis === "vertical" ? "column" : "row" };
-	// pop_out_bottom ↔ down; pop_out_top ↔ up; horizontal deferred
+	// pop_out_bottom ↔ down; pop_out_top ↔ up; right↔right; left↔left
 	const overflow =
 		direction === "down" && rng() > 0.7
 			? ("pop_out_bottom" as const)
 			: direction === "up" && rng() > 0.7
 				? ("pop_out_top" as const)
-				: ("reject" as const);
+				: direction === "right" && rng() > 0.7
+					? ("pop_out_right" as const)
+					: direction === "left" && rng() > 0.7
+						? ("pop_out_left" as const)
+						: ("reject" as const);
 	cfg.placement = {
 		mode: "gravity",
 		gravity: { enabled: true, direction, wrap: false },

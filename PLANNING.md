@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Situational superko landed (Go Lite Situational
-Superko). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Horizontal pop-out landed (Connect 4 Right Pop
+Out). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -55,9 +55,9 @@ Working sandbox slice (see README “Current implementation status”):
 - Rectangular grid; cell / column / row input
 - Direct + gravity placement (down | up | left | right; column ↔ vertical, row ↔ horizontal)
 - Capture (flip demo); n-in-a-row wins
-- Column pop-out: `pop_out_bottom` ↔ gravity down; `pop_out_top` ↔ gravity up
+- Column/row pop-out: bottom↔down, top↔up, right↔right, left↔left
 - Presets: Tic-Tac-Toe, Connect 4, Connect 4 Up, Connect 4 Right, Connect 4 Pop Out,
-  Connect 4 Up Pop Out, Gomoku, Capture / Flip Demo,
+  Connect 4 Up Pop Out, Connect 4 Right Pop Out, Gomoku, Capture / Flip Demo,
   Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
   Step Race (Move + reach_row),
   Life Lite (manual tick + B3/S23)
@@ -81,12 +81,13 @@ Working sandbox slice (see README “Current implementation status”):
 - **Situational superko:** `capture.ko = "situational"` + `(board|side)` history
   hashes; Go Lite Situational Superko preset
 - **Top pop-out:** `overflow = "pop_out_top"` ↔ gravity up; Connect 4 Up Pop Out
+- **Horizontal pop-out:** `pop_out_right` / `pop_out_left` + `popOutRow`;
+  Connect 4 Right Pop Out
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: full Go rules, hex/graph wrap, simultaneous/delayed actions,
-horizontal pop-out (`pop_out_left` / `pop_out_right`).
+Not yet: full Go rules, hex/graph wrap, simultaneous/delayed actions.
 
 ## Milestone exit criteria
 

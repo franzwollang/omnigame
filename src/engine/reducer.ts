@@ -64,8 +64,16 @@ export type GameConfig = {
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
-	/** Column pop-out: bottom ↔ gravity down, top ↔ gravity up. Horizontal deferred. */
-	overflow?: "reject" | "pop_out_bottom" | "pop_out_top";
+	/**
+	 * Pop-out overflow: bottom↔down, top↔up, right↔right, left↔left.
+	 * Vertical uses popOutColumn; horizontal uses popOutRow.
+	 */
+	overflow?:
+		| "reject"
+		| "pop_out_bottom"
+		| "pop_out_top"
+		| "pop_out_left"
+		| "pop_out_right";
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
 	captureMode?: "flip" | "liberties";
@@ -219,6 +227,8 @@ export function reduce(
 			return handleActivateRow(state, event.row, config);
 		case "popOutColumn":
 			return handlePopOutColumn(state, event.col, config);
+		case "popOutRow":
+			return handlePopOutRow(state, event.row, config);
 		case "tick":
 			return handleTick(state, config);
 		case "pass":
@@ -738,6 +748,88 @@ function handlePopOutColumn(
 	const newMoveCount = state.moveCount + 1;
 
 	// Check win conditions after pop (some variants may differ)
+	const winner = checkWinner(
+		newGrid,
+		state.currentPlayer,
+		config.winLength,
+		config.adjacency,
+		config.topology ?? "rectangle",
+		config.graph,
+		config.gridWrap === true
+	);
+	if (winner) {
+		return {
+			...state,
+			grid: newGrid,
+			status: "won",
+			winner: state.currentPlayer,
+			moveCount: newMoveCount
+		};
+	}
+
+	const isFull = isBoardFull(newGrid, config);
+	if (isFull) {
+		return {
+			...state,
+			grid: newGrid,
+			status: "draw",
+			moveCount: newMoveCount
+		};
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...state,
+		grid: newGrid,
+		currentPlayer: nextPlayer,
+		moveCount: newMoveCount
+	};
+}
+
+function handlePopOutRow(
+	state: GameState,
+	row: number,
+	config: GameConfig
+): GameState {
+	if (state.status !== "playing") return state;
+	const height = state.grid.height;
+	const width = state.grid.width;
+	if (row < 0 || row >= height) return state;
+
+	const overflow = config.overflow ?? "reject";
+	const direction = config.gravityDirection ?? "down";
+	const fromRight = overflow === "pop_out_right" && direction === "right";
+	const fromLeft = overflow === "pop_out_left" && direction === "left";
+	if (!fromRight && !fromLeft) return state;
+
+	const exitCol = fromRight ? width - 1 : 0;
+	const exitVal = getCell(state.grid, { row, col: exitCol });
+	if (exitVal === null) return state; // nothing to pop
+	// Must pop own token
+	if (exitVal !== state.currentPlayer) return state;
+
+	const newCells = [...state.grid.cells];
+	if (fromRight) {
+		// Shift row right: remove rightmost, pull from the left
+		for (let col = width - 1; col > 0; col--) {
+			const from = { row, col: col - 1 };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row, col: 0 }, state.grid.width)] = null;
+	} else {
+		// Shift row left: remove leftmost, pull from the right
+		for (let col = 0; col < width - 1; col++) {
+			const from = { row, col: col + 1 };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row, col: width - 1 }, state.grid.width)] = null;
+	}
+
+	const newGrid = { ...state.grid, cells: newCells };
+	const newMoveCount = state.moveCount + 1;
+
 	const winner = checkWinner(
 		newGrid,
 		state.currentPlayer,

@@ -30,6 +30,7 @@ function centerBias(state: GameState, action: KernelAction): number {
 			row = cy;
 			break;
 		case "activateRow":
+		case "popOutRow":
 			row = action.row;
 			col = cx;
 			break;

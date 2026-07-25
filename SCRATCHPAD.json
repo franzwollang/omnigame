@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T09:05-05:00",
-  "turn": 8,
+  "updated_at": "2026-07-25T09:30-05:00",
+  "turn": 9,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after situational superko"
+    "goal": "Hand off after horizontal pop-out"
   },
   "recent": [
-    "PLANNING/OPEN_ISSUES honest on superko; sandbox ko hint fixed",
     "Landed pop_out_top + Connect 4 Up Pop Out",
-    "Landed situational superko + Go Lite Situational Superko"
+    "Landed situational superko + Go Lite Situational Superko",
+    "Merged 67b2 onto acf9; landed horizontal pop-out"
   ],
   "discoveries": [
-    "pop_out_top mirrors bottom via exit-row shift; OverflowPopOutTop already stubbed",
-    "situational history = board|side; same stones different side legal vs positional"
+    "situational history = board|side; same stones different side legal vs positional",
+    "horizontal pop-out needs popOutRow (not popOutColumn); left↔left right↔right"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick next-missing-mechanism (hex wrap / horizontal pop-out / simultaneous / delayed)",
+  "next_step": "Cloud agent: pick next-missing-mechanism (hex/graph wrap / simultaneous / delayed)",
   "blockers": []
 }

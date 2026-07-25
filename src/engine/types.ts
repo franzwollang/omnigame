@@ -88,6 +88,11 @@ export type PopOutColumnEvent = {
 	col: number;
 };
 
+export type PopOutRowEvent = {
+	type: "popOutRow";
+	row: number;
+};
+
 export type TickEvent = {
 	type: "tick";
 };
@@ -107,6 +112,7 @@ export type GameEvent =
 	| ActivateColumnEvent
 	| ActivateRowEvent
 	| PopOutColumnEvent
+	| PopOutRowEvent
 	| TickEvent
 	| PassEvent
 	| ResetEvent;
