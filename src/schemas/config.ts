@@ -109,17 +109,18 @@ export const zConfig = z
 			.strict()
 			.default({ mode: "cell" as const }),
 		/**
-		 * Range-1 piece movement; required when input.mode = "move".
-		 * orthogonal | diagonal | king (both) on rectangle;
-		 * hex_offset / graph use topology neighbors (orthogonal only).
-		 * Richer ranges deferred.
+		 * Piece movement; required when input.mode = "move".
+		 * orthogonal | diagonal | king on rectangle with sliding `range` 1..8
+		 * (blocker-aware ray walk; range 1 = adjacent only).
+		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
+		 * Capture-by-replacement still deferred.
 		 */
 		movement: z
 			.object({
 				adjacency: z
 					.enum(["orthogonal", "diagonal", "king"])
 					.default("orthogonal"),
-				range: z.literal(1).default(1)
+				range: z.number().int().min(1).max(8).default(1)
 			})
 			.strict()
 			.optional(),
@@ -415,6 +416,14 @@ export const zConfig = z
 							"hex_offset move requires movement.adjacency = 'orthogonal' (diagonal/king deferred)"
 					});
 				}
+				if (cfg.movement && cfg.movement.range !== 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "range"],
+						message:
+							"hex_offset move requires movement.range = 1 (sliding deferred)"
+					});
+				}
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
@@ -481,6 +490,14 @@ export const zConfig = z
 						path: ["movement", "adjacency"],
 						message:
 							"graph move requires movement.adjacency = 'orthogonal' (uses explicit edges)"
+					});
+				}
+				if (cfg.movement && cfg.movement.range !== 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "range"],
+						message:
+							"graph move requires movement.range = 1 (sliding deferred)"
 					});
 				}
 			} else {

@@ -1,8 +1,8 @@
 /**
  * Pure movement legality helpers (M5 Move foothold + piece-table adjacency).
- * Range-1 steps: orthogonal | diagonal | king (both) on rectangle;
- * hex_offset / graph use topology neighbors (orthogonal only).
- * Richer ranges later.
+ * Rectangle: orthogonal | diagonal | king with sliding range 1..8 (blocker-
+ * aware ray walk). Hex_offset / graph: topology neighbors, orthogonal only,
+ * range 1.
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell } from "@/engine/types";
@@ -17,7 +17,8 @@ export type MovementAdjacency = "orthogonal" | "diagonal" | "king";
 
 export type MovementConfig = {
 	adjacency: MovementAdjacency;
-	range: 1;
+	/** Max steps along a ray (1 = adjacent only; >1 = sliding). */
+	range: number;
 };
 
 export type MovementBoard = {
@@ -40,7 +41,7 @@ const DIAGONAL: ReadonlyArray<readonly [number, number]> = [
 	[1, 1]
 ];
 
-/** Deltas for a movement adjacency at range 1 (rectangle piece-table). */
+/** Deltas for a movement adjacency (rectangle piece-table rays). */
 export function adjacencyDeltas(
 	adjacency: MovementAdjacency
 ): ReadonlyArray<readonly [number, number]> {
@@ -63,6 +64,39 @@ function boardOpts(
 	};
 }
 
+function posKey(p: Position): string {
+	return `${p.row},${p.col}`;
+}
+
+/**
+ * Empty cells reachable by sliding along adjacency rays up to `range`.
+ * Stops at board edge, occupied cells (no jump), or wrap lap.
+ */
+function slideDestinations(
+	grid: Grid,
+	from: Position,
+	config: MovementConfig,
+	wrap: boolean
+): Position[] {
+	const out: Position[] = [];
+	const range = Math.max(1, Math.floor(config.range));
+	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
+		let cur = from;
+		const seen = new Set<string>([posKey(from)]);
+		for (let dist = 1; dist <= range; dist++) {
+			const next = step(grid, cur, { row: dr, col: dc }, wrap);
+			if (!next) break;
+			const key = posKey(next);
+			if (seen.has(key)) break;
+			seen.add(key);
+			if (getCell(grid, next) !== null) break;
+			out.push(next);
+			cur = next;
+		}
+	}
+	return out;
+}
+
 /** Neighbor cells for a range-1 step under the board topology. */
 export function movementNeighbors(
 	grid: Grid,
@@ -75,11 +109,13 @@ export function movementNeighbors(
 
 	if (topology === "hex_offset" || topology === "graph") {
 		// Hex/graph foothold: orthogonal = topology neighbors only.
-		// Diagonal/king piece-tables are rectangle-only for now.
+		// Diagonal/king and range>1 piece-tables are rectangle-only for now.
 		if (config.adjacency !== "orthogonal") return [];
+		if (config.range !== 1) return [];
 		return neighbors(grid, from, topology, graph, wrap);
 	}
 
+	// Rectangle range-1: one step along each delta (empty check is caller's job).
 	const out: Position[] = [];
 	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
 		const to = step(grid, from, { row: dr, col: dc }, wrap);
@@ -88,7 +124,10 @@ export function movementNeighbors(
 	return out;
 }
 
-/** Toroidal or clipped adjacency of range 1. */
+/**
+ * Whether `to` lies on a clear adjacency ray within range.
+ * When `grid` is omitted, uses rectangle deltas at distance 1 only (legacy).
+ */
 export function isWithinRange(
 	from: Position,
 	to: Position,
@@ -98,19 +137,19 @@ export function isWithinRange(
 ): boolean {
 	const opts = boardOpts(wrapOrBoard);
 	if (!grid) {
-		// Legacy no-grid path: rectangle deltas only.
+		// Legacy no-grid path: rectangle unit deltas only.
 		const dr = to.row - from.row;
 		const dc = to.col - from.col;
 		return adjacencyDeltas(config.adjacency).some(
 			([r, c]) => r === dr && c === dc
 		);
 	}
-	return movementNeighbors(grid, from, config, opts).some(
+	return legalDestinations(grid, from, config, opts).some(
 		(n) => n.row === to.row && n.col === to.col
 	);
 }
 
-/** Empty destinations a piece at `from` may step to. */
+/** Empty destinations a piece at `from` may move to. */
 export function legalDestinations(
 	grid: Grid,
 	from: Position,
@@ -120,14 +159,22 @@ export function legalDestinations(
 	if (!inBounds(grid, from)) return [];
 	if (getCell(grid, from) === null) return [];
 
-	const out: Position[] = [];
-	if (config.range === 1) {
-		for (const to of movementNeighbors(grid, from, config, wrapOrBoard)) {
+	const opts = boardOpts(wrapOrBoard);
+	const { wrap, topology, graph } = opts;
+
+	if (topology === "hex_offset" || topology === "graph") {
+		if (config.adjacency !== "orthogonal") return [];
+		if (config.range !== 1) return [];
+		const out: Position[] = [];
+		for (const to of neighbors(grid, from, topology, graph, wrap)) {
 			if (getCell(grid, to) !== null) continue;
 			out.push(to);
 		}
+		return out;
 	}
-	return out;
+
+	// Rectangle: sliding ray walk (range 1 ≡ adjacent empty cells).
+	return slideDestinations(grid, from, config, wrap);
 }
 
 export function canMove(
@@ -141,7 +188,9 @@ export function canMove(
 	if (!inBounds(grid, from) || !inBounds(grid, to)) return false;
 	if (getCell(grid, from) !== player) return false;
 	if (getCell(grid, to) !== null) return false;
-	return isWithinRange(from, to, config, grid, wrapOrBoard);
+	return legalDestinations(grid, from, config, wrapOrBoard).some(
+		(n) => n.row === to.row && n.col === to.col
+	);
 }
 
 /** Build movement board context from a GameConfig-like object. */

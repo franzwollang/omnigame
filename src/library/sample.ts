@@ -502,7 +502,9 @@ function sampleNoise(rng: SamplerRng, seed: number): unknown {
 			"diagonal",
 			"king"
 		] as const);
-		raw.movement = { adjacency, range: 1 };
+		// Occasionally sample sliding range on rectangle junk/reach_row.
+		const range = rng() > 0.65 ? int(rng, 2, 4) : 1;
+		raw.movement = { adjacency, range };
 		raw.objective = {
 			mode: "reach_row",
 			targetRows: { X: 0, O: height - 1 }

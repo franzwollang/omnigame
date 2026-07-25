@@ -1694,6 +1694,46 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"slide-race": definePreset({
+		id: "slide-race",
+		name: "Slide Race",
+		tags: ["move", "slide", "range", "reach-row", "5x5", "mechanism"],
+		description:
+			"Orthogonal rook-style slide race: pieces may travel multiple empty cells along a ray (range 4). Unlocks movement.range > 1 — blocker-aware sliding that range-1 adjacency cannot express.",
+		config: {
+			metadata: { name: "Slide Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "slider-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "slider-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"life-lite": definePreset({
 		id: "life-lite",
 		name: "Life Lite",
