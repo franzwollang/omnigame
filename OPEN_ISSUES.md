@@ -8,16 +8,17 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-**Multi-step turns** landed — `turn.actionsPerTurn` + `GameState.actionsRemaining`
-+ Double Move TTT preset + tests. Classic alternating (`actionsPerTurn` omitted/1)
-unchanged. Pick the **next smallest** unlock the engine still lacks — not another
-recombination of covered primitives (see project-structure selection principle).
+**Delayed (queued) place** landed — `placement.delayTurns` +
+`GameState.pendingPlaces` + Delayed TTT preset + tests. Immediate place
+(`delayTurns` omitted/0) unchanged. Pick the **next smallest** unlock the
+engine still lacks — not another recombination of covered primitives (see
+project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- delayed (queued) actions — intent vs resolve over time
 - hidden simultaneous (commit then reveal)
 - hex/graph simultaneous (extend beyond rectangle foothold)
+- delayed + gravity / multi-step composition (only if a new seam appears)
 
 **Acceptance:**
 
@@ -50,5 +51,6 @@ or be closed after the next agent green run on cloud.
 M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties,
 graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
 simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
-hex wrap, simultaneous schedule, and multi-step `actionsPerTurn` also landed.
-Further ports only when a **new** missing mechanism appears — not a backlog.
+hex wrap, simultaneous schedule, multi-step `actionsPerTurn`, and delayed
+`delayTurns` also landed. Further ports only when a **new** missing mechanism
+appears — not a backlog.

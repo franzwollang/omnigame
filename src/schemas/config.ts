@@ -137,7 +137,13 @@ export const zConfig = z
 						"pop_out_left",
 						"pop_out_right"
 					])
-					.default("reject")
+					.default("reject"),
+				/**
+				 * Delayed (queued) place: intent lands after this many intervening
+				 * successful places (0 = immediate). Foothold: rectangle cell
+				 * n-in-a-row direct alternating only.
+				 */
+				delayTurns: z.number().int().min(0).max(8).optional()
 			})
 			.strict()
 			.default({ mode: "direct" as const, overflow: "reject" as const }),
@@ -262,6 +268,8 @@ export const zConfig = z
 		const simultaneous = cfg.turn.schedule === "simultaneous";
 		const actionsPerTurn = cfg.turn.actionsPerTurn ?? 1;
 		const multiStep = actionsPerTurn > 1;
+		const delayTurns = cfg.placement.delayTurns ?? 0;
+		const delayedPlace = delayTurns > 0;
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
 		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
@@ -647,6 +655,14 @@ export const zConfig = z
 						"actionsPerTurn > 1 requires turn.schedule = 'alternating' (not simultaneous)"
 				});
 			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message:
+						"placement.delayTurns > 0 requires turn.schedule = 'alternating' (not simultaneous)"
+				});
+			}
 		}
 
 		// Multi-step turns foothold (actionsPerTurn > 1 on alternating)
@@ -715,6 +731,87 @@ export const zConfig = z
 					path: ["grid", "topology"],
 					message:
 						"actionsPerTurn foothold requires topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message:
+						"actionsPerTurn > 1 is incompatible with placement.delayTurns > 0"
+				});
+			}
+		}
+
+		// Delayed (queued) place foothold (delayTurns > 0)
+		if (delayedPlace) {
+			if (cfg.turn.schedule !== "alternating") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message:
+						"placement.delayTurns > 0 requires turn.schedule = 'alternating'"
+				});
+			}
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message:
+						"placement.delayTurns > 0 requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "placement.delayTurns > 0 requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"placement.delayTurns > 0 requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"placement.delayTurns > 0 is incompatible with hit_miss observation"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"placement.delayTurns > 0 is incompatible with fog observation"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "placement.delayTurns > 0 is incompatible with move input"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "placement.delayTurns > 0 is incompatible with fleet placement"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"placement.delayTurns foothold requires topology = 'rectangle' (hex/graph deferred)"
 				});
 			}
 		}

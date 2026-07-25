@@ -6,7 +6,8 @@ import type {
 	Position,
 	Player,
 	CellValue,
-	Grid
+	Grid,
+	PendingPlace
 } from "./types";
 import { getCell, setCell, toIndex } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
@@ -98,6 +99,11 @@ export type GameConfig = {
 	 * When > 1, GameState.actionsRemaining tracks the remaining budget.
 	 */
 	actionsPerTurn?: number;
+	/**
+	 * Delayed place: intervening successful places before a queued intent
+	 * materializes. 0 / omitted = immediate place.
+	 */
+	delayTurns?: number;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -126,6 +132,45 @@ function resolveKoRule(config: GameConfig): KoRule {
 function resolveActionsPerTurn(config: GameConfig): number {
 	const n = config.actionsPerTurn ?? 1;
 	return n < 1 ? 1 : n;
+}
+
+function resolveDelayTurns(config: GameConfig): number {
+	const n = config.delayTurns ?? 0;
+	return n < 0 ? 0 : n;
+}
+
+function isPendingReserved(
+	pending: PendingPlace[] | undefined,
+	pos: Position
+): boolean {
+	return (pending ?? []).some(
+		(p) => p.position.row === pos.row && p.position.col === pos.col
+	);
+}
+
+function countFreeCells(
+	cells: CellValue[],
+	pending: PendingPlace[],
+	grid: Grid,
+	config: GameConfig
+): number {
+	const topology = config.topology ?? "rectangle";
+	let free = 0;
+	if (topology === "graph" && config.graph) {
+		for (const pos of config.graph.active) {
+			const idx = toIndex(pos, grid.width);
+			if (cells[idx] === null && !isPendingReserved(pending, pos)) free += 1;
+		}
+		return free;
+	}
+	for (let row = 0; row < grid.height; row++) {
+		for (let col = 0; col < grid.width; col++) {
+			const pos = { row, col };
+			const idx = toIndex(pos, grid.width);
+			if (cells[idx] === null && !isPendingReserved(pending, pos)) free += 1;
+		}
+	}
+	return free;
 }
 
 /**
@@ -644,6 +689,11 @@ function handlePlace(
 	// Guard: cell must be empty
 	if (getCell(state.grid, pos) !== null) return state;
 
+	const delayTurns = resolveDelayTurns(config);
+	if (delayTurns > 0) {
+		return handleDelayedPlace(state, pos, config, delayTurns);
+	}
+
 	const captureMode = config.captureMode ?? "flip";
 	const libertyMode =
 		Boolean(config.captureEnabled) && captureMode === "liberties";
@@ -783,6 +833,104 @@ function handlePlace(
 		moveCount: newMoveCount,
 		koPoint: nextKoPoint,
 		positionHistory: nextHistory
+	};
+}
+
+/**
+ * Delayed place: queue an intent now; materialize after `delayTurns` more places.
+ * Pending cells are reserved. When no free cells remain, flush remaining pending.
+ */
+function handleDelayedPlace(
+	state: GameState,
+	pos: Position,
+	config: GameConfig,
+	delayTurns: number
+): GameState {
+	if (isPendingReserved(state.pendingPlaces, pos)) return state;
+
+	const wrap = config.gridWrap === true;
+	const topology = config.topology ?? "rectangle";
+	const newMoveCount = state.moveCount + 1;
+	let pending: PendingPlace[] = [
+		...(state.pendingPlaces ?? []),
+		{
+			player: state.currentPlayer,
+			position: { row: pos.row, col: pos.col },
+			resolveAt: newMoveCount + delayTurns
+		}
+	];
+	let cells = [...state.grid.cells];
+	const resolvedOrder: Player[] = [];
+
+	const materializeDue = (forceAll: boolean) => {
+		const keep: PendingPlace[] = [];
+		for (const p of pending) {
+			if (forceAll || p.resolveAt <= newMoveCount) {
+				const idx = toIndex(p.position, state.grid.width);
+				if (cells[idx] === null) {
+					cells[idx] = p.player;
+					resolvedOrder.push(p.player);
+				}
+				// else fizzle (should not happen under reservation)
+			} else {
+				keep.push(p);
+			}
+		}
+		pending = keep;
+	};
+
+	materializeDue(false);
+
+	// Deadlock avoidance: if every cell is occupied or reserved, flush pending now
+	if (
+		countFreeCells(cells, pending, state.grid, config) === 0 &&
+		pending.length > 0
+	) {
+		materializeDue(true);
+	}
+
+	const newGrid: Grid = { ...state.grid, cells };
+
+	for (const player of resolvedOrder) {
+		const won = checkWinner(
+			newGrid,
+			player,
+			config.winLength,
+			config.adjacency,
+			topology,
+			config.graph,
+			wrap
+		);
+		if (won) {
+			return {
+				...state,
+				grid: newGrid,
+				pendingPlaces: pending.length > 0 ? pending : undefined,
+				status: "won",
+				winner: player,
+				moveCount: newMoveCount
+			};
+		}
+	}
+
+	if (isBoardFull(newGrid, config) && pending.length === 0) {
+		return {
+			...state,
+			grid: newGrid,
+			pendingPlaces: undefined,
+			status: "draw",
+			moveCount: newMoveCount
+		};
+	}
+
+	const turn = withTurnAdvanced(state, config);
+	return {
+		...state,
+		grid: newGrid,
+		pendingPlaces: pending.length > 0 ? pending : undefined,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		moveCount: newMoveCount
 	};
 }
 

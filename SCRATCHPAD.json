@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-07-25T10:40-05:00",
-  "turn": 12,
+  "updated_at": "2026-07-25T10:55-05:00",
+  "turn": 13,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Hand off after multi-step actionsPerTurn"
+    "goal": "Hand off after delayed place delayTurns"
   },
   "recent": [
-    "Synced d670 simultaneous onto b103",
-    "Landed turn.actionsPerTurn + Double Move TTT",
-    "actionsRemaining budget; win mid-turn; tests"
+    "Synced b103 multi-step tip onto b7a6",
+    "Landed placement.delayTurns + Delayed TTT",
+    "pendingPlaces queue/resolve + reserve + flush"
   ],
   "discoveries": [
-    "Multi-step = alternating budget; not a new schedule slot",
-    "Illegal place leaves actionsRemaining unchanged"
+    "delayTurns = intervening places before materialize",
+    "Flush pending when no free cells avoids deadlock"
   ],
   "open_threads": [
     "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: pick delayed-actions or hidden simultaneous",
+  "next_step": "Cloud agent: pick hidden simultaneous or hex/graph simultaneous",
   "blockers": []
 }

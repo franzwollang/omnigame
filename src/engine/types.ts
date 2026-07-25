@@ -17,6 +17,14 @@ export type GameStatus = "playing" | "won" | "draw";
 /** hit_miss: placement = lay fleet; combat = fire. Other modes omit / combat. */
 export type GamePhase = "placement" | "combat";
 
+/** Queued place intent for delayed placement (`placement.delayTurns` > 0). */
+export type PendingPlace = {
+	player: Player;
+	position: Position;
+	/** Absolute `moveCount` at which this place materializes. */
+	resolveAt: number;
+};
+
 export type GameState = {
 	/** Public board (placements or shot results). */
 	grid: Grid;
@@ -31,6 +39,11 @@ export type GameState = {
 	 * Present when `actionsPerTurn > 1`; decremented on success; reset on handoff.
 	 */
 	actionsRemaining?: number;
+	/**
+	 * Delayed places: queued intents that materialize after intervening places.
+	 * Cells in this list are reserved (illegal to place on) until resolved/fizzled.
+	 */
+	pendingPlaces?: PendingPlace[];
 	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */
 	consecutivePasses?: number;
 	/**

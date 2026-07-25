@@ -104,6 +104,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
 		features.push(Contracts.ScheduleMultiStep());
 	}
+	if ((cfg.placement.delayTurns ?? 0) > 0) {
+		features.push(Contracts.PlacementDelayed());
+	}
 
 	return features;
 }

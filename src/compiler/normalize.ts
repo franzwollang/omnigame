@@ -62,6 +62,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		objectiveMode: config.objective.mode,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
+		delayTurns: config.placement.delayTurns ?? 0,
 		scheduler: config.scheduler
 			? {
 					rules: config.scheduler.rules,
@@ -103,6 +104,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	objectiveMode: "n_in_a_row",
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
+	delayTurns: 0,
 	initial: []
 };
 

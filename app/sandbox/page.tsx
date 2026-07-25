@@ -383,6 +383,10 @@ export default function GamePage() {
 											gameState.actionsRemaining != null
 												? ` · ${gameState.actionsRemaining} left`
 												: ""
+										}${
+											(gameState.pendingPlaces?.length ?? 0) > 0
+												? ` · ${gameState.pendingPlaces!.length} pending`
+												: ""
 										}`
 								: ""}
 						</p>

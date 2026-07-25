@@ -201,7 +201,8 @@ function isNoop(before: GameState, after: GameState): boolean {
 		before.status === after.status &&
 		(before.phase ?? "combat") === (after.phase ?? "combat") &&
 		before.grid.cells === after.grid.cells &&
-		before.hidden?.cells === after.hidden?.cells
+		before.hidden?.cells === after.hidden?.cells &&
+		before.pendingPlaces === after.pendingPlaces
 	);
 }
 
@@ -540,6 +541,13 @@ function placeFailureReason(
 	const topology = config.topology ?? "rectangle";
 	if (!isActivePosition(pos, topology, config.graph)) return "not_applicable";
 	if (getCell(state.grid, pos) !== null) return "cell_occupied";
+	if (
+		(state.pendingPlaces ?? []).some(
+			(p) => p.position.row === pos.row && p.position.col === pos.col
+		)
+	) {
+		return "cell_occupied";
+	}
 	if (!config.captureEnabled) return null;
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";

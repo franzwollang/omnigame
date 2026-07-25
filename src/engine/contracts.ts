@@ -299,6 +299,18 @@ export const Contracts = {
 		hooks: ["nextTurn"],
 		invariants: ["actionsPerTurnBudgetBeforeHandoff"]
 	}),
+	/**
+	 * Delayed (queued) place: intent is recorded now; stone materializes after
+	 * delayTurns intervening places. Keeps PlacementPolicy = direct.
+	 */
+	PlacementDelayed: (): FeatureContract => ({
+		id: "PlacementDelayed",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["applyPlacement", "applyEffects"],
+		invariants: ["intentBeforeResolve", "pendingCellsReserved"]
+	}),
 	TopologyHex: (): FeatureContract => ({
 		id: "TopologyHex",
 		requires: ["CellsWritable"],

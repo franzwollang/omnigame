@@ -198,9 +198,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								</div>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								Wrap edges and realtime turns are deferred. Use
-								manual_tick + Life Lite, simultaneous joint place, or
-								actionsPerTurn for multi-step alternating turns.
+								manual_tick + Life Lite, simultaneous joint place,
+								actionsPerTurn for multi-step, or delayTurns for queued
+								places.
 							</p>
 							<FormField
 								control={form.control}
@@ -280,6 +280,34 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<p className="text-xs text-muted-foreground">
 											&gt;1 keeps the current player until the budget is
 											spent (alternating + cell + n-in-a-row only).
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="placement.delayTurns"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Place delay (turns)</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												min={0}
+												max={8}
+												value={field.value ?? 0}
+												onChange={(e) => {
+													const n = Number(e.target.value);
+													field.onChange(
+														Number.isFinite(n) && n >= 0 ? n : 0
+													);
+												}}
+											/>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											&gt;0 queues the place; stone lands after that many
+											intervening places (cell reserved meanwhile).
 										</p>
 										<FormMessage />
 									</FormItem>

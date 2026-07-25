@@ -140,6 +140,47 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"delayed-ttt": definePreset({
+		id: "delayed-ttt",
+		name: "Delayed TTT",
+		tags: ["delayed", "queue", "delayTurns", "3x3", "n-in-a-row", "mechanism"],
+		description:
+			"Places queue as intents and land after one intervening place. Pending cells are reserved. Unlocks placement.delayTurns.",
+		config: {
+			metadata: { name: "Delayed TTT", version: 1 },
+			grid: { width: 3, height: 3, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			tokens: [
+				{
+					id: "X",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "O",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject", delayTurns: 1 },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	"toroidal-ttt": definePreset({
 		id: "toroidal-ttt",
 		name: "Toroidal TTT",

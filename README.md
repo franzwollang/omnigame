@@ -58,6 +58,7 @@ These are built from the same shared schema and operators.
 - **Toroidal TTT** (`grid.wrap` rectangle)
 - **Simultaneous TTT** (`turn.schedule = simultaneous` joint place; same-cell conflict)
 - **Double Move TTT** (`turn.actionsPerTurn = 2` multi-step budget before handoff)
+- **Delayed TTT** (`placement.delayTurns = 1` queued place; pending cells reserved)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -114,6 +115,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
   - overflow: `reject` | `pop_out_bottom` | `pop_out_top` | `pop_out_left` |
     `pop_out_right` (paired with gravity direction; horizontal uses `popOutRow`)
+  - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT)
 - **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating (Double Move TTT)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
@@ -125,9 +127,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, delayed (queued)
-actions, hidden/hex/graph simultaneous, and a larger set of reusable
-operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, hidden/hex/graph
+simultaneous, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 

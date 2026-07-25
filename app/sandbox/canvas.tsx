@@ -725,6 +725,71 @@ export default function SandboxCanvas({
 			}
 		});
 
+		// Delayed-place intents: faint ghost marks on reserved pending cells
+		for (const pending of gameState.pendingPlaces ?? []) {
+			const { row, col } = pending.position;
+			const { x, y } = cellWorldPos(
+				row,
+				col,
+				gridWidth,
+				gridHeight,
+				topology,
+				cellSize,
+				totalCellSize,
+				graph
+			);
+			const color = pending.player === "X" ? 0x64748b : 0xf87171;
+			if (pending.player === "X") {
+				const material = new THREE.LineBasicMaterial({
+					color,
+					linewidth: 1,
+					transparent: true,
+					opacity: 0.45
+				});
+				const points1 = [
+					new THREE.Vector3(x - cellSize * 0.25, y + cellSize * 0.25, 0.002),
+					new THREE.Vector3(x + cellSize * 0.25, y - cellSize * 0.25, 0.002)
+				];
+				const points2 = [
+					new THREE.Vector3(x + cellSize * 0.25, y + cellSize * 0.25, 0.002),
+					new THREE.Vector3(x - cellSize * 0.25, y - cellSize * 0.25, 0.002)
+				];
+				marksGroup.add(
+					new THREE.Line(
+						new THREE.BufferGeometry().setFromPoints(points1),
+						material
+					),
+					new THREE.Line(
+						new THREE.BufferGeometry().setFromPoints(points2),
+						material.clone()
+					)
+				);
+			} else {
+				const curve = new THREE.EllipseCurve(
+					x,
+					y,
+					cellSize * 0.28,
+					cellSize * 0.28,
+					0,
+					2 * Math.PI,
+					false,
+					0
+				);
+				const geometry = new THREE.BufferGeometry().setFromPoints(
+					curve.getPoints(24)
+				);
+				const material = new THREE.LineBasicMaterial({
+					color,
+					linewidth: 1,
+					transparent: true,
+					opacity: 0.45
+				});
+				const circle = new THREE.Line(geometry, material);
+				circle.position.z = 0.002;
+				marksGroup.add(circle);
+			}
+		}
+
 		// Draw token placements (images if provided)
 		placements.forEach((p) => {
 			const token = tokenById.get(p.tokenId);
@@ -782,6 +847,7 @@ export default function SandboxCanvas({
 		gameState.grid.cells,
 		gameState.grid.width,
 		gameState.grid.height,
+		gameState.pendingPlaces,
 		tokens,
 		placements,
 		enablePopOutButtons,
