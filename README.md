@@ -105,12 +105,12 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Fog Connect Lite presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
-- **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/tiny MCTS/UCT)
+- **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
-- **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync`), including UCT tree search
+- **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs, scores playability (compile → opening legality → random playout), sandbox Library modal loads playable finds
 
-What’s **roadmap**, not fully realized yet: placement-phase / multi-ship Battleship depth, ko/full Go rules, deeper library search UX / hit-miss-aware agents, and a larger set of reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: placement-phase / multi-ship Battleship depth, ko/full Go rules, deeper library search UX, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -308,6 +308,7 @@ Baseline agents (enough to prove the ABI):
 
 - random legal
 - greedy 1-ply (win / block / heuristics)
+- hunt (hit/miss observe → target after hits, parity search)
 - tiny flat MCTS
 - UCT tree search (UCB1 + optional tree reuse)
 
@@ -342,7 +343,7 @@ Near-term milestones:
 - **Library explorer foothold**: sample/classify playable vs noise; load finds into sandbox
 - **Anchor games**: mechanism-first ports only — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
-- **Baseline agents**: random/greedy/tiny MCTS/UCT on kernel only; hit/miss-aware bots still open
+- **Baseline agents**: random/greedy/hunt/tiny MCTS/UCT on kernel only; hunt uses `observe` for hit/miss
 
 Future features include camera/perspective modes, richer multi-entity interactions, schema-driven UI generation (richer controls, constraints), and 3D functionality once the 2D path is stable.
 

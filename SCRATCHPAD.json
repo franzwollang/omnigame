@@ -1,15 +1,15 @@
 {
-  "updated_at": "2026-07-25T05:25-05:00",
-  "turn": 18,
+  "updated_at": "2026-07-25T05:45-05:00",
+  "turn": 19,
   "focus": {
     "milestone": "post-M7",
-    "issue": "hit-miss-aware-agents",
-    "goal": "Observation-aware fire agent for Battleship-lite"
+    "issue": "observation-placement-phase",
+    "goal": "Placement-phase / multi-ship Battleship depth"
   },
   "recent": [
-    "Synced 23ff onto b701",
-    "Fog radius: observation.mode=fog + Fog Connect Lite",
-    "Sandbox consumes observation.visible as fog mask"
+    "Synced b701 onto 4234",
+    "Hunt agent: observe-based fire (target + parity)",
+    "MCTS/UCT hit_miss delegates to hunt; sandbox option"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
@@ -17,8 +17,8 @@
     "Fog bootstrap: full vision until player has own pieces"
   ],
   "open_threads": [
-    "Next: hit-miss-aware agent or placement-phase Battleship"
+    "Next: placement-phase Battleship or library-explorer-depth"
   ],
-  "next_step": "Implement hit/miss-aware agent using kernel.observe (hunt after hits)",
+  "next_step": "Schema + kernel placement phase / multi-ship for Battleship depth",
   "blockers": []
 }

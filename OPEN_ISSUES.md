@@ -6,22 +6,10 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ## Immediate (post-M7)
 
-### hit-miss-aware-agents
-
-UCT landed for full-info games. Hit/miss configs still fall back to uniform
-random inside MCTS/UCT. Optional: a baseline that uses `kernel.observe` (hunt
-mode after hits, parity shooting, etc.).
-
-**Acceptance:**
-
-- [ ] Agent uses observations (not full hidden fleet) to choose `fire` actions
-- [ ] Kernel-only (`legalActions` + `stepSync` + `observe`)
-- [ ] Smoke test on Battleship-lite
-
 ### observation-placement-phase
 
-Fog radius landed (`observation.mode = fog` + Fog Connect Lite). Remaining
-Battleship depth: placement-phase / multi-ship authoring if still desired.
+Fog radius and hit/miss hunt agent landed. Remaining Battleship depth:
+placement-phase / multi-ship authoring if still desired.
 
 **Acceptance:**
 

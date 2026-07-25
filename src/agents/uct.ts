@@ -13,6 +13,7 @@ import type {
 import { playerOf } from "@/engine/kernel";
 import { mulberry32 } from "@/engine/rng";
 import type { Agent } from "@/agents/types";
+import { createHuntAgent } from "@/agents/hunt";
 
 const DEFAULT_SIMULATIONS = 80;
 const DEFAULT_DEPTH_LIMIT = 32;
@@ -215,8 +216,8 @@ export type UctOptions = {
 
 /**
  * UCT (UCB1) Monte Carlo tree search over `kernel.legalActions` / `stepSync`.
- * Skips partial-info hit/miss configs (uniform random among legal) — same
- * honesty boundary as the flat MCTS foothold.
+ * On hit/miss configs, delegates to the observation hunt agent (no hidden
+ * fleet rollouts under partial information).
  */
 export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 	const simulations = opts?.simulations ?? DEFAULT_SIMULATIONS;
@@ -225,20 +226,22 @@ export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 	const reuseTree = opts?.reuseTree ?? true;
 	let next = mulberry32(seed >>> 0);
 	let priorRoot: UctNode | null = null;
+	const hunt = createHuntAgent(seed);
 
 	return {
 		kind: "uct",
 		reset(s: Seed) {
 			next = mulberry32(s >>> 0);
 			priorRoot = null;
+			hunt.reset(s);
 		},
 		act(kernel: GameKernel, state: GameState, player: PlayerId): KernelAction | null {
 			const legal = kernel.legalActions(state, player);
 			if (legal.length === 0) return null;
 
 			if ((kernel.config.observationMode ?? "full") === "hit_miss") {
-				const idx = Math.floor(next() * legal.length);
-				return cloneAction(legal[Math.min(idx, legal.length - 1)]!);
+				const pick = hunt.act(kernel, state, player);
+				return pick ? cloneAction(pick) : null;
 			}
 
 			// One-move win: take immediately (same as greedy / flat MCTS).

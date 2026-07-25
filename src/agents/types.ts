@@ -9,7 +9,7 @@ import type {
 	Seed
 } from "@/engine/kernel";
 
-export type AgentKind = "random" | "greedy" | "mcts" | "uct";
+export type AgentKind = "random" | "greedy" | "mcts" | "uct" | "hunt";
 
 export type Agent = {
 	readonly kind: AgentKind;

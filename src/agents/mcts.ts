@@ -8,6 +8,7 @@ import type {
 import { playerOf } from "@/engine/kernel";
 import { mulberry32 } from "@/engine/rng";
 import type { Agent } from "@/agents/types";
+import { createHuntAgent } from "@/agents/hunt";
 
 function cloneAction(action: KernelAction): KernelAction {
 	return structuredClone(action);
@@ -39,8 +40,8 @@ function rolloutValue(
 
 /**
  * Tiny flat MCTS-ish: for each legal root action, run N random rollouts via
- * `kernel.stepSync` and pick the best mean score. Skips hit/miss partial-info
- * configs (returns first legal action) — full observation only.
+ * `kernel.stepSync` and pick the best mean score. On hit/miss configs, delegates
+ * to the observation hunt agent (no hidden-fleet rollouts).
  */
 export function createTinyMctsAgent(
 	seed: Seed = 0,
@@ -49,19 +50,21 @@ export function createTinyMctsAgent(
 	const rolloutsPerAction = opts?.rolloutsPerAction ?? 12;
 	const depthLimit = opts?.depthLimit ?? 24;
 	let next = mulberry32(seed >>> 0);
+	const hunt = createHuntAgent(seed);
 
 	return {
 		kind: "mcts",
 		reset(s: Seed) {
 			next = mulberry32(s >>> 0);
+			hunt.reset(s);
 		},
 		act(kernel: GameKernel, state: GameState, player: PlayerId): KernelAction | null {
 			const legal = kernel.legalActions(state, player);
 			if (legal.length === 0) return null;
 
 			if ((kernel.config.observationMode ?? "full") === "hit_miss") {
-				const idx = Math.floor(next() * legal.length);
-				return cloneAction(legal[Math.min(idx, legal.length - 1)]!);
+				const pick = hunt.act(kernel, state, player);
+				return pick ? cloneAction(pick) : null;
 			}
 
 			let best = legal[0]!;

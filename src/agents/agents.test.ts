@@ -3,11 +3,14 @@ import { compileConfig } from "@/compiler";
 import {
 	createAgent,
 	createGreedyAgent,
+	createHuntAgent,
 	createRandomAgent,
-	createUctAgent
+	createUctAgent,
+	pickHuntFireAction
 } from "@/agents";
 import { examplePresets } from "@/presets/registry";
 import type { KernelAction } from "@/engine/kernel";
+import type { CellValue } from "@/engine/types";
 
 describe("kernel agents (M6)", () => {
 	it("random agent only picks from legalActions", () => {
@@ -57,6 +60,7 @@ describe("kernel agents (M6)", () => {
 	it("createAgent factory returns requested kind", () => {
 		expect(createAgent("random").kind).toBe("random");
 		expect(createAgent("greedy").kind).toBe("greedy");
+		expect(createAgent("hunt").kind).toBe("hunt");
 		expect(createAgent("mcts").kind).toBe("mcts");
 		expect(createAgent("uct").kind).toBe("uct");
 	});
@@ -154,5 +158,147 @@ describe("kernel agents (M6)", () => {
 		const agent = createGreedyAgent();
 		const pick = agent.act(kernel, state, 1);
 		expect(pick).toEqual({ type: "place", position: { row: 0, col: 2 } });
+	});
+
+	it("hunt picker targets orthogonal neighbors after a hit", () => {
+		const width = 5;
+		const height = 5;
+		const cells: CellValue[] = Array(width * height).fill(null);
+		cells[4 * width + 4] = "hit";
+		const legal: KernelAction[] = [
+			{ type: "fire", position: { row: 0, col: 0 } },
+			{ type: "fire", position: { row: 3, col: 4 } },
+			{ type: "fire", position: { row: 4, col: 3 } },
+			{ type: "fire", position: { row: 2, col: 2 } }
+		];
+		const next = () => 0; // always first of preferred pool
+		const pick = pickHuntFireAction(cells, width, height, legal, next);
+		expect(pick?.type).toBe("fire");
+		expect(
+			pick &&
+				pick.type === "fire" &&
+				((pick.position.row === 3 && pick.position.col === 4) ||
+					(pick.position.row === 4 && pick.position.col === 3))
+		).toBe(true);
+	});
+
+	it("hunt picker extends a line of hits before other neighbors", () => {
+		const width = 5;
+		const height = 5;
+		const cells: CellValue[] = Array(width * height).fill(null);
+		cells[4 * width + 3] = "hit";
+		cells[4 * width + 4] = "hit";
+		const legal: KernelAction[] = [
+			{ type: "fire", position: { row: 4, col: 2 } }, // line extension
+			{ type: "fire", position: { row: 3, col: 4 } }, // mere neighbor
+			{ type: "fire", position: { row: 0, col: 0 } }
+		];
+		const pick = pickHuntFireAction(cells, width, height, legal, () => 0);
+		expect(pick).toEqual({ type: "fire", position: { row: 4, col: 2 } });
+	});
+
+	it("hunt agent fires only legal cells on Battleship-lite and hunts after hit", () => {
+		const { kernel } = compileConfig(
+			examplePresets["battleship-lite"].config
+		);
+		let state = kernel.initialState(42);
+		const agent = createHuntAgent(42);
+
+		// First shot: any legal fire (parity search)
+		const first = agent.act(kernel, state, 0);
+		expect(first?.type).toBe("fire");
+		const openingLegal = kernel.legalActions(state, 0);
+		expect(
+			openingLegal.some(
+				(a) =>
+					a.type === "fire" &&
+					first!.type === "fire" &&
+					a.position.row === first!.position.row &&
+					a.position.col === first!.position.col
+			)
+		).toBe(true);
+
+		// Force a known hit so hunt mode is observable
+		state = kernel.stepSync(state, {
+			type: "fire",
+			position: { row: 4, col: 4 }
+		}).nextState;
+		expect(state.grid.cells[4 * 5 + 4]).toBe("hit");
+		// O replies somewhere harmless
+		state = kernel.stepSync(state, {
+			type: "fire",
+			position: { row: 2, col: 2 }
+		}).nextState;
+
+		const huntPick = agent.act(kernel, state, 0);
+		expect(huntPick?.type).toBe("fire");
+		if (huntPick?.type === "fire") {
+			const { row, col } = huntPick.position;
+			const orthoToHit =
+				(Math.abs(row - 4) === 1 && col === 4) ||
+				(row === 4 && Math.abs(col - 4) === 1);
+			expect(orthoToHit).toBe(true);
+			const stillLegal = kernel.legalActions(state, 0);
+			expect(
+				stillLegal.some(
+					(a) =>
+						a.type === "fire" &&
+						a.position.row === row &&
+						a.position.col === col
+				)
+			).toBe(true);
+		}
+	});
+
+	it("hunt agent completes a Battleship-lite playout via observe+legalActions", () => {
+		const { kernel } = compileConfig(
+			examplePresets["battleship-lite"].config
+		);
+		let state = kernel.initialState(7);
+		const x = createHuntAgent(7);
+		const o = createHuntAgent(99);
+		let guard = 0;
+		while (state.status === "playing" && guard < 40) {
+			const player = kernel.currentPlayer(state);
+			const agent = player === 0 ? x : o;
+			// Prove observe is available (agent uses it internally)
+			const obs = kernel.observe(state, player);
+			expect(obs.cells.length).toBe(25);
+			expect(obs.visible.every(Boolean)).toBe(true);
+			const action = agent.act(kernel, state, player);
+			expect(action).not.toBeNull();
+			expect(action!.type).toBe("fire");
+			state = kernel.stepSync(state, action!).nextState;
+			guard += 1;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner === "X" || state.winner === "O").toBe(true);
+	});
+
+	it("mcts/uct hit_miss path delegates to hunt (adjacent after hit)", () => {
+		const { kernel } = compileConfig(
+			examplePresets["battleship-lite"].config
+		);
+		let state = kernel.initialState();
+		state = kernel.stepSync(state, {
+			type: "fire",
+			position: { row: 4, col: 4 }
+		}).nextState;
+		state = kernel.stepSync(state, {
+			type: "fire",
+			position: { row: 1, col: 1 }
+		}).nextState;
+		for (const kind of ["mcts", "uct"] as const) {
+			const agent = createAgent(kind, 3);
+			const pick = agent.act(kernel, state, 0);
+			expect(pick?.type).toBe("fire");
+			if (pick?.type === "fire") {
+				const { row, col } = pick.position;
+				const orthoToHit =
+					(Math.abs(row - 4) === 1 && col === 4) ||
+					(row === 4 && Math.abs(col - 4) === 1);
+				expect(orthoToHit).toBe(true);
+			}
+		}
 	});
 });
