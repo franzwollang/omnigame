@@ -39,7 +39,11 @@ import {
 	usesPlacementPhase,
 	type FleetConfig
 } from "@/engine/fleet";
-import { canMove, type MovementConfig } from "@/engine/movement";
+import {
+	canMove,
+	movementBoardFrom,
+	type MovementConfig
+} from "@/engine/movement";
 import {
 	applyLifeStep,
 	type SchedulerConfig
@@ -799,12 +803,13 @@ function handleSimultaneousMove(
 	const movement = config.movement;
 	if (!movement) return state;
 
-	const wrap = config.gridWrap === true;
+	const board = movementBoardFrom(config);
+	const wrap = board.wrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
 
 	if (
-		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, wrap) ||
-		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, wrap)
+		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, board) ||
+		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, board)
 	) {
 		return state;
 	}
@@ -962,7 +967,7 @@ function handleMove(
 			to,
 			state.currentPlayer,
 			movement,
-			config.gridWrap === true
+			movementBoardFrom(config)
 		)
 	) {
 		return state;

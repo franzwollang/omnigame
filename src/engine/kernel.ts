@@ -30,7 +30,11 @@ import {
 	canPlaceFleetCell,
 	usesPlacementPhase
 } from "@/engine/fleet";
-import { canMove, legalDestinations } from "@/engine/movement";
+import {
+	canMove,
+	legalDestinations,
+	movementBoardFrom
+} from "@/engine/movement";
 import {
 	allActivePositions,
 	isActivePosition
@@ -478,15 +482,15 @@ function collectLegalActions(
 		if (inputMode === "move") {
 			const movement = config.movement;
 			if (!movement) return [];
-			const wrap = config.gridWrap === true;
+			const board = movementBoardFrom(config);
 			for (const from of allActivePositions(
 				state.grid,
 				config.topology ?? "rectangle",
 				config.graph
 			)) {
 				if (getCell(state.grid, from) !== acting) continue;
-				for (const to of legalDestinations(state.grid, from, movement, wrap)) {
-					if (canMove(state.grid, from, to, acting, movement, wrap)) {
+				for (const to of legalDestinations(state.grid, from, movement, board)) {
+					if (canMove(state.grid, from, to, acting, movement, board)) {
 						actions.push({ type: "move", from, to });
 					}
 				}
@@ -619,16 +623,16 @@ function collectLegalActions(
 		if (phase === "move") {
 			const movement = config.movement;
 			if (!movement) return actions;
-			const wrap = config.gridWrap === true;
+			const board = movementBoardFrom(config);
 			for (const from of allActivePositions(
 				state.grid,
 				config.topology ?? "rectangle",
 				config.graph
 			)) {
 				if (getCell(state.grid, from) !== state.currentPlayer) continue;
-				for (const to of legalDestinations(state.grid, from, movement, wrap)) {
+				for (const to of legalDestinations(state.grid, from, movement, board)) {
 					if (
-						canMove(state.grid, from, to, state.currentPlayer, movement, wrap)
+						canMove(state.grid, from, to, state.currentPlayer, movement, board)
 					) {
 						actions.push({ type: "move", from, to });
 					}
@@ -642,16 +646,16 @@ function collectLegalActions(
 	if (inputMode === "move") {
 		const movement = config.movement;
 		if (!movement) return actions;
-		const wrap = config.gridWrap === true;
+		const board = movementBoardFrom(config);
 		for (const from of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
 			config.graph
 		)) {
 			if (getCell(state.grid, from) !== state.currentPlayer) continue;
-			for (const to of legalDestinations(state.grid, from, movement, wrap)) {
+			for (const to of legalDestinations(state.grid, from, movement, board)) {
 				if (
-					canMove(state.grid, from, to, state.currentPlayer, movement, wrap)
+					canMove(state.grid, from, to, state.currentPlayer, movement, board)
 				) {
 					actions.push({ type: "move", from, to });
 				}
@@ -930,14 +934,14 @@ export function explainKernelAction(
 				detail: detailFor("mode_mismatch", action)
 			};
 		}
-		const wrap = config.gridWrap === true;
+		const board = movementBoardFrom(config);
 		const xOk = canMove(
 			state.grid,
 			action.moves.X.from,
 			action.moves.X.to,
 			"X",
 			movement,
-			wrap
+			board
 		);
 		const oOk = canMove(
 			state.grid,
@@ -945,7 +949,7 @@ export function explainKernelAction(
 			action.moves.O.to,
 			"O",
 			movement,
-			wrap
+			board
 		);
 		if (xOk && oOk) return { legal: true };
 		return {
@@ -1277,7 +1281,7 @@ export function explainKernelAction(
 					action.to,
 					acting,
 					config.movement,
-					config.gridWrap === true
+					movementBoardFrom(config)
 				)
 			) {
 				return {

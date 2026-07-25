@@ -256,9 +256,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											manual_tick needs scheduler + objective none;
 											simultaneous needs cell + n-in-a-row (joint place)
 											on rectangle/hex/graph, or move + reach_row (joint
-											move) on rectangle. Optional commitReveal hides
-											place picks until both commit; resolveOrder sets
-											same-cell / same-destination priority.
+											move) on rectangle/hex/graph. Optional commitReveal
+											hides place picks until both commit; resolveOrder
+											sets same-cell / same-destination priority.
 										</p>
 										<FormMessage />
 									</FormItem>

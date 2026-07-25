@@ -266,3 +266,27 @@ describe("Diagonal Step Race (diagonal adjacency + reach_row)", () => {
 		expect(badRange.success).toBe(false);
 	});
 });
+
+describe("Hex Step Race (topology-aware movement)", () => {
+	it("validates hex-step-race and lists hex neighbor destinations", () => {
+		const cfg = examplePresets["hex-step-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.inputMode).toBe("move");
+		const state = kernel.initialState();
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.every((a) => a.type === "move")).toBe(true);
+		expect(legal.some((a) => a.type === "move" && a.to.row === 3)).toBe(
+			true
+		);
+	});
+
+	it("rejects diagonal adjacency on hex move configs", () => {
+		const bad = zConfig.safeParse({
+			...examplePresets["hex-step-race"].config,
+			movement: { adjacency: "diagonal" as const, range: 1 as const }
+		});
+		expect(bad.success).toBe(false);
+	});
+});

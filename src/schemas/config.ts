@@ -110,7 +110,9 @@ export const zConfig = z
 			.default({ mode: "cell" as const }),
 		/**
 		 * Range-1 piece movement; required when input.mode = "move".
-		 * orthogonal | diagonal | king (both) — richer ranges deferred.
+		 * orthogonal | diagonal | king (both) on rectangle;
+		 * hex_offset / graph use topology neighbors (orthogonal only).
+		 * Richer ranges deferred.
 		 */
 		movement: z
 			.object({
@@ -397,21 +399,36 @@ export const zConfig = z
 			}
 		}
 
-		// Hex foothold: direct cell placement + n-in-a-row only (no gravity/column/move/tick/capture)
+		// Hex foothold: cell + n-in-a-row, or move + reach_row (topology-aware movement).
+		// No gravity/column/tick/capture on hex.
 		if (hexBoard) {
-			if (cfg.objective.mode !== "n_in_a_row") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message: "hex_offset requires objective.mode = 'n_in_a_row'"
-				});
-			}
-			if (cfg.input.mode !== "cell") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "hex_offset requires input.mode = 'cell'"
-				});
+			const hexMove = moveInput && reachRow;
+			if (hexMove) {
+				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "adjacency"],
+						message:
+							"hex_offset move requires movement.adjacency = 'orthogonal' (diagonal/king deferred)"
+					});
+				}
+			} else {
+				if (cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"hex_offset requires objective.mode = 'n_in_a_row' (or move + reach_row)"
+					});
+				}
+				if (cfg.input.mode !== "cell") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["input", "mode"],
+						message:
+							"hex_offset requires input.mode = 'cell' (or move + reach_row)"
+					});
+				}
 			}
 			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
@@ -435,16 +452,9 @@ export const zConfig = z
 					message: "hex_offset is incompatible with manual_tick"
 				});
 			}
-			if (moveInput) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "hex_offset is incompatible with move input"
-				});
-			}
 		}
 
-		// Graph foothold: explicit adjacency; same restricted surface as hex
+		// Graph foothold: explicit adjacency; cell + n-in-a-row, or move + reach_row.
 		if (graphBoard) {
 			if (!cfg.grid.nodes || cfg.grid.nodes.length < 2) {
 				ctx.addIssue({
@@ -460,19 +470,33 @@ export const zConfig = z
 					message: "graph topology requires grid.edges (≥ 1)"
 				});
 			}
-			if (cfg.objective.mode !== "n_in_a_row") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message: "graph requires objective.mode = 'n_in_a_row'"
-				});
-			}
-			if (cfg.input.mode !== "cell") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "graph requires input.mode = 'cell'"
-				});
+			const graphMove = moveInput && reachRow;
+			if (graphMove) {
+				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "adjacency"],
+						message:
+							"graph move requires movement.adjacency = 'orthogonal' (uses explicit edges)"
+					});
+				}
+			} else {
+				if (cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"graph requires objective.mode = 'n_in_a_row' (or move + reach_row)"
+					});
+				}
+				if (cfg.input.mode !== "cell") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["input", "mode"],
+						message:
+							"graph requires input.mode = 'cell' (or move + reach_row)"
+					});
+				}
 			}
 			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
@@ -493,13 +517,6 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "schedule"],
 					message: "graph is incompatible with manual_tick"
-				});
-			}
-			if (moveInput) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "graph is incompatible with move input"
 				});
 			}
 			if (cfg.win && cfg.win.adjacency.mode !== "composite") {
@@ -650,14 +667,7 @@ export const zConfig = z
 			}
 			if (simMove) {
 				// reach_row pairing enforced below with moveInput !== reachRow
-				if (cfg.grid.topology !== "rectangle") {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["grid", "topology"],
-						message:
-							"simultaneous move requires topology = 'rectangle' (hex/graph deferred)"
-					});
-				}
+				// Topology-aware movement: rectangle | hex_offset | graph
 				if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
@@ -707,7 +717,7 @@ export const zConfig = z
 			// Multi-action simultaneous place (actionsPerTurn > 1) is allowed on
 			// rectangle | hex_offset | graph — same topologies as single-action
 			// simultaneous place. Alternating multi-step uses the same topologies.
-			// Simultaneous move is single-action only (see above).
+			// Simultaneous move is single-action on rectangle | hex_offset | graph.
 		} else if (cfg.turn.commitReveal === true) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,

@@ -1438,6 +1438,160 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"simultaneous-hex-step-race": definePreset({
+		id: "simultaneous-hex-step-race",
+		name: "Simultaneous Hex Step Race",
+		tags: ["move", "reach-row", "simultaneous", "hex", "topology", "mechanism"],
+		description:
+			"Joint-move step race on odd-r hex: runners step along hex neighbors each round. Unlocks topology-aware movement + simultaneous move on hex_offset.",
+		config: {
+			metadata: { name: "Simultaneous Hex Step Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hex-runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"simultaneous-graph-step-race": definePreset({
+		id: "simultaneous-graph-step-race",
+		name: "Simultaneous Graph Step Race",
+		tags: [
+			"move",
+			"reach-row",
+			"simultaneous",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Joint-move race on two parallel graph lanes: steps follow explicit edges only. Unlocks topology-aware movement + simultaneous move on graph.",
+		config: {
+			metadata: { name: "Simultaneous Graph Step Race", version: 1 },
+			grid: {
+				width: 2,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"]
+				]
+			},
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 0, col: 1, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"hex-step-race": definePreset({
+		id: "hex-step-race",
+		name: "Hex Step Race",
+		tags: ["move", "reach-row", "hex", "topology", "mechanism"],
+		description:
+			"Alternating orthogonal step race on odd-r hex. Unlocks topology-aware movement (hex neighbors) beyond rectangle deltas.",
+		config: {
+			metadata: { name: "Hex Step Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hex-alt-runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-alt-runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"diagonal-step-race": definePreset({
 		id: "diagonal-step-race",
 		name: "Diagonal Step Race",
