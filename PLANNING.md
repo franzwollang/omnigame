@@ -16,7 +16,7 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Rectangle `grid.wrap` landed (Toroidal TTT).
+**Optimizing for this phase:** Gravity `direction: "up"` landed (Connect 4 Up).
 Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
