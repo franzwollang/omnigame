@@ -55,11 +55,11 @@ export type GameConfig = {
 	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column" | "move";
+	inputMode?: "cell" | "column" | "row" | "move";
 	placementMode?: "direct" | "gravity";
-	/** Vertical gravity axis. Left/right need row input — deferred. */
-	gravityDirection?: "down" | "up";
-	/** Bottom pop-out (Connect 4 Pop Out). `pop_out_top` deferred. */
+	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
+	gravityDirection?: "down" | "up" | "left" | "right";
+	/** Bottom pop-out (Connect 4 Pop Out). Top / horizontal pop-out deferred. */
 	overflow?: "reject" | "pop_out_bottom";
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
@@ -180,6 +180,8 @@ export function reduce(
 			return handleFire(state, event.position, config);
 		case "activateColumn":
 			return handleActivateColumn(state, event.col, config);
+		case "activateRow":
+			return handleActivateRow(state, event.row, config);
 		case "popOutColumn":
 			return handlePopOutColumn(state, event.col, config);
 		case "tick":
@@ -557,9 +559,10 @@ function handleActivateColumn(
 	if (col < 0 || col >= width) return state;
 
 	const direction = config.gravityDirection ?? "down";
+	if (direction !== "down" && direction !== "up") return state;
 
 	// Settle toward the gravity exit: down → first empty from bottom;
-	// up → first empty from top. Left/right deferred (need row input).
+	// up → first empty from top.
 	let targetRow = -1;
 	if (direction === "down") {
 		for (let row = height - 1; row >= 0; row--) {
@@ -582,6 +585,45 @@ function handleActivateColumn(
 	}
 
 	return handlePlace(state, { row: targetRow, col }, config);
+}
+
+function handleActivateRow(
+	state: GameState,
+	row: number,
+	config: GameConfig
+): GameState {
+	if (state.status !== "playing") return state;
+	const height = state.grid.height;
+	const width = state.grid.width;
+	if (row < 0 || row >= height) return state;
+
+	const direction = config.gravityDirection ?? "down";
+	if (direction !== "left" && direction !== "right") return state;
+
+	// Settle toward the gravity exit: right → first empty from right;
+	// left → first empty from left.
+	let targetCol = -1;
+	if (direction === "right") {
+		for (let col = width - 1; col >= 0; col--) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetCol = col;
+				break;
+			}
+		}
+	} else {
+		for (let col = 0; col < width; col++) {
+			if (getCell(state.grid, { row, col }) === null) {
+				targetCol = col;
+				break;
+			}
+		}
+	}
+	if (targetCol === -1) {
+		// Row full
+		return state;
+	}
+
+	return handlePlace(state, { row, col: targetCol }, config);
 }
 
 function handlePopOutColumn(

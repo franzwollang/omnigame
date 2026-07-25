@@ -66,6 +66,11 @@ export type ActivateColumnEvent = {
 	col: number;
 };
 
+export type ActivateRowEvent = {
+	type: "activateRow";
+	row: number;
+};
+
 export type PopOutColumnEvent = {
 	type: "popOutColumn";
 	col: number;
@@ -88,6 +93,7 @@ export type GameEvent =
 	| MoveEvent
 	| FireEvent
 	| ActivateColumnEvent
+	| ActivateRowEvent
 	| PopOutColumnEvent
 	| TickEvent
 	| PassEvent

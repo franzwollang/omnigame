@@ -142,6 +142,30 @@ describe("validateConfig", () => {
 		expect(result.errors.some((e) => e.includes("column"))).toBe(true);
 	});
 
+	it("surfaces Zod composition errors for row without gravity", () => {
+		const bad = {
+			...examplePresets["tic-tac-toe"].config,
+			input: { mode: "row" as const },
+			placement: { mode: "direct" as const, overflow: "reject" as const }
+		};
+		const result = validateConfig(bad);
+		expect(result.ok).toBe(false);
+		expect(result.errors.some((e) => e.includes("row"))).toBe(true);
+	});
+
+	it("wires InputTargetRow for row gravity configs", () => {
+		const ids = buildFeatureContracts(
+			examplePresets["connect-4-right"].config
+		).map((c) => c.id);
+		expect(ids).toEqual(
+			expect.arrayContaining([
+				"InputTargetRow",
+				"GravityAxis",
+				"PlacementGravity"
+			])
+		);
+	});
+
 	it("surfaces Zod composition errors for pop-out without gravity", () => {
 		const bad = {
 			...examplePresets["tic-tac-toe"].config,

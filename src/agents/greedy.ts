@@ -29,6 +29,10 @@ function centerBias(state: GameState, action: KernelAction): number {
 			col = action.col;
 			row = cy;
 			break;
+		case "activateRow":
+			row = action.row;
+			col = cx;
+			break;
 		default:
 			return 0;
 	}

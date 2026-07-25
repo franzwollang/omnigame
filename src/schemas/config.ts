@@ -66,8 +66,8 @@ export const zConfig = z
 		rng: z.object({ seed: z.number() }).strict(),
 		input: z
 			.object({
-				// move = piece relocation (select from → to); cell/column = placement
-				mode: z.enum(["cell", "column", "move"])
+				// move = piece relocation; cell/column/row = placement
+				mode: z.enum(["cell", "column", "row", "move"])
 			})
 			.strict()
 			.default({ mode: "cell" as const }),
@@ -85,8 +85,10 @@ export const zConfig = z
 				gravity: z
 					.object({
 						enabled: z.boolean().default(false),
-						// left/right need row input — deferred
-						direction: z.enum(["down", "up"]).default("down"),
+						// down|up ↔ column input; left|right ↔ row input
+						direction: z
+							.enum(["down", "up", "left", "right"])
+							.default("down"),
 						wrap: z.literal(false).default(false)
 					})
 					.optional(),
@@ -98,7 +100,7 @@ export const zConfig = z
 					})
 					.strict()
 					.optional(),
-				// pop_out_top deferred to M1+
+				// pop_out_top / horizontal pop-out deferred
 				overflow: z.enum(["reject", "pop_out_bottom"]).default("reject")
 			})
 			.strict()
@@ -512,7 +514,7 @@ export const zConfig = z
 			});
 		}
 
-		// column input requires gravity placement (mode or enabled sugar)
+		// column / row input require gravity placement (mode or enabled sugar)
 		if (cfg.input.mode === "column" && !gravityImplied) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
@@ -520,6 +522,51 @@ export const zConfig = z
 				message:
 					"input.mode = 'column' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
+		}
+		if (cfg.input.mode === "row" && !gravityImplied) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["input", "mode"],
+				message:
+					"input.mode = 'row' requires placement.mode = 'gravity' (or gravity.enabled)"
+			});
+		}
+
+		// Axis pairing: column ↔ vertical (down|up); row ↔ horizontal (left|right)
+		const gravityDir = cfg.placement.gravity?.direction ?? "down";
+		const verticalDir = gravityDir === "down" || gravityDir === "up";
+		const horizontalDir = gravityDir === "left" || gravityDir === "right";
+		if (gravityImplied && cfg.input.mode === "column" && horizontalDir) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "gravity", "direction"],
+				message:
+					"gravity direction 'left'/'right' requires input.mode = 'row' (column is vertical)"
+			});
+		}
+		if (gravityImplied && cfg.input.mode === "row" && verticalDir) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "gravity", "direction"],
+				message:
+					"gravity direction 'down'/'up' requires input.mode = 'column' (row is horizontal)"
+			});
+		}
+		if (
+			gravityImplied &&
+			cfg.input.mode === "cell" &&
+			(horizontalDir || verticalDir)
+		) {
+			// cell + gravity is allowed only for vertical historically? Prefer honesty:
+			// gravity always needs a line axis (column or row).
+			if (horizontalDir) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message:
+						"horizontal gravity (left/right) requires input.mode = 'row'"
+				});
+			}
 		}
 
 		// Move games: step pieces; pair with reach_row (Step Race foothold)
@@ -600,16 +647,17 @@ export const zConfig = z
 					"overflow !== 'reject' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
 		}
-		// pop_out_bottom is the exit-side symmetric to gravity down
+		// pop_out_bottom is the exit-side symmetric to gravity down only
 		if (
 			cfg.placement.overflow === "pop_out_bottom" &&
-			cfg.placement.gravity?.direction === "up"
+			cfg.placement.gravity?.direction !== undefined &&
+			cfg.placement.gravity.direction !== "down"
 		) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["placement", "overflow"],
 				message:
-					"overflow 'pop_out_bottom' requires gravity direction 'down' (pop_out_top deferred)"
+					"overflow 'pop_out_bottom' requires gravity direction 'down' (pop_out_top / horizontal pop-out deferred)"
 			});
 		}
 

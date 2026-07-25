@@ -78,15 +78,23 @@ function sampleNInARow(rng: SamplerRng, seed: number): ConfigInput {
 	return cfg;
 }
 
-/** Coherent gravity / column family (Connect-4-ish). */
+/** Coherent gravity / column-or-row family (Connect-4-ish). */
 function sampleGravity(rng: SamplerRng, seed: number): ConfigInput {
 	const width = int(rng, 4, 7);
 	const height = int(rng, 4, 6);
 	const length = int(rng, 3, Math.min(4, width, height));
-	const direction = rng() > 0.5 ? ("up" as const) : ("down" as const);
+	const axis = rng() > 0.5 ? ("vertical" as const) : ("horizontal" as const);
+	const direction =
+		axis === "vertical"
+			? rng() > 0.5
+				? ("up" as const)
+				: ("down" as const)
+			: rng() > 0.5
+				? ("left" as const)
+				: ("right" as const);
 	const cfg = baseMeta(`Sample gravity ${width}x${height}`, seed);
 	cfg.grid = { width, height, topology: "rectangle", wrap: false };
-	cfg.input = { mode: "column" };
+	cfg.input = { mode: axis === "vertical" ? "column" : "row" };
 	// pop_out_bottom only pairs with gravity down
 	const overflow =
 		direction === "down" && rng() > 0.7 ? "pop_out_bottom" : "reject";

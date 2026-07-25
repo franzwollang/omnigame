@@ -29,6 +29,8 @@ export function actionKey(action: KernelAction): string {
 			return `fire:${action.position.row},${action.position.col}`;
 		case "activateColumn":
 			return `col:${action.col}`;
+		case "activateRow":
+			return `row:${action.row}`;
 		case "popOutColumn":
 			return `pop:${action.col}`;
 		case "tick":

@@ -170,6 +170,13 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		[applyAction]
 	);
 
+	const activateRow = useCallback(
+		(row: number) => {
+			applyAction({ type: "activateRow", row });
+		},
+		[applyAction]
+	);
+
 	const popOutColumn = useCallback(
 		(col: number) => {
 			applyAction({ type: "popOutColumn", col });
@@ -259,6 +266,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		dispatchAction: applyAction,
 		placeMove,
 		activateColumn,
+		activateRow,
 		popOutColumn,
 		tick,
 		pass,

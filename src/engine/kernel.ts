@@ -40,6 +40,7 @@ export type KernelAction =
 	| { type: "move"; from: Position; to: Position }
 	| { type: "fire"; position: Position }
 	| { type: "activateColumn"; col: number }
+	| { type: "activateRow"; row: number }
 	| { type: "popOutColumn"; col: number }
 	| { type: "tick" }
 	| { type: "pass" };
@@ -53,6 +54,7 @@ export type IllegalReason =
 	| "suicide"
 	| "own_ship"
 	| "column_full"
+	| "row_full"
 	| "no_own_piece"
 	| "invalid_destination"
 	| "mode_mismatch"
@@ -131,6 +133,8 @@ function formatAction(action: KernelAction): string {
 			return `fire (${action.position.row},${action.position.col})`;
 		case "activateColumn":
 			return `column ${action.col}`;
+		case "activateRow":
+			return `row ${action.row}`;
 		case "popOutColumn":
 			return `pop-out ${action.col}`;
 		case "tick":
@@ -267,6 +271,17 @@ function columnHasSpace(
 	return getCell(state.grid, { row: entryRow, col }) === null;
 }
 
+function rowHasSpace(
+	state: GameState,
+	row: number,
+	direction: "left" | "right" = "right"
+): boolean {
+	// Entry side must be clear: left for right gravity, right for left.
+	const entryCol =
+		direction === "right" ? 0 : state.grid.width - 1;
+	return getCell(state.grid, { row, col: entryCol }) === null;
+}
+
 function canPlaceCell(
 	state: GameState,
 	pos: Position,
@@ -384,9 +399,20 @@ function collectLegalActions(
 
 	if (inputMode === "column") {
 		const direction = config.gravityDirection ?? "down";
+		const vertical =
+			direction === "down" || direction === "up" ? direction : "down";
 		for (let col = 0; col < state.grid.width; col++) {
-			if (columnHasSpace(state, col, direction)) {
+			if (columnHasSpace(state, col, vertical)) {
 				actions.push({ type: "activateColumn", col });
+			}
+		}
+	} else if (inputMode === "row") {
+		const direction = config.gravityDirection ?? "right";
+		const horizontal =
+			direction === "left" || direction === "right" ? direction : "right";
+		for (let row = 0; row < state.grid.height; row++) {
+			if (rowHasSpace(state, row, horizontal)) {
+				actions.push({ type: "activateRow", row });
 			}
 		}
 	} else {
@@ -464,6 +490,8 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 			return "Cannot fire on your own ship";
 		case "column_full":
 			return "Column has no empty space";
+		case "row_full":
+			return "Row has no empty space";
 		case "no_own_piece":
 			return "No owned piece at source / column bottom";
 		case "invalid_destination":
@@ -610,7 +638,9 @@ export function explainKernelAction(
 			}
 			if (
 				!manualTick &&
-				(inputMode === "column" || inputMode === "move")
+				(inputMode === "column" ||
+					inputMode === "row" ||
+					inputMode === "move")
 			) {
 				return {
 					legal: false,
@@ -636,18 +666,41 @@ export function explainKernelAction(
 					detail: detailFor("mode_mismatch", action)
 				};
 			}
-			if (
-				!columnHasSpace(
-					state,
-					action.col,
-					config.gravityDirection ?? "down"
-				)
-			) {
+			{
+				const direction = config.gravityDirection ?? "down";
+				const vertical =
+					direction === "down" || direction === "up" ? direction : "down";
+				if (!columnHasSpace(state, action.col, vertical)) {
+					return {
+						legal: false,
+						reason: "column_full",
+						detail: detailFor("column_full", action)
+					};
+				}
+			}
+			break;
+		}
+		case "activateRow": {
+			if (inputMode !== "row") {
 				return {
 					legal: false,
-					reason: "column_full",
-					detail: detailFor("column_full", action)
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
 				};
+			}
+			{
+				const direction = config.gravityDirection ?? "right";
+				const horizontal =
+					direction === "left" || direction === "right"
+						? direction
+						: "right";
+				if (!rowHasSpace(state, action.row, horizontal)) {
+					return {
+						legal: false,
+						reason: "row_full",
+						detail: detailFor("row_full", action)
+					};
+				}
 			}
 			break;
 		}
@@ -738,6 +791,8 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "activateColumn":
 		case "popOutColumn":
 			return b.type === a.type && a.col === b.col;
+		case "activateRow":
+			return b.type === "activateRow" && a.row === b.row;
 		case "tick":
 		case "pass":
 			return true;
@@ -746,14 +801,14 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 
 /**
  * Board cells to highlight for a legal-action set (overlay / heatmap).
- * Column actions highlight the entry-side empty cell (top for down, bottom for up).
+ * Column/row gravity actions highlight the entry-side empty cell.
  */
 export function highlightCellsForActions(
 	state: GameState,
 	actions: readonly KernelAction[],
 	opts?: {
 		selectedFrom?: Position | null;
-		gravityDirection?: "down" | "up";
+		gravityDirection?: "down" | "up" | "left" | "right";
 	}
 ): Position[] {
 	const selected = opts?.selectedFrom ?? null;
@@ -798,6 +853,24 @@ export function highlightCellsForActions(
 					for (let row = state.grid.height - 1; row >= 0; row--) {
 						if (getCell(state.grid, { row, col: action.col }) === null) {
 							push({ row, col: action.col });
+							break;
+						}
+					}
+				}
+				break;
+			}
+			case "activateRow": {
+				if (direction === "right") {
+					for (let col = 0; col < state.grid.width; col++) {
+						if (getCell(state.grid, { row: action.row, col }) === null) {
+							push({ row: action.row, col });
+							break;
+						}
+					}
+				} else {
+					for (let col = state.grid.width - 1; col >= 0; col--) {
+						if (getCell(state.grid, { row: action.row, col }) === null) {
+							push({ row: action.row, col });
 							break;
 						}
 					}

@@ -188,6 +188,51 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"connect-4-right": definePreset({
+		id: "connect-4-right",
+		name: "Connect 4 (Right)",
+		tags: ["classic", "7x6", "gravity", "row-activation", "gravity-right"],
+		description:
+			"Horizontal gravity: activate a row and discs slide right; first to connect four wins.",
+		config: {
+			metadata: { name: "Connect 4 Right", version: 1 },
+			grid: { width: 7, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "row" },
+			tokens: [
+				{
+					id: "disc-red",
+					label: "R",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/disc-red.png" }
+				},
+				{
+					id: "disc-yellow",
+					label: "Y",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/disc-yellow.png" }
+				}
+			],
+			placement: {
+				mode: "gravity",
+				gravity: { enabled: true, direction: "right", wrap: false },
+				overflow: "reject"
+			},
+			win: {
+				length: 4,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: true
+				}
+			},
+			placements: [],
+			initial: []
+		}
+	}),
 	gomoku: definePreset({
 		id: "gomoku",
 		name: "Gomoku",

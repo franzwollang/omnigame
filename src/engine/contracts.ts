@@ -80,6 +80,14 @@ export const Contracts = {
 		hooks: ["validateInput"],
 		invariants: []
 	}),
+	InputTargetRow: (): FeatureContract => ({
+		id: "InputTargetRow",
+		requires: [],
+		provides: ["TargetLine"],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: []
+	}),
 	InputMove: (): FeatureContract => ({
 		id: "InputMove",
 		requires: ["CellsWritable"],
@@ -137,7 +145,7 @@ export const Contracts = {
 		hooks: ["validateInput"],
 		invariants: []
 	}),
-	/** Gravity implies a vertical line axis (column drops / pop-out). */
+	/** Gravity implies a line axis (column drops / row slides / pop-out). */
 	GravityAxis: (): FeatureContract => ({
 		id: "GravityAxis",
 		requires: [],

@@ -292,6 +292,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<SelectContent>
 														<SelectItem value="cell">cell</SelectItem>
 														<SelectItem value="column">column</SelectItem>
+														<SelectItem value="row">row</SelectItem>
 														<SelectItem value="move">move</SelectItem>
 													</SelectContent>
 												</Select>
@@ -520,11 +521,13 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<SelectContent>
 														<SelectItem value="down">down</SelectItem>
 														<SelectItem value="up">up</SelectItem>
+														<SelectItem value="left">left</SelectItem>
+														<SelectItem value="right">right</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												Vertical axis only (left/right need row input — deferred).
+												column ↔ down/up; row ↔ left/right.
 											</p>
 											<FormMessage />
 										</FormItem>
@@ -553,7 +556,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												pop_out_top deferred to M1+.
+												pop_out_top / horizontal pop-out deferred.
 											</p>
 											<FormMessage />
 										</FormItem>

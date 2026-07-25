@@ -22,8 +22,9 @@ type Props = {
 	gameState: GameState;
 	onCellClick: (pos: Position) => void;
 	onActivateColumn?: (col: number) => void;
+	onActivateRow?: (row: number) => void;
 	onPopOutColumn?: (col: number) => void;
-	inputMode?: "cell" | "column" | "move";
+	inputMode?: "cell" | "column" | "row" | "move";
 	enablePopOutButtons?: boolean;
 	topology?: GridTopology;
 	/** Compiled graph adjacency/layout when topology = graph. */
@@ -97,6 +98,7 @@ export default function SandboxCanvas({
 	gameState,
 	onCellClick,
 	onActivateColumn,
+	onActivateRow,
 	onPopOutColumn,
 	inputMode = "cell",
 	enablePopOutButtons = false,
@@ -118,6 +120,7 @@ export default function SandboxCanvas({
 	const textureCacheRef = useRef<Map<string, THREE.Texture>>(new Map());
 	const onCellClickRef = useRef(onCellClick);
 	const onActivateColumnRef = useRef<typeof onActivateColumn>(onActivateColumn);
+	const onActivateRowRef = useRef<typeof onActivateRow>(onActivateRow);
 	const onPopOutColumnRef = useRef<typeof onPopOutColumn>(onPopOutColumn);
 	const inputModeRef = useRef(inputMode);
 	const popButtonsGroupRef = useRef<THREE.Group | null>(null);
@@ -135,9 +138,10 @@ export default function SandboxCanvas({
 
 	useEffect(() => {
 		onActivateColumnRef.current = onActivateColumn;
+		onActivateRowRef.current = onActivateRow;
 		onPopOutColumnRef.current = onPopOutColumn;
 		inputModeRef.current = inputMode;
-	}, [onActivateColumn, onPopOutColumn, inputMode]);
+	}, [onActivateColumn, onActivateRow, onPopOutColumn, inputMode]);
 
 	useEffect(() => {
 		const canvasEl = canvasRef.current;
@@ -460,6 +464,8 @@ export default function SandboxCanvas({
 				const { row, col } = intersects[0].object.userData;
 				if (inputModeRef.current === "column" && onActivateColumnRef.current) {
 					onActivateColumnRef.current(col);
+				} else if (inputModeRef.current === "row" && onActivateRowRef.current) {
+					onActivateRowRef.current(row);
 				} else {
 					onCellClickRef.current({ row, col });
 				}

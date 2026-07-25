@@ -50,7 +50,7 @@ export function expandGravityEnabled(config: Config): MacroResult {
 		next.placement.gravity = { ...gravity, enabled: true };
 		changed = true;
 	} else {
-		// Preserve explicit direction (down|up); only fill wrap/enabled defaults.
+		// Preserve explicit direction (down|up|left|right); only fill wrap/enabled defaults.
 		if (next.placement.gravity.wrap !== false) {
 			next.placement.gravity.wrap = false;
 			changed = true;

@@ -25,7 +25,7 @@ function play(
 }
 
 describe("schema honesty (M0)", () => {
-	it("rejects unsupported knobs", () => {
+	it("rejects unsupported knobs and axis mismatches", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		expect(
 			zConfig.safeParse({
@@ -33,12 +33,36 @@ describe("schema honesty (M0)", () => {
 				turn: { mode: "realtime" }
 			}).success
 		).toBe(false);
+		// horizontal gravity without row input
 		expect(
 			zConfig.safeParse({
 				...base,
 				placement: {
 					mode: "gravity",
 					gravity: { enabled: true, direction: "left", wrap: false },
+					overflow: "reject"
+				}
+			}).success
+		).toBe(false);
+		// column + left mismatch
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "left", wrap: false },
+					overflow: "reject"
+				}
+			}).success
+		).toBe(false);
+		// row + down mismatch
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "down", wrap: false },
 					overflow: "reject"
 				}
 			}).success
@@ -71,7 +95,7 @@ describe("schema honesty (M0)", () => {
 		).toBe(false);
 	});
 
-	it("accepts rectangle wrap, gravity-up, and all shipped presets", () => {
+	it("accepts rectangle wrap, gravity axes, and all shipped presets", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		expect(
 			zConfig.safeParse({
@@ -85,6 +109,17 @@ describe("schema honesty (M0)", () => {
 				placement: {
 					mode: "gravity",
 					gravity: { enabled: true, direction: "up", wrap: false },
+					overflow: "reject"
+				}
+			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "right", wrap: false },
 					overflow: "reject"
 				}
 			}).success
@@ -188,6 +223,43 @@ describe("transcript: Connect 4 gravity-up", () => {
 		expect(state.winner).toBe("X");
 		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
 		expect(getCell(state.grid, { row: 3, col: 0 })).toBe("X");
+	});
+});
+
+describe("transcript: Connect 4 gravity-right (row input)", () => {
+	const config: GameConfig = {
+		gridWidth: 7,
+		gridHeight: 6,
+		winLength: 4,
+		adjacency: adjacencyAll,
+		inputMode: "row",
+		placementMode: "gravity",
+		gravityDirection: "right"
+	};
+
+	it("slides to the right edge and stacks leftward", () => {
+		let state = createInitialState(config);
+		state = reduce(state, { type: "activateRow", row: 2 }, config);
+		expect(getCell(state.grid, { row: 2, col: 6 })).toBe("X");
+		state = reduce(state, { type: "activateRow", row: 2 }, config);
+		expect(getCell(state.grid, { row: 2, col: 5 })).toBe("O");
+		expect(state.currentPlayer).toBe("X");
+	});
+
+	it("horizontal four-in-a-row wins toward the right", () => {
+		const state = play(config, [
+			{ type: "activateRow", row: 0 }, // X → col 6
+			{ type: "activateRow", row: 1 }, // O
+			{ type: "activateRow", row: 0 }, // X → col 5
+			{ type: "activateRow", row: 1 }, // O
+			{ type: "activateRow", row: 0 }, // X → col 4
+			{ type: "activateRow", row: 1 }, // O
+			{ type: "activateRow", row: 0 } // X → col 3 wins
+		]);
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 6 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 3 })).toBe("X");
 	});
 });
 

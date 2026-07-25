@@ -98,6 +98,7 @@ export default function GamePage() {
 		dispatchAction,
 		placeMove,
 		activateColumn,
+		activateRow,
 		popOutColumn,
 		tick,
 		pass,
@@ -546,6 +547,7 @@ export default function GamePage() {
 					gameState={viewState}
 					onCellClick={placeMove}
 					onActivateColumn={activateColumn}
+					onActivateRow={activateRow}
 					enablePopOutButtons={enablePopOut}
 					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
 					inputMode={currentConfig?.input.mode ?? "cell"}

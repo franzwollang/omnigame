@@ -127,6 +127,17 @@ describe("normalizeConfig / compile", () => {
 		expect(result.gameConfig.gravityDirection).toBe("up");
 	});
 
+	it("preserves gravity direction right and row input through flatten", () => {
+		const raw = structuredClone(examplePresets["connect-4-right"].config);
+		const result = compile(raw);
+		expect(result.ok).toBe(true);
+		if (!result.ok) return;
+		expect(result.normalized.input.mode).toBe("row");
+		expect(result.normalized.placement.gravity?.direction).toBe("right");
+		expect(result.gameConfig.inputMode).toBe("row");
+		expect(result.gameConfig.gravityDirection).toBe("right");
+	});
+
 	it("placements macro seeds the kernel board", () => {
 		const cfg = structuredClone(examplePresets["tic-tac-toe"].config);
 		cfg.placements = [{ row: 1, col: 1, tokenId: "X" }];

@@ -71,6 +71,21 @@ describe("GameKernel scaffold", () => {
 		expect(getCell(state.grid, { row: 0, col: 3 })).toBe("X");
 	});
 
+	it("lists row activations for Connect 4 gravity-right", () => {
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["connect-4-right"].config
+		);
+		expect(gameConfig.gravityDirection).toBe("right");
+		expect(gameConfig.inputMode).toBe("row");
+		let state = kernel.initialState();
+		expect(kernel.legalActions(state, 0)).toHaveLength(6);
+
+		const drop: KernelAction = { type: "activateRow", row: 2 };
+		const result = kernel.stepSync(state, drop);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 2, col: 6 })).toBe("X");
+	});
+
 	it("includes pop-out actions when overflow is enabled", () => {
 		const { kernel } = compileConfig(
 			examplePresets["connect-4-popout"].config
@@ -159,6 +174,19 @@ describe("GameKernel scaffold", () => {
 		});
 		expect(cells).toHaveLength(7);
 		expect(cells.every((c) => c.row === 5)).toBe(true);
+	});
+
+	it("highlightCellsForActions uses left entry for gravity-right", () => {
+		const { kernel } = compileConfig(
+			examplePresets["connect-4-right"].config
+		);
+		const state = kernel.initialState();
+		const legal = kernel.legalActions(state, 0);
+		const cells = highlightCellsForActions(state, legal, {
+			gravityDirection: "right"
+		});
+		expect(cells).toHaveLength(6);
+		expect(cells.every((c) => c.col === 0)).toBe(true);
 	});
 
 	it("emits a terminal event on win and formats event lines", () => {
