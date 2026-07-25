@@ -1,24 +1,24 @@
 {
-  "updated_at": "2026-07-25T06:25-05:00",
-  "turn": 21,
+  "updated_at": "2026-07-25T06:45-05:00",
+  "turn": 22,
   "focus": {
     "milestone": "post-M7",
     "issue": "next-missing-mechanism",
-    "goal": "Pick smallest unlock: wrap, ko, simultaneous, or delayed"
+    "goal": "Pick next unlock: gravity-up, ko, simultaneous, or delayed"
   },
   "recent": [
-    "Synced fcfd onto eb3f",
-    "library-explorer-depth: graph sample + score + share",
-    "Closed library-explorer-depth"
+    "Synced eb3f onto 485f",
+    "Landed grid.wrap (rectangle) + Toroidal TTT + wrap.test.ts",
+    "Closed wrap slice of next-missing-mechanism"
   ],
   "discoveries": [
     "Prefer Effect.sync/pipe over Effect.gen (needs downlevelIteration)",
     "Base new cron turns on latest progression branch, not main",
-    "Share finds via ?find= base64 or ?librarySeed=&libraryIndex="
+    "Wrap: shared normalizePos/step; hex/graph wrap still deferred"
   ],
   "open_threads": [
-    "Next: missing mechanism (wrap / ko / simultaneous / delayed)"
+    "Next: gravity-up / ko / simultaneous / delayed / hex-wrap"
   ],
-  "next_step": "Choose one missing mechanism; implement schema+kernel+preset+tests",
+  "next_step": "Choose next missing mechanism; implement schema+kernel+preset+tests",
   "blockers": []
 }

@@ -16,9 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Library explorer depth landed (graph sampling,
-scored playability, share links). Hand off to the next **missing mechanism**
-(see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Rectangle `grid.wrap` landed (Toroidal TTT).
+Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -72,12 +71,13 @@ Working sandbox slice (see README “Current implementation status”):
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
 - Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
+- **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle); Toroidal TTT preset
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
 
-Not yet: ko/full Go rules, deeper library explorer UX.
+Not yet: ko/full Go rules, non-down gravity, hex/graph wrap, simultaneous/delayed actions.
 
 ## Milestone exit criteria
 
