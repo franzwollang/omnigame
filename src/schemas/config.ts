@@ -704,6 +704,16 @@ export const zConfig = z
 							"simultaneous move is incompatible with commitReveal (deferred)"
 					});
 				}
+				// Apply-time path revalidation for ordered/joint sliding is not
+				// implemented; forbid range > 1 under simultaneous until it is.
+				if ((cfg.movement?.range ?? 1) > 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "range"],
+						message:
+							"simultaneous move requires movement.range = 1 (sliding path integrity deferred)"
+					});
+				}
 			}
 			if (hitMiss) {
 				ctx.addIssue({

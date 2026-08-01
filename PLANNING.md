@@ -1,9 +1,13 @@
 # OmniGame Planning
 
 Roadmap and coordination only. Concrete open work lives in `OPEN_ISSUES.md`.
-Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
+Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
+(stale vs kernel — refresh tracked). Historical notes: `docs/scratchpad.md`
+(not a backlog).
 
 ## Status board
+
+### Phase 1 — Foundation (complete)
 
 | ID | Milestone | Status |
 |---|---|---|
@@ -16,204 +20,120 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Post-`#47` stack is on main (through sliding
-`movement.range`). Prefer **composition honesty** (simultaneous × sliding) and
-the next true missing mechanism over more recombinations — see `OPEN_ISSUES.md`.
+### Phase 2 — Composition honesty + next seams (active)
+
+| ID | Focus | Status |
+|---|---|---|
+| M8 | Composition honesty (debt + sandbox/agent truth) | `in progress` |
+| M9 | Next missing mechanism (default: capture-by-replacement) | `not started` |
+
+**Optimizing for this marathon:** P0 debt closed (Agent joint-move + schema
+forbid simultaneous×sliding + `isNoop` harden). Continue **P1 → P3** in
+`OPEN_ISSUES.md` without asking which fork.
+
+## Marathon runbook (cloud agents)
+
+### Environment
+
+- Node `>=20.19.0`, package manager **`pnpm@10.5.2`** (`package.json#packageManager`)
+- Green gate (every PR / before handoff):
+
+```bash
+pnpm install
+pnpm typecheck
+pnpm test
+```
+
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥289** Vitest tests (do not
+delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
+
+### Read order (cold start)
+
+1. `SCRATCHPAD.json` → current focus / next_step  
+2. `OPEN_ISSUES.md` → **Immediate (prioritized)** top item  
+3. This file → Phase 2 board + Do-not-do  
+4. `README.md` status only for vocabulary — not as a task list  
+
+### Task selection (no user ask)
+
+1. Work the highest unfinished **P0 → P1 → P2 → P3** item in `OPEN_ISSUES.md`.  
+2. When P0–P2 composition/honesty items are done, start **P3**
+   `capture-by-replacement` using its mini-spec in OPEN_ISSUES.  
+3. If blocked on environment only, fix tooling and continue — do not invent
+   parallel roadmaps.  
+4. After each landed item: update OPEN_ISSUES (resolve + log), PLANNING status,
+   SCRATCHPAD, run green gate, checkpoint commit if policy allows.
+
+### Do not do (this phase)
+
+- No new n-in-a-row / gravity-only preset recombinations  
+- No exhausting `references/` as a checklist (mechanism-first only)  
+- No Effect Schema migration; no arbitrary user code in specs  
+- No weakening / skipping tests to go green  
+- No hex/graph `movement.range > 1` until a new seam forces it  
+- No simultaneous × sliding re-enable until apply-time path integrity exists  
+- Do not treat `docs/scratchpad.md` as current backlog  
 
 ## Decisions (locked)
 
 | Topic | Decision |
 |---|---|
-| FP runtime | **Effect.ts** — core + edge services; keep Zod at the JSON/UI boundary until Effect Schema migration is deliberate |
-| M0 vs Kernel | **Hybrid:** short honesty pass (narrow/label), then Kernel+Effect — do **not** expand the plain reducer for every unused knob first |
-| Product surface (near-term) | **Sandbox composer** + **Library explorer** (sample/classify/score; share links; load finds). |
+| FP runtime | **Effect.ts** — core + edges; Zod at JSON/UI until Effect Schema is deliberate |
+| Product surfaces | Sandbox composer + Library explorer |
+| Reference games | Mechanism-first only (`.cursor/rules/project-structure.mdc`) |
+| Simultaneous × sliding | **Forbidden** in schema (`range > 1` under simultaneous move) until apply-time path checks exist |
+| Marathon priority | Composition honesty **before** new mechanism |
 
-### Why this sequencing
+## Product surfaces
 
-Implementing full gravity/wrap/realtime in today’s plain reducer, then redoing it under Effect +
-Kernel, doubles work. Better:
-
-1. **M0** — make the UI honest (remove or mark unsupported fields); install Effect; add
-   transcript tests for what already works; label Reversi accurately.
-2. **M1** — introduce `GameKernel` and move stepping/legal-actions into Effect-backed core;
-   UI reads `step` events. New mechanics land here, not in the old reducer.
-
-## Product surfaces (what they are)
-
-Two different UIs, same engine:
-
-| Surface | Question it answers | Interaction |
+| Surface | Question | Interaction |
 |---|---|---|
-| **Sandbox (composer)** | “Can I author *this* game and play it?” | You edit JSON/form for one config; board updates; browse presets |
-| **Library explorer** | “What’s out there in config-space?” | System samples/randomizes many configs; most are junk; you hunt for rare playable hybrids |
+| **Sandbox** | Author *this* game? | JSON/form + play + presets |
+| **Library explorer** | What’s in config-space? | Sample / score / share / load finds |
 
-Near-term focus = sandbox composer + library explorer (graph sampling, scores, share links).
+## What exists today (summary)
 
-## What exists today
+Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
+Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
+variants, flip + liberties capture, point/positional/situational ko, observation
+(hit/miss + fog), fleet placement, Move (orthogonal/diagonal/king + sliding
+range on rectangle), tick/Life, simultaneous place/move (incl. ordered, hidden
+commit-reveal, multi-action), multi-step turns, delayed place/gravity, in-turn
+phases (place→move / place→fire / place→move→fire + `connect_or_destroy`).
 
-Working sandbox slice (see README “Current implementation status”):
+Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
+Lite, Slide Race, Simultaneous Step Race, Place Move & Fire Lite, Go Lite
+variants, etc.).
 
-- Rectangular grid; cell / column / row input
-- Direct + gravity placement (down | up | left | right; column ↔ vertical, row ↔ horizontal)
-- Capture (flip demo); n-in-a-row wins
-- Column/row pop-out: bottom↔down, top↔up, right↔right, left↔left
-- Presets: Tic-Tac-Toe, Connect 4, Connect 4 Up, Connect 4 Right, Connect 4 Pop Out,
-  Connect 4 Up Pop Out, Connect 4 Right Pop Out, Gomoku, Capture / Flip Demo,
-  Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
-  Step Race (Move + reach_row),
-  Life Lite (manual tick + B3/S23), Toroidal TTT, Toroidal Hex Connect Lite,
-  Simultaneous TTT, Ordered Simultaneous TTT, Hidden Simultaneous TTT,
-  Double-Place Simultaneous TTT, Double-Place Simultaneous Hex,
-  Double-Place Simultaneous Graph, Double Move TTT, Double Move Hex,
-  Double Move Graph, Delayed TTT, Delayed Connect 4, Place & Move Lite,
-  Place & Fire Lite, Simultaneous Step Race, Diagonal Step Race, Slide Race,
-  Place, Move & Fire Lite
-- Zod schema + JSON/form sandbox + Three.js canvas
-- Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
-- Vitest transcript + kernel + validateConfig + GameIR replay tests
-- Sandbox play through `GameKernel` (`useGameEngine` → `stepSync` + event log)
-- GameIR v0 (`src/ir/gameIr.ts`): `seed + actions` transcript + sandbox Replay
-- Client Zod + contract validation in sandbox; Z3 server action optional/experimental
-- Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
-- Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
-- Move foothold (`src/engine/movement.ts`): `orthogonal` | `diagonal` |
-  `king` + sliding `range` 1..8 (rectangle) + `reach_row`; Step Race /
-  Diagonal Step Race / Slide Race; topology-aware orthogonal move on
-  hex_offset / graph (Hex Step Race; range 1)
-- Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
-- Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
-- Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
-- **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle + hex_offset);
-  Toroidal TTT + Toroidal Hex Connect Lite presets (graph: explicit edges)
-- Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
-- **Simple (point) ko:** `placement.capture.ko` + `GameState.koPoint`; illegal reason `"ko"`
-- **Positional superko:** `capture.ko = "positional"` + `GameState.positionHistory`;
-  illegal reason `"superko"`; Go Lite Superko preset
-- **Situational superko:** `capture.ko = "situational"` + `(board|side)` history
-  hashes; Go Lite Situational Superko preset
-- **Top pop-out:** `overflow = "pop_out_top"` ↔ gravity up; Connect 4 Up Pop Out
-- **Horizontal pop-out:** `pop_out_right` / `pop_out_left` + `popOutRow`;
-  Connect 4 Right Pop Out
-- Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
-  `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
-- Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
-- **Simultaneous schedule:** `turn.schedule = "simultaneous"` + `simultaneousPlace` /
-  `stepJoint`; same-cell conflict places neither (joint); rectangle + hex_offset + graph;
-  Simultaneous TTT / Hex Connect Lite / Graph Connect Lite presets
-- **Ordered simultaneous:** `turn.resolveOrder = x_first | o_first`; sequential
-  apply within the round; earlier seat wins same-cell; Ordered Simultaneous TTT
-- **Hidden simultaneous:** `turn.commitReveal` + `commitPlace` +
-  `GameState.committedPlacements`; opponent commit hidden until reveal;
-  Hidden Simultaneous TTT preset
-- **Multi-step turns:** `turn.actionsPerTurn` + `GameState.actionsRemaining`;
-  handoff after budget; rectangle | hex_offset | graph; Double Move TTT / Hex /
-  Graph presets
-- **Multi-action simultaneous:** `actionsPerTurn > 1` under simultaneous on
-  rectangle | hex_offset | graph; N places per seat per round; indexed-pair
-  resolve; Double-Place Simultaneous TTT / Hex / Graph
-- **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
-  cell intents reserve an intersection (Delayed TTT); column/row gravity
-  intents settle landing at resolve time (Delayed Connect 4)
-- **In-turn phases:** `turn.phases` (`["place","move"]`, `["place","fire"]`, or
-  `["place","move","fire"]` + `connect_or_destroy`) + `GameState.turnPhaseIndex`;
-  phase-routed legality; Place & Move / Place & Fire / Place, Move & Fire Lite
-- **Simultaneous move:** `turn.schedule = simultaneous` + `input.mode = move` +
-  `simultaneousMove` joint resolve; same-destination conflict; reach_row win;
-  Simultaneous Step Race / Hex / Graph (no multi-action / commitReveal)
-- **Piece-table adjacency:** `movement.adjacency` = `orthogonal` | `diagonal` |
-  `king` on rectangle; Diagonal Step Race proves diagonal-only steps;
-  hex/graph move uses topology neighbors (orthogonal only)
-- **Sliding range:** `movement.range` 1..8 on rectangle (blocker-aware ray walk);
-  Slide Race preset; hex/graph remain range 1
+**Form honesty:** form covers many turn/placement knobs but **not**
+`movement.*` or `turn.phases` — JSON/presets for those until P1 closes.
 
-Not yet: full Go rules; capture-by-replacement piece tables; richer multi-phase
-machines beyond fleet + in-turn phases; hex/graph `range > 1`.
+**Not yet:** capture-by-replacement; full Go; hex/graph sliding; joint UCT under
+simultaneous; CI workflows; Guess Who / query operator (deferred).
 
-**Known composition debt (see OPEN_ISSUES):** simultaneous move + `range > 1`
-does not re-check path blockers at apply time; sandbox form lacks movement
-controls.
+## Phase 2 exit criteria
 
-## Milestone exit criteria
+### M8 — Composition honesty
 
-### M0 — Honesty pass + Effect foothold
+- Simultaneous × sliding closed (schema forbid **or** apply-time path check + tests)
+- Sandbox Agent step works for simultaneous **move** (joint move)
+- Form exposes movement (+ phases) **or** README explicitly marks JSON-only
+- `isNoop` includes phase budget / ko / positionHistory fields
+- Known agent-search limitation under simultaneous documented or improved
 
-- Unsupported schema fields are removed from the form **or** marked unsupported (no silent no-ops).
-- Prefer narrowing unsupported fields until Kernel+Effect — unless a one-liner is
-  trivial and tested. (Many former “narrow until later” knobs — wrap, pop-out
-  variants, simultaneous, phases, sliding — are now landed; see “What exists today”.)
-- Reversi preset labeled honestly (or endgame fixed — prefer label in M0).
-- `effect` package installed; one small pure module (e.g. seeded RNG or Option helpers) proves the dependency.
-- Minimal test harness + transcript tests for TTT / Connect 4 / one capture sequence.
-- Docs: README stack says Effect is in use / being adopted; drop false claims (`jumpPanTo`, “XState transitions” until true).
+### M9 — Capture-by-replacement
 
-Related: Immediate issues in `OPEN_ISSUES.md`.
-
-### M1 — GameKernel + Effect core + events
-
-- Typed `GameKernel` with `initialState` / `legalActions` / `step` (events out).
-- Core stepping lives under Effect (pure logic; Effect at composition/runtime edges as needed).
-- Sandbox plays presets through the kernel; old ad-hoc hook thins down.
-- Schema↔engine parity work for *kept* knobs happens as features move behind the kernel.
-
-### M2 — GameIR + replay
-
-- Serializable action/event transcript; `seed + actions → same state`.
-- Minimal replay path in sandbox.
-
-**Done:** `src/ir/gameIr.ts` + tests; sandbox Replay button re-runs action log.
-
-### M3 — Compiler / normalize
-
-- Validate → normalize → kernel builder; macros → named primitives only.
-
-**Done:** `src/compiler/` (`compile` / macros / `normalizeConfig`); sandbox +
-presets play through it; `gravity.enabled` and `placements→initial` macros.
-
-### M4 — Observation + Battleship-lite
-
-- Hit/miss (+ hidden placement) observation; Battleship-lite preset.
-
-**Done:** `observation.mode` / `objective.mode` in schema; hidden fleet layer;
-`fire` action; per-player `observe()` on kernel steps; Battleship-lite preset +
-tests. Fleet placement phase (`fleet.ships` + Battleship Place) landed post-M7.
-
-### M5 — Anchor / reference ports
-
-- Port or invent anchors **only when each unlocks a new mechanism** (see selection
-  principle in `.cursor/rules/project-structure.mdc`). Not “finish `references/`.”
-- Each port has transcript/simulation tests for the mechanism it claims to prove.
-
-**Done:** Step Race (Move), Life Lite (tick), Hex Connect Lite
-(`hex_offset`), Go Lite (liberties + area_control + simple ko), Graph Connect Lite
-(`graph`). Planned M5 mechanism slots covered; optional later anchors still
-allowed by selection principle.
-
-### M6 — Debug tooling + agents
-
-- Legal-move / “why illegal” / event trace; random/greedy/(tiny) MCTS on kernel only.
-
-**Done:** `explainAction` + `highlightCellsForActions`; sandbox legal overlay +
-why-illegal + full event log; `src/agents/` random/greedy/tiny MCTS + Agent step.
-Post-M6 depth: UCT (`createUctAgent`) with tree reuse landed; hit/miss-aware
-agents still open.
-
-### M7 — Library explorer
-
-- Sample/randomize configs; surface playable vs noise (Library of Babel framing).
-
-**Done:** `src/library/` (`sample` / `assessPlayability` / `exploreLibrary`) +
-sandbox Library modal (load playable finds). Heuristics: compile → opening
-legality → short random playout. Post-M7: graph topology + UCT agent landed;
-hand off to fog observation / hit-miss agents / library depth.
+- Schema + kernel path for move onto occupied enemy cell (replace)
+- Preset + transcript/replay tests
+- Contracts/validation; no forked per-game engine
 
 ## Sequencing notes
 
-1. M0 honesty = **label/narrow**, not “implement every knob in the old reducer.”
-2. M1 before M4–M6 — observation, agents, and new mechanics sit on the ABI.
-3. Effect Schema migration is optional later; Zod can remain the sandbox JSON validator initially.
-4. `references/` is a design corpus, not a backlog — select by missing mechanism.
+1. Mechanism-first ports only — not “finish `references/`.”  
+2. Effect Schema optional later; Zod remains sandbox validator.  
+3. Prefer schema honesty over silent no-ops when composition is unsafe.
 
 ## Non-goals (keep stable)
 
-From README: not Unity-for-all-genres; not universal optimal solving; no continuous physics
-first; no arbitrary user code in specs.
+From README: not Unity-for-all-genres; not universal optimal solving; no continuous
+physics first; no arbitrary user code in specs.

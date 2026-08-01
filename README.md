@@ -98,14 +98,20 @@ The editor provides live JSON + Zod + feature-contract validation (`validateConf
 Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/dark mode
 (although no toggle added yet), and editor scroll position is preserved on format.
 
-The form fields mirror the JSON schema (`metadata`, `grid`, `turn`, `rng`) with updates syncing two-ways with the editor.
+The form syncs two-ways with the JSON editor for many knobs (`metadata`, `grid`,
+`turn` schedule/budget/delay, placement, win, …). **JSON/presets only (for now):**
+`movement.adjacency` / `movement.range`, and `turn.phases` — see
+`OPEN_ISSUES.md` `sandbox-form-honesty`.
 
 ## Scripts
 
 - `pnpm run dev` — Next.js sandbox
 - `pnpm run build` / `start` — production
 - `pnpm run typecheck` / `lint`
-- `pnpm test` — Vitest engine transcripts
+- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥289 tests)
+- Green gate: `pnpm install && pnpm typecheck && pnpm test`
+
+Open work and marathon queue: `OPEN_ISSUES.md` / `PLANNING.md` (not this README).
 
 ## Architecture notes (directional)
 
@@ -369,24 +375,21 @@ For formal composition semantics and invariants, see `docs/semantics.md`.
 
 ## Roadmap
 
-Core development focuses on turning the current sandbox into a compiler-like pipeline (spec → kernel + IR). Library explorer foothold landed (`src/library/` + sandbox Library modal).
+**Landed (Phase 1):** GameKernel + GameIR + compiler, observation (hit/miss + fog +
+fleet place), Move (incl. sliding on rectangle), tick/Life, hex + graph topology,
+liberties/ko/superko, simultaneous / multi-step / delayed / in-turn phases, library
+explorer, debug overlays, baseline agents. Details: README status section +
+`PLANNING.md`.
 
-Near-term milestones:
+**Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- **Kernel/IR boundary**: formalize the `GameKernel` interface and introduce a stable `GameIR` for replay/logging
-- **Compiler stages**: validate/normalize specs and expand macros into primitive operators + constraints
-- **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
-- **Observation support**: hit/miss + fog radius + fleet placement phase landed (Battleship-lite / Fog Connect Lite / Battleship Place)
-- **Move foothold**: `orthogonal` | `diagonal` | `king` + sliding `range` 1..8 + reach_row (Step Race / Diagonal Step Race / Slide Race) landed; simultaneous joint move (Simultaneous Step Race) landed; capture-by-replacement piece tables and chase games still open
-- **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
-- **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
-- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"`) + **situational superko** (`ko: "situational"` + `board|side` history)
-- **Library explorer foothold**: sample/classify playable vs noise; load finds into sandbox
-- **Anchor games**: mechanism-first ports only — not exhausting `references/`
-- **Debug tooling**: event trace, legal move overlays, “why illegal” explanations
-- **Baseline agents**: random/greedy/hunt/tiny MCTS/UCT on kernel only; hunt uses `observe` for hit/miss
+- Composition honesty: form movement/phases, simultaneous agent-search quality
+- **Next mechanism (default):** capture-by-replacement on move
+- Deferred: Guess Who-like query operator; full Go rules; hex/graph `range > 1`;
+  apply-time simultaneous sliding; CI workflows
 
-Future features include camera/perspective modes, richer multi-entity interactions, schema-driven UI generation (richer controls, constraints), and 3D functionality once the 2D path is stable.
+Future features include richer schema-driven UI, camera modes, and 3D once the 2D
+path stays stable.
 
 ## Non-goals (keep scope stable)
 

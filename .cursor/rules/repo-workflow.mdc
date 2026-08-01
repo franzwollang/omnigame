@@ -14,10 +14,10 @@ Live demo: [omnigame.vercel.app](https://omnigame.vercel.app/).
 | Artifact | Job |
 |---|---|
 | `README.md` | Durable product vision, architecture, non-goals (primary reference) |
-| `docs/semantics.md` | Formal composition / feature-contract semantics (draft) |
-| `docs/scratchpad.md` | Longer design notes + reference-game port requirements |
-| `PLANNING.md` | Planning & coordination — milestones, sequencing, status board |
-| `OPEN_ISSUES.md` | Current open work items + acceptance criteria |
+| `docs/semantics.md` | Formal composition / feature-contract semantics (draft; may lag kernel) |
+| `docs/scratchpad.md` | **Historical** design notes — not current backlog |
+| `PLANNING.md` | Planning & coordination — milestones, marathon runbook, status board |
+| `OPEN_ISSUES.md` | Current open work items + acceptance criteria (prioritized) |
 | `SCRATCHPAD.json` | Agent session snapshot (focus / next step) |
 | `app/` / `src/` | Implementation (Next.js UI + engine/schemas/presets) |
 | `references/` | Standalone reference games (design corpus; excluded from tsconfig) |
@@ -28,10 +28,18 @@ without replacing each other.
 ## Stack (orient quickly)
 
 - **App:** Next.js 14 (App Router), React 18, TypeScript, Tailwind, shadcn/ui
-- **Engine:** pure reducers in `src/engine/`; Zod schemas in `src/schemas/`
+- **Engine:** pure reducers + `GameKernel` in `src/engine/`; Zod in `src/schemas/`
 - **Sandbox:** JSON editor + form + Three.js canvas under `app/sandbox/`
-- **Optional tooling:** z3-solver (SMT checks), XState (declared; not yet wired)
-- **Package manager:** `pnpm` — `pnpm run dev` / `build` / `typecheck` / `lint`
+- **FP:** Effect.ts (RNG / composition); Zod at JSON edge
+- **Optional tooling:** z3-solver (experimental server helper — not sandbox-wired)
+- **Package manager:** `pnpm@10.5.2` — Node `>=20.19.0`
+- **Verify:** `pnpm install` → `pnpm typecheck` → `pnpm test` (≥289 tests)
+
+## Marathon / cloud agents
+
+Follow `PLANNING.md` marathon runbook and `OPEN_ISSUES.md` P0→Pn order. Prefer
+composition honesty before new mechanisms. Mechanism-first reference selection
+(project-structure rule).
 
 ## Divergence protocol
 

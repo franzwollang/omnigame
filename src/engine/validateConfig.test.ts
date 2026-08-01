@@ -196,4 +196,17 @@ describe("validateConfig", () => {
 		expect(result.ok).toBe(false);
 		expect(result.errors.some((e) => e.includes("overflow"))).toBe(true);
 	});
+
+	it("rejects simultaneous move with movement.range > 1", () => {
+		const base = examplePresets["simultaneous-step-race"].config;
+		const bad = {
+			...base,
+			movement: { ...base.movement!, range: 4 as const }
+		};
+		const result = validateConfig(bad);
+		expect(result.ok).toBe(false);
+		expect(
+			result.errors.some((e) => e.toLowerCase().includes("range"))
+		).toBe(true);
+	});
 });

@@ -2,69 +2,83 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
+**Marathon rule:** Work **P1 → P2 → P3 → P4** in order (P0 composition bugs
+closed in prep). Do not ask which fork — honesty first, then capture-by-replacement.
+
 ---
 
-## Immediate (post-stack review)
+## Immediate (prioritized)
 
-### next-missing-mechanism
+### P1 — sandbox-form-honesty
 
-**Sliding movement** landed on tip `#47` (merged to main) — `movement.range` 1..8
-on rectangle (blocker-aware ray walk) + Slide Race + tests. Hex/graph stay at
-range 1. Pick the **next smallest** unlock the engine still lacks — not another
-recombination of covered primitives (see project-structure selection principle).
-
-Candidates only when they force a new seam, e.g.:
-
-- capture-by-replacement (or capture piece tables) on move
-- richer multi-phase game machines beyond fleet + in-turn phases
-- hex/graph sliding (only if a new seam appears; range>1 deferred there)
+**Problem:** Form does not expose `movement.adjacency` / `movement.range` or
+`turn.phases`. README Usage now notes JSON-only; still prefer form controls or a
+durable in-UI “JSON-only” affordance.
 
 **Acceptance:**
 
-- [ ] Name the mechanism and why existing primitives cannot express it
-- [ ] Schema + Kernel path + preset (or library family) + transcript tests
-- [ ] No forked per-game engine
+- [ ] Add form controls for movement (+ `turn.phases` when relevant), **or**
+      durable UI copy (not only README) that those fields are JSON/preset-only
+- [ ] No impression that the form covers the full schema
 
-### simultaneous-sliding-path-integrity
+### P2 — simultaneous-agent-search
 
-**Problem (code review after `#47`):** Schema allows `movement.range > 1` together
-with simultaneous move. Legality uses pre-round `canMove` (ray clear), but
-`applySimultaneousMovePair` in `src/engine/reducer.ts` only re-checks `from`
-ownership and `to` emptiness on ordered resolve — not intermediate path cells.
-Confirmed hole: ordered (`resolveOrder`) + `range > 4` can let a later seat
-teleport past a piece that landed on its ray. Joint simultaneous can also
-“pass through” rays when destinations differ.
-
-Presets (Slide Race alternating; Simultaneous Step Race `range: 1`) do not hit
-this; the composition is still schema-legal.
+**Problem:** Tiny MCTS / UCT fall back to uniform random among seat legals under
+`schedule = simultaneous`; greedy skips lookahead. Joint action space is never
+searched.
 
 **Acceptance:**
 
-- [ ] Either re-validate path blockers at apply time (ordered + joint), **or**
-      schema/contracts forbid `range > 1` under `schedule = simultaneous`
-- [ ] Regression test covering ordered simultaneous + sliding path conflict
-- [ ] Document the chosen policy in README / semantics
+- [ ] Label Agent UI: “random under simultaneous” for MCTS/UCT, **or**
+- [ ] Root search over joint actions via `stepJoint` / `stepPly` for ≥1 agent
+- [ ] Test or README agents blurb documents the limitation
 
-### sandbox-form-movement-gap
+### P3 — capture-by-replacement (default next mechanism)
 
-**Problem:** Engine + JSON support `movement.adjacency` / `movement.range`, but
-`app/sandbox/form.tsx` does not expose them (JSON/presets only). Same class of
-honesty gap as earlier schema↔UI drift; README’s “form mirrors schema” claim is
-overstated for piece tables.
+**Why existing primitives fail:** Move only allows empty destinations.
+Chess-like / attrition races need **move onto enemy → remove occupant**.
+Liberties/flip capture are place-centric, not move-replace.
+
+**Mini-spec:**
+
+- Schema: e.g. `movement.capture = "none" | "replace"` (name OK if documented);
+  rectangle foothold; require `input.mode = move`
+- Kernel/reducer: enemy cells legal destinations when replace on; apply clears
+  occupant then lands; emit events
+- Illegal: own-piece destination; sliding path empty except destination
+- Preset: **Replace Race** (reach_row + replace)
+- Tests: transcript, replay, validateConfig rejects bad combos
+- Out of scope: multi-jump checkers, capture chains, hex/graph (unless free)
 
 **Acceptance:**
 
-- [ ] Form controls for adjacency + range when `input.mode = move`, **or**
-      README/UI explicitly mark movement as JSON-only
-- [ ] No silent impression that the form covers the full schema
+- [ ] Schema + contracts + kernel path
+- [ ] Preset + transcript/replay tests
+- [ ] PLANNING M9 → `done`; hand off next mechanism
 
-### tooling-node-pnpm
+### P3 — next-missing-mechanism (after capture)
 
-Lockfile/`engines` fix landed on main (`pnpm@10.5.2`, Node `>=20.19.0`). Cloud
-agent tip ran 288 tests green. Remaining:
+Only after capture-by-replacement. Pick smallest new seam, e.g.:
 
-- [ ] Add CI (if desired) pinning Node ≥20.19 and pnpm 10.5.2 — no `.github`
-      workflows yet
+- Guess Who-like query / commit (README MVP anchor)
+- Richer multi-phase machines beyond current `turn.phases`
+- Apply-time simultaneous sliding (re-open composition)
+- Hex/graph `range > 1` (only if a new seam appears)
+
+**Acceptance:** schema + kernel + preset + tests; mechanism-first.
+
+### P4 — tooling-ci
+
+- [ ] Optional `.github/workflows` pinning Node ≥20.19 + pnpm 10.5.2
+      (`typecheck` + `test`)
+
+### P4 — semantics-doc-refresh
+
+**Problem:** `docs/semantics.md` still uses pre-simultaneous event vocabulary.
+
+**Acceptance:**
+
+- [ ] Sync compact draft with current kernel events/state/phases
 
 ---
 
@@ -72,6 +86,9 @@ agent tip ran 288 tests green. Remaining:
 
 ### reference-game-ports
 
-Mechanism anchors through sliding `movement.range` are landed (see
-`PLANNING.md` “What exists today”). Further ports only when a **new** missing
-mechanism appears — not a backlog of `references/`.
+Further ports only for **new** mechanisms — not exhausting `references/`.
+
+### deferred-mvp-anchors
+
+Guess Who-like / full Go remain deferred under post-capture
+`next-missing-mechanism`.

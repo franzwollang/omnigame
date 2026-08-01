@@ -238,10 +238,15 @@ function isNoop(before: GameState, after: GameState): boolean {
 		before.currentPlayer === after.currentPlayer &&
 		before.status === after.status &&
 		(before.phase ?? "combat") === (after.phase ?? "combat") &&
+		(before.turnPhaseIndex ?? 0) === (after.turnPhaseIndex ?? 0) &&
+		(before.actionsRemaining ?? null) === (after.actionsRemaining ?? null) &&
+		(before.koPoint?.row ?? null) === (after.koPoint?.row ?? null) &&
+		(before.koPoint?.col ?? null) === (after.koPoint?.col ?? null) &&
 		before.grid.cells === after.grid.cells &&
 		before.hidden?.cells === after.hidden?.cells &&
 		before.pendingPlaces === after.pendingPlaces &&
-		before.committedPlacements === after.committedPlacements
+		before.committedPlacements === after.committedPlacements &&
+		before.positionHistory === after.positionHistory
 	);
 }
 

@@ -1,21 +1,22 @@
 {
-  "updated_at": "2026-08-01T16:10-05:00",
-  "turn": 28,
+  "updated_at": "2026-08-01T16:20-05:00",
+  "turn": 29,
   "focus": {
-    "milestone": null,
-    "issue": "simultaneous-sliding-path-integrity",
-    "goal": "Post-merge review debt tracked; next mechanism TBD"
+    "milestone": "M8",
+    "issue": "sandbox-form-honesty",
+    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
   },
   "recent": [
-    "Merged tip PR #47 (39 commits: pop_out_top→sliding) into main",
-    "288/288 tests; review: simultaneous×sliding path hole + form gap"
+    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
+    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
   ],
   "discoveries": [
-    "Ordered simultaneous + range>1 can path-jump in applySimultaneousMovePair"
+    "Sandbox Agent step only joint-placed (move presets silent no-op)",
+    "isNoop omitted phase/ko/history fields"
   ],
   "open_threads": [
-    "Prefer fix composition debt vs new mechanism for next cloud pass?"
+    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
   ],
-  "next_step": "User/agents: fix simultaneous-sliding or pick capture-by-replacement",
+  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
   "blockers": []
 }

@@ -17,6 +17,7 @@ import { useGameEngine } from "@/engine/useGameEngine";
 import {
 	formatKernelEvent,
 	highlightCellsForActions,
+	jointMoveFromActions,
 	jointPlaceFromActions,
 	jointPlacesFromActions
 } from "@/engine/kernel";
@@ -171,7 +172,8 @@ export default function GamePage() {
 				const a0 = agentRef.current.act(kernel, gameState, 0);
 				const a1 = agentRef.current.act(kernel, gameState, 1);
 				if (!a0 || !a1) return;
-				const joint = jointPlaceFromActions(a0, a1);
+				const joint =
+					jointPlaceFromActions(a0, a1) ?? jointMoveFromActions(a0, a1);
 				if (joint) dispatchAction(joint);
 				return;
 			}
