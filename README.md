@@ -99,9 +99,10 @@ Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/da
 (although no toggle added yet), and editor scroll position is preserved on format.
 
 The form syncs two-ways with the JSON editor for many knobs (`metadata`, `grid`,
-`turn` schedule/budget/delay, placement, win, …). **JSON/presets only (for now):**
-`movement.adjacency` / `movement.range`, and `turn.phases` — see
-`OPEN_ISSUES.md` `sandbox-form-honesty`.
+`turn` schedule/budget/delay/**phases**, **movement**, placement, win, …). A
+dashed “Form coverage” callout in the Form tab lists remaining JSON/preset-only
+fields (`scheduler`, graph `nodes`/`edges`, `initial`, `placements`,
+`placement.capture`, …).
 
 ## Scripts
 
@@ -354,10 +355,16 @@ Don’t commit to heavy theory early, but keep the seam clean:
 Baseline agents (enough to prove the ABI):
 
 - random legal
-- greedy 1-ply (win / block / heuristics)
+- greedy 1-ply (win / block / heuristics; under `simultaneous`, skips
+  lookahead because a single seat action is a no-op until joint resolve)
 - hunt (hit/miss observe → target after hits, parity search)
 - tiny flat MCTS
 - UCT tree search (UCB1 + optional tree reuse)
+
+**Simultaneous limitation:** MCTS and UCT fall back to uniform random among
+the current seat’s `legalActions` when `turn.schedule = simultaneous` (joint
+action space is not searched yet). The sandbox Agent UI labels this as
+“random if simultaneous.”
 
 ## Suggested module structure (directional)
 
@@ -383,10 +390,10 @@ explorer, debug overlays, baseline agents. Details: README status section +
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- Composition honesty: form movement/phases, simultaneous agent-search quality
 - **Next mechanism (default):** capture-by-replacement on move
 - Deferred: Guess Who-like query operator; full Go rules; hex/graph `range > 1`;
-  apply-time simultaneous sliding; CI workflows
+  apply-time simultaneous sliding; joint UCT over simultaneous actions; CI workflows
+- Docs: refresh `docs/semantics.md` vs current kernel events
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

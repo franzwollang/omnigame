@@ -2,36 +2,12 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P1 → P2 → P3 → P4** in order (P0 composition bugs
-closed in prep). Do not ask which fork — honesty first, then capture-by-replacement.
+**Marathon rule:** Work **P3 → P4** in order (P0–P2 / M8 closed). Do not ask
+which fork — start capture-by-replacement (M9).
 
 ---
 
 ## Immediate (prioritized)
-
-### P1 — sandbox-form-honesty
-
-**Problem:** Form does not expose `movement.adjacency` / `movement.range` or
-`turn.phases`. README Usage now notes JSON-only; still prefer form controls or a
-durable in-UI “JSON-only” affordance.
-
-**Acceptance:**
-
-- [ ] Add form controls for movement (+ `turn.phases` when relevant), **or**
-      durable UI copy (not only README) that those fields are JSON/preset-only
-- [ ] No impression that the form covers the full schema
-
-### P2 — simultaneous-agent-search
-
-**Problem:** Tiny MCTS / UCT fall back to uniform random among seat legals under
-`schedule = simultaneous`; greedy skips lookahead. Joint action space is never
-searched.
-
-**Acceptance:**
-
-- [ ] Label Agent UI: “random under simultaneous” for MCTS/UCT, **or**
-- [ ] Root search over joint actions via `stepJoint` / `stepPly` for ≥1 agent
-- [ ] Test or README agents blurb documents the limitation
 
 ### P3 — capture-by-replacement (default next mechanism)
 
@@ -64,6 +40,7 @@ Only after capture-by-replacement. Pick smallest new seam, e.g.:
 - Richer multi-phase machines beyond current `turn.phases`
 - Apply-time simultaneous sliding (re-open composition)
 - Hex/graph `range > 1` (only if a new seam appears)
+- Joint UCT / MCTS over simultaneous actions (deeper than P2 label)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first.
 

@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-01T17:55-05:00",
+  "turn": 31,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M9",
+    "issue": "capture-by-replacement",
+    "goal": "Schema+kernel replace capture on move; Replace Race preset"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "P1: form movement + phases controls + coverage callout",
+    "P2: Agent UI/README label MCTS/UCT random under simultaneous; M8 done"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "MCTS/UCT already random-fallback under simultaneous in agents",
+    "Form watch can strip unregistered fields — register movement/phases"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "P3 capture-by-replacement mini-spec; then next-missing-mechanism"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Cloud: implement movement.capture=replace + Replace Race + tests",
   "blockers": []
 }
