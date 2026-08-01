@@ -52,3 +52,4 @@
 {"ts":"2026-08-01T16:20-05:00","focus":"marathon prep","summary":"P0 debt fixed; Phase2 PLANNING+OPEN_ISSUES queue; README/rules refreshed","next":"P1 form honesty then P3 capture-by-replacement"}
 {"ts":"2026-08-01T17:45-05:00","focus":"P1 sandbox-form-honesty","summary":"Added movement+phases form controls and Form coverage callout; closed P1","next":"P2 simultaneous-agent-search label or joint root search"}
 {"ts":"2026-08-01T17:55-05:00","focus":"P2 simultaneous-agent-search","summary":"Labeled MCTS/UCT random-under-simultaneous; closed M8; hand off M9 capture","next":"implement movement.capture=replace + Replace Race"}
+{"ts":"2026-08-01T18:20-05:00","focus":"M9 capture-by-replacement","summary":"Implemented replace capture + Replace Race; closed M9; hand off next-missing-mechanism","next":"pick smallest new seam under next-missing-mechanism"}

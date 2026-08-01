@@ -50,6 +50,7 @@ These are built from the same shared schema and operators.
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Diagonal Step Race** (`movement.adjacency = diagonal` ferz step + reach_row)
 - **Slide Race** (`movement.range > 1` blocker-aware orthogonal slide + reach_row)
+- **Replace Race** (`movement.capture = replace` — move onto enemy clears then lands)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
@@ -141,11 +142,12 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Movement**: piece steps/slides via `{ type: "move", from, to }` with
   `movement.adjacency` = `orthogonal` | `diagonal` | `king` and sliding
   `movement.range` 1..8 on rectangle (Step Race / Diagonal Step Race /
-  Slide Race / Simultaneous Step Race); hex_offset / graph
-  use topology neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph
-  Step Race
+  Slide Race / Simultaneous Step Race); `movement.capture = replace` moves
+  onto an enemy cell (path empty except destination) — Replace Race;
+  hex_offset / graph use topology neighbors (orthogonal, range 1) — Hex Step
+  Race / Simultaneous Hex/Graph Step Race
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
-- **Effects**: optional capture toggles (Capture / Flip Demo)
+- **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
@@ -154,8 +156,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, capture-by-replacement
-piece tables, richer multi-phase machines, and a larger set of reusable
+What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
+machines, joint simultaneous search, and a larger set of reusable
 operators/constraints.
 
 ## Technical vision (expanded)
@@ -390,10 +392,10 @@ explorer, debug overlays, baseline agents. Details: README status section +
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- **Next mechanism (default):** capture-by-replacement on move
-- Deferred: Guess Who-like query operator; full Go rules; hex/graph `range > 1`;
-  apply-time simultaneous sliding; joint UCT over simultaneous actions; CI workflows
-- Docs: refresh `docs/semantics.md` vs current kernel events
+- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. Guess
+  Who-like query, richer phases, apply-time simultaneous sliding, joint UCT)
+- Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
+  workflows; `docs/semantics.md` refresh vs current kernel events
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

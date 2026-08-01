@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T17:55-05:00",
-  "turn": 31,
+  "updated_at": "2026-08-01T18:20-05:00",
+  "turn": 32,
   "focus": {
     "milestone": "M9",
-    "issue": "capture-by-replacement",
-    "goal": "Schema+kernel replace capture on move; Replace Race preset"
+    "issue": "next-missing-mechanism",
+    "goal": "Pick smallest new seam after capture-by-replacement"
   },
   "recent": [
-    "P1: form movement + phases controls + coverage callout",
-    "P2: Agent UI/README label MCTS/UCT random under simultaneous; M8 done"
+    "Merged M8 honesty from 0dda onto b777",
+    "M9: movement.capture=replace + Replace Race + tests; closed P3 capture"
   ],
   "discoveries": [
-    "MCTS/UCT already random-fallback under simultaneous in agents",
-    "Form watch can strip unregistered fields — register movement/phases"
+    "handleMove overwrite lands replace; pieceCaptured kernel event mirrors shotResult",
+    "Schema forbids replace×simultaneous / hex / placement.capture"
   ],
   "open_threads": [
-    "P3 capture-by-replacement mini-spec; then next-missing-mechanism"
+    "P3 next-missing-mechanism; then P4 CI / semantics refresh"
   ],
-  "next_step": "Cloud: implement movement.capture=replace + Replace Race + tests",
+  "next_step": "Cloud: pick smallest next seam (query/phases/sim sliding/joint UCT)",
   "blockers": []
 }

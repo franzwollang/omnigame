@@ -25,11 +25,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | ID | Focus | Status |
 |---|---|---|
 | M8 | Composition honesty (debt + sandbox/agent truth) | `done` |
-| M9 | Next missing mechanism (default: capture-by-replacement) | `not started` |
+| M9 | Next missing mechanism (capture-by-replacement) | `done` |
 
-**Optimizing for this marathon:** M8 composition honesty closed (P0–P2).
-Start **P3 capture-by-replacement** (M9) per mini-spec in `OPEN_ISSUES.md`
-without asking which fork.
+**Optimizing for this marathon:** M9 capture-by-replacement closed. Pick
+**P3 next-missing-mechanism** (smallest new seam) then P4 CI / semantics
+refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -102,16 +102,18 @@ commit-reveal, multi-action), multi-step turns, delayed place/gravity, in-turn
 phases (place→move / place→fire / place→move→fire + `connect_or_destroy`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
-Lite, Slide Race, Simultaneous Step Race, Place Move & Fire Lite, Go Lite
-variants, etc.).
+Lite, Slide Race, Replace Race, Simultaneous Step Race, Place Move & Fire Lite,
+Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
-`movement.adjacency` / `movement.range`, placement, win, observation, etc.,
-plus an in-UI “Form coverage” callout for remaining JSON/preset-only fields
-(`scheduler`, graph nodes/edges, `initial`, capture, …).
+`movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
+observation, etc., plus an in-UI “Form coverage” callout for remaining
+JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
+`placement.capture`, …).
 
-**Not yet:** capture-by-replacement; full Go; hex/graph sliding; joint UCT under
-simultaneous; CI workflows; Guess Who / query operator (deferred).
+**Not yet:** full Go; hex/graph sliding; joint UCT under simultaneous;
+simultaneous replace capture; CI workflows; Guess Who / query operator
+(deferred under next-missing-mechanism).
 
 ## Phase 2 exit criteria
 
@@ -125,9 +127,11 @@ simultaneous; CI workflows; Guess Who / query operator (deferred).
 
 ### M9 — Capture-by-replacement
 
-- Schema + kernel path for move onto occupied enemy cell (replace)
-- Preset + transcript/replay tests
-- Contracts/validation; no forked per-game engine
+- Schema + kernel path for move onto occupied enemy cell (replace) — **done**
+- Preset + transcript/replay tests — **done** (Replace Race)
+- Contracts/validation; no forked per-game engine — **done**
+- Out of scope still deferred: multi-jump, capture chains, hex/graph replace,
+  simultaneous replace
 
 ## Sequencing notes
 

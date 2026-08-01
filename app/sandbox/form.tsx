@@ -69,7 +69,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 		if (!current) {
 			form.setValue(
 				"movement",
-				{ adjacency: "orthogonal", range: 1 },
+				{ adjacency: "orthogonal", range: 1, capture: "none" },
 				{ shouldDirty: true }
 			);
 		}
@@ -555,6 +555,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										Required for input.mode = move and for phases that
 										include move. Diagonal/king and range &gt; 1 are
 										rectangle-only; simultaneous move requires range = 1.
+										Replace capture is rectangle + alternating move only.
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
@@ -634,6 +635,46 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											)}
 										/>
 									</div>
+									<FormField
+										control={form.control}
+										name="movement.capture"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Capture</FormLabel>
+												<FormControl>
+													<Select
+														value={field.value ?? "none"}
+														onValueChange={(v) => {
+															ensureMovement();
+															field.onChange(v);
+														}}
+														disabled={
+															hexOrGraph ||
+															simultaneousMove ||
+															inputMode !== "move"
+														}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="none" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="none">none</SelectItem>
+															<SelectItem value="replace">
+																replace (onto enemy)
+															</SelectItem>
+														</SelectContent>
+													</Select>
+												</FormControl>
+												<p className="text-xs text-muted-foreground">
+													Replace: land on an enemy cell to remove it
+													(path must be empty except destination).
+													Rectangle + move input only; not simultaneous
+													or placement.capture.
+												</p>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
 								</div>
 							)}
 

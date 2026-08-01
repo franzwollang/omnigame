@@ -112,6 +112,12 @@ export type KernelEvent =
 			result: ShotResult;
 			player: Player;
 	  }
+	| {
+			type: "pieceCaptured";
+			position: Position;
+			captured: Player;
+			by: Player;
+	  }
 	| { type: "phaseChanged"; phase: "placement" | "combat" }
 	| { type: "tickApplied"; generation: number }
 	| { type: "ignored"; action: KernelAction; reason: IllegalReason }
@@ -316,6 +322,26 @@ function applyStep(
 				position: action.position,
 				result: marked,
 				player: state.currentPlayer
+			});
+		}
+	}
+
+	if (
+		action.type === "move" &&
+		config.movement?.capture === "replace" &&
+		actor !== "simultaneous"
+	) {
+		const prior = getCell(state.grid, action.to);
+		if (
+			(prior === "X" || prior === "O") &&
+			prior !== actor &&
+			getCell(nextState.grid, action.to) === actor
+		) {
+			events.push({
+				type: "pieceCaptured",
+				position: action.to,
+				captured: prior,
+				by: actor
 			});
 		}
 	}

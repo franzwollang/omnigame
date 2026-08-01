@@ -112,15 +112,17 @@ export const zConfig = z
 		 * Piece movement; required when input.mode = "move".
 		 * orthogonal | diagonal | king on rectangle with sliding `range` 1..8
 		 * (blocker-aware ray walk; range 1 = adjacent only).
+		 * `capture: "replace"` — move onto enemy clears occupant then lands
+		 * (rectangle + move input; path empty except destination).
 		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
-		 * Capture-by-replacement still deferred.
 		 */
 		movement: z
 			.object({
 				adjacency: z
 					.enum(["orthogonal", "diagonal", "king"])
 					.default("orthogonal"),
-				range: z.number().int().min(1).max(8).default(1)
+				range: z.number().int().min(1).max(8).default(1),
+				capture: z.enum(["none", "replace"]).default("none")
 			})
 			.strict()
 			.optional(),
@@ -714,6 +716,14 @@ export const zConfig = z
 							"simultaneous move requires movement.range = 1 (sliding path integrity deferred)"
 					});
 				}
+				if (cfg.movement?.capture === "replace") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "capture"],
+						message:
+							"simultaneous move is incompatible with movement.capture = 'replace' (joint capture deferred)"
+					});
+				}
 			}
 			if (hitMiss) {
 				ctx.addIssue({
@@ -1206,6 +1216,34 @@ export const zConfig = z
 					path: ["initial"],
 					message:
 						"move / reach_row requires public initial seeds for both X and O"
+				});
+			}
+		}
+
+		// Capture-by-replacement: rectangle move foothold
+		if (cfg.movement?.capture === "replace") {
+			if (!moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'replace' requires input.mode = 'move'"
+				});
+			}
+			if (cfg.grid.topology !== "rectangle") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'replace' requires rectangle topology (hex/graph deferred)"
+				});
+			}
+			if (captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'replace' is incompatible with placement.capture"
 				});
 			}
 		}
