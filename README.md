@@ -99,9 +99,10 @@ Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/da
 (although no toggle added yet), and editor scroll position is preserved on format.
 
 The form syncs two-ways with the JSON editor for many knobs (`metadata`, `grid`,
-`turn` schedule/budget/delay, placement, win, …). **JSON/presets only (for now):**
-`movement.adjacency` / `movement.range`, and `turn.phases` — see
-`OPEN_ISSUES.md` `sandbox-form-honesty`.
+`turn` schedule/budget/delay/**phases**, **movement**, placement, win, …). A
+dashed “Form coverage” callout in the Form tab lists remaining JSON/preset-only
+fields (`scheduler`, graph `nodes`/`edges`, `initial`, `placements`,
+`placement.capture`, …).
 
 ## Scripts
 

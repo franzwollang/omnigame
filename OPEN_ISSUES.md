@@ -2,24 +2,12 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P1 → P2 → P3 → P4** in order (P0 composition bugs
-closed in prep). Do not ask which fork — honesty first, then capture-by-replacement.
+**Marathon rule:** Work **P2 → P3 → P4** in order (P0–P1 closed). Do not ask
+which fork — honesty first, then capture-by-replacement.
 
 ---
 
 ## Immediate (prioritized)
-
-### P1 — sandbox-form-honesty
-
-**Problem:** Form does not expose `movement.adjacency` / `movement.range` or
-`turn.phases`. README Usage now notes JSON-only; still prefer form controls or a
-durable in-UI “JSON-only” affordance.
-
-**Acceptance:**
-
-- [ ] Add form controls for movement (+ `turn.phases` when relevant), **or**
-      durable UI copy (not only README) that those fields are JSON/preset-only
-- [ ] No impression that the form covers the full schema
 
 ### P2 — simultaneous-agent-search
 

@@ -27,9 +27,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M8 | Composition honesty (debt + sandbox/agent truth) | `in progress` |
 | M9 | Next missing mechanism (default: capture-by-replacement) | `not started` |
 
-**Optimizing for this marathon:** P0 debt closed (Agent joint-move + schema
-forbid simultaneous×sliding + `isNoop` harden). Continue **P1 → P3** in
-`OPEN_ISSUES.md` without asking which fork.
+**Optimizing for this marathon:** P0 debt closed; **P1 form honesty closed**
+(movement + phases controls + in-UI coverage callout). Continue **P2 → P3**
+in `OPEN_ISSUES.md` without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -56,8 +56,9 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Task selection (no user ask)
 
-1. Work the highest unfinished **P0 → P1 → P2 → P3** item in `OPEN_ISSUES.md`.  
-2. When P0–P2 composition/honesty items are done, start **P3**
+1. Work the highest unfinished **P2 → P3 → P4** item in `OPEN_ISSUES.md`
+   (P0–P1 closed).  
+2. When P2 composition/honesty items are done, start **P3**
    `capture-by-replacement` using its mini-spec in OPEN_ISSUES.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -105,8 +106,10 @@ Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, Simultaneous Step Race, Place Move & Fire Lite, Go Lite
 variants, etc.).
 
-**Form honesty:** form covers many turn/placement knobs but **not**
-`movement.*` or `turn.phases` — JSON/presets for those until P1 closes.
+**Form honesty:** form exposes turn schedule/budget/delay/**phases**,
+`movement.adjacency` / `movement.range`, placement, win, observation, etc.,
+plus an in-UI “Form coverage” callout for remaining JSON/preset-only fields
+(`scheduler`, graph nodes/edges, `initial`, capture, …).
 
 **Not yet:** capture-by-replacement; full Go; hex/graph sliding; joint UCT under
 simultaneous; CI workflows; Guess Who / query operator (deferred).
@@ -117,7 +120,7 @@ simultaneous; CI workflows; Guess Who / query operator (deferred).
 
 - Simultaneous × sliding closed (schema forbid **or** apply-time path check + tests)
 - Sandbox Agent step works for simultaneous **move** (joint move)
-- Form exposes movement (+ phases) **or** README explicitly marks JSON-only
+- Form exposes movement (+ phases) **or** README explicitly marks JSON-only — **done** (controls + in-UI coverage callout)
 - `isNoop` includes phase budget / ko / positionHistory fields
 - Known agent-search limitation under simultaneous documented or improved
 
