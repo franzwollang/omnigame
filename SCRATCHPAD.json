@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T18:35-05:00",
-  "turn": 34,
+  "updated_at": "2026-08-01T18:50-05:00",
+  "turn": 35,
   "focus": {
-    "milestone": "M10",
+    "milestone": "M11",
     "issue": "next-missing-mechanism",
-    "goal": "Guess Who Lite landed; next seam or P4"
+    "goal": "Joint simultaneous sliding landed; next seam or P4"
   },
   "recent": [
-    "Synced M8+M9 from b777 onto 34ac",
-    "M10: Guess Who Lite deduction query/guess + identify_secret",
-    "Green gate: typecheck + 311 tests"
+    "Synced M8–M10 from 34ac onto a376",
+    "M11: joint simultaneous sliding + Simultaneous Slide Race",
+    "Green gate: typecheck + 323 tests"
   ],
   "discoveries": [
-    "Deduction secrets via runSeeded; queryAnswered/guessResult mirror shotResult",
-    "Sandbox maps deduction→cell for canvas; JSON/preset for play"
+    "Vacated-origin canJointSimultaneousMoves; ordered still range=1",
+    "Joint swap now legal (pre-round occupied dest no longer blocks)"
   ],
   "open_threads": [
-    "P3 next seam (sim sliding / joint UCT / richer phases) or P4 CI/semantics"
+    "P3 next seam (ordered sim slide / joint UCT / replace) or P4 CI/semantics"
   ],
   "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []

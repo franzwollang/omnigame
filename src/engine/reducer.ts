@@ -954,6 +954,7 @@ function handleSimultaneousMove(
 	if (!movement) return state;
 
 	const board = movementBoardFrom(config);
+	const wrap = board.wrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
 
 	const legal =

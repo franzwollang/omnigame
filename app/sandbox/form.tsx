@@ -635,7 +635,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														1 = adjacent step; 2–8 = sliding ray on
 														rectangle (stops at occupied / edge).
 														{rangeMax === 1
-															? " Locked to 1 for hex/graph or simultaneous move."
+															? " Locked to 1 for hex/graph or ordered simultaneous."
 															: ""}
 													</p>
 													<FormMessage />

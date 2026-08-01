@@ -27,8 +27,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M8 | Composition honesty (debt + sandbox/agent truth) | `done` |
 | M9 | Next missing mechanism (capture-by-replacement) | `done` |
 | M10 | Next missing mechanism (Guess Who Lite query/guess) | `done` |
+| M11 | Next missing mechanism (joint simultaneous sliding) | `done` |
 
-**Optimizing for this marathon:** M10 Guess Who Lite closed. Pick
+**Optimizing for this marathon:** M11 simultaneous × sliding closed. Pick
 **P3 next-missing-mechanism** (smallest new seam) then P4 CI / semantics
 refresh — without asking which fork.
 
@@ -45,7 +46,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥311** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥323** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -58,8 +59,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M10) — smallest new seam — or
+   (P0–P2 / M8–M11 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M11) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -73,7 +74,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 - No Effect Schema migration; no arbitrary user code in specs  
 - No weakening / skipping tests to go green  
 - No hex/graph `movement.range > 1` until a new seam forces it  
-- No simultaneous × sliding re-enable until apply-time path integrity exists  
+- No ordered simultaneous sliding / simultaneous replace until those paths exist  
 - Do not treat `docs/scratchpad.md` as current backlog  
 
 ## Decisions (locked)
@@ -83,7 +84,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 | FP runtime | **Effect.ts** — core + edges; Zod at JSON/UI until Effect Schema is deliberate |
 | Product surfaces | Sandbox composer + Library explorer |
 | Reference games | Mechanism-first only (`.cursor/rules/project-structure.mdc`) |
-| Simultaneous × sliding | **Forbidden** in schema (`range > 1` under simultaneous move) until apply-time path checks exist |
+| Simultaneous × sliding | **Joint** allowed via vacated-origin path checks; **ordered** still range=1 |
 | Marathon priority | Composition honesty **before** new mechanism |
 
 ## Product surfaces
@@ -106,13 +107,13 @@ variants, flip + liberties capture, **move capture-by-replacement**, point/
 positional/situational ko, observation (hit/miss + fog + **deduction**), fleet
 placement, Move (orthogonal/diagonal/king + sliding range on rectangle),
 tick/Life, simultaneous place/move (incl. ordered, hidden commit-reveal,
-multi-action), multi-step turns, delayed place/gravity, in-turn phases
-(place→move / place→fire / place→move→fire + `connect_or_destroy`), **query +
-guess / identify_secret**.
+multi-action, **joint sliding**), multi-step turns, delayed place/gravity,
+in-turn phases (place→move / place→fire / place→move→fire + `connect_or_destroy`),
+**query + guess / identify_secret**.
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
-Lite, Slide Race, Replace Race, Guess Who Lite, Simultaneous Step Race, Place
-Move & Fire Lite, Go Lite variants, etc.).
+Lite, Slide Race, Simultaneous Slide Race, Replace Race, Guess Who Lite,
+Simultaneous Step Race, Place Move & Fire Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
 `movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
@@ -120,9 +121,9 @@ observation, etc., plus an in-UI “Form coverage” callout for remaining
 JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 `placement.capture`, `deduction.*` / `identify_secret`, …).
 
-**Not yet:** full Go; hex/graph sliding; joint UCT under simultaneous;
-simultaneous replace capture; CI workflows; richer Guess Who commit/hypothesis
-beyond query+guess MVP.
+**Not yet:** full Go; hex/graph sliding; ordered simultaneous sliding; joint UCT
+under simultaneous; simultaneous replace capture; CI workflows; richer Guess Who
+commit/hypothesis beyond query+guess MVP.
 
 ## Phase 2 exit criteria
 
@@ -148,6 +149,13 @@ beyond query+guess MVP.
 - Kernel query/guess + `queryAnswered` / `guessResult`; observation projection — **done**
 - Preset `guess-who-lite` + transcript/replay tests — **done**
 - Out of scope: full canvas UI; richer commit/hypothesis; simultaneous deduction
+
+### M11 — Joint simultaneous sliding
+
+- Vacated-origin path checks for joint simultaneous + `range > 1` — **done**
+- Schema allows joint sliding; ordered simultaneous still range = 1 — **done**
+- Preset `simultaneous-slide-race` + transcript/replay tests — **done**
+- Out of scope: ordered sequential sliding; simultaneous replace capture
 
 ## Sequencing notes
 
