@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-01T18:50-05:00",
+  "turn": 35,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M11",
+    "issue": "next-missing-mechanism",
+    "goal": "Joint simultaneous sliding landed; next seam or P4"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced M8–M10 from 34ac onto a376",
+    "M11: joint simultaneous sliding + Simultaneous Slide Race",
+    "Green gate: typecheck + 323 tests"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Vacated-origin canJointSimultaneousMoves; ordered still range=1",
+    "Joint swap now legal (pre-round occupied dest no longer blocks)"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "P3 next seam (ordered sim slide / joint UCT / replace) or P4 CI/semantics"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []
 }
