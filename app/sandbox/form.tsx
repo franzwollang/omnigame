@@ -95,7 +95,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									JSON or presets required for:{" "}
 									<span className="font-medium text-foreground">
 										scheduler, grid.nodes/edges, initial seeds, placements,
-										placement.capture, fleet ship geometry beyond lengths
+										placement.capture, fleet ship geometry beyond lengths,
+										deduction.*, identify_secret
 									</span>
 									.
 								</p>

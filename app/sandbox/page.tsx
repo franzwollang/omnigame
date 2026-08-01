@@ -762,7 +762,11 @@ export default function GamePage() {
 							? popOutRow
 							: undefined
 					}
-					inputMode={currentConfig?.input.mode ?? "cell"}
+					inputMode={
+						currentConfig?.input.mode === "deduction"
+							? "cell"
+							: (currentConfig?.input.mode ?? "cell")
+					}
 					topology={currentConfig?.grid.topology ?? "rectangle"}
 					graph={engineConfig.graph}
 					highlightCells={highlightCells}

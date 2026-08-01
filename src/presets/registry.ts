@@ -1501,6 +1501,47 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"guess-who-lite": definePreset({
+		id: "guess-who-lite",
+		name: "Guess Who Lite",
+		tags: ["deduction", "query", "observation", "mechanism", "mvp"],
+		description:
+			"4-character roster; ask yes/no trait queries; guess opponent secret to win. Unlocks query + guess operators (README Guess Who-like MVP).",
+		config: {
+			metadata: { name: "Guess Who Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"simultaneous-step-race": definePreset({
 		id: "simultaneous-step-race",
 		name: "Simultaneous Step Race",

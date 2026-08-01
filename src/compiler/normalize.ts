@@ -86,6 +86,17 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		fleet: config.fleet
 			? { ships: [...config.fleet.ships] }
 			: undefined,
+		seed: config.rng.seed,
+		deduction: config.deduction
+			? {
+					roster: config.deduction.roster.map((c) => ({
+						id: c.id,
+						traits: { ...c.traits }
+					})),
+					traits: [...config.deduction.traits],
+					wrongGuess: config.deduction.wrongGuess
+				}
+			: undefined,
 		initial: config.initial
 	};
 }

@@ -103,8 +103,8 @@ export const zConfig = z
 		rng: z.object({ seed: z.number() }).strict(),
 		input: z
 			.object({
-				// move = piece relocation; cell/column/row = placement
-				mode: z.enum(["cell", "column", "row", "move"])
+				// move = piece relocation; cell/column/row = placement; deduction = query/guess
+				mode: z.enum(["cell", "column", "row", "move", "deduction"])
 			})
 			.strict()
 			.default({ mode: "cell" as const }),
@@ -184,7 +184,9 @@ export const zConfig = z
 			.default({ mode: "direct" as const, overflow: "reject" as const }),
 		observation: z
 			.object({
-				mode: z.enum(["full", "hit_miss", "fog"]).default("full"),
+				mode: z
+					.enum(["full", "hit_miss", "fog", "deduction"])
+					.default("full"),
 				/** Vision radius when mode = fog (ignored otherwise). */
 				radius: z.number().int().min(0).max(32).default(1),
 				/** Rectangle distance metric for fog; hex uses cube, graph uses BFS. */
@@ -207,6 +209,28 @@ export const zConfig = z
 			})
 			.strict()
 			.optional(),
+		/**
+		 * Deduction / Guess Who-lite: shared public roster + traits; each seat
+		 * gets a secret character. Query yes/no traits; guess to win.
+		 */
+		deduction: z
+			.object({
+				roster: z
+					.array(
+						z
+							.object({
+								id: z.string().min(1),
+								traits: z.record(z.string(), z.boolean())
+							})
+							.strict()
+					)
+					.min(2)
+					.max(12),
+				traits: z.array(z.string().min(1)).min(1).max(6),
+				wrongGuess: z.enum(["lose", "end_turn"]).default("lose")
+			})
+			.strict()
+			.optional(),
 		objective: z
 			.object({
 				mode: z
@@ -216,6 +240,7 @@ export const zConfig = z
 						"connect_or_destroy",
 						"reach_row",
 						"area_control",
+						"identify_secret",
 						"none"
 					])
 					.default("n_in_a_row"),
@@ -230,7 +255,7 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / none
+		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / identify_secret / none
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -296,6 +321,12 @@ export const zConfig = z
 			cfg.placement.gravity?.enabled === true;
 		const hitMiss = cfg.observation.mode === "hit_miss";
 		const fog = cfg.observation.mode === "fog";
+		const deductionInput = cfg.input.mode === "deduction";
+		const deductionObs = cfg.observation.mode === "deduction";
+		const identifySecret = cfg.objective.mode === "identify_secret";
+		const hasDeductionBlock = cfg.deduction !== undefined;
+		const deductionActive =
+			deductionInput || deductionObs || identifySecret || hasDeductionBlock;
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
 		const connectOrDestroy = cfg.objective.mode === "connect_or_destroy";
 		const reachRow = cfg.objective.mode === "reach_row";
@@ -311,6 +342,177 @@ export const zConfig = z
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
 		const needsHitMiss = destroyHidden || connectOrDestroy;
+
+		// Deduction / Guess Who-lite: input + observation + objective + block lockstep
+		if (deductionActive) {
+			if (!deductionInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message:
+						"deduction requires input.mode = 'deduction' (lockstep with observation/objective/deduction block)"
+				});
+			}
+			if (!deductionObs) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"deduction requires observation.mode = 'deduction' (lockstep with input/objective/deduction block)"
+				});
+			}
+			if (!identifySecret) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message:
+						"deduction requires objective.mode = 'identify_secret' (lockstep with input/observation/deduction block)"
+				});
+			}
+			if (!hasDeductionBlock) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["deduction"],
+					message: "deduction requires a deduction block (roster + traits)"
+				});
+			}
+			if (cfg.win !== undefined) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["win"],
+					message: "deduction / identify_secret does not use win"
+				});
+			}
+			if (cfg.movement) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement"],
+					message: "deduction is incompatible with movement"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "deduction is incompatible with fleet"
+				});
+			}
+			if (hitMiss || fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"deduction is incompatible with hit_miss / fog observation"
+				});
+			}
+			if (simultaneous) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "deduction is incompatible with simultaneous"
+				});
+			}
+			if (manualTick) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "deduction is incompatible with manual_tick"
+				});
+			}
+			if (cfg.turn.commitReveal === true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "commitReveal"],
+					message: "deduction is incompatible with commitReveal"
+				});
+			}
+			if (inTurnPhases) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message: "deduction is incompatible with turn.phases"
+				});
+			}
+			if (multiStep) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message: "deduction requires actionsPerTurn = 1"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message: "deduction is incompatible with delayTurns"
+				});
+			}
+			if (gravityImplied || Boolean(cfg.placement.capture?.enabled)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"deduction is incompatible with gravity / placement.capture"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message: "deduction requires topology = 'rectangle'"
+				});
+			}
+			if (cfg.initial.length > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["initial"],
+					message: "deduction is incompatible with initial seeds"
+				});
+			}
+			if (cfg.grid.wrap) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "wrap"],
+					message: "deduction is incompatible with grid.wrap"
+				});
+			}
+			if (cfg.deduction) {
+				const traitKeys = cfg.deduction.traits;
+				const traitSet = new Set(traitKeys);
+				if (traitSet.size !== traitKeys.length) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "traits"],
+						message: "deduction.traits entries must be unique"
+					});
+				}
+				const ids = new Set<string>();
+				for (let i = 0; i < cfg.deduction.roster.length; i++) {
+					const entry = cfg.deduction.roster[i]!;
+					if (ids.has(entry.id)) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["deduction", "roster", i, "id"],
+							message: "deduction.roster ids must be unique"
+						});
+					}
+					ids.add(entry.id);
+					const keys = Object.keys(entry.traits);
+					const keySet = new Set(keys);
+					if (
+						keys.length !== traitKeys.length ||
+						!traitKeys.every((t) => keySet.has(t))
+					) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["deduction", "roster", i, "traits"],
+							message:
+								"every roster entry must have exactly the keys in deduction.traits"
+						});
+					}
+				}
+			}
+		}
 		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
 		if (
 			cfg.grid.wrap &&
@@ -1326,7 +1528,8 @@ export const zConfig = z
 			});
 		}
 
-		if (hitMiss !== needsHitMiss) {
+		// Deduction observation/objective must not force destroy_hidden pairing
+		if (!deductionObs && !identifySecret && hitMiss !== needsHitMiss) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: hitMiss ? ["objective", "mode"] : ["observation", "mode"],

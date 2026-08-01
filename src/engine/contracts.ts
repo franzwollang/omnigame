@@ -17,6 +17,7 @@ export type Slot =
 				| "connectOrDestroy"
 				| "reachRow"
 				| "areaControl"
+				| "identifySecret"
 				| "none";
 	  }
 	| { type: "Schedule"; value: "alternating" | "manualTick" | "simultaneous" };
@@ -101,6 +102,14 @@ export const Contracts = {
 		slots: [{ type: "PlacementPolicy", value: "move" }],
 		hooks: ["validateInput", "applyPlacement"],
 		invariants: ["movesOwnPieceToLegalDestination"]
+	}),
+	InputDeduction: (): FeatureContract => ({
+		id: "InputDeduction",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["queryOrGuessOperators"]
 	}),
 	MovementReplaceCapture: (): FeatureContract => ({
 		id: "MovementReplaceCapture",
@@ -253,6 +262,14 @@ export const Contracts = {
 		hooks: [],
 		invariants: ["hidesCellsOutsideRadius"]
 	}),
+	ObservationDeduction: (): FeatureContract => ({
+		id: "ObservationDeduction",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: [],
+		invariants: ["hidesOpponentSecret"]
+	}),
 	DestroyHidden: (): FeatureContract => ({
 		id: "DestroyHidden",
 		requires: ["CellsWritable"],
@@ -288,6 +305,14 @@ export const Contracts = {
 		slots: [{ type: "EndCondition", value: "areaControl" }],
 		hooks: ["checkEnd"],
 		invariants: ["twoPassesEndGame", "scoreStonesPlusTerritory"]
+	}),
+	IdentifySecret: (): FeatureContract => ({
+		id: "IdentifySecret",
+		requires: [],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "identifySecret" }],
+		hooks: ["checkEnd"],
+		invariants: ["guessOpponentSecret"]
 	}),
 	OpenEnded: (): FeatureContract => ({
 		id: "OpenEnded",

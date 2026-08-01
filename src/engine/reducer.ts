@@ -7,7 +7,8 @@ import type {
 	Player,
 	CellValue,
 	Grid,
-	PendingPlace
+	PendingPlace,
+	DeductionCharacter
 } from "./types";
 import {
 	asPlacementList,
@@ -54,6 +55,12 @@ import {
 	type GridTopology
 } from "@/engine/topology";
 import { getCell as readCell } from "@/engine/types";
+import {
+	answerQuery,
+	assignSecrets,
+	eliminateAfterQuery,
+	isGuessCorrect
+} from "@/engine/deduction";
 
 export type InitialSeed = {
 	row: number;
@@ -73,7 +80,7 @@ export type GameConfig = {
 	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column" | "row" | "move";
+	inputMode?: "cell" | "column" | "row" | "move" | "deduction";
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
@@ -94,7 +101,7 @@ export type GameConfig = {
 	koRule?: KoRule;
 	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
-	observationMode?: "full" | "hit_miss" | "fog";
+	observationMode?: "full" | "hit_miss" | "fog" | "deduction";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
 	fogRadius?: number;
 	fogMetric?: "chebyshev" | "manhattan";
@@ -104,6 +111,7 @@ export type GameConfig = {
 		| "connect_or_destroy"
 		| "reach_row"
 		| "area_control"
+		| "identify_secret"
 		| "none";
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
@@ -143,6 +151,14 @@ export type GameConfig = {
 	 * placement (place onto hidden) then transitions to combat (fire).
 	 */
 	fleet?: FleetConfig;
+	/** Seed for deduction secrets (from config.rng.seed). */
+	seed?: number;
+	/** Deduction / Guess Who-lite roster + traits. */
+	deduction?: {
+		roster: DeductionCharacter[];
+		traits: string[];
+		wrongGuess: "lose" | "end_turn";
+	};
 	initial?: InitialSeed[];
 };
 
@@ -406,6 +422,17 @@ export function createInitialState(config: GameConfig): GameState {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
 	}
 
+	const deductionMode =
+		config.observationMode === "deduction" ||
+		config.inputMode === "deduction";
+	if (deductionMode && config.deduction) {
+		const rosterIds = config.deduction.roster.map((c) => c.id);
+		base.deduction = {
+			secret: assignSecrets(rosterIds, config.seed ?? 0),
+			eliminated: { X: [], O: [] }
+		};
+	}
+
 	if (seeds.length === 0) {
 		const koRule = resolveKoRule(config);
 		if (usesSuperkoHistory(koRule)) {
@@ -498,11 +525,117 @@ export function reduce(
 			return handleSimultaneousMove(state, event.moves, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
+		case "query":
+			return handleQuery(state, event.trait, event.value, config);
+		case "guess":
+			return handleGuess(state, event.id, config);
 		case "reset":
 			return createInitialState(config);
 		default:
 			return state;
 	}
+}
+
+function isDeductionMode(config: GameConfig): boolean {
+	return (
+		(config.inputMode === "deduction" ||
+			config.observationMode === "deduction") &&
+		config.deduction != null
+	);
+}
+
+function handleQuery(
+	state: GameState,
+	trait: string,
+	value: boolean,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if (!config.deduction.traits.includes(trait)) return state;
+
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const answer = answerQuery(
+		secretId,
+		config.deduction.roster,
+		trait,
+		value
+	);
+	const eliminated = eliminateAfterQuery(
+		config.deduction.roster,
+		state.deduction.eliminated[player],
+		trait,
+		value,
+		answer
+	);
+	const newMoveCount = state.moveCount + 1;
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				...state.deduction.eliminated,
+				[player]: eliminated
+			},
+			lastQuery: { by: player, trait, value, answer }
+		},
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleGuess(
+	state: GameState,
+	id: string,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const correct = isGuessCorrect(secretId, id);
+	const newMoveCount = state.moveCount + 1;
+
+	if (correct) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: player
+		};
+	}
+
+	if (config.deduction.wrongGuess === "lose") {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: opponent
+		};
+	}
+
+	// end_turn: handoff without win
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
 }
 
 function handlePass(state: GameState, config: GameConfig): GameState {

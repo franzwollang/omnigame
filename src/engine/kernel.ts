@@ -73,7 +73,9 @@ export type KernelAction =
 			type: "commitPlace";
 			player: Player;
 			position: Position;
-	  };
+	  }
+	| { type: "query"; trait: string; value: boolean }
+	| { type: "guess"; id: string };
 
 /** Structured legality failure codes for debug UI / agents. */
 export type IllegalReason =
@@ -117,6 +119,19 @@ export type KernelEvent =
 			position: Position;
 			captured: Player;
 			by: Player;
+	  }
+	| {
+			type: "queryAnswered";
+			player: Player;
+			trait: string;
+			value: boolean;
+			answer: boolean;
+	  }
+	| {
+			type: "guessResult";
+			player: Player;
+			targetId: string;
+			correct: boolean;
 	  }
 	| { type: "phaseChanged"; phase: "placement" | "combat" }
 	| { type: "tickApplied"; generation: number }
@@ -215,6 +230,10 @@ function formatAction(action: KernelAction): string {
 		}
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
+		case "query":
+			return `query ${action.trait}=${action.value}`;
+		case "guess":
+			return `guess ${action.id}`;
 	}
 }
 
@@ -227,6 +246,10 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
 		case "pieceCaptured":
 			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
+		case "queryAnswered":
+			return `${event.player}: query ${event.trait}=${event.value} → ${event.answer}`;
+		case "guessResult":
+			return `${event.player}: guess ${event.targetId} → ${event.correct ? "correct" : "wrong"}`;
 		case "phaseChanged":
 			return `phase → ${event.phase}`;
 		case "tickApplied":
@@ -254,7 +277,8 @@ function isNoop(before: GameState, after: GameState): boolean {
 		before.hidden?.cells === after.hidden?.cells &&
 		before.pendingPlaces === after.pendingPlaces &&
 		before.committedPlacements === after.committedPlacements &&
-		before.positionHistory === after.positionHistory
+		before.positionHistory === after.positionHistory &&
+		before.deduction === after.deduction
 	);
 }
 
@@ -346,6 +370,31 @@ function applyStep(
 				by: actor
 			});
 		}
+	}
+
+	if (action.type === "query") {
+		const lq = nextState.deduction?.lastQuery;
+		if (lq) {
+			events.push({
+				type: "queryAnswered",
+				player: lq.by,
+				trait: lq.trait,
+				value: lq.value,
+				answer: lq.answer
+			});
+		}
+	}
+
+	if (action.type === "guess" && actor !== "simultaneous") {
+		const opponent: Player = actor === "X" ? "O" : "X";
+		const secretId = state.deduction?.secret[opponent];
+		const correct = secretId !== undefined && secretId === action.id;
+		events.push({
+			type: "guessResult",
+			player: actor,
+			targetId: action.id,
+			correct
+		});
 	}
 
 	if (action.type === "tick") {
@@ -573,6 +622,22 @@ function collectLegalActions(
 		)) {
 			if (canPlaceCell(state, position, config)) {
 				actions.push({ type: "place", position });
+			}
+		}
+		return actions;
+	}
+
+	if (inputMode === "deduction" && config.deduction) {
+		for (const trait of config.deduction.traits) {
+			actions.push({ type: "query", trait, value: true });
+			actions.push({ type: "query", trait, value: false });
+		}
+		const eliminated = new Set(
+			state.deduction?.eliminated[state.currentPlayer] ?? []
+		);
+		for (const character of config.deduction.roster) {
+			if (!eliminated.has(character.id)) {
+				actions.push({ type: "guess", id: character.id });
 			}
 		}
 		return actions;
@@ -1143,6 +1208,53 @@ export function explainKernelAction(
 			}
 			break;
 		}
+		case "query": {
+			if (inputMode !== "deduction" || !config.deduction) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (!config.deduction.traits.includes(action.trait)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			break;
+		}
+		case "guess": {
+			if (inputMode !== "deduction" || !config.deduction) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const rosterIds = new Set(
+				config.deduction.roster.map((c) => c.id)
+			);
+			if (!rosterIds.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			const eliminated = new Set(
+				state.deduction?.eliminated[state.currentPlayer] ?? []
+			);
+			if (eliminated.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			break;
+		}
 		case "place": {
 			if (hitMiss) {
 				if (!usesPlacementPhase(config.fleet)) {
@@ -1411,6 +1523,14 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 				a.position.row === b.position.row &&
 				a.position.col === b.position.col
 			);
+		case "query":
+			return (
+				b.type === "query" &&
+				a.trait === b.trait &&
+				a.value === b.value
+			);
+		case "guess":
+			return b.type === "guess" && a.id === b.id;
 	}
 }
 
@@ -1600,8 +1720,11 @@ export function createGameKernel(config: GameConfig): GameKernel {
 
 	return {
 		config,
-		initialState(_seed?: Seed) {
-			return createInitialState(config);
+		initialState(seed?: Seed) {
+			return createInitialState({
+				...config,
+				seed: seed ?? config.seed
+			});
 		},
 		currentPlayer(state) {
 			if ((config.turnSchedule ?? "alternating") === "simultaneous") {

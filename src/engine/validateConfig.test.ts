@@ -127,6 +127,24 @@ describe("buildFeatureContracts", () => {
 		);
 		expect(go.map((c) => c.id)).not.toContain("Capture");
 		expect(go.map((c) => c.id)).not.toContain("NInARow");
+
+		const guess = buildFeatureContracts(
+			examplePresets["guess-who-lite"].config
+		);
+		expect(guess.map((c) => c.id).sort()).toEqual(
+			[
+				"BoardWritable",
+				"IdentifySecret",
+				"InputDeduction",
+				"ObservationDeduction"
+			].sort()
+		);
+		expect(guess.map((c) => c.id)).not.toContain("NInARow");
+		expect(guess.map((c) => c.id)).not.toContain("PlacementDirect");
+		expect(checkContracts(guess)).toEqual([]);
+		expect(validateConfig(examplePresets["guess-who-lite"].config).ok).toBe(
+			true
+		);
 		expect(go.map((c) => c.id)).not.toContain("AdjacencyProvided");
 		expect(checkContracts(go)).toEqual([]);
 	});
