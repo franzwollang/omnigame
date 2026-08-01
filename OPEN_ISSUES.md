@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M9 capture-by-replacement closed).
+**Marathon rule:** Work **P3 → P4** in order (M10 Guess Who Lite closed).
 Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,9 +12,10 @@ Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Pick the smallest new seam that existing primitives cannot express, e.g.:
+Guess Who Lite (query + guess / `identify_secret`) landed as M10.
 
-- Guess Who-like query / commit (README MVP anchor)
+Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
+
 - Richer multi-phase machines beyond current `turn.phases`
 - Apply-time simultaneous sliding (re-open composition)
 - Hex/graph `range > 1` (only if a new seam appears)
@@ -35,7 +36,7 @@ exhaust `references/` or recombine covered primitives).
 **Acceptance:**
 
 - [ ] Sync compact draft with current kernel events/state/phases (incl.
-      `pieceCaptured`, simultaneous, phases)
+      `pieceCaptured`, `queryAnswered` / `guessResult`, simultaneous, phases)
 
 ---
 
@@ -47,4 +48,5 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 
 ### deferred-mvp-anchors
 
-Guess Who-like / full Go remain candidates under `next-missing-mechanism`.
+Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite
+covers the README query/guess MVP seam (richer commit/hypothesis still open).

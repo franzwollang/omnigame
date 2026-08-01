@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T18:20-05:00",
-  "turn": 32,
+  "updated_at": "2026-08-01T18:35-05:00",
+  "turn": 34,
   "focus": {
-    "milestone": "M9",
+    "milestone": "M10",
     "issue": "next-missing-mechanism",
-    "goal": "Pick smallest new seam after capture-by-replacement"
+    "goal": "Guess Who Lite landed; next seam or P4"
   },
   "recent": [
-    "Merged M8 honesty from 0dda onto b777",
-    "M9: movement.capture=replace + Replace Race + tests; closed P3 capture"
+    "Synced M8+M9 from b777 onto 34ac",
+    "M10: Guess Who Lite deduction query/guess + identify_secret",
+    "Green gate: typecheck + 311 tests"
   ],
   "discoveries": [
-    "handleMove overwrite lands replace; pieceCaptured kernel event mirrors shotResult",
-    "Schema forbids replace×simultaneous / hex / placement.capture"
+    "Deduction secrets via runSeeded; queryAnswered/guessResult mirror shotResult",
+    "Sandbox maps deduction→cell for canvas; JSON/preset for play"
   ],
   "open_threads": [
-    "P3 next-missing-mechanism; then P4 CI / semantics refresh"
+    "P3 next seam (sim sliding / joint UCT / richer phases) or P4 CI/semantics"
   ],
-  "next_step": "Cloud: pick smallest next seam (query/phases/sim sliding/joint UCT)",
+  "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []
 }

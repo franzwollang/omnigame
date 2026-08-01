@@ -51,6 +51,7 @@ These are built from the same shared schema and operators.
 - **Diagonal Step Race** (`movement.adjacency = diagonal` ferz step + reach_row)
 - **Slide Race** (`movement.range > 1` blocker-aware orthogonal slide + reach_row)
 - **Replace Race** (`movement.capture = replace` — move onto enemy clears then lands)
+- **Guess Who Lite** (deduction query/guess + identify_secret)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
@@ -131,7 +132,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
   **rectangle** and **hex_offset** (graph wrap = explicit edges); Toroidal TTT +
   Toroidal Hex Connect Lite presets
-- **Inputs**: cell-click, column-activation, row-activation, and piece move (`input.mode = "cell" | "column" | "row" | "move"`)
+- **Inputs**: cell-click, column-activation, row-activation, piece move, and
+  deduction query/guess (`input.mode = "cell" | "column" | "row" | "move" | "deduction"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
   - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
@@ -148,8 +150,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   Race / Simultaneous Hex/Graph Step Race
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
@@ -157,8 +159,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
-machines, joint simultaneous search, and a larger set of reusable
-operators/constraints.
+machines, joint simultaneous search, richer Guess Who commit/hypothesis beyond
+query+guess MVP, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -335,7 +337,9 @@ The goal is to converge on a “complete-ish” primitive set by implementing a 
 - **Battleship-lite**: hidden placement, hit/miss observation, sink objective  
   Stresses: partial info + connectivity constraints + phases
 - **Guess Who-like**: predicate queries over an attribute set  
-  Stresses: query operator + hypothesis/commit actions + race objective
+  Stresses: query operator + hypothesis/commit actions + race objective  
+  **Landed (MVP):** Guess Who Lite — `deduction` input/observation,
+  `identify_secret`, query + guess (richer commit/hypothesis still deferred)
 - **Go-lite / territory fill**: place + adjacency/liberty constraints + area scoring (simplified)  
   Stresses: stepping + constraints + scoring
 
@@ -390,12 +394,16 @@ liberties/ko/superko, simultaneous / multi-step / delayed / in-turn phases, libr
 explorer, debug overlays, baseline agents. Details: README status section +
 `PLANNING.md`.
 
+**Landed (Phase 2 so far):** composition honesty (M8), capture-by-replacement /
+Replace Race (M9), Guess Who Lite query+guess / `identify_secret` (M10).
+
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. Guess
-  Who-like query, richer phases, apply-time simultaneous sliding, joint UCT)
+- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. richer
+  phases, apply-time simultaneous sliding, joint UCT)
 - Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
-  workflows; `docs/semantics.md` refresh vs current kernel events
+  workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
+  Who commit/hypothesis beyond query+guess
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

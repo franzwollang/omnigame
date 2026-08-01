@@ -26,8 +26,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 |---|---|---|
 | M8 | Composition honesty (debt + sandbox/agent truth) | `done` |
 | M9 | Next missing mechanism (capture-by-replacement) | `done` |
+| M10 | Next missing mechanism (Guess Who Lite query/guess) | `done` |
 
-**Optimizing for this marathon:** M9 capture-by-replacement closed. Pick
+**Optimizing for this marathon:** M10 Guess Who Lite closed. Pick
 **P3 next-missing-mechanism** (smallest new seam) then P4 CI / semantics
 refresh — without asking which fork.
 
@@ -44,7 +45,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥302** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥311** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -58,7 +59,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
    (P0–P2 / M8 closed).  
-2. Start **P3** `capture-by-replacement` (M9) using its mini-spec in OPEN_ISSUES.  
+2. Start **P3** `next-missing-mechanism` (post-M10) — smallest new seam — or
+   P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
 4. After each landed item: update OPEN_ISSUES (resolve + log), PLANNING status,
@@ -96,28 +98,31 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
 **Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race
 preset demonstrates `capture = replace`.
+**Deduction:** Guess Who Lite (`input/observation = deduction`,
+`identify_secret`, query + guess operators).
 
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement**, point/
-positional/situational ko, observation (hit/miss + fog), fleet placement, Move
-(orthogonal/diagonal/king + sliding range on rectangle), tick/Life, simultaneous
-place/move (incl. ordered, hidden commit-reveal, multi-action), multi-step turns,
-delayed place/gravity, in-turn phases (place→move / place→fire / place→move→fire
-+ `connect_or_destroy`).
+positional/situational ko, observation (hit/miss + fog + **deduction**), fleet
+placement, Move (orthogonal/diagonal/king + sliding range on rectangle),
+tick/Life, simultaneous place/move (incl. ordered, hidden commit-reveal,
+multi-action), multi-step turns, delayed place/gravity, in-turn phases
+(place→move / place→fire / place→move→fire + `connect_or_destroy`), **query +
+guess / identify_secret**.
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
-Lite, Slide Race, Replace Race, Simultaneous Step Race, Place Move & Fire Lite,
-Go Lite variants, etc.).
+Lite, Slide Race, Replace Race, Guess Who Lite, Simultaneous Step Race, Place
+Move & Fire Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
 `movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
 observation, etc., plus an in-UI “Form coverage” callout for remaining
 JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
-`placement.capture`, …).
+`placement.capture`, `deduction.*` / `identify_secret`, …).
 
 **Not yet:** full Go; hex/graph sliding; joint UCT under simultaneous;
-simultaneous replace capture; CI workflows; Guess Who / query operator
-(deferred under next-missing-mechanism).
+simultaneous replace capture; CI workflows; richer Guess Who commit/hypothesis
+beyond query+guess MVP.
 
 ## Phase 2 exit criteria
 
@@ -136,6 +141,13 @@ simultaneous replace capture; CI workflows; Guess Who / query operator
 - Contracts/validation; no forked per-game engine — **done**
 - Out of scope still deferred: multi-jump, capture chains, hex/graph replace,
   simultaneous replace
+
+### M10 — Guess Who Lite (query + guess)
+
+- Schema deduction lockstep (`input`/`observation`/`objective`/`deduction`) — **done**
+- Kernel query/guess + `queryAnswered` / `guessResult`; observation projection — **done**
+- Preset `guess-who-lite` + transcript/replay tests — **done**
+- Out of scope: full canvas UI; richer commit/hypothesis; simultaneous deduction
 
 ## Sequencing notes
 
