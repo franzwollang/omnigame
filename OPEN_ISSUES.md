@@ -8,20 +8,17 @@ Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`
 
 ### next-missing-mechanism
 
-Positional **superko** landed — `capture.ko = "positional"` +
-`GameState.positionHistory` + illegal reason `"superko"` + Go Lite Superko
-preset + tests. Point ko (`ko: true` / `"point"`) unchanged on Go Lite.
-Pick the **next smallest** unlock the engine still lacks — not another
-recombination of covered primitives (see project-structure selection principle).
+**Sliding movement** landed — `movement.range` 1..8 on rectangle (blocker-aware
+ray walk) + Slide Race preset + tests. Hex/graph stay at range 1. Pick the
+**next smallest** unlock the engine still lacks — not another recombination of
+covered primitives (see project-structure selection principle).
 
 Candidates only when they force a new seam, e.g.:
 
-- situational superko (history includes side-to-move)
-- simultaneous / hidden simultaneous actions
-- delayed actions / multi-step turns
-- hex/graph wrap (follow-on to rectangle wrap)
-- `pop_out_top` (exit-side symmetric to gravity up)
-- horizontal pop-out (`pop_out_left` / `pop_out_right`)
+- capture-by-replacement (or capture piece tables) on move
+- richer multi-phase game machines beyond fleet + in-turn phases
+- hex/graph sliding (only if a new seam appears; range>1 deferred there)
+- phases hex/graph lift (only if a new seam appears; kernel already topology-aware)
 
 **Acceptance:**
 
@@ -53,5 +50,13 @@ or be closed after the next agent green run on cloud.
 
 M5 planned mechanism anchors landed (observation, Move, tick, hex, liberties,
 graph). Fleet placement, library depth, rectangle wrap, gravity-up, gravity-row,
-simple ko, and positional superko also landed. Further ports only when a **new**
+simple ko, positional/situational superko, `pop_out_top`, horizontal pop-out,
+hex wrap, simultaneous schedule (rectangle + hex + graph), multi-step
+`actionsPerTurn` (rectangle + hex + graph), delayed `delayTurns` (direct cell +
+delayed gravity), hidden simultaneous `commitReveal`, ordered simultaneous
+`resolveOrder`, multi-action simultaneous (rectangle + hex + graph), in-turn
+`turn.phases` place→move / place→fire / place→move→fire (`connect_or_destroy`),
+simultaneous move (joint move resolve), diagonal/king movement adjacency,
+topology-aware movement (hex/graph move + simultaneous), and sliding
+`movement.range` > 1 (Slide Race) also landed. Further ports only when a **new**
 missing mechanism appears — not a backlog.

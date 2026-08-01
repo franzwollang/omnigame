@@ -1,18 +1,23 @@
 // React hook: sandbox play through GameKernel (M1) + GameIR action log (M2)
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
-import type { GameState, Position } from "./types";
+import type { GameState, Player, Position } from "./types";
 import { getCell } from "./types";
 import type { GameConfig } from "./reducer";
 import {
 	createGameKernel,
 	formatKernelEvent,
+	jointMoveFromActions,
+	jointPlaceFromActions,
+	jointPlacesFromActions,
 	type GameKernel,
 	type IllegalReason,
 	type KernelAction,
 	type KernelEvent,
+	type PlayerId,
 	type Seed
 } from "@/engine/kernel";
+import { listHasPosition, positionsEqual } from "@/engine/types";
 import {
 	createInitialTurnContext,
 	type TurnContext
@@ -36,8 +41,29 @@ function turnContextFor(state: GameState): TurnContext {
 	return { phase: "awaitInput" };
 }
 
+export type PendingPlacements = Partial<Record<Player, Position[]>>;
+export type PendingMoves = Partial<
+	Record<Player, { from: Position; to: Position }>
+>;
+
+function commitLen(
+	commits: GameState["committedPlacements"],
+	player: Player
+): number {
+	return commits?.[player]?.length ?? 0;
+}
+
 export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const kernel: GameKernel = useMemo(() => createGameKernel(config), [config]);
+	const simultaneous =
+		(config.turnSchedule ?? "alternating") === "simultaneous";
+	const simultaneousMove =
+		simultaneous && (config.inputMode ?? "cell") === "move";
+	const commitReveal = simultaneous && config.commitReveal === true;
+	const resolveOrder = simultaneous
+		? (config.resolveOrder ?? "joint")
+		: "joint";
+	const actionsPerRound = simultaneous ? (config.actionsPerTurn ?? 1) : 1;
 
 	const [state, setState] = useState<GameState>(() =>
 		kernel.initialState(seed)
@@ -46,6 +72,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const [eventLog, setEventLog] = useState<KernelEvent[]>([]);
 	const [actionLog, setActionLog] = useState<KernelAction[]>([]);
 	const [selectedFrom, setSelectedFrom] = useState<Position | null>(null);
+	const [pendingPlacements, setPendingPlacements] = useState<PendingPlacements>(
+		{}
+	);
+	const [pendingMoves, setPendingMoves] = useState<PendingMoves>({});
 	const [lastIllegal, setLastIllegal] = useState<{
 		reason: IllegalReason;
 		detail: string;
@@ -61,6 +91,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	actionLogRef.current = actionLog;
 	const selectedFromRef = useRef<Position | null>(null);
 	selectedFromRef.current = selectedFrom;
+	const pendingRef = useRef<PendingPlacements>({});
+	pendingRef.current = pendingPlacements;
+	const pendingMovesRef = useRef<PendingMoves>({});
+	pendingMovesRef.current = pendingMoves;
 
 	const transcript: GameIRTranscript = useMemo(
 		() => createTranscript(actionLog, seed),
@@ -77,16 +111,28 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		setActionLog([]);
 		selectedFromRef.current = null;
 		setSelectedFrom(null);
+		pendingRef.current = {};
+		setPendingPlacements({});
+		pendingMovesRef.current = {};
+		setPendingMoves({});
 		setLastIllegal(null);
 		setTurnContext(turnContextFor(next));
 	}, [kernel, seed]);
 
 	const applyAction = useCallback(
 		(action: KernelAction) => {
-			const player = kernel.currentPlayer(stateRef.current);
+			const side = kernel.currentPlayer(stateRef.current);
+			const explainPlayer: PlayerId =
+				action.type === "commitPlace"
+					? action.player === "X"
+						? 0
+						: 1
+					: side === "simultaneous"
+						? 0
+						: side;
 			const explained = kernel.explainAction(
 				stateRef.current,
-				player,
+				explainPlayer,
 				action
 			);
 			if (!explained.legal) {
@@ -114,15 +160,230 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 					[...log, ...applied].slice(-ACTION_LOG_CAP)
 				);
 			}
+			pendingRef.current = {};
+			setPendingPlacements({});
+			pendingMovesRef.current = {};
+			setPendingMoves({});
+			selectedFromRef.current = null;
+			setSelectedFrom(null);
 			setTurnContext(turnContextFor(result.nextState));
 			return result;
 		},
 		[kernel]
 	);
 
+	/** Which seat is choosing next in simultaneous / commit-reveal collection. */
+	const simultaneousSeat: Player | null = useMemo(() => {
+		if (!simultaneous || state.status !== "playing") return null;
+		if (simultaneousMove) {
+			if (!pendingMoves.X) return "X";
+			if (!pendingMoves.O) return "O";
+			return null;
+		}
+		if (commitReveal) {
+			if (commitLen(state.committedPlacements, "X") < actionsPerRound)
+				return "X";
+			if (commitLen(state.committedPlacements, "O") < actionsPerRound)
+				return "O";
+			return null;
+		}
+		const xLen = pendingPlacements.X?.length ?? 0;
+		const oLen = pendingPlacements.O?.length ?? 0;
+		if (xLen < actionsPerRound) return "X";
+		if (oLen < actionsPerRound) return "O";
+		return null;
+	}, [
+		simultaneous,
+		simultaneousMove,
+		commitReveal,
+		state.status,
+		state.committedPlacements,
+		pendingPlacements,
+		pendingMoves,
+		actionsPerRound
+	]);
+
 	const placeMove = useCallback(
 		(pos: Position) => {
+			if (simultaneous && simultaneousMove) {
+				const seat: Player | null = !pendingMovesRef.current.X
+					? "X"
+					: !pendingMovesRef.current.O
+						? "O"
+						: null;
+				if (!seat) return;
+				const selected = selectedFromRef.current;
+				const occupant = getCell(stateRef.current.grid, pos);
+				if (!selected) {
+					if (occupant === seat) {
+						selectedFromRef.current = pos;
+						setSelectedFrom(pos);
+					}
+					return;
+				}
+				if (positionsEqual(selected, pos)) {
+					selectedFromRef.current = null;
+					setSelectedFrom(null);
+					return;
+				}
+				if (occupant === seat) {
+					selectedFromRef.current = pos;
+					setSelectedFrom(pos);
+					return;
+				}
+				const moveAction: KernelAction = {
+					type: "move",
+					from: selected,
+					to: pos
+				};
+				const explained = kernel.explainAction(
+					stateRef.current,
+					seat === "X" ? 0 : 1,
+					moveAction
+				);
+				if (!explained.legal) {
+					setLastIllegal({
+						reason: explained.reason,
+						detail: explained.detail
+					});
+					return;
+				}
+				setLastIllegal(null);
+				const nextPending: PendingMoves = {
+					...pendingMovesRef.current,
+					[seat]: { from: selected, to: pos }
+				};
+				pendingMovesRef.current = nextPending;
+				setPendingMoves(nextPending);
+				selectedFromRef.current = null;
+				setSelectedFrom(null);
+				if (nextPending.X && nextPending.O) {
+					const joint = jointMoveFromActions(
+						{ type: "move", from: nextPending.X.from, to: nextPending.X.to },
+						{ type: "move", from: nextPending.O.from, to: nextPending.O.to }
+					);
+					if (joint) applyAction(joint);
+				}
+				return;
+			}
+			if (simultaneous) {
+				if (commitReveal) {
+					const seat =
+						commitLen(stateRef.current.committedPlacements, "X") <
+						actionsPerRound
+							? "X"
+							: commitLen(stateRef.current.committedPlacements, "O") <
+								  actionsPerRound
+								? "O"
+								: null;
+					if (!seat) return;
+					applyAction({
+						type: "commitPlace",
+						player: seat,
+						position: pos
+					});
+					return;
+				}
+				const xLen = pendingRef.current.X?.length ?? 0;
+				const oLen = pendingRef.current.O?.length ?? 0;
+				const seat =
+					xLen < actionsPerRound ? "X" : oLen < actionsPerRound ? "O" : null;
+				if (!seat) return;
+				const own = pendingRef.current[seat] ?? [];
+				if (listHasPosition(own, pos)) {
+					setLastIllegal({
+						reason: "already_committed",
+						detail: "Already chosen this cell this round"
+					});
+					return;
+				}
+				const explained = kernel.explainAction(
+					stateRef.current,
+					seat === "X" ? 0 : 1,
+					{ type: "place", position: pos }
+				);
+				if (!explained.legal) {
+					setLastIllegal({
+						reason: explained.reason,
+						detail: explained.detail
+					});
+					return;
+				}
+				setLastIllegal(null);
+				const nextOwn = [...own, pos];
+				const nextPending: PendingPlacements = {
+					...pendingRef.current,
+					[seat]: nextOwn
+				};
+				pendingRef.current = nextPending;
+				setPendingPlacements(nextPending);
+				const nx = nextPending.X?.length ?? 0;
+				const no = nextPending.O?.length ?? 0;
+				if (nx === actionsPerRound && no === actionsPerRound) {
+					const joint =
+						actionsPerRound <= 1
+							? jointPlaceFromActions(
+									{ type: "place", position: nextPending.X![0]! },
+									{ type: "place", position: nextPending.O![0]! }
+								)
+							: jointPlacesFromActions(
+									nextPending.X!.map((p) => ({
+										type: "place" as const,
+										position: p
+									})),
+									nextPending.O!.map((p) => ({
+										type: "place" as const,
+										position: p
+									}))
+								);
+					if (joint) applyAction(joint);
+				}
+				return;
+			}
 			if ((config.observationMode ?? "full") === "hit_miss") {
+				const turnPhases = config.turnPhases;
+				if (turnPhases && turnPhases.length > 0) {
+					const phase =
+						turnPhases[stateRef.current.turnPhaseIndex ?? 0] ?? "place";
+					if (phase === "place") {
+						applyAction({ type: "place", position: pos });
+						selectedFromRef.current = null;
+						setSelectedFrom(null);
+						return;
+					}
+					if (phase === "fire") {
+						applyAction({ type: "fire", position: pos });
+						selectedFromRef.current = null;
+						setSelectedFrom(null);
+						return;
+					}
+					if (phase === "move") {
+						const selected = selectedFromRef.current;
+						const occupant = getCell(stateRef.current.grid, pos);
+						if (!selected) {
+							if (occupant === stateRef.current.currentPlayer) {
+								selectedFromRef.current = pos;
+								setSelectedFrom(pos);
+							}
+							return;
+						}
+						if (selected.row === pos.row && selected.col === pos.col) {
+							selectedFromRef.current = null;
+							setSelectedFrom(null);
+							return;
+						}
+						if (occupant === stateRef.current.currentPlayer) {
+							selectedFromRef.current = pos;
+							setSelectedFrom(pos);
+							return;
+						}
+						applyAction({ type: "move", from: selected, to: pos });
+						selectedFromRef.current = null;
+						setSelectedFrom(null);
+						return;
+					}
+					return;
+				}
 				const phase = stateRef.current.phase ?? "combat";
 				if (phase === "placement") {
 					applyAction({ type: "place", position: pos });
@@ -131,7 +392,12 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				}
 				return;
 			}
-			if ((config.inputMode ?? "cell") === "move") {
+			const turnPhases = config.turnPhases;
+			const inTurnPhase =
+				turnPhases && turnPhases.length > 0
+					? turnPhases[stateRef.current.turnPhaseIndex ?? 0]
+					: null;
+			if (inTurnPhase === "move" || (config.inputMode ?? "cell") === "move") {
 				const selected = selectedFromRef.current;
 				const occupant = getCell(stateRef.current.grid, pos);
 				if (!selected) {
@@ -159,8 +425,20 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				return;
 			}
 			applyAction({ type: "place", position: pos });
+			selectedFromRef.current = null;
+			setSelectedFrom(null);
 		},
-		[applyAction, config.observationMode, config.inputMode]
+		[
+			applyAction,
+			config.observationMode,
+			config.inputMode,
+			config.turnPhases,
+			simultaneous,
+			simultaneousMove,
+			commitReveal,
+			kernel,
+			actionsPerRound
+		]
 	);
 
 	const activateColumn = useCallback(
@@ -184,6 +462,13 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		[applyAction]
 	);
 
+	const popOutRow = useCallback(
+		(row: number) => {
+			applyAction({ type: "popOutRow", row });
+		},
+		[applyAction]
+	);
+
 	const tick = useCallback(() => {
 		applyAction({ type: "tick" });
 	}, [applyAction]);
@@ -201,6 +486,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		setActionLog([]);
 		selectedFromRef.current = null;
 		setSelectedFrom(null);
+		pendingRef.current = {};
+		setPendingPlacements({});
+		pendingMovesRef.current = {};
+		setPendingMoves({});
 		setLastIllegal(null);
 		setTurnContext(turnContextFor(next));
 	}, [kernel]);
@@ -218,6 +507,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 			setActionLog(result.appliedActions.slice(-ACTION_LOG_CAP));
 			selectedFromRef.current = null;
 			setSelectedFrom(null);
+			pendingRef.current = {};
+			setPendingPlacements({});
+			pendingMovesRef.current = {};
+			setPendingMoves({});
 			setLastIllegal(null);
 			setTurnContext(turnContextFor(result.finalState));
 			return result;
@@ -226,18 +519,29 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	);
 
 	const legalActionsList = useMemo(() => {
-		return kernel.legalActions(state, kernel.currentPlayer(state));
-	}, [kernel, state]);
+		if (simultaneous) {
+			const seat = simultaneousSeat ?? "X";
+			return kernel.legalActions(state, seat === "X" ? 0 : 1);
+		}
+		const side = kernel.currentPlayer(state);
+		if (side === "simultaneous") return kernel.legalActions(state, 0);
+		return kernel.legalActions(state, side);
+	}, [kernel, state, simultaneous, simultaneousSeat]);
 
 	const legalActions = useCallback(() => {
 		return legalActionsList;
 	}, [legalActionsList]);
 
-	/** Current player's observation (full / hit-miss / fog projection). */
-	const observation = useMemo(
-		() => kernel.observe(state, kernel.currentPlayer(state)),
-		[kernel, state]
-	);
+	/** Current seat's observation (commit-reveal uses choosing seat). */
+	const observation = useMemo(() => {
+		if (simultaneous) {
+			const seat = simultaneousSeat ?? "X";
+			return kernel.observe(state, seat === "X" ? 0 : 1);
+		}
+		const side = kernel.currentPlayer(state);
+		const pid: PlayerId = side === "simultaneous" ? 0 : side;
+		return kernel.observe(state, pid);
+	}, [kernel, state, simultaneous, simultaneousSeat]);
 
 	/** State with grid replaced by the current player's observation cells. */
 	const viewState: GameState = useMemo(
@@ -261,6 +565,12 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		actionLog,
 		transcript,
 		selectedFrom,
+		pendingPlacements,
+		pendingMoves,
+		simultaneousSeat,
+		commitReveal,
+		resolveOrder,
+		actionsPerRound,
 		legalActions,
 		legalActionsList,
 		dispatchAction: applyAction,
@@ -268,6 +578,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		activateColumn,
 		activateRow,
 		popOutColumn,
+		popOutRow,
 		tick,
 		pass,
 		reset,

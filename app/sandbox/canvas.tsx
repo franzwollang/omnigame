@@ -24,8 +24,11 @@ type Props = {
 	onActivateColumn?: (col: number) => void;
 	onActivateRow?: (row: number) => void;
 	onPopOutColumn?: (col: number) => void;
+	onPopOutRow?: (row: number) => void;
 	inputMode?: "cell" | "column" | "row" | "move";
 	enablePopOutButtons?: boolean;
+	/** Which board edge hosts pop-out buttons (exit side). */
+	popOutSide?: "top" | "bottom" | "left" | "right";
 	topology?: GridTopology;
 	/** Compiled graph adjacency/layout when topology = graph. */
 	graph?: GraphTopologyData;
@@ -39,6 +42,8 @@ type Props = {
 	 * When omitted, all cells are treated as visible.
 	 */
 	fogVisible?: boolean[];
+	/** Gravity direction — used to preview delayed column/row intents. */
+	gravityDirection?: "down" | "up" | "left" | "right";
 	// token rendering
 	tokens?: {
 		id: string;
@@ -100,14 +105,17 @@ export default function SandboxCanvas({
 	onActivateColumn,
 	onActivateRow,
 	onPopOutColumn,
+	onPopOutRow,
 	inputMode = "cell",
 	enablePopOutButtons = false,
+	popOutSide = "bottom",
 	topology = "rectangle",
 	graph,
 	highlightCells = [],
 	selectedCell = null,
 	showLegalOverlay = true,
 	fogVisible,
+	gravityDirection = "down",
 	tokens = [],
 	placements = []
 }: Props) {
@@ -122,6 +130,7 @@ export default function SandboxCanvas({
 	const onActivateColumnRef = useRef<typeof onActivateColumn>(onActivateColumn);
 	const onActivateRowRef = useRef<typeof onActivateRow>(onActivateRow);
 	const onPopOutColumnRef = useRef<typeof onPopOutColumn>(onPopOutColumn);
+	const onPopOutRowRef = useRef<typeof onPopOutRow>(onPopOutRow);
 	const inputModeRef = useRef(inputMode);
 	const popButtonsGroupRef = useRef<THREE.Group | null>(null);
 	const labelRendererRef = useRef<CSS2DRenderer | null>(null);
@@ -140,8 +149,9 @@ export default function SandboxCanvas({
 		onActivateColumnRef.current = onActivateColumn;
 		onActivateRowRef.current = onActivateRow;
 		onPopOutColumnRef.current = onPopOutColumn;
+		onPopOutRowRef.current = onPopOutRow;
 		inputModeRef.current = inputMode;
-	}, [onActivateColumn, onActivateRow, onPopOutColumn, inputMode]);
+	}, [onActivateColumn, onActivateRow, onPopOutColumn, onPopOutRow, inputMode]);
 
 	useEffect(() => {
 		const canvasEl = canvasRef.current;
@@ -442,19 +452,30 @@ export default function SandboxCanvas({
 			// Check pop-out buttons first if enabled
 			if (
 				enablePopOutButtons &&
-				onPopOutColumnRef.current &&
-				popButtonsGroupRef.current
+				popButtonsGroupRef.current &&
+				(onPopOutColumnRef.current || onPopOutRowRef.current)
 			) {
 				const popIntersects = raycasterRef.current.intersectObjects(
 					popButtonsGroupRef.current.children,
 					true
 				);
 				if (popIntersects.length > 0) {
-					const { col } = (popIntersects[0].object.userData || {}) as {
-						col: number;
+					const data = (popIntersects[0].object.userData || {}) as {
+						col?: number;
+						row?: number;
 					};
-					if (typeof col === "number") {
-						onPopOutColumnRef.current(col);
+					if (
+						typeof data.col === "number" &&
+						onPopOutColumnRef.current
+					) {
+						onPopOutColumnRef.current(data.col);
+						return;
+					}
+					if (
+						typeof data.row === "number" &&
+						onPopOutRowRef.current
+					) {
+						onPopOutRowRef.current(data.row);
 						return;
 					}
 				}
@@ -707,6 +728,118 @@ export default function SandboxCanvas({
 			}
 		});
 
+		// Delayed-place intents: faint ghost marks on reserved pending cells /
+		// gravity entry cells for column/row intents
+		for (const pending of gameState.pendingPlaces ?? []) {
+			let row: number;
+			let col: number;
+			if (pending.kind === "column") {
+				col = pending.col;
+				// Preview at current settle landing (or entry if somehow full)
+				const height = gridHeight;
+				if (gravityDirection === "up") {
+					row = 0;
+					for (let r = 0; r < height; r++) {
+						if (getCell(gameState.grid, { row: r, col }) === null) {
+							row = r;
+							break;
+						}
+					}
+				} else {
+					row = height - 1;
+					for (let r = height - 1; r >= 0; r--) {
+						if (getCell(gameState.grid, { row: r, col }) === null) {
+							row = r;
+							break;
+						}
+					}
+				}
+			} else if (pending.kind === "row") {
+				row = pending.row;
+				const width = gridWidth;
+				if (gravityDirection === "left") {
+					col = 0;
+					for (let c = 0; c < width; c++) {
+						if (getCell(gameState.grid, { row, col: c }) === null) {
+							col = c;
+							break;
+						}
+					}
+				} else {
+					col = width - 1;
+					for (let c = width - 1; c >= 0; c--) {
+						if (getCell(gameState.grid, { row, col: c }) === null) {
+							col = c;
+							break;
+						}
+					}
+				}
+			} else {
+				row = pending.position.row;
+				col = pending.position.col;
+			}
+			const { x, y } = cellWorldPos(
+				row,
+				col,
+				gridWidth,
+				gridHeight,
+				topology,
+				cellSize,
+				totalCellSize,
+				graph
+			);
+			const color = pending.player === "X" ? 0x64748b : 0xf87171;
+			if (pending.player === "X") {
+				const material = new THREE.LineBasicMaterial({
+					color,
+					linewidth: 1,
+					transparent: true,
+					opacity: 0.45
+				});
+				const points1 = [
+					new THREE.Vector3(x - cellSize * 0.25, y + cellSize * 0.25, 0.002),
+					new THREE.Vector3(x + cellSize * 0.25, y - cellSize * 0.25, 0.002)
+				];
+				const points2 = [
+					new THREE.Vector3(x + cellSize * 0.25, y + cellSize * 0.25, 0.002),
+					new THREE.Vector3(x - cellSize * 0.25, y - cellSize * 0.25, 0.002)
+				];
+				marksGroup.add(
+					new THREE.Line(
+						new THREE.BufferGeometry().setFromPoints(points1),
+						material
+					),
+					new THREE.Line(
+						new THREE.BufferGeometry().setFromPoints(points2),
+						material.clone()
+					)
+				);
+			} else {
+				const curve = new THREE.EllipseCurve(
+					x,
+					y,
+					cellSize * 0.28,
+					cellSize * 0.28,
+					0,
+					2 * Math.PI,
+					false,
+					0
+				);
+				const geometry = new THREE.BufferGeometry().setFromPoints(
+					curve.getPoints(24)
+				);
+				const material = new THREE.LineBasicMaterial({
+					color,
+					linewidth: 1,
+					transparent: true,
+					opacity: 0.45
+				});
+				const circle = new THREE.Line(geometry, material);
+				circle.position.z = 0.002;
+				marksGroup.add(circle);
+			}
+		}
+
 		// Draw token placements (images if provided)
 		placements.forEach((p) => {
 			const token = tokenById.get(p.tokenId);
@@ -764,11 +897,13 @@ export default function SandboxCanvas({
 		gameState.grid.cells,
 		gameState.grid.width,
 		gameState.grid.height,
+		gameState.pendingPlaces,
 		tokens,
 		placements,
 		enablePopOutButtons,
 		topology,
-		graph
+		graph,
+		gravityDirection
 	]);
 
 	// CSS2D DOM pop-out buttons
@@ -784,23 +919,55 @@ export default function SandboxCanvas({
 		const cellSize = 0.9;
 		const spacing = 0.1;
 		const totalCellSize = cellSize + spacing;
+		const planeWidth = gridWidth * totalCellSize;
 		const planeHeight = gridHeight * totalCellSize;
-		const y = planeHeight / 2 + spacing * 0.5; // slightly above top edge
-		for (let col = 0; col < gridWidth; col++) {
-			const x = (col - (gridWidth - 1) / 2) * totalCellSize;
-			const btn = document.createElement("button");
-			btn.className =
-				"rounded-full px-2 py-1 text-xs bg-zinc-800/90 text-zinc-100 border border-zinc-600 shadow pointer-events-auto hover:bg-zinc-700";
-			btn.textContent = "Pop";
-			btn.onclick = (e) => {
-				e.stopPropagation();
-				if (onPopOutColumnRef.current) onPopOutColumnRef.current(col);
-			};
-			const obj = new CSS2DObject(btn);
-			obj.position.set(x, y, 0);
-			group.add(obj);
+		const horizontal = popOutSide === "left" || popOutSide === "right";
+		if (horizontal) {
+			const x =
+				popOutSide === "left"
+					? -(planeWidth / 2 + spacing * 0.5)
+					: planeWidth / 2 + spacing * 0.5;
+			for (let row = 0; row < gridHeight; row++) {
+				const y = ((gridHeight - 1) / 2 - row) * totalCellSize;
+				const btn = document.createElement("button");
+				btn.className =
+					"rounded-full px-2 py-1 text-xs bg-zinc-800/90 text-zinc-100 border border-zinc-600 shadow pointer-events-auto hover:bg-zinc-700";
+				btn.textContent = "Pop";
+				btn.onclick = (e) => {
+					e.stopPropagation();
+					if (onPopOutRowRef.current) onPopOutRowRef.current(row);
+				};
+				const obj = new CSS2DObject(btn);
+				obj.position.set(x, y, 0);
+				group.add(obj);
+			}
+		} else {
+			// Place buttons on the exit side (top for pop_out_top, bottom for pop_out_bottom)
+			const y =
+				popOutSide === "top"
+					? planeHeight / 2 + spacing * 0.5
+					: -(planeHeight / 2 + spacing * 0.5);
+			for (let col = 0; col < gridWidth; col++) {
+				const x = (col - (gridWidth - 1) / 2) * totalCellSize;
+				const btn = document.createElement("button");
+				btn.className =
+					"rounded-full px-2 py-1 text-xs bg-zinc-800/90 text-zinc-100 border border-zinc-600 shadow pointer-events-auto hover:bg-zinc-700";
+				btn.textContent = "Pop";
+				btn.onclick = (e) => {
+					e.stopPropagation();
+					if (onPopOutColumnRef.current) onPopOutColumnRef.current(col);
+				};
+				const obj = new CSS2DObject(btn);
+				obj.position.set(x, y, 0);
+				group.add(obj);
+			}
 		}
-	}, [enablePopOutButtons, gameState.grid.width, gameState.grid.height]);
+	}, [
+		enablePopOutButtons,
+		popOutSide,
+		gameState.grid.width,
+		gameState.grid.height
+	]);
 
 	// Legal-move / selection / fog overlay (tint cell hit meshes)
 	useEffect(() => {

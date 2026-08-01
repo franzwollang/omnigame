@@ -20,6 +20,7 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 
 	const needsAdjacency =
 		cfg.objective.mode === "n_in_a_row" ||
+		cfg.objective.mode === "connect_or_destroy" ||
 		(Boolean(cfg.placement.capture?.enabled) &&
 			(cfg.placement.capture?.mode ?? "flip") === "flip");
 	if (needsAdjacency) features.push(Contracts.AdjacencyProvided());
@@ -55,6 +56,12 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 			features.push(Contracts.OverflowReject());
 		} else if (cfg.placement.overflow === "pop_out_bottom") {
 			features.push(Contracts.OverflowPopOutBottom());
+		} else if (cfg.placement.overflow === "pop_out_top") {
+			features.push(Contracts.OverflowPopOutTop());
+		} else if (cfg.placement.overflow === "pop_out_right") {
+			features.push(Contracts.OverflowPopOutRight());
+		} else if (cfg.placement.overflow === "pop_out_left") {
+			features.push(Contracts.OverflowPopOutLeft());
 		}
 	}
 
@@ -79,6 +86,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	}
 	if (cfg.objective.mode === "destroy_hidden") {
 		features.push(Contracts.DestroyHidden());
+	} else if (cfg.objective.mode === "connect_or_destroy") {
+		features.push(Contracts.ConnectOrDestroy());
 	} else if (cfg.objective.mode === "reach_row") {
 		features.push(Contracts.ReachRow());
 	} else if (cfg.objective.mode === "area_control") {
@@ -91,6 +100,30 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 
 	if (cfg.turn.schedule === "manual_tick") {
 		features.push(Contracts.SchedulerManualTick());
+	}
+	if (cfg.turn.schedule === "simultaneous") {
+		const resolveOrder = cfg.turn.resolveOrder ?? "joint";
+		features.push(Contracts.ScheduleSimultaneous(resolveOrder));
+		if (cfg.input.mode === "move") {
+			features.push(Contracts.ScheduleSimultaneousMove());
+		}
+		if (cfg.turn.commitReveal === true) {
+			features.push(Contracts.ScheduleCommitReveal());
+		}
+		if (resolveOrder === "x_first" || resolveOrder === "o_first") {
+			features.push(Contracts.ScheduleOrderedResolve());
+		}
+		if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+			features.push(Contracts.ScheduleMultiActionSimultaneous());
+		}
+	} else if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+		features.push(Contracts.ScheduleMultiStep());
+	}
+	if ((cfg.placement.delayTurns ?? 0) > 0) {
+		features.push(Contracts.PlacementDelayed());
+	}
+	if ((cfg.turn.phases?.length ?? 0) > 0) {
+		features.push(Contracts.ScheduleInTurnPhases());
 	}
 
 	return features;

@@ -8,7 +8,8 @@ import { compile } from "@/compiler";
 import { createGreedyAgent, createRandomAgent } from "@/agents";
 import type { Config } from "@/schemas/config";
 import type { PlayabilityReport } from "@/library/types";
-import type { GameKernel, KernelAction } from "@/engine/kernel";
+import type { GameKernel, KernelAction, PlayerId } from "@/engine/kernel";
+import { stepPly } from "@/engine/kernel";
 import type { GameState } from "@/engine/types";
 
 export type AssessOptions = {
@@ -34,7 +35,7 @@ function runPlayout(
 	pickAction: (
 		kernel: GameKernel,
 		state: GameState,
-		player: ReturnType<GameKernel["currentPlayer"]>
+		player: PlayerId
 	) => KernelAction | null,
 	maxSteps: number
 ): PlayoutStats {
@@ -48,18 +49,24 @@ function runPlayout(
 			terminated = true;
 			break;
 		}
-		const p = kernel.currentPlayer(state);
-		const action = pickAction(kernel, state, p);
-		if (!action) break;
 		const before = state.moveCount;
-		const result = kernel.stepSync(state, action);
+		const sideBefore = kernel.currentPlayer(state);
+		const result = stepPly(kernel, state, (player, _legal) =>
+			pickAction(kernel, state, player)
+		);
+		if (!result) break;
 		state = result.nextState;
 		if (
 			state.moveCount > before ||
 			result.events.some((e) => e.type !== "ignored")
 		) {
 			stepsTaken += 1;
-			playersMoved.add(String(p));
+			if (sideBefore === "simultaneous") {
+				playersMoved.add("0");
+				playersMoved.add("1");
+			} else {
+				playersMoved.add(String(sideBefore));
+			}
 		}
 		if (result.terminal || state.status !== "playing") {
 			terminated = true;
@@ -114,8 +121,9 @@ export function assessPlayability(
 
 	const { kernel, config } = compiled;
 	const initial = kernel.initialState(seed);
-	const player = kernel.currentPlayer(initial);
-	const opening = kernel.legalActions(initial, player);
+	const side = kernel.currentPlayer(initial);
+	const openingPlayer: PlayerId = side === "simultaneous" ? 0 : side;
+	const opening = kernel.legalActions(initial, openingPlayer);
 
 	if (opening.length === 0) {
 		return {

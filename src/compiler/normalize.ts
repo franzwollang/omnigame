@@ -25,10 +25,11 @@ export type NormalizeResult = {
 };
 
 function resolveKoRule(
-	ko: boolean | "point" | "positional" | undefined
+	ko: boolean | "point" | "positional" | "situational" | undefined
 ): KoRule {
 	if (ko === true || ko === "point") return "point";
 	if (ko === "positional") return "positional";
+	if (ko === "situational") return "situational";
 	return "none";
 }
 
@@ -60,6 +61,14 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		fogMetric: config.observation.metric,
 		objectiveMode: config.objective.mode,
 		turnSchedule: config.turn.schedule,
+		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
+		delayTurns: config.placement.delayTurns ?? 0,
+		commitReveal: config.turn.commitReveal === true,
+		resolveOrder: config.turn.resolveOrder ?? "joint",
+		turnPhases:
+			config.turn.phases && config.turn.phases.length > 0
+				? [...config.turn.phases]
+				: undefined,
 		scheduler: config.scheduler
 			? {
 					rules: config.scheduler.rules,
@@ -100,6 +109,10 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	fogMetric: "chebyshev",
 	objectiveMode: "n_in_a_row",
 	turnSchedule: "alternating",
+	actionsPerTurn: 1,
+	delayTurns: 0,
+	commitReveal: false,
+	resolveOrder: "joint",
 	initial: []
 };
 

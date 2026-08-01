@@ -11,9 +11,15 @@ export type Slot =
 	| { type: "PlacementPolicy"; value: "direct" | "gravity" | "move" }
 	| {
 			type: "EndCondition";
-			value: "nInARow" | "destroyHidden" | "reachRow" | "areaControl" | "none";
+			value:
+				| "nInARow"
+				| "destroyHidden"
+				| "connectOrDestroy"
+				| "reachRow"
+				| "areaControl"
+				| "none";
 	  }
-	| { type: "Schedule"; value: "alternating" | "manualTick" };
+	| { type: "Schedule"; value: "alternating" | "manualTick" | "simultaneous" };
 
 export type PhaseHook =
 	| "validateInput"
@@ -136,6 +142,22 @@ export const Contracts = {
 		hooks: ["applyEffects"],
 		invariants: []
 	}),
+	OverflowPopOutRight: (): FeatureContract => ({
+		id: "OverflowPopOutRight",
+		requires: ["TargetLine"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: []
+	}),
+	OverflowPopOutLeft: (): FeatureContract => ({
+		id: "OverflowPopOutLeft",
+		requires: ["TargetLine"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: []
+	}),
 	/** Base board always present: cells can be written by placement features. */
 	BoardWritable: (): FeatureContract => ({
 		id: "BoardWritable",
@@ -231,6 +253,18 @@ export const Contracts = {
 		hooks: ["checkEnd"],
 		invariants: []
 	}),
+	/**
+	 * Dual end for place→move→fire: n-in-a-row after place/move, or sink
+	 * opponent fleet after fire. Single EndCondition slot (not two providers).
+	 */
+	ConnectOrDestroy: (): FeatureContract => ({
+		id: "ConnectOrDestroy",
+		requires: ["Adjacency", "CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "connectOrDestroy" }],
+		hooks: ["checkEnd"],
+		invariants: ["phaseRoutesConnectOrDestroy"]
+	}),
 	ReachRow: (): FeatureContract => ({
 		id: "ReachRow",
 		requires: ["ResolvedCell"],
@@ -262,6 +296,118 @@ export const Contracts = {
 		slots: [{ type: "Schedule", value: "manualTick" }],
 		hooks: ["applyEffects"],
 		invariants: ["globalSynchronousUpdate"]
+	}),
+	ScheduleSimultaneous: (
+		resolveOrder: "joint" | "x_first" | "o_first" = "joint"
+	): FeatureContract => ({
+		id: "ScheduleSimultaneous",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [{ type: "Schedule", value: "simultaneous" }],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: [
+			"jointActionPerRound",
+			resolveOrder === "joint"
+				? "sameCellConflictNeitherApplies"
+				: "sameCellConflictFirstSeatWins"
+		]
+	}),
+	/**
+	 * Simultaneous move (input.mode = move under simultaneous). Keeps Schedule =
+	 * simultaneous; each seat submits one {from,to}; same-dest conflict rules
+	 * mirror joint place.
+	 */
+	ScheduleSimultaneousMove: (): FeatureContract => ({
+		id: "ScheduleSimultaneousMove",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: [
+			"jointMovePerRound",
+			"sameDestinationConflictNeitherOrFirst"
+		]
+	}),
+	/**
+	 * Ordered simultaneous resolve (resolveOrder = x_first | o_first). Keeps
+	 * Schedule = simultaneous; earlier seat wins same-cell conflicts.
+	 */
+	ScheduleOrderedResolve: (): FeatureContract => ({
+		id: "ScheduleOrderedResolve",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: ["sequentialApplyWithinRound", "sameCellConflictFirstSeatWins"]
+	}),
+	/**
+	 * Hidden simultaneous (commit-then-reveal). Keeps Schedule = simultaneous;
+	 * adds private commit buffer before joint resolve.
+	 */
+	ScheduleCommitReveal: (): FeatureContract => ({
+		id: "ScheduleCommitReveal",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: [
+			"commitBeforeJointResolve",
+			"opponentCommitHiddenUntilReveal"
+		]
+	}),
+	/**
+	 * Multi-step alternating turns (actionsPerTurn > 1). Keeps Schedule free —
+	 * schedule remains alternating; this owns the nextTurn budget invariant.
+	 */
+	ScheduleMultiStep: (): FeatureContract => ({
+		id: "ScheduleMultiStep",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["nextTurn"],
+		invariants: ["actionsPerTurnBudgetBeforeHandoff"]
+	}),
+	/**
+	 * Multi-action simultaneous rounds (actionsPerTurn > 1 under simultaneous).
+	 * Each seat submits N places; joint resolve applies indexed pairs.
+	 */
+	ScheduleMultiActionSimultaneous: (): FeatureContract => ({
+		id: "ScheduleMultiActionSimultaneous",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: ["actionsPerRoundBudgetBeforeJointResolve"]
+	}),
+	/**
+	 * Delayed (queued) place: intent is recorded now; stone materializes after
+	 * delayTurns intervening places. Direct cell intents reserve that cell;
+	 * gravity column/row intents reserve a slot and settle at resolve time.
+	 */
+	PlacementDelayed: (): FeatureContract => ({
+		id: "PlacementDelayed",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["applyPlacement", "applyEffects"],
+		invariants: [
+			"intentBeforeResolve",
+			"pendingCellsReserved",
+			"pendingGravitySettlesOnResolve"
+		]
+	}),
+	/**
+	 * Ordered in-turn phase sequence (place→move, place→fire, or
+	 * place→move→fire before handoff). Distinct from ScheduleMultiStep
+	 * (N copies of one action type).
+	 */
+	ScheduleInTurnPhases: (): FeatureContract => ({
+		id: "ScheduleInTurnPhases",
+		requires: ["CellsWritable", "ResolvedCell"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "nextTurn"],
+		invariants: ["phaseIndexBeforeHandoff", "phaseRoutesActionType"]
 	}),
 	TopologyHex: (): FeatureContract => ({
 		id: "TopologyHex",

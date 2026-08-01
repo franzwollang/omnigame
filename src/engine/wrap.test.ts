@@ -68,7 +68,7 @@ describe("adjacency wrap helpers", () => {
 });
 
 describe("schema: grid.wrap", () => {
-	it("accepts wrap on rectangle and rejects on hex", () => {
+	it("accepts wrap on rectangle and hex; rejects on graph", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		expect(
 			zConfig.safeParse({
@@ -81,13 +81,28 @@ describe("schema: grid.wrap", () => {
 				...base,
 				grid: { ...base.grid, topology: "hex_offset", wrap: true }
 			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["graph-connect-lite"].config,
+				grid: {
+					...examplePresets["graph-connect-lite"].config.grid,
+					wrap: true
+				}
+			}).success
 		).toBe(false);
 	});
 
-	it("accepts toroidal-ttt preset", () => {
-		const parsed = zConfig.safeParse(examplePresets["toroidal-ttt"].config);
-		expect(parsed.success).toBe(true);
-		expect(parsed.success && parsed.data.grid.wrap).toBe(true);
+	it("accepts toroidal-ttt and toroidal-hex-connect-lite presets", () => {
+		const rect = zConfig.safeParse(examplePresets["toroidal-ttt"].config);
+		expect(rect.success).toBe(true);
+		expect(rect.success && rect.data.grid.wrap).toBe(true);
+		const hex = zConfig.safeParse(
+			examplePresets["toroidal-hex-connect-lite"].config
+		);
+		expect(hex.success).toBe(true);
+		expect(hex.success && hex.data.grid.wrap).toBe(true);
+		expect(hex.success && hex.data.grid.topology).toBe("hex_offset");
 	});
 });
 
@@ -103,6 +118,36 @@ describe("wrap win detection", () => {
 		expect(
 			checkWinner(grid, "X", 3, adjacencyAll, "rectangle", undefined, true)
 		).toBe(true);
+	});
+
+	it("detects hex horizontal win across the east/west seam", () => {
+		let grid = emptyGrid(4, 3);
+		grid = { ...grid, cells: setCell(grid, { row: 1, col: 3 }, "X") };
+		grid = { ...grid, cells: setCell(grid, { row: 1, col: 0 }, "X") };
+		grid = { ...grid, cells: setCell(grid, { row: 1, col: 1 }, "X") };
+		expect(
+			checkWinner(grid, "X", 3, adjacencyAll, "hex_offset", undefined, false)
+		).toBe(false);
+		expect(
+			checkWinner(grid, "X", 3, adjacencyAll, "hex_offset", undefined, true)
+		).toBe(true);
+	});
+});
+
+describe("hex wrap neighbors", () => {
+	it("includes cube neighbors across the seam when wrap is on", () => {
+		const grid = emptyGrid(4, 3);
+		const corner = neighbors(
+			grid,
+			{ row: 0, col: 0 },
+			"hex_offset",
+			undefined,
+			true
+		);
+		expect(corner).toHaveLength(6);
+		// E/W cube axis wraps col 0 ↔ col 3 on row 0
+		expect(corner).toContainEqual({ row: 0, col: 3 });
+		expect(corner).toContainEqual({ row: 0, col: 1 });
 	});
 });
 
@@ -143,6 +188,28 @@ describe("transcript: Toroidal TTT wrap win", () => {
 			{ row: 1, col: 1 },
 			{ row: 0, col: 2 },
 			{ row: 2, col: 2 }
+		];
+		for (const position of places) {
+			state = kernel.stepSync(state, { type: "place", position }).nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+	});
+
+	it("kernel path plays toroidal-hex-connect-lite wrap win", () => {
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["toroidal-hex-connect-lite"].config
+		);
+		expect(gameConfig.gridWrap).toBe(true);
+		expect(gameConfig.topology).toBe("hex_offset");
+		let state = kernel.initialState();
+		// X: (1,3) (1,0) (1,1) wraps across E/W seam → length 3
+		const places = [
+			{ row: 1, col: 3 },
+			{ row: 0, col: 0 },
+			{ row: 1, col: 0 },
+			{ row: 0, col: 1 },
+			{ row: 1, col: 1 }
 		];
 		for (const position of places) {
 			state = kernel.stepSync(state, { type: "place", position }).nextState;

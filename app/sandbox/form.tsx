@@ -126,7 +126,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<div className="space-y-0.5">
 											<FormLabel>Wrap (toroidal)</FormLabel>
 											<p className="text-xs text-muted-foreground">
-												Rectangle only — edges connect opposite sides
+												Rectangle and hex_offset — opposite edges connect
+												(graph: add wrap edges explicitly)
 											</p>
 										</div>
 										<FormControl>
@@ -134,8 +135,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												checked={field.value === true}
 												onCheckedChange={field.onChange}
 												disabled={
-													(form.watch("grid.topology") ?? "rectangle") !==
-													"rectangle"
+													!["rectangle", "hex_offset"].includes(
+														form.watch("grid.topology") ?? "rectangle"
+													)
 												}
 											/>
 										</FormControl>
@@ -196,8 +198,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								</div>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								Wrap edges and realtime turns are deferred. Use
-								manual_tick + Life Lite for discrete generations.
+								manual_tick + Life Lite, simultaneous joint place or
+								joint move, commitReveal for hidden simultaneous,
+								resolveOrder for ordered same-cell priority,
+								actionsPerTurn for multi-step, delayTurns for queued
+								places, or phases for place→move / place→fire /
+								place→move→fire within a turn.
 							</p>
 							<FormField
 								control={form.control}
@@ -240,11 +246,136 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<SelectItem value="manual_tick">
 														manual_tick
 													</SelectItem>
+													<SelectItem value="simultaneous">
+														simultaneous
+													</SelectItem>
 												</SelectContent>
 											</Select>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
-											manual_tick requires scheduler + objective none.
+											manual_tick needs scheduler + objective none;
+											simultaneous needs cell + n-in-a-row (joint place)
+											on rectangle/hex/graph, or move + reach_row (joint
+											move) on rectangle/hex/graph. Optional commitReveal
+											hides place picks until both commit; resolveOrder
+											sets same-cell / same-destination priority.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.commitReveal"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Commit-reveal</FormLabel>
+										<FormControl>
+											<Select
+												value={field.value === true ? "true" : "false"}
+												onValueChange={(v) =>
+													field.onChange(v === "true")
+												}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="false" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="false">false</SelectItem>
+													<SelectItem value="true">true</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Requires schedule = simultaneous. Each seat commits
+											privately; board updates when both have committed.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.resolveOrder"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Resolve order</FormLabel>
+										<FormControl>
+											<Select
+												value={field.value ?? "joint"}
+												onValueChange={field.onChange}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="joint" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="joint">joint</SelectItem>
+													<SelectItem value="x_first">x_first</SelectItem>
+													<SelectItem value="o_first">o_first</SelectItem>
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Simultaneous same-cell: joint places neither;
+											x_first / o_first give the earlier seat the cell.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.actionsPerTurn"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Actions per turn</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												min={1}
+												max={8}
+												value={field.value ?? 1}
+												onChange={(e) => {
+													const n = Number(e.target.value);
+													field.onChange(
+														Number.isFinite(n) && n > 0 ? n : 1
+													);
+												}}
+											/>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											&gt;1 = multi-step under alternating, or multi-action
+											rounds under simultaneous (rectangle | hex_offset |
+											graph + cell + n-in-a-row).
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="placement.delayTurns"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Place delay (turns)</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												min={0}
+												max={8}
+												value={field.value ?? 0}
+												onChange={(e) => {
+													const n = Number(e.target.value);
+													field.onChange(
+														Number.isFinite(n) && n >= 0 ? n : 0
+													);
+												}}
+											/>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											&gt;0 queues the place; stone lands after that many
+											intervening places. Cell mode reserves the cell;
+											gravity column/row settles landing at resolve time.
 										</p>
 										<FormMessage />
 									</FormItem>
@@ -458,6 +589,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="destroy_hidden">
 															destroy_hidden
 														</SelectItem>
+														<SelectItem value="connect_or_destroy">
+															connect_or_destroy
+														</SelectItem>
 														<SelectItem value="reach_row">
 															reach_row
 														</SelectItem>
@@ -469,7 +603,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												destroy_hidden↔hit_miss; reach_row↔move;
+												destroy_hidden↔hit_miss; connect_or_destroy↔
+												place→move→fire + hit_miss; reach_row↔move;
 												area_control↔liberties; none↔tick.
 											</p>
 											<FormMessage />
@@ -552,11 +687,20 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="pop_out_bottom">
 															pop_out_bottom
 														</SelectItem>
+														<SelectItem value="pop_out_top">
+															pop_out_top
+														</SelectItem>
+														<SelectItem value="pop_out_right">
+															pop_out_right
+														</SelectItem>
+														<SelectItem value="pop_out_left">
+															pop_out_left
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
-												pop_out_top / horizontal pop-out deferred.
+												bottom↔down, top↔up, right↔right, left↔left.
 											</p>
 											<FormMessage />
 										</FormItem>

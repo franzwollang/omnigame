@@ -16,8 +16,8 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Positional superko landed on liberties games
-(Go Lite Superko). Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Sliding `movement.range` landed (Slide Race).
+Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
 
 ## Decisions (locked)
 
@@ -55,11 +55,18 @@ Working sandbox slice (see README “Current implementation status”):
 - Rectangular grid; cell / column / row input
 - Direct + gravity placement (down | up | left | right; column ↔ vertical, row ↔ horizontal)
 - Capture (flip demo); n-in-a-row wins
+- Column/row pop-out: bottom↔down, top↔up, right↔right, left↔left
 - Presets: Tic-Tac-Toe, Connect 4, Connect 4 Up, Connect 4 Right, Connect 4 Pop Out,
-  Gomoku, Capture / Flip Demo,
+  Connect 4 Up Pop Out, Connect 4 Right Pop Out, Gomoku, Capture / Flip Demo,
   Battleship Lite (hit/miss observation), Battleship Place (fleet placement phase),
   Step Race (Move + reach_row),
-  Life Lite (manual tick + B3/S23)
+  Life Lite (manual tick + B3/S23), Toroidal TTT, Toroidal Hex Connect Lite,
+  Simultaneous TTT, Ordered Simultaneous TTT, Hidden Simultaneous TTT,
+  Double-Place Simultaneous TTT, Double-Place Simultaneous Hex,
+  Double-Place Simultaneous Graph, Double Move TTT, Double Move Hex,
+  Double Move Graph, Delayed TTT, Delayed Connect 4, Place & Move Lite,
+  Place & Fire Lite, Simultaneous Step Race, Diagonal Step Race, Slide Race,
+  Place, Move & Fire Lite
 - Zod schema + JSON/form sandbox + Three.js canvas
 - Effect dependency + seeded RNG foothold (`src/engine/rng.ts`)
 - Vitest transcript + kernel + validateConfig + GameIR replay tests
@@ -68,21 +75,58 @@ Working sandbox slice (see README “Current implementation status”):
 - Client Zod + contract validation in sandbox; Z3 server action optional/experimental
 - Compiler (`src/compiler/`): validate → macros → normalize → GameKernel; sandbox via `compileToGameConfig`
 - Observation hit/miss (`src/engine/observation.ts`) + Battleship-lite preset; `fire` + `StepResult.observations`
-- Move foothold (`src/engine/movement.ts`): orthogonal step + `reach_row`; Step Race preset
+- Move foothold (`src/engine/movement.ts`): `orthogonal` | `diagonal` |
+  `king` + sliding `range` 1..8 (rectangle) + `reach_row`; Step Race /
+  Diagonal Step Race / Slide Race; topology-aware orthogonal move on
+  hex_offset / graph (Hex Step Race; range 1)
 - Tick/scheduler foothold (`src/engine/scheduler.ts`): `manual_tick` + Life B3/S23; Life Lite preset
 - Hex topology foothold (`src/engine/topology.ts`): `hex_offset` odd-r + Hex Connect Lite
 - Graph topology foothold: `grid.topology = "graph"` + nodes/edges + Graph Connect Lite
-- **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle); Toroidal TTT preset
+- **Wrap foothold:** `grid.wrap` toroidal adjacency (rectangle + hex_offset);
+  Toroidal TTT + Toroidal Hex Connect Lite presets (graph: explicit edges)
 - Liberties/territory foothold (`src/engine/liberties.ts`): group capture + area_control + Go Lite
 - **Simple (point) ko:** `placement.capture.ko` + `GameState.koPoint`; illegal reason `"ko"`
 - **Positional superko:** `capture.ko = "positional"` + `GameState.positionHistory`;
   illegal reason `"superko"`; Go Lite Superko preset
+- **Situational superko:** `capture.ko = "situational"` + `(board|side)` history
+  hashes; Go Lite Situational Superko preset
+- **Top pop-out:** `overflow = "pop_out_top"` ↔ gravity up; Connect 4 Up Pop Out
+- **Horizontal pop-out:** `pop_out_right` / `pop_out_left` + `popOutRow`;
+  Connect 4 Right Pop Out
 - Debug + agents (M6): legal-move overlay, `explainAction` why-illegal, event trace;
   `src/agents/` random / greedy / tiny MCTS / UCT on kernel only
 - Library explorer (M7): `src/library/` sample + playability classify; sandbox Library modal
+- **Simultaneous schedule:** `turn.schedule = "simultaneous"` + `simultaneousPlace` /
+  `stepJoint`; same-cell conflict places neither (joint); rectangle + hex_offset + graph;
+  Simultaneous TTT / Hex Connect Lite / Graph Connect Lite presets
+- **Ordered simultaneous:** `turn.resolveOrder = x_first | o_first`; sequential
+  apply within the round; earlier seat wins same-cell; Ordered Simultaneous TTT
+- **Hidden simultaneous:** `turn.commitReveal` + `commitPlace` +
+  `GameState.committedPlacements`; opponent commit hidden until reveal;
+  Hidden Simultaneous TTT preset
+- **Multi-step turns:** `turn.actionsPerTurn` + `GameState.actionsRemaining`;
+  handoff after budget; rectangle | hex_offset | graph; Double Move TTT / Hex /
+  Graph presets
+- **Multi-action simultaneous:** `actionsPerTurn > 1` under simultaneous on
+  rectangle | hex_offset | graph; N places per seat per round; indexed-pair
+  resolve; Double-Place Simultaneous TTT / Hex / Graph
+- **Delayed place:** `placement.delayTurns` + `GameState.pendingPlaces`;
+  cell intents reserve an intersection (Delayed TTT); column/row gravity
+  intents settle landing at resolve time (Delayed Connect 4)
+- **In-turn phases:** `turn.phases` (`["place","move"]`, `["place","fire"]`, or
+  `["place","move","fire"]` + `connect_or_destroy`) + `GameState.turnPhaseIndex`;
+  phase-routed legality; Place & Move / Place & Fire / Place, Move & Fire Lite
+- **Simultaneous move:** `turn.schedule = simultaneous` + `input.mode = move` +
+  `simultaneousMove` joint resolve; same-destination conflict; reach_row win;
+  Simultaneous Step Race / Hex / Graph (no multi-action / commitReveal)
+- **Piece-table adjacency:** `movement.adjacency` = `orthogonal` | `diagonal` |
+  `king` on rectangle; Diagonal Step Race proves diagonal-only steps;
+  hex/graph move uses topology neighbors (orthogonal only)
+- **Sliding range:** `movement.range` 1..8 on rectangle (blocker-aware ray walk);
+  Slide Race preset; hex/graph remain range 1
 
-Not yet: situational superko / full Go rules, hex/graph wrap, simultaneous/delayed
-actions, `pop_out_top` / horizontal pop-out.
+Not yet: full Go rules; phases hex/graph lift; capture-by-replacement piece
+tables; richer multi-phase machines beyond fleet + in-turn phases.
 
 ## Milestone exit criteria
 

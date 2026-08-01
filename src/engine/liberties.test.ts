@@ -8,7 +8,8 @@ import {
 	isLegalLibertyPlace,
 	orthogonalNeighbors,
 	scoreArea,
-	simulateLibertyPlace
+	simulateLibertyPlace,
+	situationHash
 } from "@/engine/liberties";
 import { createInitialState, type GameConfig } from "@/engine/reducer";
 import { getCell, setCell, type Grid } from "@/engine/types";
@@ -140,6 +141,34 @@ describe("liberties helpers", () => {
 		).toBe(true);
 	});
 
+	it("situational allows same board with different side-to-move; positional forbids", () => {
+		let g = gridOf(3, 3, Array(9).fill(null));
+		g = { ...g, cells: setCell(g, { row: 0, col: 0 }, "X") };
+		const pos = { row: 1, col: 1 };
+		const simulated = simulateLibertyPlace(g, pos, "O");
+		expect(simulated).not.toBeNull();
+		const after = { ...g, cells: simulated!.cells };
+		// O's place would yield (after, X). History only has (after, O).
+		expect(
+			isLegalLibertyPlace(g, pos, "O", false, {
+				koRule: "situational",
+				positionHistory: [situationHash(after, "O")]
+			})
+		).toBe(true);
+		expect(
+			isLegalLibertyPlace(g, pos, "O", false, {
+				koRule: "situational",
+				positionHistory: [situationHash(after, "X")]
+			})
+		).toBe(false);
+		expect(
+			isLegalLibertyPlace(g, pos, "O", false, {
+				koRule: "positional",
+				positionHistory: [boardPositionHash(after)]
+			})
+		).toBe(false);
+	});
+
 	it("scores stones plus enclosed territory", () => {
 		// X owns left column + enclosed empties on left of a wall
 		let g = gridOf(3, 2, Array(6).fill(null));
@@ -180,6 +209,19 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(state.koPoint).toBeNull();
 		expect(state.positionHistory).toEqual([
 			boardPositionHash(state.grid)
+		]);
+	});
+
+	it("validates and compiles the go-lite-situational-superko preset", () => {
+		const cfg = examplePresets["go-lite-situational-superko"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.koRule).toBe("situational");
+		expect(gameConfig.koEnabled).toBe(true);
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(state.koPoint).toBeNull();
+		expect(state.positionHistory).toEqual([
+			situationHash(state.grid, state.currentPlayer)
 		]);
 	});
 
@@ -422,6 +464,97 @@ describe("Go Lite (liberties + area_control)", () => {
 		);
 	});
 
+	it("enforces situational superko: same (board, side) cycle illegal; pass keeps history", () => {
+		const cfg = structuredClone(
+			examplePresets["go-lite-situational-superko"].config
+		);
+		cfg.initial = [
+			{ row: 0, col: 1, player: "X", visibility: "public" },
+			{ row: 0, col: 2, player: "O", visibility: "public" },
+			{ row: 1, col: 0, player: "X", visibility: "public" },
+			{ row: 1, col: 1, player: "O", visibility: "public" },
+			{ row: 1, col: 3, player: "O", visibility: "public" },
+			{ row: 2, col: 1, player: "X", visibility: "public" },
+			{ row: 2, col: 2, player: "O", visibility: "public" }
+		];
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		const initialHash = situationHash(state.grid, state.currentPlayer);
+		expect(state.positionHistory).toEqual([initialHash]);
+
+		const capture: KernelAction = {
+			type: "place",
+			position: { row: 1, col: 2 }
+		};
+		state = kernel.stepSync(state, capture).nextState;
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe(null);
+		expect(state.koPoint).toBeNull();
+		expect(state.positionHistory).toHaveLength(2);
+		expect(state.positionHistory![0]).toBe(initialHash);
+		expect(state.positionHistory![1]).toBe(
+			situationHash(state.grid, state.currentPlayer)
+		);
+
+		const recapture: KernelAction = {
+			type: "place",
+			position: { row: 1, col: 1 }
+		};
+		expect(
+			kernel.legalActions(state, 1).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 1
+			)
+		).toBe(false);
+		const ignored = kernel.stepSync(state, recapture);
+		expect(ignored.events[0]).toMatchObject({
+			type: "ignored",
+			reason: "superko"
+		});
+		expect(ignored.nextState).toBe(state);
+
+		const histAfterCapture = state.positionHistory!.length;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.positionHistory).toHaveLength(histAfterCapture);
+
+		state = kernel.initialState(cfg.rng.seed);
+		state = kernel.stepSync(state, capture).nextState;
+		const elsewhere: KernelAction = {
+			type: "place",
+			position: { row: 4, col: 4 }
+		};
+		state = kernel.stepSync(state, elsewhere).nextState;
+		const xElsewhere: KernelAction = {
+			type: "place",
+			position: { row: 4, col: 0 }
+		};
+		state = kernel.stepSync(state, xElsewhere).nextState;
+		expect(
+			kernel.legalActions(state, 1).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 1
+			)
+		).toBe(true);
+		state = kernel.stepSync(state, recapture).nextState;
+		expect(getCell(state.grid, { row: 1, col: 2 })).toBe(null);
+		expect(state.positionHistory!.length).toBe(5);
+
+		const script: KernelAction[] = [
+			capture,
+			elsewhere,
+			xElsewhere,
+			recapture
+		];
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.positionHistory).toEqual(
+			state.positionHistory
+		);
+	});
+
 	it("rejects unpaired liberties / area_control", () => {
 		const bad = structuredClone(examplePresets["go-lite"].config);
 		bad.objective.mode = "n_in_a_row";
@@ -542,5 +675,30 @@ describe("createInitialState consecutivePasses + koPoint", () => {
 		expect(state.positionHistory).toEqual([
 			boardPositionHash(state.grid)
 		]);
+	});
+
+	it("seeds positionHistory for situational superko with side-to-move", () => {
+		const config: GameConfig = {
+			gridWidth: 5,
+			gridHeight: 5,
+			winLength: 3,
+			adjacency: {
+				mode: "linear",
+				horizontal: true,
+				vertical: true,
+				backDiagonal: false,
+				forwardDiagonal: false
+			},
+			captureEnabled: true,
+			captureMode: "liberties",
+			koRule: "situational",
+			koEnabled: true,
+			objectiveMode: "area_control"
+		};
+		const state = createInitialState(config);
+		expect(state.positionHistory).toEqual([
+			situationHash(state.grid, state.currentPlayer)
+		]);
+		expect(state.positionHistory![0]).toContain("|X");
 	});
 });

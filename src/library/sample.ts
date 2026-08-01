@@ -75,6 +75,31 @@ function sampleNInARow(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: rng() > 0.3
 		}
 	};
+	// Occasionally compose with simultaneous (optionally ordered / multi-action)
+	// or alternating multi-step.
+	if (rng() > 0.72) {
+		if (rng() > 0.45) {
+			const resolveOrder =
+				rng() > 0.55
+					? ("joint" as const)
+					: rng() > 0.5
+						? ("x_first" as const)
+						: ("o_first" as const);
+			const multiAction = rng() > 0.75;
+			cfg.turn = {
+				mode: "turn",
+				schedule: "simultaneous",
+				...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+				...(multiAction ? { actionsPerTurn: 2 } : {})
+			};
+		} else if (rng() > 0.55) {
+			cfg.turn = {
+				mode: "turn",
+				schedule: "alternating",
+				actionsPerTurn: 2
+			};
+		}
+	}
 	return cfg;
 }
 
@@ -95,9 +120,17 @@ function sampleGravity(rng: SamplerRng, seed: number): ConfigInput {
 	const cfg = baseMeta(`Sample gravity ${width}x${height}`, seed);
 	cfg.grid = { width, height, topology: "rectangle", wrap: false };
 	cfg.input = { mode: axis === "vertical" ? "column" : "row" };
-	// pop_out_bottom only pairs with gravity down
+	// pop_out_bottom ↔ down; pop_out_top ↔ up; right↔right; left↔left
 	const overflow =
-		direction === "down" && rng() > 0.7 ? "pop_out_bottom" : "reject";
+		direction === "down" && rng() > 0.7
+			? ("pop_out_bottom" as const)
+			: direction === "up" && rng() > 0.7
+				? ("pop_out_top" as const)
+				: direction === "right" && rng() > 0.7
+					? ("pop_out_right" as const)
+					: direction === "left" && rng() > 0.7
+						? ("pop_out_left" as const)
+						: ("reject" as const);
 	cfg.placement = {
 		mode: "gravity",
 		gravity: { enabled: true, direction, wrap: false },
@@ -125,7 +158,7 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 		width: size,
 		height: size,
 		topology: "hex_offset",
-		wrap: false
+		wrap: rng() > 0.65
 	};
 	cfg.win = {
 		length,
@@ -137,6 +170,31 @@ function sampleHex(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: true
 		}
 	};
+	// Occasionally compose with simultaneous (optionally ordered / multi-action)
+	// or alternating multi-step on hex.
+	if (rng() > 0.7) {
+		if (rng() > 0.45) {
+			const resolveOrder =
+				rng() > 0.6
+					? ("joint" as const)
+					: rng() > 0.5
+						? ("x_first" as const)
+						: ("o_first" as const);
+			const multiAction = rng() > 0.75;
+			cfg.turn = {
+				mode: "turn",
+				schedule: "simultaneous",
+				...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+				...(multiAction ? { actionsPerTurn: 2 } : {})
+			};
+		} else if (rng() > 0.55) {
+			cfg.turn = {
+				mode: "turn",
+				schedule: "alternating",
+				actionsPerTurn: 2
+			};
+		}
+	}
 	return cfg;
 }
 
@@ -292,6 +350,31 @@ function sampleGraph(rng: SamplerRng, seed: number): ConfigInput {
 			forwardDiagonal: false
 		}
 	};
+	// Occasionally compose with simultaneous (active-node joint / multi-action)
+	// or alternating multi-step on graph.
+	if (rng() > 0.7) {
+		if (rng() > 0.45) {
+			const resolveOrder =
+				rng() > 0.6
+					? ("joint" as const)
+					: rng() > 0.5
+						? ("x_first" as const)
+						: ("o_first" as const);
+			const multiAction = rng() > 0.75;
+			cfg.turn = {
+				mode: "turn",
+				schedule: "simultaneous",
+				...(resolveOrder !== "joint" ? { resolveOrder } : {}),
+				...(multiAction ? { actionsPerTurn: 2 } : {})
+			};
+		} else if (rng() > 0.55) {
+			cfg.turn = {
+				mode: "turn",
+				schedule: "alternating",
+				actionsPerTurn: 2
+			};
+		}
+	}
 	return cfg;
 }
 
@@ -414,7 +497,14 @@ function sampleNoise(rng: SamplerRng, seed: number): unknown {
 		raw.scheduler = { rules: "life_b3s23", neighborhood: "moore" };
 	}
 	if (inputMode === "move" && rng() > 0.5) {
-		raw.movement = { adjacency: "orthogonal", range: 1 };
+		const adjacency = pick(rng, [
+			"orthogonal",
+			"diagonal",
+			"king"
+		] as const);
+		// Occasionally sample sliding range on rectangle junk/reach_row.
+		const range = rng() > 0.65 ? int(rng, 2, 4) : 1;
+		raw.movement = { adjacency, range };
 		raw.objective = {
 			mode: "reach_row",
 			targetRows: { X: 0, O: height - 1 }

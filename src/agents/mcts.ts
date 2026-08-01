@@ -5,7 +5,7 @@ import type {
 	PlayerId,
 	Seed
 } from "@/engine/kernel";
-import { playerOf } from "@/engine/kernel";
+import { playerOf, stepPly } from "@/engine/kernel";
 import { mulberry32 } from "@/engine/rng";
 import type { Agent } from "@/agents/types";
 import { createHuntAgent } from "@/agents/hunt";
@@ -24,11 +24,12 @@ function rolloutValue(
 	let s = state;
 	let depth = 0;
 	while (s.status === "playing" && depth < depthLimit) {
-		const pid = kernel.currentPlayer(s);
-		const legal = kernel.legalActions(s, pid);
-		if (legal.length === 0) break;
-		const pick = legal[Math.floor(next() * legal.length)]!;
-		s = kernel.stepSync(s, pick).nextState;
+		const result = stepPly(kernel, s, (_player, legal) => {
+			if (legal.length === 0) return null;
+			return legal[Math.floor(next() * legal.length)]!;
+		});
+		if (!result) break;
+		s = result.nextState;
 		depth += 1;
 	}
 	if (s.status === "won") {
@@ -65,6 +66,11 @@ export function createTinyMctsAgent(
 			if ((kernel.config.observationMode ?? "full") === "hit_miss") {
 				const pick = hunt.act(kernel, state, player);
 				return pick ? cloneAction(pick) : null;
+			}
+
+			// Single place cannot step under simultaneous — random seat choice.
+			if ((kernel.config.turnSchedule ?? "alternating") === "simultaneous") {
+				return cloneAction(legal[Math.floor(next() * legal.length)]!);
 			}
 
 			let best = legal[0]!;

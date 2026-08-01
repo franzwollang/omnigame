@@ -2,8 +2,9 @@
  * Observation projection (M4+).
  *
  * full: identity view of the public grid.
- * hit_miss: each player sees own hidden fleet + public shot results; opponent
- * fleet cells stay blank until marked hit/miss on the public grid.
+ * hit_miss: each player sees own hidden fleet + public shot results + any
+ * public spotters (X/O on the public grid from place→fire); opponent fleet
+ * cells stay blank until marked hit/miss on the public grid.
  * fog: cells within `fogRadius` of any own piece are visible; others fogged.
  * Bootstrap: with no own pieces yet, the whole board is visible.
  */
@@ -185,9 +186,17 @@ export function observe(
 	}
 
 	if (mode !== "hit_miss") {
+		const cells = [...state.grid.cells];
+		// Hidden simultaneous: overlay own commit only (opponent stays secret).
+		if (config.commitReveal && state.committedPlacements) {
+			const own = state.committedPlacements[player] ?? [];
+			for (const pos of own) {
+				cells[toIndex(pos, state.grid.width)] = player;
+			}
+		}
 		return {
 			player,
-			cells: [...state.grid.cells],
+			cells,
 			visible: allVisible(size),
 			lastShot
 		};
@@ -200,6 +209,11 @@ export function observe(
 	for (let i = 0; i < size; i++) {
 		const shot = state.grid.cells[i] ?? null;
 		if (shot === "hit" || shot === "miss") {
+			cells[i] = shot;
+			continue;
+		}
+		// Public spotters (place→fire in-turn phases) are visible to both seats
+		if (shot === "X" || shot === "O") {
 			cells[i] = shot;
 			continue;
 		}

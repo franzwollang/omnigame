@@ -40,18 +40,39 @@ These are built from the same shared schema and operators.
 - **Connect 4 (Up)** (gravity rises toward the top)
 - **Connect 4 (Right)** (row activation; discs slide right)
 - **Connect 4 (Pop Out)**
+- **Connect 4 (Up Pop Out)** (gravity up + top pop-out)
+- **Connect 4 (Right Pop Out)** (row gravity + right pop-out / `popOutRow`)
 - **Gomoku (5‑in‑a‑row)**
 - **Capture / Flip Demo** (Reversi-style sandwich capture; n-in-a-row win, not full Othello)
 - **Battleship Lite** (hit/miss observation + destroy_hidden)
 - **Battleship Place** (fleet.ships placement phase → combat)
 - **Fog Connect Lite** (fog-of-war radius observation + n-in-a-row)
 - **Step Race** (orthogonal `Move` + reach_row objective)
+- **Diagonal Step Race** (`movement.adjacency = diagonal` ferz step + reach_row)
+- **Slide Race** (`movement.range > 1` blocker-aware orthogonal slide + reach_row)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
+- **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
 - **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
+- **Go Lite Situational Superko** (situational superko — forbids repeating a prior board+side-to-move)
 - **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
 - **Toroidal TTT** (`grid.wrap` rectangle)
+- **Simultaneous TTT** (`turn.schedule = simultaneous` joint place; same-cell conflict)
+- **Ordered Simultaneous TTT** (`turn.resolveOrder = x_first`; earlier seat wins same-cell)
+- **Simultaneous Hex Connect Lite** (simultaneous + `hex_offset` composition)
+- **Simultaneous Graph Connect Lite** (simultaneous + `graph` composition)
+- **Hidden Simultaneous TTT** (`turn.commitReveal`; private commits then reveal)
+- **Double Move TTT** (`turn.actionsPerTurn = 2` multi-step budget before handoff)
+- **Double Move Hex / Graph** (alternating multi-step on `hex_offset` / `graph`)
+- **Double-Place Simultaneous TTT** (`actionsPerTurn = 2` under simultaneous rounds)
+- **Double-Place Simultaneous Hex / Graph** (multi-action simultaneous on hex_offset / graph)
+- **Delayed TTT** (`placement.delayTurns = 1` queued place; pending cells reserved)
+- **Delayed Connect 4** (delayed gravity: column intents settle at resolve time)
+- **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
+- **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
+- **Place, Move & Fire Lite** (`turn.phases: ["place","move","fire"]` + `connect_or_destroy`)
+- **Simultaneous Step Race** (`simultaneous` + `move` joint resolve; same-destination conflict)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -100,16 +121,25 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 
 - **Topology**: rectangular grid, odd-r hex (`hex_offset`), or explicit adjacency
   graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
-  **rectangle** boards (hex/graph wrap deferred); Toroidal TTT preset
+  **rectangle** and **hex_offset** (graph wrap = explicit edges); Toroidal TTT +
+  Toroidal Hex Connect Lite presets
 - **Inputs**: cell-click, column-activation, row-activation, and piece move (`input.mode = "cell" | "column" | "row" | "move"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
   - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
-  - overflow: `reject` | `pop_out_bottom` (bottom pop-out; requires gravity down; `pop_out_top` / horizontal pop-out deferred)
-- **Movement**: orthogonal step (`movement.adjacency = "orthogonal"`, `range = 1`) via `{ type: "move", from, to }`
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite)
+  - overflow: `reject` | `pop_out_bottom` | `pop_out_top` | `pop_out_left` |
+    `pop_out_right` (paired with gravity direction; horizontal uses `popOutRow`)
+  - delayed place (`placement.delayTurns` > 0 → queue intent; Delayed TTT cell
+    reserve, or Delayed Connect 4 gravity settle-on-resolve)
+- **Movement**: piece steps/slides via `{ type: "move", from, to }` with
+  `movement.adjacency` = `orthogonal` | `diagonal` | `king` and sliding
+  `movement.range` 1..8 on rectangle (Step Race / Diagonal Step Race /
+  Slide Race / Simultaneous Step Race); hex_offset / graph
+  use topology neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph
+  Step Race
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race); `none` (open-ended / tick demos)
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
@@ -117,9 +147,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: situational superko / full Go rules, hex/graph wrap,
-simultaneous/delayed actions, `pop_out_top` / horizontal pop-out, and a larger set of
-reusable operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, capture-by-replacement
+piece tables, richer multi-phase machines, and a larger set of reusable
+operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -198,8 +228,10 @@ Design rule: constraints are **pure functions**; no hidden state mutation.
 Turn logic is declarative:
 
 - N players
-- schedule: alternating, simultaneous, or ordered simultaneous resolution
-- phases: place → move → attack (etc.)
+- schedule: alternating, simultaneous place or move (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action place rounds), or multi-step alternating
+- phases: in-turn `turn.phases` (place→move, place→fire, place→move→fire with
+  `connect_or_destroy`); game-long fleet placement → combat; hex-graph phase
+  lifts still expanding
 - action points / per-turn budgets
 
 ### 6) Observation primitive (high leverage; optional early, core later)
@@ -345,10 +377,10 @@ Near-term milestones:
 - **Compiler stages**: validate/normalize specs and expand macros into primitive operators + constraints
 - **Topology generalization**: evolve from rectangular grids toward graph-based boards (while keeping grid ergonomics)
 - **Observation support**: hit/miss + fog radius + fleet placement phase landed (Battleship-lite / Fog Connect Lite / Battleship Place)
-- **Move foothold**: orthogonal step + reach_row (Step Race) landed; richer piece tables / chase games still open
+- **Move foothold**: `orthogonal` | `diagonal` | `king` + sliding `range` 1..8 + reach_row (Step Race / Diagonal Step Race / Slide Race) landed; simultaneous joint move (Simultaneous Step Race) landed; capture-by-replacement piece tables and chase games still open
 - **Tick/scheduler foothold**: Life Lite (`manual_tick` + B3/S23) landed; realtime loops stay at UI edge
 - **Hex topology foothold**: `hex_offset` (odd-r) + Hex Connect Lite landed; general graph boards still open
-- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"` + `positionHistory`)
+- **Liberties / territory foothold**: `capture.mode=liberties` + `area_control` + Go Lite landed; **point ko** (`capture.ko` / `ko: true`) + **positional superko** (`ko: "positional"`) + **situational superko** (`ko: "situational"` + `board|side` history)
 - **Library explorer foothold**: sample/classify playable vs noise; load finds into sandbox
 - **Anchor games**: mechanism-first ports only — not exhausting `references/`
 - **Debug tooling**: event trace, legal move overlays, “why illegal” explanations

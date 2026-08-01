@@ -1,21 +1,22 @@
 {
-  "updated_at": "2026-07-25T08:25-05:00",
-  "turn": 6,
+  "updated_at": "2026-07-25T15:22-05:00",
+  "turn": 27,
   "focus": {
     "milestone": null,
     "issue": "next-missing-mechanism",
-    "goal": "Cloud agents unblocked; pick next mechanism"
+    "goal": "Hand off after sliding movement.range"
   },
   "recent": [
-    "Pushed pnpm 10.5.2 lockfile + engines Node 20.19+",
-    "PLANNING/OPEN_ISSUES honest on superko; sandbox ko hint fixed"
+    "Synced bad2 tip onto 6bcc",
+    "Landed movement.range slide 1..8 + Slide Race",
+    "288 tests green; typecheck clean"
   ],
   "discoveries": [
-    "CVE bump had rewritten lockfile with pnpm 9 vs packageManager 10.5.2"
+    "Range>1 = blocker-aware ray walk; hex/graph stay range 1"
   ],
   "open_threads": [
-    "No GitHub Actions yet; cloud agents should honor packageManager + engines"
+    "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
   ],
-  "next_step": "Cloud agent: implement next-missing-mechanism from OPEN_ISSUES",
+  "next_step": "Cloud agent: pick capture-by-replacement or richer phase machines",
   "blockers": []
 }

@@ -14,7 +14,10 @@ export const zConfig = z
 				topology: z
 					.enum(["rectangle", "hex_offset", "graph"])
 					.default("rectangle"),
-				/** Toroidal adjacency for rectangle boards (hex/graph wrap deferred). */
+				/**
+				 * Toroidal adjacency for rectangle and hex_offset boards.
+				 * Graph wrap is N/A — authors add cross-seam edges explicitly.
+				 */
 				wrap: z.boolean().default(false),
 				/** Playable nodes when topology = graph (inactive slots stay empty). */
 				nodes: z
@@ -43,14 +46,48 @@ export const zConfig = z
 					.optional()
 			})
 			.strict(),
-		// realtime deferred; manual_tick unlocks discrete Life-style generations
+		// realtime deferred; manual_tick = Life generations; simultaneous = joint place/move
 		turn: z
 			.object({
 				mode: z.literal("turn"),
-				/** alternating = classic turns; manual_tick = global scheduler step. */
+				/**
+				 * alternating = classic turns;
+				 * manual_tick = global scheduler step;
+				 * simultaneous = both players submit a place or move per round (joint resolve).
+				 */
 				schedule: z
-					.enum(["alternating", "manual_tick"])
-					.default("alternating")
+					.enum(["alternating", "manual_tick", "simultaneous"])
+					.default("alternating"),
+				/**
+				 * Actions before schedule handoff: under alternating, successful
+				 * places before the opponent's turn; under simultaneous, places
+				 * each seat submits per joint round (move rounds are always 1). Default 1.
+				 */
+				actionsPerTurn: z.number().int().min(1).max(8).optional(),
+				/**
+				 * Hidden simultaneous: each seat commits privately; joint resolve when both
+				 * have committed. Requires schedule = simultaneous. Default false = open joint.
+				 */
+				commitReveal: z.boolean().optional(),
+				/**
+				 * Simultaneous conflict resolution. `joint` = both-or-neither (default);
+				 * `x_first` / `o_first` = apply seats in order, earlier seat wins same-cell.
+				 * Requires schedule = simultaneous when not joint.
+				 */
+				resolveOrder: z
+					.enum(["joint", "x_first", "o_first"])
+					.default("joint")
+					.optional(),
+				/**
+				 * Ordered in-turn action types before handoff
+				 * (place→move, place→fire, or place→move→fire). Distinct from
+				 * actionsPerTurn (N copies of one action type).
+				 */
+				phases: z
+					.array(z.enum(["place", "move", "fire"]))
+					.min(2)
+					.max(3)
+					.optional()
 			})
 			.strict()
 			.default({ mode: "turn" as const, schedule: "alternating" as const }),
@@ -71,11 +108,19 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "cell" as const }),
-		/** Orthogonal step movement; required when input.mode = "move". */
+		/**
+		 * Piece movement; required when input.mode = "move".
+		 * orthogonal | diagonal | king on rectangle with sliding `range` 1..8
+		 * (blocker-aware ray walk; range 1 = adjacent only).
+		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
+		 * Capture-by-replacement still deferred.
+		 */
 		movement: z
 			.object({
-				adjacency: z.literal("orthogonal").default("orthogonal"),
-				range: z.literal(1).default(1)
+				adjacency: z
+					.enum(["orthogonal", "diagonal", "king"])
+					.default("orthogonal"),
+				range: z.number().int().min(1).max(8).default(1)
 			})
 			.strict()
 			.optional(),
@@ -104,18 +149,34 @@ export const zConfig = z
 						 *   recapture of a single stone just captured
 						 * - "positional": positional superko — forbid any prior
 						 *   public-board position (cells hash)
+						 * - "situational": situational superko — forbid any prior
+						 *   (board, side-to-move) pair
 						 */
 						ko: z
 							.union([
 								z.boolean(),
-								z.enum(["point", "positional"])
+								z.enum(["point", "positional", "situational"])
 							])
 							.default(false)
 					})
 					.strict()
 					.optional(),
-				// pop_out_top / horizontal pop-out deferred
-				overflow: z.enum(["reject", "pop_out_bottom"]).default("reject")
+				// pop_out_* paired with gravity direction (see refine below)
+				overflow: z
+					.enum([
+						"reject",
+						"pop_out_bottom",
+						"pop_out_top",
+						"pop_out_left",
+						"pop_out_right"
+					])
+					.default("reject"),
+				/**
+				 * Delayed (queued) place: intent lands after this many intervening
+				 * successful places (0 = immediate). Supports direct cell place or
+				 * gravity column/row (landing settled at resolve time).
+				 */
+				delayTurns: z.number().int().min(0).max(8).optional()
 			})
 			.strict()
 			.default({ mode: "direct" as const, overflow: "reject" as const }),
@@ -150,6 +211,7 @@ export const zConfig = z
 					.enum([
 						"n_in_a_row",
 						"destroy_hidden",
+						"connect_or_destroy",
 						"reach_row",
 						"area_control",
 						"none"
@@ -166,7 +228,7 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row; unused for destroy_hidden / reach_row / area_control / none
+		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / none
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -233,18 +295,31 @@ export const zConfig = z
 		const hitMiss = cfg.observation.mode === "hit_miss";
 		const fog = cfg.observation.mode === "fog";
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
+		const connectOrDestroy = cfg.objective.mode === "connect_or_destroy";
 		const reachRow = cfg.objective.mode === "reach_row";
 		const areaControl = cfg.objective.mode === "area_control";
 		const moveInput = cfg.input.mode === "move";
 		const manualTick = cfg.turn.schedule === "manual_tick";
+		const simultaneous = cfg.turn.schedule === "simultaneous";
+		const actionsPerTurn = cfg.turn.actionsPerTurn ?? 1;
+		const multiStep = actionsPerTurn > 1;
+		const delayTurns = cfg.placement.delayTurns ?? 0;
+		const delayedPlace = delayTurns > 0;
+		const inTurnPhases = (cfg.turn.phases?.length ?? 0) > 0;
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
-		// Toroidal wrap is rectangle-only for now (hex/graph wrap deferred)
-		if (cfg.grid.wrap && cfg.grid.topology !== "rectangle") {
+		const needsHitMiss = destroyHidden || connectOrDestroy;
+		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
+		if (
+			cfg.grid.wrap &&
+			cfg.grid.topology !== "rectangle" &&
+			cfg.grid.topology !== "hex_offset"
+		) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: ["grid", "wrap"],
-				message: "grid.wrap is only supported for topology = 'rectangle'"
+				message:
+					"grid.wrap is only supported for topology = 'rectangle' | 'hex_offset' (graph: add wrap edges explicitly)"
 			});
 		}
 		const captureEnabled = Boolean(cfg.placement.capture?.enabled);
@@ -252,7 +327,10 @@ export const zConfig = z
 		const libertyCapture = captureEnabled && captureMode === "liberties";
 		const koRaw = cfg.placement.capture?.ko;
 		const koOn =
-			koRaw === true || koRaw === "point" || koRaw === "positional";
+			koRaw === true ||
+			koRaw === "point" ||
+			koRaw === "positional" ||
+			koRaw === "situational";
 
 		if (koOn && !libertyCapture) {
 			ctx.addIssue({
@@ -309,6 +387,13 @@ export const zConfig = z
 					message: "area_control is incompatible with manual_tick"
 				});
 			}
+			if (simultaneous) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "area_control is incompatible with simultaneous"
+				});
+			}
 			if (moveInput) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -318,21 +403,44 @@ export const zConfig = z
 			}
 		}
 
-		// Hex foothold: direct cell placement + n-in-a-row only (no gravity/column/move/tick/capture)
+		// Hex foothold: cell + n-in-a-row, or move + reach_row (topology-aware movement).
+		// No gravity/column/tick/capture on hex.
 		if (hexBoard) {
-			if (cfg.objective.mode !== "n_in_a_row") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message: "hex_offset requires objective.mode = 'n_in_a_row'"
-				});
-			}
-			if (cfg.input.mode !== "cell") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "hex_offset requires input.mode = 'cell'"
-				});
+			const hexMove = moveInput && reachRow;
+			if (hexMove) {
+				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "adjacency"],
+						message:
+							"hex_offset move requires movement.adjacency = 'orthogonal' (diagonal/king deferred)"
+					});
+				}
+				if (cfg.movement && cfg.movement.range !== 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "range"],
+						message:
+							"hex_offset move requires movement.range = 1 (sliding deferred)"
+					});
+				}
+			} else {
+				if (cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"hex_offset requires objective.mode = 'n_in_a_row' (or move + reach_row)"
+					});
+				}
+				if (cfg.input.mode !== "cell") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["input", "mode"],
+						message:
+							"hex_offset requires input.mode = 'cell' (or move + reach_row)"
+					});
+				}
 			}
 			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
@@ -356,16 +464,9 @@ export const zConfig = z
 					message: "hex_offset is incompatible with manual_tick"
 				});
 			}
-			if (moveInput) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "hex_offset is incompatible with move input"
-				});
-			}
 		}
 
-		// Graph foothold: explicit adjacency; same restricted surface as hex
+		// Graph foothold: explicit adjacency; cell + n-in-a-row, or move + reach_row.
 		if (graphBoard) {
 			if (!cfg.grid.nodes || cfg.grid.nodes.length < 2) {
 				ctx.addIssue({
@@ -381,19 +482,41 @@ export const zConfig = z
 					message: "graph topology requires grid.edges (≥ 1)"
 				});
 			}
-			if (cfg.objective.mode !== "n_in_a_row") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message: "graph requires objective.mode = 'n_in_a_row'"
-				});
-			}
-			if (cfg.input.mode !== "cell") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "graph requires input.mode = 'cell'"
-				});
+			const graphMove = moveInput && reachRow;
+			if (graphMove) {
+				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "adjacency"],
+						message:
+							"graph move requires movement.adjacency = 'orthogonal' (uses explicit edges)"
+					});
+				}
+				if (cfg.movement && cfg.movement.range !== 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "range"],
+						message:
+							"graph move requires movement.range = 1 (sliding deferred)"
+					});
+				}
+			} else {
+				if (cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"graph requires objective.mode = 'n_in_a_row' (or move + reach_row)"
+					});
+				}
+				if (cfg.input.mode !== "cell") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["input", "mode"],
+						message:
+							"graph requires input.mode = 'cell' (or move + reach_row)"
+					});
+				}
 			}
 			if (gravityImplied || captureEnabled) {
 				ctx.addIssue({
@@ -414,13 +537,6 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "schedule"],
 					message: "graph is incompatible with manual_tick"
-				});
-			}
-			if (moveInput) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "graph is incompatible with move input"
 				});
 			}
 			if (cfg.win && cfg.win.adjacency.mode !== "composite") {
@@ -537,6 +653,449 @@ export const zConfig = z
 				path: ["scheduler"],
 				message: "scheduler requires turn.schedule = 'manual_tick'"
 			});
+		}
+
+		// Simultaneous joint place (cell + n-in-a-row) or joint move (move + reach_row)
+		if (simultaneous) {
+			const simMove = moveInput;
+			const simPlace = cfg.input.mode === "cell";
+			if (!simMove && !simPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message:
+						"simultaneous requires input.mode = 'cell' (joint place) or 'move' (joint move)"
+				});
+			}
+			if (simPlace) {
+				if (cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"simultaneous place requires objective.mode = 'n_in_a_row'"
+					});
+				}
+				if (gravityImplied || captureEnabled) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["placement"],
+						message:
+							"simultaneous requires direct placement without capture/gravity"
+					});
+				}
+			}
+			if (simMove) {
+				// reach_row pairing enforced below with moveInput !== reachRow
+				// Topology-aware movement: rectangle | hex_offset | graph
+				if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "actionsPerTurn"],
+						message:
+							"simultaneous move does not support actionsPerTurn > 1"
+					});
+				}
+				if (cfg.turn.commitReveal === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "commitReveal"],
+						message:
+							"simultaneous move is incompatible with commitReveal (deferred)"
+					});
+				}
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "simultaneous is incompatible with hit_miss observation"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "simultaneous is incompatible with fog observation"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "simultaneous is incompatible with fleet placement"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message:
+						"placement.delayTurns > 0 requires turn.schedule = 'alternating' (not simultaneous)"
+				});
+			}
+			// Multi-action simultaneous place (actionsPerTurn > 1) is allowed on
+			// rectangle | hex_offset | graph — same topologies as single-action
+			// simultaneous place. Alternating multi-step uses the same topologies.
+			// Simultaneous move is single-action on rectangle | hex_offset | graph.
+		} else if (cfg.turn.commitReveal === true) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["turn", "commitReveal"],
+				message:
+					"turn.commitReveal requires turn.schedule = 'simultaneous'"
+			});
+		} else if (
+			cfg.turn.resolveOrder !== undefined &&
+			cfg.turn.resolveOrder !== "joint"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["turn", "resolveOrder"],
+				message:
+					"turn.resolveOrder other than 'joint' requires turn.schedule = 'simultaneous'"
+			});
+		}
+
+		// Multi-step / multi-action foothold (actionsPerTurn > 1)
+		if (multiStep) {
+			if (
+				cfg.turn.schedule !== "alternating" &&
+				cfg.turn.schedule !== "simultaneous"
+			) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message:
+						"actionsPerTurn > 1 requires turn.schedule = 'alternating' or 'simultaneous'"
+				});
+			}
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message: "actionsPerTurn > 1 requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "actionsPerTurn > 1 requires input.mode = 'cell'"
+				});
+			}
+			if (gravityImplied || captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"actionsPerTurn > 1 requires direct placement without capture/gravity"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "actionsPerTurn > 1 is incompatible with hit_miss observation"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "actionsPerTurn > 1 is incompatible with fog observation"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "actionsPerTurn > 1 is incompatible with move input"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "actionsPerTurn > 1 is incompatible with fleet placement"
+				});
+			}
+			// Alternating multi-step and simultaneous multi-action both allow
+			// rectangle | hex_offset | graph (same topologies as single-action
+			// place / simultaneous). Other topology gates stay above.
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message:
+						"actionsPerTurn > 1 is incompatible with placement.delayTurns > 0"
+				});
+			}
+		}
+
+		// Delayed (queued) place foothold (delayTurns > 0)
+		if (delayedPlace) {
+			if (cfg.turn.schedule !== "alternating") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message:
+						"placement.delayTurns > 0 requires turn.schedule = 'alternating'"
+				});
+			}
+			if (cfg.objective.mode !== "n_in_a_row") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message:
+						"placement.delayTurns > 0 requires objective.mode = 'n_in_a_row'"
+				});
+			}
+			const gravityDelayed =
+				gravityImplied &&
+				(cfg.input.mode === "column" || cfg.input.mode === "row") &&
+				!captureEnabled;
+			const directDelayed =
+				cfg.input.mode === "cell" && !gravityImplied && !captureEnabled;
+			if (!gravityDelayed && !directDelayed) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"placement.delayTurns > 0 requires direct cell place, or gravity with column/row input (no capture)"
+				});
+			}
+			if (cfg.placement.overflow !== "reject") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "overflow"],
+					message:
+						"placement.delayTurns > 0 is incompatible with pop-out overflow"
+				});
+			}
+			if (hitMiss) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"placement.delayTurns > 0 is incompatible with hit_miss observation"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"placement.delayTurns > 0 is incompatible with fog observation"
+				});
+			}
+			if (moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "placement.delayTurns > 0 is incompatible with move input"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "placement.delayTurns > 0 is incompatible with fleet placement"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"placement.delayTurns foothold requires topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
+		}
+
+		// In-turn phase sequence (place→move / place→fire / place→move→fire)
+		if (inTurnPhases) {
+			const phases = cfg.turn.phases!;
+			const hasMove = phases.includes("move");
+			const hasFire = phases.includes("fire");
+			const isTriple =
+				phases.length === 3 &&
+				phases[0] === "place" &&
+				phases[1] === "move" &&
+				phases[2] === "fire";
+			if (cfg.turn.schedule !== "alternating") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message:
+						"turn.phases requires turn.schedule = 'alternating'"
+				});
+			}
+			if (multiStep) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message:
+						"turn.phases is incompatible with actionsPerTurn > 1 (phases sequence action types; actionsPerTurn repeats one type)"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message: "turn.phases is incompatible with placement.delayTurns > 0"
+				});
+			}
+			if (simultaneous || cfg.turn.commitReveal === true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"turn.phases is incompatible with simultaneous / commitReveal"
+				});
+			}
+			if (phases[0] !== "place") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message: "turn.phases must start with 'place'"
+				});
+			}
+			if (!hasMove && !hasFire) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"turn.phases must include 'move' or 'fire' after place (e.g. ['place','move'], ['place','fire'], or ['place','move','fire'])"
+				});
+			}
+			if (hasMove && hasFire && !isTriple) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"turn.phases with both move and fire must be exactly ['place','move','fire']"
+				});
+			}
+			if (isTriple) {
+				if (!connectOrDestroy) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"turn.phases place→move→fire requires objective.mode = 'connect_or_destroy' (dual end: n-in-a-row or sink fleet)"
+					});
+				}
+				if (!hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"turn.phases place→move→fire requires observation.mode = 'hit_miss'"
+					});
+				}
+				if (!cfg.movement) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement"],
+						message: "turn.phases place→move→fire requires a movement block"
+					});
+				}
+				if (!cfg.win) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["win"],
+						message:
+							"turn.phases place→move→fire requires a win block (connect leg)"
+					});
+				}
+			} else {
+				if (hasMove && cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"turn.phases with 'move' requires objective.mode = 'n_in_a_row'"
+					});
+				}
+				if (hasFire && !hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"turn.phases with 'fire' requires observation.mode = 'hit_miss'"
+					});
+				}
+				if (hasFire && cfg.objective.mode !== "destroy_hidden") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"turn.phases with 'fire' requires objective.mode = 'destroy_hidden'"
+					});
+				}
+				if (hasMove && !cfg.movement) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement"],
+						message: "turn.phases with 'move' requires a movement block"
+					});
+				}
+				if (hasFire && cfg.movement) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement"],
+						message: "turn.phases place→fire does not use a movement block"
+					});
+				}
+				if (hasMove && hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"turn.phases place→move is incompatible with hit_miss observation"
+					});
+				}
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message:
+						"turn.phases requires input.mode = 'cell' (place/fire phases); move phase uses movement"
+				});
+			}
+			if (gravityImplied || captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"turn.phases requires direct placement without capture/gravity"
+				});
+			}
+			if (fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message: "turn.phases is incompatible with fog observation"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message:
+						"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire / place→move→fire)"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"turn.phases foothold requires topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
 		}
 
 		// column / row input require gravity placement (mode or enabled sugar)
@@ -672,7 +1231,7 @@ export const zConfig = z
 					"overflow !== 'reject' requires placement.mode = 'gravity' (or gravity.enabled)"
 			});
 		}
-		// pop_out_bottom is the exit-side symmetric to gravity down only
+		// pop_out_* ↔ matching gravity direction
 		if (
 			cfg.placement.overflow === "pop_out_bottom" &&
 			cfg.placement.gravity?.direction !== undefined &&
@@ -682,16 +1241,58 @@ export const zConfig = z
 				code: z.ZodIssueCode.custom,
 				path: ["placement", "overflow"],
 				message:
-					"overflow 'pop_out_bottom' requires gravity direction 'down' (pop_out_top / horizontal pop-out deferred)"
+					"overflow 'pop_out_bottom' requires gravity direction 'down'"
+			});
+		}
+		if (
+			cfg.placement.overflow === "pop_out_top" &&
+			(cfg.placement.gravity?.direction ?? "down") !== "up"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "overflow"],
+				message:
+					"overflow 'pop_out_top' requires gravity direction 'up'"
+			});
+		}
+		if (
+			cfg.placement.overflow === "pop_out_right" &&
+			cfg.placement.gravity?.direction !== "right"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "overflow"],
+				message:
+					"overflow 'pop_out_right' requires gravity direction 'right'"
+			});
+		}
+		if (
+			cfg.placement.overflow === "pop_out_left" &&
+			cfg.placement.gravity?.direction !== "left"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["placement", "overflow"],
+				message:
+					"overflow 'pop_out_left' requires gravity direction 'left'"
 			});
 		}
 
-		if (hitMiss !== destroyHidden) {
+		if (hitMiss !== needsHitMiss) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: hitMiss ? ["objective", "mode"] : ["observation", "mode"],
 				message:
-					"observation.mode 'hit_miss' and objective.mode 'destroy_hidden' must be used together"
+					"observation.mode 'hit_miss' must pair with objective.mode 'destroy_hidden' or 'connect_or_destroy'"
+			});
+		}
+
+		if (connectOrDestroy && !inTurnPhases) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["turn", "phases"],
+				message:
+					"objective.mode 'connect_or_destroy' requires turn.phases ['place','move','fire']"
 			});
 		}
 
@@ -765,12 +1366,16 @@ export const zConfig = z
 			});
 		}
 
-		if (cfg.objective.mode === "n_in_a_row") {
+		if (
+			cfg.objective.mode === "n_in_a_row" ||
+			cfg.objective.mode === "connect_or_destroy"
+		) {
 			if (!cfg.win) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["win"],
-					message: "win is required when objective.mode = 'n_in_a_row'"
+					message:
+						"win is required when objective.mode = 'n_in_a_row' or 'connect_or_destroy'"
 				});
 			} else {
 				// adjacency must have at least one direction enabled (lattice only)

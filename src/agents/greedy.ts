@@ -17,6 +17,7 @@ function centerBias(state: GameState, action: KernelAction): number {
 	switch (action.type) {
 		case "place":
 		case "fire":
+		case "commitPlace":
 			row = action.position.row;
 			col = action.position.col;
 			break;
@@ -30,6 +31,7 @@ function centerBias(state: GameState, action: KernelAction): number {
 			row = cy;
 			break;
 		case "activateRow":
+		case "popOutRow":
 			row = action.row;
 			col = cx;
 			break;
@@ -41,10 +43,18 @@ function centerBias(state: GameState, action: KernelAction): number {
 }
 
 function captureBias(state: GameState, action: KernelAction): number {
-	if (action.type !== "place" && action.type !== "move") return 0;
+	if (
+		action.type !== "place" &&
+		action.type !== "move" &&
+		action.type !== "commitPlace"
+	) {
+		return 0;
+	}
 	// Prefer placing near opponent pieces (local flip / liberty pressure heuristic).
 	const pos =
-		action.type === "place" ? action.position : action.to;
+		action.type === "place" || action.type === "commitPlace"
+			? action.position
+			: action.to;
 	let near = 0;
 	for (const [dr, dc] of [
 		[-1, 0],
@@ -84,12 +94,16 @@ export function createGreedyAgent(_seed: Seed = 0): Agent {
 			if (legal.length === 0) return null;
 
 			const me = playerOf(player);
+			const simultaneous =
+				(kernel.config.turnSchedule ?? "alternating") === "simultaneous";
 
-			// Immediate win
-			for (const action of legal) {
-				const next = kernel.stepSync(state, action).nextState;
-				if (next.status === "won" && next.winner === me) {
-					return action;
+			// Immediate win (alternating only — single place is a no-op when joint)
+			if (!simultaneous) {
+				for (const action of legal) {
+					const next = kernel.stepSync(state, action).nextState;
+					if (next.status === "won" && next.winner === me) {
+						return action;
+					}
 				}
 			}
 
@@ -97,12 +111,20 @@ export function createGreedyAgent(_seed: Seed = 0): Agent {
 			// opponent best immediate win after our move and avoid those when possible.
 			const safe: KernelAction[] = [];
 			for (const action of legal) {
+				if (simultaneous) {
+					safe.push(action);
+					continue;
+				}
 				const after = kernel.stepSync(state, action).nextState;
 				if (after.status !== "playing") {
 					safe.push(action);
 					continue;
 				}
 				const opp = kernel.currentPlayer(after);
+				if (opp === "simultaneous") {
+					safe.push(action);
+					continue;
+				}
 				const oppLegal = kernel.legalActions(after, opp);
 				const oppCanWin = oppLegal.some((oa) => {
 					const terminal = kernel.stepSync(after, oa).nextState;

@@ -91,6 +91,24 @@ describe("buildFeatureContracts", () => {
 			expect.arrayContaining(["OverflowPopOutBottom", "PlacementGravity"])
 		);
 
+		const popTop = buildFeatureContracts(
+			examplePresets["connect-4-up-popout"].config
+		);
+		expect(popTop.map((c) => c.id)).toEqual(
+			expect.arrayContaining(["OverflowPopOutTop", "PlacementGravity"])
+		);
+		expect(popTop.map((c) => c.id)).not.toContain("OverflowPopOutBottom");
+		expect(checkContracts(popTop)).toEqual([]);
+
+		const popRight = buildFeatureContracts(
+			examplePresets["connect-4-right-popout"].config
+		);
+		expect(popRight.map((c) => c.id)).toEqual(
+			expect.arrayContaining(["OverflowPopOutRight", "PlacementGravity"])
+		);
+		expect(popRight.map((c) => c.id)).not.toContain("OverflowPopOutBottom");
+		expect(checkContracts(popRight)).toEqual([]);
+
 		const capture = buildFeatureContracts(examplePresets.reversi.config);
 		expect(capture.map((c) => c.id)).toEqual(
 			expect.arrayContaining(["Capture", "PlacementDirect", "InputTargetCell"])

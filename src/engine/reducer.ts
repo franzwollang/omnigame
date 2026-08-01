@@ -6,9 +6,18 @@ import type {
 	Position,
 	Player,
 	CellValue,
-	Grid
+	Grid,
+	PendingPlace
 } from "./types";
-import { getCell, setCell, toIndex } from "./types";
+import {
+	asPlacementList,
+	getCell,
+	isCellPending,
+	listHasPosition,
+	positionsEqual,
+	setCell,
+	toIndex
+} from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
 import {
@@ -17,6 +26,8 @@ import {
 	boardPositionHash,
 	isLegalLibertyPlace,
 	koPointFromCapture,
+	situationHash,
+	usesSuperkoHistory,
 	type KoRule
 } from "@/engine/liberties";
 import { fleetDestroyed } from "@/engine/observation";
@@ -28,7 +39,11 @@ import {
 	usesPlacementPhase,
 	type FleetConfig
 } from "@/engine/fleet";
-import { canMove, type MovementConfig } from "@/engine/movement";
+import {
+	canMove,
+	movementBoardFrom,
+	type MovementConfig
+} from "@/engine/movement";
 import {
 	applyLifeStep,
 	type SchedulerConfig
@@ -62,14 +77,22 @@ export type GameConfig = {
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
-	/** Bottom pop-out (Connect 4 Pop Out). Top / horizontal pop-out deferred. */
-	overflow?: "reject" | "pop_out_bottom";
+	/**
+	 * Pop-out overflow: bottom↔down, top↔up, right↔right, left↔left.
+	 * Vertical uses popOutColumn; horizontal uses popOutRow.
+	 */
+	overflow?:
+		| "reject"
+		| "pop_out_bottom"
+		| "pop_out_top"
+		| "pop_out_left"
+		| "pop_out_right";
 	captureEnabled?: boolean;
 	/** flip = Reversi; liberties = Go-lite group removal. */
 	captureMode?: "flip" | "liberties";
-	/** none | point (simple ko) | positional (superko). */
+	/** none | point (simple ko) | positional | situational (superko). */
 	koRule?: KoRule;
-	/** Legacy alias: true when koRule is point or positional. */
+	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
 	observationMode?: "full" | "hit_miss" | "fog";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
@@ -78,11 +101,39 @@ export type GameConfig = {
 	objectiveMode?:
 		| "n_in_a_row"
 		| "destroy_hidden"
+		| "connect_or_destroy"
 		| "reach_row"
 		| "area_control"
 		| "none";
-	/** Classic alternating turns vs discrete global tick (Life Lite). */
-	turnSchedule?: "alternating" | "manual_tick";
+	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
+	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
+	/**
+	 * Successful actions before handoff (alternating) or places per seat per
+	 * simultaneous round. Default 1. When > 1 under alternating,
+	 * GameState.actionsRemaining tracks the remaining budget.
+	 */
+	actionsPerTurn?: number;
+	/**
+	 * Delayed place: intervening successful places before a queued intent
+	 * materializes. 0 / omitted = immediate place.
+	 */
+	delayTurns?: number;
+	/**
+	 * Hidden simultaneous: commit privately then reveal jointly.
+	 * Requires turnSchedule = simultaneous.
+	 */
+	commitReveal?: boolean;
+	/**
+	 * Simultaneous same-cell resolution: joint (both-or-neither) or ordered
+	 * seat priority (`x_first` / `o_first`). Default joint.
+	 */
+	resolveOrder?: "joint" | "x_first" | "o_first";
+	/**
+	 * Ordered in-turn action types (place→move, place→fire, or
+	 * place→move→fire) before handoff. When set, GameState.turnPhaseIndex
+	 * tracks the active phase.
+	 */
+	turnPhases?: Array<"place" | "move" | "fire">;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -108,6 +159,217 @@ function resolveKoRule(config: GameConfig): KoRule {
 	return config.koEnabled ? "point" : "none";
 }
 
+function resolveActionsPerTurn(config: GameConfig): number {
+	const n = config.actionsPerTurn ?? 1;
+	return n < 1 ? 1 : n;
+}
+
+function resolveDelayTurns(config: GameConfig): number {
+	const n = config.delayTurns ?? 0;
+	return n < 0 ? 0 : n;
+}
+
+/** Place/move connect wins for n_in_a_row and dual connect_or_destroy. */
+function checksConnectWin(config: GameConfig): boolean {
+	const mode = config.objectiveMode ?? "n_in_a_row";
+	return mode === "n_in_a_row" || mode === "connect_or_destroy";
+}
+
+/** Fire sink wins for destroy_hidden and dual connect_or_destroy. */
+function checksDestroyWin(config: GameConfig): boolean {
+	const mode = config.objectiveMode ?? "n_in_a_row";
+	return mode === "destroy_hidden" || mode === "connect_or_destroy";
+}
+
+function isPendingReserved(
+	pending: PendingPlace[] | undefined,
+	pos: Position
+): boolean {
+	return (pending ?? []).some(
+		(p) =>
+			isCellPending(p) &&
+			p.position.row === pos.row &&
+			p.position.col === pos.col
+	);
+}
+
+function pendingColumnCount(
+	pending: PendingPlace[] | undefined,
+	col: number
+): number {
+	return (pending ?? []).filter((p) => p.kind === "column" && p.col === col)
+		.length;
+}
+
+function pendingRowCount(
+	pending: PendingPlace[] | undefined,
+	row: number
+): number {
+	return (pending ?? []).filter((p) => p.kind === "row" && p.row === row)
+		.length;
+}
+
+function emptyCellsInColumn(cells: CellValue[], width: number, height: number, col: number): number {
+	let n = 0;
+	for (let row = 0; row < height; row++) {
+		if (cells[toIndex({ row, col }, width)] === null) n += 1;
+	}
+	return n;
+}
+
+function emptyCellsInRow(cells: CellValue[], width: number, row: number): number {
+	let n = 0;
+	for (let col = 0; col < width; col++) {
+		if (cells[toIndex({ row, col }, width)] === null) n += 1;
+	}
+	return n;
+}
+
+/** First empty settle row for vertical gravity, or null if column full. */
+function settleColumnRow(
+	cells: CellValue[],
+	width: number,
+	height: number,
+	col: number,
+	direction: "down" | "up"
+): number | null {
+	if (direction === "down") {
+		for (let row = height - 1; row >= 0; row--) {
+			if (cells[toIndex({ row, col }, width)] === null) return row;
+		}
+	} else {
+		for (let row = 0; row < height; row++) {
+			if (cells[toIndex({ row, col }, width)] === null) return row;
+		}
+	}
+	return null;
+}
+
+/** First empty settle col for horizontal gravity, or null if row full. */
+function settleRowCol(
+	cells: CellValue[],
+	width: number,
+	row: number,
+	direction: "left" | "right"
+): number | null {
+	if (direction === "right") {
+		for (let col = width - 1; col >= 0; col--) {
+			if (cells[toIndex({ row, col }, width)] === null) return col;
+		}
+	} else {
+		for (let col = 0; col < width; col++) {
+			if (cells[toIndex({ row, col }, width)] === null) return col;
+		}
+	}
+	return null;
+}
+
+function columnHasPendingSpace(
+	cells: CellValue[],
+	width: number,
+	height: number,
+	pending: PendingPlace[] | undefined,
+	col: number
+): boolean {
+	return (
+		emptyCellsInColumn(cells, width, height, col) >
+		pendingColumnCount(pending, col)
+	);
+}
+
+function rowHasPendingSpace(
+	cells: CellValue[],
+	width: number,
+	pending: PendingPlace[] | undefined,
+	row: number
+): boolean {
+	return emptyCellsInRow(cells, width, row) > pendingRowCount(pending, row);
+}
+
+function countFreeCells(
+	cells: CellValue[],
+	pending: PendingPlace[],
+	grid: Grid,
+	config: GameConfig
+): number {
+	const topology = config.topology ?? "rectangle";
+	let free = 0;
+	if (topology === "graph" && config.graph) {
+		for (const pos of config.graph.active) {
+			const idx = toIndex(pos, grid.width);
+			if (cells[idx] === null && !isPendingReserved(pending, pos)) free += 1;
+		}
+	} else {
+		for (let row = 0; row < grid.height; row++) {
+			for (let col = 0; col < grid.width; col++) {
+				const pos = { row, col };
+				const idx = toIndex(pos, grid.width);
+				if (cells[idx] === null && !isPendingReserved(pending, pos)) free += 1;
+			}
+		}
+	}
+	const gravityPending = pending.filter(
+		(p) => p.kind === "column" || p.kind === "row"
+	).length;
+	return Math.max(0, free - gravityPending);
+}
+
+/**
+ * After a successful non-terminal action: spend one action from the turn
+ * budget, or hand off to the opponent and reset the budget.
+ */
+function withTurnAdvanced(
+	state: GameState,
+	config: GameConfig
+): Pick<GameState, "currentPlayer" | "actionsRemaining"> {
+	const budget = resolveActionsPerTurn(config);
+	if (budget <= 1) {
+		return {
+			currentPlayer: state.currentPlayer === "X" ? "O" : "X",
+			actionsRemaining: undefined
+		};
+	}
+	const remaining = state.actionsRemaining ?? budget;
+	if (remaining > 1) {
+		return {
+			currentPlayer: state.currentPlayer,
+			actionsRemaining: remaining - 1
+		};
+	}
+	return {
+		currentPlayer: state.currentPlayer === "X" ? "O" : "X",
+		actionsRemaining: budget
+	};
+}
+
+/**
+ * In-turn phases advance the phase index; after the last phase, hand off and
+ * reset. Without turnPhases, delegates to multi-step / alternating handoff.
+ */
+function withPhaseOrTurnAdvanced(
+	state: GameState,
+	config: GameConfig
+): Pick<GameState, "currentPlayer" | "actionsRemaining" | "turnPhaseIndex"> {
+	const phases = config.turnPhases;
+	if (phases && phases.length > 1) {
+		const idx = state.turnPhaseIndex ?? 0;
+		if (idx + 1 < phases.length) {
+			return {
+				currentPlayer: state.currentPlayer,
+				actionsRemaining: undefined,
+				turnPhaseIndex: idx + 1
+			};
+		}
+		return {
+			currentPlayer: state.currentPlayer === "X" ? "O" : "X",
+			actionsRemaining: undefined,
+			turnPhaseIndex: 0
+		};
+	}
+	const turn = withTurnAdvanced(state, config);
+	return { ...turn, turnPhaseIndex: undefined };
+}
+
 function isBoardFull(grid: Grid, config: GameConfig): boolean {
 	const topology = config.topology ?? "rectangle";
 	if (topology === "graph" && config.graph) {
@@ -119,6 +381,11 @@ function isBoardFull(grid: Grid, config: GameConfig): boolean {
 // Create initial game state from config
 export function createInitialState(config: GameConfig): GameState {
 	const placement = usesPlacementPhase(config.fleet);
+	const actionsPerTurn = resolveActionsPerTurn(config);
+	const alternatingMultiStep =
+		actionsPerTurn > 1 &&
+		(config.turnSchedule ?? "alternating") === "alternating";
+	const inTurnPhases = (config.turnPhases?.length ?? 0) > 0;
 	const base: GameState = {
 		grid: emptyGrid(config.gridWidth, config.gridHeight),
 		currentPlayer: "X",
@@ -128,7 +395,9 @@ export function createInitialState(config: GameConfig): GameState {
 		consecutivePasses: 0,
 		koPoint: null,
 		phase: placement ? "placement" : "combat",
-		fleetProgress: placement ? initialFleetProgressMap() : undefined
+		fleetProgress: placement ? initialFleetProgressMap() : undefined,
+		actionsRemaining: alternatingMultiStep ? actionsPerTurn : undefined,
+		turnPhaseIndex: inTurnPhases ? 0 : undefined
 	};
 
 	const seeds = config.initial ?? [];
@@ -138,8 +407,13 @@ export function createInitialState(config: GameConfig): GameState {
 	}
 
 	if (seeds.length === 0) {
-		if (resolveKoRule(config) === "positional") {
-			base.positionHistory = [boardPositionHash(base.grid)];
+		const koRule = resolveKoRule(config);
+		if (usesSuperkoHistory(koRule)) {
+			base.positionHistory = [
+				koRule === "situational"
+					? situationHash(base.grid, base.currentPlayer)
+					: boardPositionHash(base.grid)
+			];
 		}
 		return base;
 	}
@@ -180,8 +454,15 @@ export function createInitialState(config: GameConfig): GameState {
 	if (base.hidden && hiddenCells) {
 		base.hidden = { ...base.hidden, cells: hiddenCells };
 	}
-	if (resolveKoRule(config) === "positional") {
-		base.positionHistory = [boardPositionHash(base.grid)];
+	{
+		const koRule = resolveKoRule(config);
+		if (usesSuperkoHistory(koRule)) {
+			base.positionHistory = [
+				koRule === "situational"
+					? situationHash(base.grid, base.currentPlayer)
+					: boardPositionHash(base.grid)
+			];
+		}
 	}
 	return base;
 }
@@ -205,10 +486,18 @@ export function reduce(
 			return handleActivateRow(state, event.row, config);
 		case "popOutColumn":
 			return handlePopOutColumn(state, event.col, config);
+		case "popOutRow":
+			return handlePopOutRow(state, event.row, config);
 		case "tick":
 			return handleTick(state, config);
 		case "pass":
 			return handlePass(state, config);
+		case "simultaneousPlace":
+			return handleSimultaneousPlace(state, event.placements, config);
+		case "simultaneousMove":
+			return handleSimultaneousMove(state, event.moves, config);
+		case "commitPlace":
+			return handleCommitPlace(state, event.player, event.position, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -265,13 +554,423 @@ function handleTick(state: GameState, config: GameConfig): GameState {
 	};
 }
 
+/**
+ * Apply one simultaneous sub-step pair onto `grid` (joint or ordered).
+ * Returns the updated grid and whether a same-cell joint conflict occurred
+ * (board unchanged for that pair under joint).
+ */
+function applySimultaneousPair(
+	grid: Grid,
+	pair: { X: Position; O: Position },
+	resolveOrder: "joint" | "x_first" | "o_first"
+): { grid: Grid; conflict: boolean } {
+	const conflict = positionsEqual(pair.X, pair.O);
+
+	if (resolveOrder === "joint") {
+		if (conflict) return { grid, conflict: true };
+		const xFree = getCell(grid, pair.X) === null;
+		const oFree = getCell(grid, pair.O) === null;
+		// Cross-index: a later pair may find a seat's cell already filled.
+		// Place only seats whose target is still empty (natural sequential apply).
+		let cells = grid.cells;
+		let next: Grid = grid;
+		if (xFree) {
+			cells = setCell(next, pair.X, "X");
+			next = { ...grid, cells };
+		}
+		if (oFree && getCell(next, pair.O) === null) {
+			cells = setCell(next, pair.O, "O");
+			next = { ...grid, cells };
+		}
+		return { grid: next, conflict: false };
+	}
+
+	const first: Player = resolveOrder === "x_first" ? "X" : "O";
+	const second: Player = first === "X" ? "O" : "X";
+	let next = grid;
+	if (getCell(next, pair[first]) === null) {
+		const cells = setCell(next, pair[first], first);
+		next = { ...grid, cells };
+	}
+	if (getCell(next, pair[second]) === null) {
+		const cells = setCell(next, pair[second], second);
+		next = { ...grid, cells };
+	}
+	return { grid: next, conflict };
+}
+
+/**
+ * Simultaneous schedule: both players submit place(s); resolve in one step.
+ * Scalar placements = classic 1-per-seat round. Arrays = multi-action rounds
+ * (`actionsPerTurn` > 1): apply indexed pairs as sequential sub-steps with
+ * win checks after each. Joint same-cell → neither; ordered → earlier seat wins.
+ * If both complete a winning line in the same sub-step → draw.
+ */
+function handleSimultaneousPlace(
+	state: GameState,
+	placements: {
+		X: Position | Position[];
+		O: Position | Position[];
+	},
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") === "move") return state;
+	if ((config.observationMode ?? "full") === "hit_miss") return state;
+
+	const topology = config.topology ?? "rectangle";
+	const wrap = config.gridWrap === true;
+	const resolveOrder = config.resolveOrder ?? "joint";
+	const budget = resolveActionsPerTurn(config);
+	const xs = asPlacementList(placements.X);
+	const os = asPlacementList(placements.O);
+
+	if (xs.length !== budget || os.length !== budget) return state;
+
+	const validPos = (pos: Position): boolean => {
+		if (
+			pos.row < 0 ||
+			pos.row >= state.grid.height ||
+			pos.col < 0 ||
+			pos.col >= state.grid.width
+		) {
+			return false;
+		}
+		if (!isActivePosition(pos, topology, config.graph)) return false;
+		if (getCell(state.grid, pos) !== null) return false;
+		return true;
+	};
+
+	// Within-seat duplicates are illegal for the whole joint action.
+	for (let i = 0; i < xs.length; i++) {
+		for (let j = i + 1; j < xs.length; j++) {
+			if (positionsEqual(xs[i]!, xs[j]!)) return state;
+		}
+	}
+	for (let i = 0; i < os.length; i++) {
+		for (let j = i + 1; j < os.length; j++) {
+			if (positionsEqual(os[i]!, os[j]!)) return state;
+		}
+	}
+
+	// All choices validated against the pre-round board (simultaneous intent).
+	for (const pos of xs) {
+		if (!validPos(pos)) return state;
+	}
+	for (const pos of os) {
+		if (!validPos(pos)) return state;
+	}
+
+	let workingGrid = state.grid;
+	const clearedCommits = { committedPlacements: undefined as undefined };
+
+	for (let i = 0; i < budget; i++) {
+		const pair = { X: xs[i]!, O: os[i]! };
+		const applied = applySimultaneousPair(workingGrid, pair, resolveOrder);
+		workingGrid = applied.grid;
+
+		const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
+		if (shouldCheckWin) {
+			const xWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"X",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			const oWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"O",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			if (xWins && oWins) {
+				return {
+					...state,
+					...clearedCommits,
+					grid: workingGrid,
+					status: "draw",
+					winner: null,
+					moveCount: state.moveCount + 1
+				};
+			}
+			if (xWins) {
+				return {
+					...state,
+					...clearedCommits,
+					grid: workingGrid,
+					status: "won",
+					winner: "X",
+					moveCount: state.moveCount + 1
+				};
+			}
+			if (oWins) {
+				return {
+					...state,
+					...clearedCommits,
+					grid: workingGrid,
+					status: "won",
+					winner: "O",
+					moveCount: state.moveCount + 1
+				};
+			}
+		}
+
+		if (isBoardFull(workingGrid, config)) {
+			return {
+				...state,
+				...clearedCommits,
+				grid: workingGrid,
+				status: "draw",
+				winner: null,
+				moveCount: state.moveCount + 1
+			};
+		}
+	}
+
+	return {
+		...state,
+		...clearedCommits,
+		grid: workingGrid,
+		moveCount: state.moveCount + 1
+		// Simultaneous rounds do not flip currentPlayer
+	};
+}
+
+export type SimultaneousMovePair = {
+	from: Position;
+	to: Position;
+};
+
+/**
+ * Apply one simultaneous move pair onto `grid` (joint or ordered).
+ * Same destination under joint → neither moves. Ordered applies first seat
+ * then second against the updated board (second may become illegal).
+ */
+function applySimultaneousMovePair(
+	grid: Grid,
+	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
+	resolveOrder: "joint" | "x_first" | "o_first"
+): { grid: Grid; conflict: boolean; applied: { X: boolean; O: boolean } } {
+	const sameDest = positionsEqual(moves.X.to, moves.O.to);
+
+	if (resolveOrder === "joint") {
+		if (sameDest) {
+			return { grid, conflict: true, applied: { X: false, O: false } };
+		}
+		// Atomic: clear both origins, then land both destinations.
+		let cells = setCell(grid, moves.X.from, null);
+		cells = setCell({ ...grid, cells }, moves.O.from, null);
+		cells = setCell({ ...grid, cells }, moves.X.to, "X");
+		cells = setCell({ ...grid, cells }, moves.O.to, "O");
+		return {
+			grid: { ...grid, cells },
+			conflict: false,
+			applied: { X: true, O: true }
+		};
+	}
+
+	const first: Player = resolveOrder === "x_first" ? "X" : "O";
+	const second: Player = first === "X" ? "O" : "X";
+	let next = grid;
+	const applied = { X: false, O: false };
+
+	const tryApply = (seat: Player) => {
+		const m = moves[seat];
+		if (getCell(next, m.from) !== seat) return;
+		if (getCell(next, m.to) !== null) return;
+		let cells = setCell(next, m.from, null);
+		cells = setCell({ ...next, cells }, m.to, seat);
+		next = { ...next, cells };
+		applied[seat] = true;
+	};
+
+	tryApply(first);
+	tryApply(second);
+	return { grid: next, conflict: sameDest, applied };
+}
+
+/**
+ * Simultaneous schedule + move input: both seats submit one {from,to}.
+ * Each move validated with canMove on the pre-round board. Same destination
+ * under joint → neither; ordered → first seat wins the cell when both claim it.
+ * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
+ */
+function handleSimultaneousMove(
+	state: GameState,
+	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") !== "move") return state;
+	const movement = config.movement;
+	if (!movement) return state;
+
+	const board = movementBoardFrom(config);
+	const wrap = board.wrap === true;
+	const resolveOrder = config.resolveOrder ?? "joint";
+
+	if (
+		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, board) ||
+		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, board)
+	) {
+		return state;
+	}
+
+	const applied = applySimultaneousMovePair(state.grid, moves, resolveOrder);
+	const workingGrid = applied.grid;
+	const nextBase: GameState = {
+		...state,
+		grid: workingGrid,
+		moveCount: state.moveCount + 1
+	};
+
+	const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
+	if (!shouldCheckWin) return nextBase;
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
+		const xTarget = config.targetRows?.X;
+		const oTarget = config.targetRows?.O;
+		const xWins =
+			applied.applied.X &&
+			xTarget != null &&
+			moves.X.to.row === xTarget &&
+			getCell(workingGrid, moves.X.to) === "X";
+		const oWins =
+			applied.applied.O &&
+			oTarget != null &&
+			moves.O.to.row === oTarget &&
+			getCell(workingGrid, moves.O.to) === "O";
+		if (xWins && oWins) {
+			return { ...nextBase, status: "draw", winner: null };
+		}
+		if (xWins) {
+			return { ...nextBase, status: "won", winner: "X" };
+		}
+		if (oWins) {
+			return { ...nextBase, status: "won", winner: "O" };
+		}
+		return nextBase;
+	}
+
+	if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
+		const topology = config.topology ?? "rectangle";
+		const xWins = Boolean(
+			checkWinner(
+				workingGrid,
+				"X",
+				config.winLength,
+				config.adjacency,
+				topology,
+				config.graph,
+				wrap
+			)
+		);
+		const oWins = Boolean(
+			checkWinner(
+				workingGrid,
+				"O",
+				config.winLength,
+				config.adjacency,
+				topology,
+				config.graph,
+				wrap
+			)
+		);
+		if (xWins && oWins) {
+			return { ...nextBase, status: "draw", winner: null };
+		}
+		if (xWins) {
+			return { ...nextBase, status: "won", winner: "X" };
+		}
+		if (oWins) {
+			return { ...nextBase, status: "won", winner: "O" };
+		}
+	}
+
+	return nextBase;
+}
+
+/**
+ * Hidden simultaneous: record a private commit. When both seats have committed
+ * their full per-round budget (`actionsPerTurn`), resolve via
+ * handleSimultaneousPlace (joint or ordered resolveOrder).
+ */
+function handleCommitPlace(
+	state: GameState,
+	player: Player,
+	position: Position,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") === "move") return state;
+
+	const topology = config.topology ?? "rectangle";
+	const budget = resolveActionsPerTurn(config);
+	if (
+		position.row < 0 ||
+		position.row >= state.grid.height ||
+		position.col < 0 ||
+		position.col >= state.grid.width
+	) {
+		return state;
+	}
+	if (!isActivePosition(position, topology, config.graph)) return state;
+	if (getCell(state.grid, position) !== null) return state;
+
+	const prior = state.committedPlacements ?? {};
+	const own = prior[player] ?? [];
+	if (own.length >= budget) return state; // budget already full
+	if (listHasPosition(own, position)) return state; // duplicate within seat
+
+	const nextOwn = [...own, position];
+	const nextCommits: Partial<Record<Player, Position[]>> = {
+		...prior,
+		[player]: nextOwn
+	};
+
+	const xList = nextCommits.X ?? [];
+	const oList = nextCommits.O ?? [];
+	if (xList.length === budget && oList.length === budget) {
+		return handleSimultaneousPlace(
+			{ ...state, committedPlacements: nextCommits },
+			{ X: xList, O: oList },
+			config
+		);
+	}
+
+	return {
+		...state,
+		committedPlacements: nextCommits
+		// moveCount unchanged until reveal
+	};
+}
+
 function handleMove(
 	state: GameState,
 	from: Position,
 	to: Position,
 	config: GameConfig
 ): GameState {
-	if ((config.inputMode ?? "cell") !== "move") return state;
+	// Simultaneous games must use simultaneousMove (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+	const phases = config.turnPhases;
+	const phaseIdx = state.turnPhaseIndex ?? 0;
+	const inTurnMovePhase = Boolean(phases && phases[phaseIdx] === "move");
+	if ((config.inputMode ?? "cell") !== "move" && !inTurnMovePhase) return state;
 	if (state.status !== "playing") return state;
 	const movement = config.movement;
 	if (!movement) return state;
@@ -282,7 +981,7 @@ function handleMove(
 			to,
 			state.currentPlayer,
 			movement,
-			config.gridWrap === true
+			movementBoardFrom(config)
 		)
 	) {
 		return state;
@@ -309,10 +1008,38 @@ function handleMove(
 		}
 	}
 
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	if (checksConnectWin(config)) {
+		const wrap = config.gridWrap === true;
+		const winner = checkWinner(
+			newGrid,
+			state.currentPlayer,
+			config.winLength,
+			config.adjacency,
+			config.topology ?? "rectangle",
+			config.graph,
+			wrap
+		);
+		if (winner) {
+			return {
+				...next,
+				status: "won",
+				winner: state.currentPlayer
+			};
+		}
+		if (isBoardFull(newGrid, config)) {
+			return {
+				...next,
+				status: "draw"
+			};
+		}
+	}
+
+	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
 		...next,
-		currentPlayer: nextPlayer
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
 	};
 }
 
@@ -325,6 +1052,12 @@ function handleFire(
 	if (state.status !== "playing") return state;
 	// Placement phase: only place actions are legal
 	if ((state.phase ?? "combat") === "placement") return state;
+	// In-turn phases: only fire during the fire phase
+	const phases = config.turnPhases;
+	if (phases && phases.length > 0) {
+		const phase = phases[state.turnPhaseIndex ?? 0];
+		if (phase !== "fire") return state;
+	}
 	if (
 		pos.row < 0 ||
 		pos.row >= state.grid.height ||
@@ -333,7 +1066,7 @@ function handleFire(
 	) {
 		return state;
 	}
-	// Already shot
+	// Already shot / public spotter occupying cell
 	if (getCell(state.grid, pos) !== null) return state;
 
 	const occupant =
@@ -352,7 +1085,7 @@ function handleFire(
 		moveCount: newMoveCount
 	};
 
-	if ((config.objectiveMode ?? "n_in_a_row") === "destroy_hidden") {
+	if (checksDestroyWin(config)) {
 		const opponent: Player = state.currentPlayer === "X" ? "O" : "X";
 		if (fleetDestroyed(next, opponent)) {
 			return {
@@ -363,10 +1096,12 @@ function handleFire(
 		}
 	}
 
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
 		...next,
-		currentPlayer: nextPlayer
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
 	};
 }
 
@@ -430,12 +1165,25 @@ function handlePlace(
 	pos: Position,
 	config: GameConfig
 ): GameState {
-	// Hit/miss with fleet: place onto hidden during placement phase
-	if ((config.observationMode ?? "full") === "hit_miss") {
+	// Simultaneous games must use simultaneousPlace (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+	// Hit/miss with fleet: place onto hidden during placement phase.
+	// Hit/miss with in-turn phases (place→fire): public spotters — fall through.
+	if (
+		(config.observationMode ?? "full") === "hit_miss" &&
+		!(config.turnPhases && config.turnPhases.length > 0)
+	) {
 		return handleFleetPlace(state, pos, config);
 	}
 	// Move games relocate existing pieces
 	if ((config.inputMode ?? "cell") === "move") return state;
+
+	// In-turn phases: only place during the place phase
+	const phases = config.turnPhases;
+	if (phases && phases.length > 0) {
+		const phase = phases[state.turnPhaseIndex ?? 0];
+		if (phase !== "place") return state;
+	}
 
 	// Guard: can only place if game is playing
 	if (state.status !== "playing") return state;
@@ -458,6 +1206,20 @@ function handlePlace(
 
 	// Guard: cell must be empty
 	if (getCell(state.grid, pos) !== null) return state;
+
+	// Place→fire: do not stack public spotters on hidden fleet cells
+	if (
+		(config.observationMode ?? "full") === "hit_miss" &&
+		state.hidden != null
+	) {
+		const under = getCell(state.hidden, pos);
+		if (under === "X" || under === "O") return state;
+	}
+
+	const delayTurns = resolveDelayTurns(config);
+	if (delayTurns > 0) {
+		return handleDelayedPlace(state, pos, config, delayTurns);
+	}
 
 	const captureMode = config.captureMode ?? "flip";
 	const libertyMode =
@@ -517,10 +1279,13 @@ function handlePlace(
 	}
 	const newMoveCount = state.moveCount + 1;
 	const newGrid = { ...state.grid, cells: newCells };
-	if (libertyMode && koRule === "positional") {
+	if (libertyMode && usesSuperkoHistory(koRule)) {
+		const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
 		nextHistory = [
 			...(state.positionHistory ?? []),
-			boardPositionHash(newGrid)
+			koRule === "situational"
+				? situationHash(newGrid, nextPlayer)
+				: boardPositionHash(newGrid)
 		];
 	}
 
@@ -549,7 +1314,23 @@ function handlePlace(
 		};
 	}
 
-	// Check win condition using config
+	// Place→fire (destroy_hidden only): place advances phase; win on fire.
+	// connect_or_destroy falls through to n-in-a-row checks after place.
+	if ((config.objectiveMode ?? "n_in_a_row") === "destroy_hidden") {
+		const turn = withPhaseOrTurnAdvanced(state, config);
+		return {
+			...state,
+			grid: newGrid,
+			currentPlayer: turn.currentPlayer,
+			actionsRemaining: turn.actionsRemaining,
+			turnPhaseIndex: turn.turnPhaseIndex,
+			moveCount: newMoveCount,
+			koPoint: nextKoPoint,
+			positionHistory: nextHistory
+		};
+	}
+
+	// Check win condition using config (n_in_a_row + connect_or_destroy)
 	const winner = checkWinner(
 		newGrid,
 		state.currentPlayer,
@@ -584,17 +1365,200 @@ function handlePlace(
 		};
 	}
 
-	// Effect: advance turn
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	// Effect: advance turn (multi-step / in-turn phases keep currentPlayer)
+	const turn = withPhaseOrTurnAdvanced(state, config);
 
 	return {
 		...state,
 		grid: newGrid,
-		currentPlayer: nextPlayer,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex,
 		moveCount: newMoveCount,
 		koPoint: nextKoPoint,
 		positionHistory: nextHistory
 	};
+}
+
+/**
+ * Delayed place: queue an intent now; materialize after `delayTurns` more places.
+ * Cell intents reserve that intersection. Column/row intents reserve a slot and
+ * settle via gravity on the board at resolve time.
+ */
+type DelayedIntent =
+	| { kind: "cell"; position: Position }
+	| { kind: "column"; col: number }
+	| { kind: "row"; row: number };
+
+function handleDelayedIntent(
+	state: GameState,
+	intent: DelayedIntent,
+	config: GameConfig,
+	delayTurns: number
+): GameState {
+	const width = state.grid.width;
+	const height = state.grid.height;
+	const cells0 = state.grid.cells;
+
+	if (intent.kind === "cell") {
+		if (isPendingReserved(state.pendingPlaces, intent.position)) return state;
+		if (getCell(state.grid, intent.position) !== null) return state;
+	} else if (intent.kind === "column") {
+		if (
+			!columnHasPendingSpace(
+				cells0,
+				width,
+				height,
+				state.pendingPlaces,
+				intent.col
+			)
+		) {
+			return state;
+		}
+	} else if (
+		!rowHasPendingSpace(cells0, width, state.pendingPlaces, intent.row)
+	) {
+		return state;
+	}
+
+	const wrap = config.gridWrap === true;
+	const topology = config.topology ?? "rectangle";
+	const direction = config.gravityDirection ?? "down";
+	const newMoveCount = state.moveCount + 1;
+	const queued: PendingPlace =
+		intent.kind === "cell"
+			? {
+					player: state.currentPlayer,
+					resolveAt: newMoveCount + delayTurns,
+					kind: "cell",
+					position: intent.position
+				}
+			: intent.kind === "column"
+				? {
+						player: state.currentPlayer,
+						resolveAt: newMoveCount + delayTurns,
+						kind: "column",
+						col: intent.col
+					}
+				: {
+						player: state.currentPlayer,
+						resolveAt: newMoveCount + delayTurns,
+						kind: "row",
+						row: intent.row
+					};
+	let pending: PendingPlace[] = [...(state.pendingPlaces ?? []), queued];
+	let cells = [...state.grid.cells];
+	const resolvedOrder: Player[] = [];
+
+	const materializeDue = (forceAll: boolean) => {
+		const keep: PendingPlace[] = [];
+		for (const p of pending) {
+			if (forceAll || p.resolveAt <= newMoveCount) {
+				if (p.kind === "cell") {
+					const idx = toIndex(p.position, width);
+					if (cells[idx] === null) {
+						cells[idx] = p.player;
+						resolvedOrder.push(p.player);
+					}
+				} else if (p.kind === "column") {
+					const vert =
+						direction === "up" || direction === "down" ? direction : "down";
+					const targetRow = settleColumnRow(
+						cells,
+						width,
+						height,
+						p.col,
+						vert
+					);
+					if (targetRow !== null) {
+						cells[toIndex({ row: targetRow, col: p.col }, width)] = p.player;
+						resolvedOrder.push(p.player);
+					}
+				} else {
+					const horiz =
+						direction === "left" || direction === "right"
+							? direction
+							: "right";
+					const targetCol = settleRowCol(cells, width, p.row, horiz);
+					if (targetCol !== null) {
+						cells[toIndex({ row: p.row, col: targetCol }, width)] = p.player;
+						resolvedOrder.push(p.player);
+					}
+				}
+			} else {
+				keep.push(p);
+			}
+		}
+		pending = keep;
+	};
+
+	materializeDue(false);
+
+	// Deadlock avoidance: if every cell is occupied or reserved, flush pending now
+	if (
+		countFreeCells(cells, pending, state.grid, config) === 0 &&
+		pending.length > 0
+	) {
+		materializeDue(true);
+	}
+
+	const newGrid: Grid = { ...state.grid, cells };
+
+	for (const player of resolvedOrder) {
+		const won = checkWinner(
+			newGrid,
+			player,
+			config.winLength,
+			config.adjacency,
+			topology,
+			config.graph,
+			wrap
+		);
+		if (won) {
+			return {
+				...state,
+				grid: newGrid,
+				pendingPlaces: pending.length > 0 ? pending : undefined,
+				status: "won",
+				winner: player,
+				moveCount: newMoveCount
+			};
+		}
+	}
+
+	if (isBoardFull(newGrid, config) && pending.length === 0) {
+		return {
+			...state,
+			grid: newGrid,
+			pendingPlaces: undefined,
+			status: "draw",
+			moveCount: newMoveCount
+		};
+	}
+
+	const turn = withTurnAdvanced(state, config);
+	return {
+		...state,
+		grid: newGrid,
+		pendingPlaces: pending.length > 0 ? pending : undefined,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		moveCount: newMoveCount
+	};
+}
+
+function handleDelayedPlace(
+	state: GameState,
+	pos: Position,
+	config: GameConfig,
+	delayTurns: number
+): GameState {
+	return handleDelayedIntent(
+		state,
+		{ kind: "cell", position: { row: pos.row, col: pos.col } },
+		config,
+		delayTurns
+	);
 }
 
 function handleActivateColumn(
@@ -610,25 +1574,26 @@ function handleActivateColumn(
 	const direction = config.gravityDirection ?? "down";
 	if (direction !== "down" && direction !== "up") return state;
 
+	const delayTurns = resolveDelayTurns(config);
+	if (delayTurns > 0) {
+		return handleDelayedIntent(
+			state,
+			{ kind: "column", col },
+			config,
+			delayTurns
+		);
+	}
+
 	// Settle toward the gravity exit: down → first empty from bottom;
 	// up → first empty from top.
-	let targetRow = -1;
-	if (direction === "down") {
-		for (let row = height - 1; row >= 0; row--) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetRow = row;
-				break;
-			}
-		}
-	} else {
-		for (let row = 0; row < height; row++) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetRow = row;
-				break;
-			}
-		}
-	}
-	if (targetRow === -1) {
+	const targetRow = settleColumnRow(
+		state.grid.cells,
+		width,
+		height,
+		col,
+		direction
+	);
+	if (targetRow === null) {
 		// Column full
 		return state;
 	}
@@ -649,25 +1614,20 @@ function handleActivateRow(
 	const direction = config.gravityDirection ?? "down";
 	if (direction !== "left" && direction !== "right") return state;
 
+	const delayTurns = resolveDelayTurns(config);
+	if (delayTurns > 0) {
+		return handleDelayedIntent(
+			state,
+			{ kind: "row", row },
+			config,
+			delayTurns
+		);
+	}
+
 	// Settle toward the gravity exit: right → first empty from right;
 	// left → first empty from left.
-	let targetCol = -1;
-	if (direction === "right") {
-		for (let col = width - 1; col >= 0; col--) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetCol = col;
-				break;
-			}
-		}
-	} else {
-		for (let col = 0; col < width; col++) {
-			if (getCell(state.grid, { row, col }) === null) {
-				targetCol = col;
-				break;
-			}
-		}
-	}
-	if (targetCol === -1) {
+	const targetCol = settleRowCol(state.grid.cells, width, row, direction);
+	if (targetCol === null) {
 		// Row full
 		return state;
 	}
@@ -685,29 +1645,124 @@ function handlePopOutColumn(
 	const width = state.grid.width;
 	if (col < 0 || col >= width) return state;
 
-	// Only support pop-out from bottom with gravity down
+	const overflow = config.overflow ?? "reject";
 	const direction = config.gravityDirection ?? "down";
-	if (direction !== "down") return state;
+	const fromBottom =
+		overflow === "pop_out_bottom" && direction === "down";
+	const fromTop = overflow === "pop_out_top" && direction === "up";
+	if (!fromBottom && !fromTop) return state;
 
-	const bottomVal = getCell(state.grid, { row: height - 1, col });
-	if (bottomVal === null) return state; // nothing to pop
-	// Optional strict rule: must pop own token; relax by removing this if desired
-	if (bottomVal !== state.currentPlayer) return state;
+	const exitRow = fromBottom ? height - 1 : 0;
+	const exitVal = getCell(state.grid, { row: exitRow, col });
+	if (exitVal === null) return state; // nothing to pop
+	// Must pop own token
+	if (exitVal !== state.currentPlayer) return state;
 
-	// Shift column down: remove bottom, pull from above
-	let newCells = [...state.grid.cells];
-	for (let row = height - 1; row > 0; row--) {
-		const from = { row: row - 1, col };
-		const to = { row, col };
-		newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+	const newCells = [...state.grid.cells];
+	if (fromBottom) {
+		// Shift column down: remove bottom, pull from above
+		for (let row = height - 1; row > 0; row--) {
+			const from = { row: row - 1, col };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row: 0, col }, state.grid.width)] = null;
+	} else {
+		// Shift column up: remove top, pull from below
+		for (let row = 0; row < height - 1; row++) {
+			const from = { row: row + 1, col };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row: height - 1, col }, state.grid.width)] = null;
 	}
-	// Top becomes empty
-	newCells[toIndex({ row: 0, col }, state.grid.width)] = null;
 
 	const newGrid = { ...state.grid, cells: newCells };
 	const newMoveCount = state.moveCount + 1;
 
 	// Check win conditions after pop (some variants may differ)
+	const winner = checkWinner(
+		newGrid,
+		state.currentPlayer,
+		config.winLength,
+		config.adjacency,
+		config.topology ?? "rectangle",
+		config.graph,
+		config.gridWrap === true
+	);
+	if (winner) {
+		return {
+			...state,
+			grid: newGrid,
+			status: "won",
+			winner: state.currentPlayer,
+			moveCount: newMoveCount
+		};
+	}
+
+	const isFull = isBoardFull(newGrid, config);
+	if (isFull) {
+		return {
+			...state,
+			grid: newGrid,
+			status: "draw",
+			moveCount: newMoveCount
+		};
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...state,
+		grid: newGrid,
+		currentPlayer: nextPlayer,
+		moveCount: newMoveCount
+	};
+}
+
+function handlePopOutRow(
+	state: GameState,
+	row: number,
+	config: GameConfig
+): GameState {
+	if (state.status !== "playing") return state;
+	const height = state.grid.height;
+	const width = state.grid.width;
+	if (row < 0 || row >= height) return state;
+
+	const overflow = config.overflow ?? "reject";
+	const direction = config.gravityDirection ?? "down";
+	const fromRight = overflow === "pop_out_right" && direction === "right";
+	const fromLeft = overflow === "pop_out_left" && direction === "left";
+	if (!fromRight && !fromLeft) return state;
+
+	const exitCol = fromRight ? width - 1 : 0;
+	const exitVal = getCell(state.grid, { row, col: exitCol });
+	if (exitVal === null) return state; // nothing to pop
+	// Must pop own token
+	if (exitVal !== state.currentPlayer) return state;
+
+	const newCells = [...state.grid.cells];
+	if (fromRight) {
+		// Shift row right: remove rightmost, pull from the left
+		for (let col = width - 1; col > 0; col--) {
+			const from = { row, col: col - 1 };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row, col: 0 }, state.grid.width)] = null;
+	} else {
+		// Shift row left: remove leftmost, pull from the right
+		for (let col = 0; col < width - 1; col++) {
+			const from = { row, col: col + 1 };
+			const to = { row, col };
+			newCells[toIndex(to, state.grid.width)] = getCell(state.grid, from);
+		}
+		newCells[toIndex({ row, col: width - 1 }, state.grid.width)] = null;
+	}
+
+	const newGrid = { ...state.grid, cells: newCells };
+	const newMoveCount = state.moveCount + 1;
+
 	const winner = checkWinner(
 		newGrid,
 		state.currentPlayer,

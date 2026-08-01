@@ -6,14 +6,20 @@
  */
 import { Effect } from "effect";
 import type { GameState, Player, Position } from "@/engine/types";
-import { getCell } from "@/engine/types";
+import {
+	asPlacementList,
+	getCell,
+	isCellPending,
+	listHasPosition,
+	positionsEqual
+} from "@/engine/types";
 import {
 	createInitialState,
 	reduce,
 	type GameConfig
 } from "@/engine/reducer";
 import { applyCaptureIfAny } from "@/engine/capture";
-import { isLegalLibertyPlace, type KoRule } from "@/engine/liberties";
+import { isLegalLibertyPlace, usesSuperkoHistory, type KoRule } from "@/engine/liberties";
 import { setCell } from "@/engine/types";
 import {
 	observe,
@@ -24,7 +30,11 @@ import {
 	canPlaceFleetCell,
 	usesPlacementPhase
 } from "@/engine/fleet";
-import { canMove, legalDestinations } from "@/engine/movement";
+import {
+	canMove,
+	legalDestinations,
+	movementBoardFrom
+} from "@/engine/movement";
 import {
 	allActivePositions,
 	isActivePosition
@@ -42,8 +52,28 @@ export type KernelAction =
 	| { type: "activateColumn"; col: number }
 	| { type: "activateRow"; row: number }
 	| { type: "popOutColumn"; col: number }
+	| { type: "popOutRow"; row: number }
 	| { type: "tick" }
-	| { type: "pass" };
+	| { type: "pass" }
+	| {
+			type: "simultaneousPlace";
+			placements: {
+				X: Position | Position[];
+				O: Position | Position[];
+			};
+	  }
+	| {
+			type: "simultaneousMove";
+			moves: {
+				X: { from: Position; to: Position };
+				O: { from: Position; to: Position };
+			};
+	  }
+	| {
+			type: "commitPlace";
+			player: Player;
+			position: Position;
+	  };
 
 /** Structured legality failure codes for debug UI / agents. */
 export type IllegalReason =
@@ -63,14 +93,19 @@ export type IllegalReason =
 	| "not_applicable"
 	| "illegal_or_noop"
 	| "ship_shape"
-	| "wrong_phase";
+	| "wrong_phase"
+	| "already_committed";
 
 export type ExplainResult =
 	| { legal: true }
 	| { legal: false; reason: IllegalReason; detail: string };
 
 export type KernelEvent =
-	| { type: "actionApplied"; action: KernelAction; player: Player }
+	| {
+			type: "actionApplied";
+			action: KernelAction;
+			player: Player | "simultaneous";
+	  }
 	| {
 			type: "shotResult";
 			position: Position;
@@ -99,7 +134,8 @@ export type StepResult = {
 export type GameKernel = {
 	readonly config: GameConfig;
 	initialState(seed?: Seed): GameState;
-	currentPlayer(state: GameState): PlayerId;
+	/** Side to move, or `"simultaneous"` when both players act each round. */
+	currentPlayer(state: GameState): PlayerId | "simultaneous";
 	legalActions(state: GameState, player: PlayerId): KernelAction[];
 	/** Why an action is illegal for `player` (reuses legality probes). */
 	explainAction(
@@ -115,6 +151,20 @@ export type GameKernel = {
 		seed?: Seed
 	): Effect.Effect<StepResult>;
 	stepSync(state: GameState, action: KernelAction, seed?: Seed): StepResult;
+	/**
+	 * Simultaneous schedule: build a joint place from per-player place actions
+	 * and step once (README jointAction foothold).
+	 */
+	stepJoint(
+		state: GameState,
+		joint: { 0: KernelAction; 1: KernelAction },
+		seed?: Seed
+	): Effect.Effect<StepResult>;
+	stepJointSync(
+		state: GameState,
+		joint: { 0: KernelAction; 1: KernelAction },
+		seed?: Seed
+	): StepResult;
 };
 
 export function playerIdOf(player: Player): PlayerId {
@@ -138,11 +188,27 @@ function formatAction(action: KernelAction): string {
 		case "activateRow":
 			return `row ${action.row}`;
 		case "popOutColumn":
-			return `pop-out ${action.col}`;
+			return `pop-out col ${action.col}`;
+		case "popOutRow":
+			return `pop-out row ${action.row}`;
 		case "tick":
 			return "tick";
 		case "pass":
 			return "pass";
+		case "simultaneousPlace": {
+			const xs = asPlacementList(action.placements.X);
+			const os = asPlacementList(action.placements.O);
+			const xPart = xs.map((p) => `(${p.row},${p.col})`).join("+");
+			const oPart = os.map((p) => `(${p.row},${p.col})`).join("+");
+			return `joint place X${xPart} O${oPart}`;
+		}
+		case "simultaneousMove": {
+			const fmt = (m: { from: Position; to: Position }) =>
+				`(${m.from.row},${m.from.col})→(${m.to.row},${m.to.col})`;
+			return `joint move X${fmt(action.moves.X)} O${fmt(action.moves.O)}`;
+		}
+		case "commitPlace":
+			return `commit ${action.player} (${action.position.row},${action.position.col})`;
 	}
 }
 
@@ -173,7 +239,9 @@ function isNoop(before: GameState, after: GameState): boolean {
 		before.status === after.status &&
 		(before.phase ?? "combat") === (after.phase ?? "combat") &&
 		before.grid.cells === after.grid.cells &&
-		before.hidden?.cells === after.hidden?.cells
+		before.hidden?.cells === after.hidden?.cells &&
+		before.pendingPlaces === after.pendingPlaces &&
+		before.committedPlacements === after.committedPlacements
 	);
 }
 
@@ -200,10 +268,16 @@ function applyStep(
 ): StepResult {
 	const nextState = reduce(state, action, config);
 	if (isNoop(state, nextState)) {
+		const probePlayer =
+			action.type === "commitPlace"
+				? playerIdOf(action.player)
+				: (config.turnSchedule ?? "alternating") === "simultaneous"
+					? 0
+					: playerIdOf(state.currentPlayer);
 		const explained = explainKernelAction(
 			config,
 			state,
-			playerIdOf(state.currentPlayer),
+			probePlayer,
 			action
 		);
 		const reason: IllegalReason =
@@ -217,8 +291,14 @@ function applyStep(
 		};
 	}
 
+	const actor: Player | "simultaneous" =
+		action.type === "simultaneousPlace" || action.type === "simultaneousMove"
+			? "simultaneous"
+			: action.type === "commitPlace"
+				? action.player
+				: state.currentPlayer;
 	const events: KernelEvent[] = [
-		{ type: "actionApplied", action, player: state.currentPlayer }
+		{ type: "actionApplied", action, player: actor }
 	];
 
 	let lastShot: { position: Position; result: ShotResult } | undefined;
@@ -270,8 +350,21 @@ function resolveKoRule(config: GameConfig): KoRule {
 function columnHasSpace(
 	state: GameState,
 	col: number,
-	direction: "down" | "up" = "down"
+	direction: "down" | "up" = "down",
+	config?: GameConfig
 ): boolean {
+	const delayTurns = config?.delayTurns ?? 0;
+	if (delayTurns > 0) {
+		// Slot reservation: empty cells in column must exceed pending column intents
+		let empty = 0;
+		for (let row = 0; row < state.grid.height; row++) {
+			if (getCell(state.grid, { row, col }) === null) empty += 1;
+		}
+		const reserved = (state.pendingPlaces ?? []).filter(
+			(p) => p.kind === "column" && p.col === col
+		).length;
+		return empty > reserved;
+	}
 	// Entry side must be clear: top for down gravity, bottom for up.
 	const entryRow =
 		direction === "down" ? 0 : state.grid.height - 1;
@@ -281,8 +374,20 @@ function columnHasSpace(
 function rowHasSpace(
 	state: GameState,
 	row: number,
-	direction: "left" | "right" = "right"
+	direction: "left" | "right" = "right",
+	config?: GameConfig
 ): boolean {
+	const delayTurns = config?.delayTurns ?? 0;
+	if (delayTurns > 0) {
+		let empty = 0;
+		for (let col = 0; col < state.grid.width; col++) {
+			if (getCell(state.grid, { row, col }) === null) empty += 1;
+		}
+		const reserved = (state.pendingPlaces ?? []).filter(
+			(p) => p.kind === "row" && p.row === row
+		).length;
+		return empty > reserved;
+	}
 	// Entry side must be clear: left for right gravity, right for left.
 	const entryCol =
 		direction === "right" ? 0 : state.grid.width - 1;
@@ -292,26 +397,46 @@ function rowHasSpace(
 function canPlaceCell(
 	state: GameState,
 	pos: Position,
-	config: GameConfig
+	config: GameConfig,
+	player: Player = state.currentPlayer
 ): boolean {
 	const topology = config.topology ?? "rectangle";
 	if (!isActivePosition(pos, topology, config.graph)) return false;
 	if (getCell(state.grid, pos) !== null) return false;
+	if (
+		(state.pendingPlaces ?? []).some(
+			(p) =>
+				isCellPending(p) &&
+				p.position.row === pos.row &&
+				p.position.col === pos.col
+		)
+	) {
+		return false;
+	}
+	// Place→fire: public spotters cannot cover hidden fleet cells
+	if (
+		(config.observationMode ?? "full") === "hit_miss" &&
+		(config.turnPhases?.length ?? 0) > 0 &&
+		state.hidden != null
+	) {
+		const under = getCell(state.hidden, pos);
+		if (under === "X" || under === "O") return false;
+	}
 	if (!config.captureEnabled) return true;
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
-		return isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
+		return isLegalLibertyPlace(state.grid, pos, player, wrap, {
 			koRule: resolveKoRule(config),
 			koPoint: state.koPoint,
 			positionHistory: state.positionHistory
 		});
 	}
-	const placedCells = setCell(state.grid, pos, state.currentPlayer);
+	const placedCells = setCell(state.grid, pos, player);
 	const after = applyCaptureIfAny(
 		{ ...state.grid, cells: placedCells },
 		pos,
-		state.currentPlayer,
+		player,
 		config.adjacency,
 		wrap
 	);
@@ -336,13 +461,75 @@ function collectLegalActions(
 	player: PlayerId
 ): KernelAction[] {
 	if (state.status !== "playing") return [];
-	if (playerIdOf(state.currentPlayer) !== player) return [];
+
+	const simultaneous =
+		(config.turnSchedule ?? "alternating") === "simultaneous";
+	if (!simultaneous && playerIdOf(state.currentPlayer) !== player) return [];
 
 	const actions: KernelAction[] = [];
 	const inputMode = config.inputMode ?? "cell";
 	const overflow = config.overflow ?? "reject";
 	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
 	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
+	const actingPlayer = simultaneous ? playerOf(player) : state.currentPlayer;
+
+	if (simultaneous) {
+		const commitReveal = config.commitReveal === true;
+		const acting = playerOf(player);
+		const budget = config.actionsPerTurn ?? 1;
+
+		// Simultaneous move: per-seat {from,to}; compose via stepJoint.
+		if (inputMode === "move") {
+			const movement = config.movement;
+			if (!movement) return [];
+			const board = movementBoardFrom(config);
+			for (const from of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (getCell(state.grid, from) !== acting) continue;
+				for (const to of legalDestinations(state.grid, from, movement, board)) {
+					if (canMove(state.grid, from, to, acting, movement, board)) {
+						actions.push({ type: "move", from, to });
+					}
+				}
+			}
+			return actions;
+		}
+
+		if (commitReveal) {
+			const own = state.committedPlacements?.[acting] ?? [];
+			// Budget full this round → no further actions until reveal.
+			if (own.length >= budget) return [];
+			for (const position of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (listHasPosition(own, position)) continue;
+				if (canPlaceCell(state, position, config, acting)) {
+					actions.push({
+						type: "commitPlace",
+						player: acting,
+						position
+					});
+				}
+			}
+			return actions;
+		}
+		// Open simultaneous place: per-player place choices; compose via stepJoint.
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (canPlaceCell(state, position, config, actingPlayer)) {
+				actions.push({ type: "place", position });
+			}
+		}
+		return actions;
+	}
 
 	if (manualTick) {
 		actions.push({ type: "tick" });
@@ -375,6 +562,56 @@ function collectLegalActions(
 			}
 			return actions;
 		}
+		// In-turn place→fire / place→move→fire: legal actions follow turnPhases
+		const turnPhases = config.turnPhases;
+		if (turnPhases && turnPhases.length > 0) {
+			const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
+			if (phase === "place") {
+				for (const position of allActivePositions(
+					state.grid,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (canPlaceCell(state, position, config)) {
+						actions.push({ type: "place", position });
+					}
+				}
+				return actions;
+			}
+			if (phase === "move") {
+				const movement = config.movement;
+				if (!movement) return actions;
+				const board = movementBoardFrom(config);
+				for (const from of allActivePositions(
+					state.grid,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (getCell(state.grid, from) !== state.currentPlayer) continue;
+					for (const to of legalDestinations(state.grid, from, movement, board)) {
+						if (
+							canMove(state.grid, from, to, state.currentPlayer, movement, board)
+						) {
+							actions.push({ type: "move", from, to });
+						}
+					}
+				}
+				return actions;
+			}
+			if (phase === "fire") {
+				for (const position of allActivePositions(
+					state.grid,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (canFireCell(state, position, state.currentPlayer)) {
+						actions.push({ type: "fire", position });
+					}
+				}
+				return actions;
+			}
+			return actions;
+		}
 		for (const position of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
@@ -387,19 +624,58 @@ function collectLegalActions(
 		return actions;
 	}
 
+	// In-turn phase sequence: legal actions follow phases[turnPhaseIndex]
+	const turnPhases = config.turnPhases;
+	if (turnPhases && turnPhases.length > 0) {
+		const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
+		if (phase === "place") {
+			for (const position of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (canPlaceCell(state, position, config)) {
+					actions.push({ type: "place", position });
+				}
+			}
+			return actions;
+		}
+		if (phase === "move") {
+			const movement = config.movement;
+			if (!movement) return actions;
+			const board = movementBoardFrom(config);
+			for (const from of allActivePositions(
+				state.grid,
+				config.topology ?? "rectangle",
+				config.graph
+			)) {
+				if (getCell(state.grid, from) !== state.currentPlayer) continue;
+				for (const to of legalDestinations(state.grid, from, movement, board)) {
+					if (
+						canMove(state.grid, from, to, state.currentPlayer, movement, board)
+					) {
+						actions.push({ type: "move", from, to });
+					}
+				}
+			}
+			return actions;
+		}
+		return actions;
+	}
+
 	if (inputMode === "move") {
 		const movement = config.movement;
 		if (!movement) return actions;
-		const wrap = config.gridWrap === true;
+		const board = movementBoardFrom(config);
 		for (const from of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
 			config.graph
 		)) {
 			if (getCell(state.grid, from) !== state.currentPlayer) continue;
-			for (const to of legalDestinations(state.grid, from, movement, wrap)) {
+			for (const to of legalDestinations(state.grid, from, movement, board)) {
 				if (
-					canMove(state.grid, from, to, state.currentPlayer, movement, wrap)
+					canMove(state.grid, from, to, state.currentPlayer, movement, board)
 				) {
 					actions.push({ type: "move", from, to });
 				}
@@ -413,7 +689,7 @@ function collectLegalActions(
 		const vertical =
 			direction === "down" || direction === "up" ? direction : "down";
 		for (let col = 0; col < state.grid.width; col++) {
-			if (columnHasSpace(state, col, vertical)) {
+			if (columnHasSpace(state, col, vertical, config)) {
 				actions.push({ type: "activateColumn", col });
 			}
 		}
@@ -422,7 +698,7 @@ function collectLegalActions(
 		const horizontal =
 			direction === "left" || direction === "right" ? direction : "right";
 		for (let row = 0; row < state.grid.height; row++) {
-			if (rowHasSpace(state, row, horizontal)) {
+			if (rowHasSpace(state, row, horizontal, config)) {
 				actions.push({ type: "activateRow", row });
 			}
 		}
@@ -442,14 +718,33 @@ function collectLegalActions(
 		actions.push({ type: "pass" });
 	}
 
-	if (overflow === "pop_out_bottom") {
-		// Pop-out from bottom only pairs with gravity down.
-		if ((config.gravityDirection ?? "down") === "down") {
+	if (overflow === "pop_out_bottom" || overflow === "pop_out_top") {
+		const direction = config.gravityDirection ?? "down";
+		const fromBottom = overflow === "pop_out_bottom" && direction === "down";
+		const fromTop = overflow === "pop_out_top" && direction === "up";
+		if (fromBottom || fromTop) {
 			const height = state.grid.height;
+			const exitRow = fromBottom ? height - 1 : 0;
 			for (let col = 0; col < state.grid.width; col++) {
-				const bottom = getCell(state.grid, { row: height - 1, col });
-				if (bottom === state.currentPlayer) {
+				const exit = getCell(state.grid, { row: exitRow, col });
+				if (exit === state.currentPlayer) {
 					actions.push({ type: "popOutColumn", col });
+				}
+			}
+		}
+	}
+
+	if (overflow === "pop_out_right" || overflow === "pop_out_left") {
+		const direction = config.gravityDirection ?? "down";
+		const fromRight = overflow === "pop_out_right" && direction === "right";
+		const fromLeft = overflow === "pop_out_left" && direction === "left";
+		if (fromRight || fromLeft) {
+			const width = state.grid.width;
+			const exitCol = fromRight ? width - 1 : 0;
+			for (let row = 0; row < state.grid.height; row++) {
+				const exit = getCell(state.grid, { row, col: exitCol });
+				if (exit === state.currentPlayer) {
+					actions.push({ type: "popOutRow", row });
 				}
 			}
 		}
@@ -466,6 +761,16 @@ function placeFailureReason(
 	const topology = config.topology ?? "rectangle";
 	if (!isActivePosition(pos, topology, config.graph)) return "not_applicable";
 	if (getCell(state.grid, pos) !== null) return "cell_occupied";
+	if (
+		(state.pendingPlaces ?? []).some(
+			(p) =>
+				isCellPending(p) &&
+				p.position.row === pos.row &&
+				p.position.col === pos.col
+		)
+	) {
+		return "cell_occupied";
+	}
 	if (!config.captureEnabled) return null;
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
@@ -488,8 +793,11 @@ function placeFailureReason(
 		) {
 			return null;
 		}
-		// Distinguish positional superko from suicide when the cell is empty
-		if (koRule === "positional" && getCell(state.grid, pos) === null) {
+		// Distinguish superko from suicide when the cell is empty
+		if (
+			usesSuperkoHistory(koRule) &&
+			getCell(state.grid, pos) === null
+		) {
 			const withoutHistory = isLegalLibertyPlace(
 				state.grid,
 				pos,
@@ -527,7 +835,7 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 		case "ko":
 			return "Immediate recapture of the last captured stone is forbidden";
 		case "superko":
-			return "Move would repeat a previous board position (positional superko)";
+			return "Move would repeat a previous board situation (superko)";
 		case "own_ship":
 			return "Cannot fire on your own ship";
 		case "column_full":
@@ -535,7 +843,7 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 		case "row_full":
 			return "Row has no empty space";
 		case "no_own_piece":
-			return "No owned piece at source / column bottom";
+			return "No owned piece at source / pop-out exit cell";
 		case "invalid_destination":
 			return "Destination is not a legal move target";
 		case "mode_mismatch":
@@ -548,6 +856,8 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 			return "Ship cells must form a contiguous orthogonal line";
 		case "wrong_phase":
 			return "Action is not valid in the current game phase";
+		case "already_committed":
+			return "This seat already committed for the current round";
 	}
 }
 
@@ -565,12 +875,176 @@ export function explainKernelAction(
 			detail: detailFor("game_over", action)
 		};
 	}
-	if (playerIdOf(state.currentPlayer) !== player) {
+	const simultaneous =
+		(config.turnSchedule ?? "alternating") === "simultaneous";
+	if (!simultaneous && playerIdOf(state.currentPlayer) !== player) {
 		return {
 			legal: false,
 			reason: "wrong_player",
 			detail: detailFor("wrong_player", action)
 		};
+	}
+
+	// Joint place: all constituent places must be individually legal on the
+	// pre-round board, lengths must match actionsPerTurn, no within-seat dups.
+	if (action.type === "simultaneousPlace") {
+		if (!simultaneous) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if ((config.inputMode ?? "cell") === "move") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const budget = config.actionsPerTurn ?? 1;
+		const xs = asPlacementList(action.placements.X);
+		const os = asPlacementList(action.placements.O);
+		if (xs.length !== budget || os.length !== budget) {
+			return {
+				legal: false,
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
+			};
+		}
+		const hasDup = (list: Position[]) => {
+			for (let i = 0; i < list.length; i++) {
+				for (let j = i + 1; j < list.length; j++) {
+					if (positionsEqual(list[i]!, list[j]!)) return true;
+				}
+			}
+			return false;
+		};
+		if (hasDup(xs) || hasDup(os)) {
+			return {
+				legal: false,
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
+			};
+		}
+		const xOk = xs.every((p) => canPlaceCell(state, p, config, "X"));
+		const oOk = os.every((p) => canPlaceCell(state, p, config, "O"));
+		if (xOk && oOk) return { legal: true };
+		return {
+			legal: false,
+			reason: "cell_occupied",
+			detail: detailFor("cell_occupied", action)
+		};
+	}
+
+	// Joint move: both seat moves must be legal on the pre-round board.
+	if (action.type === "simultaneousMove") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const movement = config.movement;
+		if (!movement) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const board = movementBoardFrom(config);
+		const xOk = canMove(
+			state.grid,
+			action.moves.X.from,
+			action.moves.X.to,
+			"X",
+			movement,
+			board
+		);
+		const oOk = canMove(
+			state.grid,
+			action.moves.O.from,
+			action.moves.O.to,
+			"O",
+			movement,
+			board
+		);
+		if (xOk && oOk) return { legal: true };
+		return {
+			legal: false,
+			reason: "invalid_destination",
+			detail: detailFor("invalid_destination", action)
+		};
+	}
+
+	if (action.type === "commitPlace") {
+		if (!simultaneous || !config.commitReveal) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (playerIdOf(action.player) !== player) {
+			return {
+				legal: false,
+				reason: "wrong_player",
+				detail: detailFor("wrong_player", action)
+			};
+		}
+		const budget = config.actionsPerTurn ?? 1;
+		const own = state.committedPlacements?.[action.player] ?? [];
+		if (own.length >= budget) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		if (listHasPosition(own, action.position)) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		if (!canPlaceCell(state, action.position, config, action.player)) {
+			return {
+				legal: false,
+				reason: "cell_occupied",
+				detail: detailFor("cell_occupied", action)
+			};
+		}
+		return { legal: true };
+	}
+
+	// In-turn phases: place/move/fire must match the active phase
+	const turnPhases = config.turnPhases;
+	if (turnPhases && turnPhases.length > 0) {
+		const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
+		if (action.type === "place" && phase !== "place") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "move" && phase !== "move") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "fire" && phase !== "fire") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
 	}
 
 	const legal = collectLegalActions(config, state, player);
@@ -712,7 +1186,7 @@ export function explainKernelAction(
 				const direction = config.gravityDirection ?? "down";
 				const vertical =
 					direction === "down" || direction === "up" ? direction : "down";
-				if (!columnHasSpace(state, action.col, vertical)) {
+				if (!columnHasSpace(state, action.col, vertical, config)) {
 					return {
 						legal: false,
 						reason: "column_full",
@@ -736,7 +1210,7 @@ export function explainKernelAction(
 					direction === "left" || direction === "right"
 						? direction
 						: "right";
-				if (!rowHasSpace(state, action.row, horizontal)) {
+				if (!rowHasSpace(state, action.row, horizontal, config)) {
 					return {
 						legal: false,
 						reason: "row_full",
@@ -747,21 +1221,49 @@ export function explainKernelAction(
 			break;
 		}
 		case "popOutColumn": {
-			if (
-				overflow !== "pop_out_bottom" ||
-				(config.gravityDirection ?? "down") !== "down"
-			) {
+			const direction = config.gravityDirection ?? "down";
+			const fromBottom =
+				overflow === "pop_out_bottom" && direction === "down";
+			const fromTop = overflow === "pop_out_top" && direction === "up";
+			if (!fromBottom && !fromTop) {
 				return {
 					legal: false,
 					reason: "not_applicable",
 					detail: detailFor("not_applicable", action)
 				};
 			}
-			const bottom = getCell(state.grid, {
-				row: state.grid.height - 1,
+			const exitRow = fromBottom ? state.grid.height - 1 : 0;
+			const exit = getCell(state.grid, {
+				row: exitRow,
 				col: action.col
 			});
-			if (bottom !== state.currentPlayer) {
+			if (exit !== state.currentPlayer) {
+				return {
+					legal: false,
+					reason: "no_own_piece",
+					detail: detailFor("no_own_piece", action)
+				};
+			}
+			break;
+		}
+		case "popOutRow": {
+			const direction = config.gravityDirection ?? "down";
+			const fromRight =
+				overflow === "pop_out_right" && direction === "right";
+			const fromLeft = overflow === "pop_out_left" && direction === "left";
+			if (!fromRight && !fromLeft) {
+				return {
+					legal: false,
+					reason: "not_applicable",
+					detail: detailFor("not_applicable", action)
+				};
+			}
+			const exitCol = fromRight ? state.grid.width - 1 : 0;
+			const exit = getCell(state.grid, {
+				row: action.row,
+				col: exitCol
+			});
+			if (exit !== state.currentPlayer) {
 				return {
 					legal: false,
 					reason: "no_own_piece",
@@ -771,14 +1273,21 @@ export function explainKernelAction(
 			break;
 		}
 		case "move": {
-			if (inputMode !== "move" || !config.movement) {
+			const turnPhases = config.turnPhases;
+			const inTurnMove =
+				turnPhases &&
+				turnPhases[state.turnPhaseIndex ?? 0] === "move";
+			if ((inputMode !== "move" && !inTurnMove) || !config.movement) {
 				return {
 					legal: false,
 					reason: "mode_mismatch",
 					detail: detailFor("mode_mismatch", action)
 				};
 			}
-			if (getCell(state.grid, action.from) !== state.currentPlayer) {
+			const acting = simultaneous
+				? playerOf(player)
+				: state.currentPlayer;
+			if (getCell(state.grid, action.from) !== acting) {
 				return {
 					legal: false,
 					reason: "no_own_piece",
@@ -790,9 +1299,9 @@ export function explainKernelAction(
 					state.grid,
 					action.from,
 					action.to,
-					state.currentPlayer,
+					acting,
 					config.movement,
-					config.gridWrap === true
+					movementBoardFrom(config)
 				)
 			) {
 				return {
@@ -834,11 +1343,93 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "popOutColumn":
 			return b.type === a.type && a.col === b.col;
 		case "activateRow":
-			return b.type === "activateRow" && a.row === b.row;
+		case "popOutRow":
+			return b.type === a.type && a.row === b.row;
 		case "tick":
 		case "pass":
 			return true;
+		case "simultaneousPlace": {
+			if (b.type !== "simultaneousPlace") return false;
+			const aX = asPlacementList(a.placements.X);
+			const aO = asPlacementList(a.placements.O);
+			const bX = asPlacementList(b.placements.X);
+			const bO = asPlacementList(b.placements.O);
+			if (aX.length !== bX.length || aO.length !== bO.length) return false;
+			return (
+				aX.every((p, i) => positionsEqual(p, bX[i]!)) &&
+				aO.every((p, i) => positionsEqual(p, bO[i]!))
+			);
+		}
+		case "simultaneousMove": {
+			if (b.type !== "simultaneousMove") return false;
+			const moveEq = (
+				m: { from: Position; to: Position },
+				n: { from: Position; to: Position }
+			) =>
+				positionsEqual(m.from, n.from) && positionsEqual(m.to, n.to);
+			return (
+				moveEq(a.moves.X, b.moves.X) && moveEq(a.moves.O, b.moves.O)
+			);
+		}
+		case "commitPlace":
+			return (
+				b.type === "commitPlace" &&
+				a.player === b.player &&
+				a.position.row === b.position.row &&
+				a.position.col === b.position.col
+			);
 	}
+}
+
+/** Build a joint place action from two per-player place actions (1-per-seat). */
+export function jointPlaceFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "place" || action1.type !== "place") return null;
+	return {
+		type: "simultaneousPlace",
+		placements: { X: action0.position, O: action1.position }
+	};
+}
+
+/** Build a joint move action from two per-player move actions. */
+export function jointMoveFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "move" || action1.type !== "move") return null;
+	return {
+		type: "simultaneousMove",
+		moves: {
+			X: { from: action0.from, to: action0.to },
+			O: { from: action1.from, to: action1.to }
+		}
+	};
+}
+
+/**
+ * Build a multi-action simultaneous place from N place actions per seat.
+ * Lengths must match; returns null on mismatch or non-place actions.
+ */
+export function jointPlacesFromActions(
+	actions0: readonly KernelAction[],
+	actions1: readonly KernelAction[]
+): KernelAction | null {
+	if (actions0.length === 0 || actions0.length !== actions1.length) return null;
+	const xs: Position[] = [];
+	const os: Position[] = [];
+	for (let i = 0; i < actions0.length; i++) {
+		const a = actions0[i]!;
+		const b = actions1[i]!;
+		if (a.type !== "place" || b.type !== "place") return null;
+		xs.push(a.position);
+		os.push(b.position);
+	}
+	return {
+		type: "simultaneousPlace",
+		placements: { X: xs, O: os }
+	};
 }
 
 /**
@@ -868,6 +1459,7 @@ export function highlightCellsForActions(
 		switch (action.type) {
 			case "place":
 			case "fire":
+			case "commitPlace":
 				push(action.position);
 				break;
 			case "move":
@@ -920,7 +1512,16 @@ export function highlightCellsForActions(
 				break;
 			}
 			case "popOutColumn":
-				push({ row: state.grid.height - 1, col: action.col });
+				push({
+					row: direction === "up" ? 0 : state.grid.height - 1,
+					col: action.col
+				});
+				break;
+			case "popOutRow":
+				push({
+					row: action.row,
+					col: direction === "left" ? 0 : state.grid.width - 1
+				});
 				break;
 			default:
 				break;
@@ -938,12 +1539,41 @@ export function createGameKernel(config: GameConfig): GameKernel {
 	): Effect.Effect<StepResult> =>
 		Effect.sync(() => applyStep(config, state, action));
 
+	const stepJoint = (
+		state: GameState,
+		joint: { 0: KernelAction; 1: KernelAction },
+		seed?: Seed
+	): Effect.Effect<StepResult> => {
+		const built =
+			jointPlaceFromActions(joint[0], joint[1]) ??
+			jointMoveFromActions(joint[0], joint[1]);
+		if (!built) {
+			return Effect.sync(() => ({
+				nextState: state,
+				events: [
+					{
+						type: "ignored" as const,
+						action: joint[0],
+						reason: "mode_mismatch" as const
+					}
+				],
+				terminal: state.status !== "playing",
+				outcome: outcomeOf(state),
+				observations: observationsFor(config, state)
+			}));
+		}
+		return step(state, built, seed);
+	};
+
 	return {
 		config,
 		initialState(_seed?: Seed) {
 			return createInitialState(config);
 		},
 		currentPlayer(state) {
+			if ((config.turnSchedule ?? "alternating") === "simultaneous") {
+				return "simultaneous";
+			}
 			return playerIdOf(state.currentPlayer);
 		},
 		legalActions(state, player) {
@@ -958,6 +1588,91 @@ export function createGameKernel(config: GameConfig): GameKernel {
 		step,
 		stepSync(state, action, seed) {
 			return Effect.runSync(step(state, action, seed));
+		},
+		stepJoint,
+		stepJointSync(state, joint, seed) {
+			return Effect.runSync(stepJoint(state, joint, seed));
 		}
 	};
+}
+
+/**
+ * Advance one decision ply: alternating single action, or simultaneous joint
+ * place when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
+ * `legalActions` for the given player (called once, or twice when joint).
+ * Under commitReveal, picks commits until each seat fills its per-round budget
+ * (final commit auto-reveals). Under open multi-action simultaneous, picks
+ * `actionsPerTurn` places per seat then joint-resolves.
+ */
+export function stepPly(
+	kernel: GameKernel,
+	state: GameState,
+	pickFor: (player: PlayerId, legal: KernelAction[]) => KernelAction | null,
+	seed?: Seed
+): StepResult | null {
+	const side = kernel.currentPlayer(state);
+	if (side === "simultaneous") {
+		const budget = kernel.config.actionsPerTurn ?? 1;
+		if (kernel.config.commitReveal) {
+			let s = state;
+			let last: StepResult | null = null;
+			// Fill each seat's commit budget; reveal fires when both are full.
+			let guard = budget * 2 + 2;
+			while (guard-- > 0 && s.status === "playing") {
+				const xLen = s.committedPlacements?.X?.length ?? 0;
+				const oLen = s.committedPlacements?.O?.length ?? 0;
+				if (xLen >= budget && oLen >= budget) break;
+				const pid: PlayerId = xLen < budget ? 0 : 1;
+				const legal = kernel.legalActions(s, pid);
+				const action = pickFor(pid, legal);
+				if (!action) return last;
+				last = kernel.stepSync(s, action, seed);
+				s = last.nextState;
+				if (s.status !== "playing") return last;
+				// After reveal, committedPlacements clears — stop.
+				if (
+					(s.committedPlacements?.X?.length ?? 0) === 0 &&
+					(s.committedPlacements?.O?.length ?? 0) === 0 &&
+					s.moveCount > state.moveCount
+				) {
+					return last;
+				}
+			}
+			return last;
+		}
+		if (budget <= 1) {
+			const a0 = pickFor(0, kernel.legalActions(state, 0));
+			const a1 = pickFor(1, kernel.legalActions(state, 1));
+			if (!a0 || !a1) return null;
+			return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
+		}
+		// Multi-action open simultaneous: collect N distinct places per seat.
+		const pickN = (pid: PlayerId): KernelAction[] | null => {
+			const picked: KernelAction[] = [];
+			const used = new Set<string>();
+			for (let i = 0; i < budget; i++) {
+				const legal = kernel
+					.legalActions(state, pid)
+					.filter((a) => {
+						if (a.type !== "place") return false;
+						const key = `${a.position.row},${a.position.col}`;
+						return !used.has(key);
+					});
+				const action = pickFor(pid, legal);
+				if (!action || action.type !== "place") return null;
+				used.add(`${action.position.row},${action.position.col}`);
+				picked.push(action);
+			}
+			return picked;
+		};
+		const xs = pickN(0);
+		const os = pickN(1);
+		if (!xs || !os) return null;
+		const joint = jointPlacesFromActions(xs, os);
+		if (!joint) return null;
+		return kernel.stepSync(state, joint, seed);
+	}
+	const action = pickFor(side, kernel.legalActions(state, side));
+	if (!action) return null;
+	return kernel.stepSync(state, action, seed);
 }

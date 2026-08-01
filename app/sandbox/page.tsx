@@ -16,8 +16,11 @@ import CenteredLoader from "@/components/loader";
 import { useGameEngine } from "@/engine/useGameEngine";
 import {
 	formatKernelEvent,
-	highlightCellsForActions
+	highlightCellsForActions,
+	jointPlaceFromActions,
+	jointPlacesFromActions
 } from "@/engine/kernel";
+import type { KernelAction, PlayerId } from "@/engine/kernel";
 import { compileToGameConfig } from "@/compiler";
 import { validateConfig } from "@/engine/validateConfig";
 import { createAgent, type AgentKind } from "@/agents";
@@ -92,6 +95,12 @@ export default function GamePage() {
 		eventLog,
 		actionLog,
 		selectedFrom,
+		pendingPlacements,
+		pendingMoves,
+		simultaneousSeat,
+		commitReveal,
+		resolveOrder,
+		actionsPerRound,
 		lastIllegal,
 		legalActionsList,
 		kernel,
@@ -100,14 +109,31 @@ export default function GamePage() {
 		activateColumn,
 		activateRow,
 		popOutColumn,
+		popOutRow,
 		tick,
 		pass,
 		reset,
 		replayFromTranscript
 	} = useGameEngine(engineConfig, playSeed);
+	const overflow = currentConfig?.placement.overflow;
 	const enablePopOut =
-		currentConfig?.placement.overflow === "pop_out_bottom";
+		overflow === "pop_out_bottom" ||
+		overflow === "pop_out_top" ||
+		overflow === "pop_out_left" ||
+		overflow === "pop_out_right";
+	const popOutSide: "top" | "bottom" | "left" | "right" =
+		overflow === "pop_out_top"
+			? "top"
+			: overflow === "pop_out_left"
+				? "left"
+				: overflow === "pop_out_right"
+					? "right"
+					: "bottom";
 	const enableTick = currentConfig?.turn.schedule === "manual_tick";
+	const enableSimultaneous =
+		currentConfig?.turn.schedule === "simultaneous";
+	const enableSimultaneousMove =
+		enableSimultaneous && currentConfig?.input.mode === "move";
 	const enablePass = currentConfig?.objective.mode === "area_control";
 	const eventLines = useMemo(
 		() => eventLog.map(formatKernelEvent),
@@ -128,8 +154,55 @@ export default function GamePage() {
 
 	const stepAgent = () => {
 		if (gameState.status !== "playing") return;
-		const player = kernel.currentPlayer(gameState);
-		const action = agentRef.current.act(kernel, gameState, player);
+		const side = kernel.currentPlayer(gameState);
+		if (side === "simultaneous") {
+			const budget = actionsPerRound;
+			if (commitReveal) {
+				const xLen = gameState.committedPlacements?.X?.length ?? 0;
+				const oLen = gameState.committedPlacements?.O?.length ?? 0;
+				const seat: PlayerId | null =
+					xLen < budget ? 0 : oLen < budget ? 1 : null;
+				if (seat === null) return;
+				const action = agentRef.current.act(kernel, gameState, seat);
+				if (action) dispatchAction(action);
+				return;
+			}
+			if (budget <= 1) {
+				const a0 = agentRef.current.act(kernel, gameState, 0);
+				const a1 = agentRef.current.act(kernel, gameState, 1);
+				if (!a0 || !a1) return;
+				const joint = jointPlaceFromActions(a0, a1);
+				if (joint) dispatchAction(joint);
+				return;
+			}
+			const pickN = (pid: PlayerId): KernelAction[] | null => {
+				const picked: KernelAction[] = [];
+				const used = new Set<string>();
+				for (let i = 0; i < budget; i++) {
+					const legal = kernel.legalActions(gameState, pid).filter((a) => {
+						if (a.type !== "place") return false;
+						return !used.has(`${a.position.row},${a.position.col}`);
+					});
+					const wrapped = {
+						...kernel,
+						legalActions: (s: typeof gameState, p: PlayerId) =>
+							p === pid ? legal : kernel.legalActions(s, p)
+					};
+					const action = agentRef.current.act(wrapped, gameState, pid);
+					if (!action || action.type !== "place") return null;
+					used.add(`${action.position.row},${action.position.col}`);
+					picked.push(action);
+				}
+				return picked;
+			};
+			const xs = pickN(0);
+			const os = pickN(1);
+			if (!xs || !os) return;
+			const joint = jointPlacesFromActions(xs, os);
+			if (joint) dispatchAction(joint);
+			return;
+		}
+		const action = agentRef.current.act(kernel, gameState, side);
 		if (action) dispatchAction(action);
 	};
 
@@ -351,7 +424,47 @@ export default function GamePage() {
 						<p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
 							Kernel events
 							{gameState.status === "playing"
-								? ` · ${gameState.currentPlayer} to move`
+								? enableSimultaneous
+									? ` · simultaneous${
+											commitReveal ? " commit-reveal" : ""
+										}${
+											resolveOrder !== "joint"
+												? ` · ${resolveOrder}`
+												: ""
+										}${
+											actionsPerRound > 1
+												? ` · ${actionsPerRound}/seat`
+												: ""
+										}${
+											simultaneousSeat
+												? ` · ${simultaneousSeat} choosing${
+														actionsPerRound > 1
+															? ` (${
+																	commitReveal
+																		? (gameState.committedPlacements?.[
+																				simultaneousSeat
+																			]?.length ?? 0)
+																		: (pendingPlacements[simultaneousSeat]
+																				?.length ?? 0)
+																}/${actionsPerRound})`
+															: ""
+													}`
+												: ""
+										}`
+									: ` · ${gameState.currentPlayer} to move${
+											gameState.turnPhaseIndex != null &&
+											(engineConfig.turnPhases?.length ?? 0) > 0
+												? ` · ${engineConfig.turnPhases![gameState.turnPhaseIndex]}`
+												: ""
+										}${
+											gameState.actionsRemaining != null
+												? ` · ${gameState.actionsRemaining} left`
+												: ""
+										}${
+											(gameState.pendingPlaces?.length ?? 0) > 0
+												? ` · ${gameState.pendingPlaces!.length} pending`
+												: ""
+										}`
 								: ""}
 						</p>
 						<div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
@@ -450,12 +563,72 @@ export default function GamePage() {
 							Life Lite: place cells, then Tick for B3/S23 step
 						</p>
 					)}
+					{enableSimultaneous && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							{enableSimultaneousMove ? (
+								<>
+									Simultaneous move
+									{resolveOrder !== "joint"
+										? ` (${resolveOrder})`
+										: ""}
+									: select {simultaneousSeat ?? "X"}&apos;s piece then
+									destination
+									{pendingMoves.X
+										? ` (X ${pendingMoves.X.from.row},${pendingMoves.X.from.col}→${pendingMoves.X.to.row},${pendingMoves.X.to.col})`
+										: ""}
+									{pendingMoves.O
+										? ` (O ${pendingMoves.O.from.row},${pendingMoves.O.from.col}→${pendingMoves.O.to.row},${pendingMoves.O.to.col})`
+										: ""}
+									; same destination →{" "}
+									{resolveOrder === "joint"
+										? "neither moves"
+										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+								</>
+							) : commitReveal ? (
+								<>
+									Hidden simultaneous
+									{actionsPerRound > 1
+										? ` (${actionsPerRound} commits/seat)`
+										: ""}
+									: commit for {simultaneousSeat ?? "X"} (own commits
+									visible only to that seat); board reveals when both
+									fill their budget; same cell →{" "}
+									{resolveOrder === "joint"
+										? "neither places"
+										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+								</>
+							) : (
+								<>
+									Simultaneous
+									{resolveOrder !== "joint"
+										? ` (${resolveOrder})`
+										: ""}
+									{actionsPerRound > 1
+										? ` · ${actionsPerRound} places/seat`
+										: ""}
+									: click a cell for {simultaneousSeat ?? "X"}
+									{pendingPlacements.X && pendingPlacements.X.length > 0
+										? ` (X@${pendingPlacements.X.map((p) => `${p.row},${p.col}`).join("+")})`
+										: ""}
+									{pendingPlacements.O && pendingPlacements.O.length > 0
+										? ` (O@${pendingPlacements.O.map((p) => `${p.row},${p.col}`).join("+")})`
+										: ""}
+									; same cell →{" "}
+									{resolveOrder === "joint"
+										? "neither places"
+										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+								</>
+							)}
+						</p>
+					)}
 					{enablePass && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Go Lite: place stones (liberties +{" "}
-							{currentConfig?.placement.capture?.ko === "positional"
-								? "positional superko"
-								: "simple ko"}
+							{currentConfig?.placement.capture?.ko === "situational"
+								? "situational superko"
+								: currentConfig?.placement.capture?.ko === "positional"
+									? "positional superko"
+									: "simple ko"}
 							); Pass twice to score
 						</p>
 					)}
@@ -553,7 +726,19 @@ export default function GamePage() {
 					onActivateColumn={activateColumn}
 					onActivateRow={activateRow}
 					enablePopOutButtons={enablePopOut}
-					onPopOutColumn={enablePopOut ? popOutColumn : undefined}
+					popOutSide={popOutSide}
+					onPopOutColumn={
+						enablePopOut &&
+						(popOutSide === "top" || popOutSide === "bottom")
+							? popOutColumn
+							: undefined
+					}
+					onPopOutRow={
+						enablePopOut &&
+						(popOutSide === "left" || popOutSide === "right")
+							? popOutRow
+							: undefined
+					}
 					inputMode={currentConfig?.input.mode ?? "cell"}
 					topology={currentConfig?.grid.topology ?? "rectangle"}
 					graph={engineConfig.graph}
@@ -561,6 +746,9 @@ export default function GamePage() {
 					selectedCell={selectedFrom}
 					showLegalOverlay={showLegalOverlay}
 					fogVisible={observation.visible}
+					gravityDirection={
+						currentConfig?.placement.gravity?.direction ?? "down"
+					}
 					tokens={currentConfig?.tokens ?? []}
 					placements={currentConfig?.placements ?? []}
 				/>

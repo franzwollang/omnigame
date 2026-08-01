@@ -71,8 +71,9 @@ describe("schema honesty (M0)", () => {
 			zConfig.safeParse({
 				...examplePresets["connect-4"].config,
 				placement: {
-					...examplePresets["connect-4"].config.placement,
-					overflow: "pop_out_top"
+					mode: "gravity",
+					gravity: { enabled: true, direction: "up", wrap: false },
+					overflow: "pop_out_bottom"
 				}
 			}).success
 		).toBe(false);
@@ -81,21 +82,30 @@ describe("schema honesty (M0)", () => {
 				...examplePresets["connect-4"].config,
 				placement: {
 					mode: "gravity",
-					gravity: { enabled: true, direction: "up", wrap: false },
-					overflow: "pop_out_bottom"
+					gravity: { enabled: true, direction: "down", wrap: false },
+					overflow: "pop_out_top"
 				}
 			}).success
 		).toBe(false);
-		// wrap + non-rectangle still rejected
+		// wrap + graph still rejected; hex wrap allowed
 		expect(
 			zConfig.safeParse({
 				...base,
 				grid: { ...base.grid, topology: "hex_offset", wrap: true }
 			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["graph-connect-lite"].config,
+				grid: {
+					...examplePresets["graph-connect-lite"].config.grid,
+					wrap: true
+				}
+			}).success
 		).toBe(false);
 	});
 
-	it("accepts rectangle wrap, gravity axes, and all shipped presets", () => {
+	it("accepts rectangle wrap, gravity axes, pop_out variants, and all shipped presets", () => {
 		const base = examplePresets["tic-tac-toe"].config;
 		expect(
 			zConfig.safeParse({
@@ -116,6 +126,16 @@ describe("schema honesty (M0)", () => {
 		expect(
 			zConfig.safeParse({
 				...examplePresets["connect-4"].config,
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "up", wrap: false },
+					overflow: "pop_out_top"
+				}
+			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
 				input: { mode: "row" },
 				placement: {
 					mode: "gravity",
@@ -124,6 +144,40 @@ describe("schema honesty (M0)", () => {
 				}
 			}).success
 		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "right", wrap: false },
+					overflow: "pop_out_right"
+				}
+			}).success
+		).toBe(true);
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "left", wrap: false },
+					overflow: "pop_out_left"
+				}
+			}).success
+		).toBe(true);
+		// mismatched horizontal pairings rejected
+		expect(
+			zConfig.safeParse({
+				...examplePresets["connect-4"].config,
+				input: { mode: "row" },
+				placement: {
+					mode: "gravity",
+					gravity: { enabled: true, direction: "right", wrap: false },
+					overflow: "pop_out_left"
+				}
+			}).success
+		).toBe(false);
 		for (const preset of Object.values(examplePresets)) {
 			const parsed = zConfig.safeParse(preset.config);
 			expect(parsed.success, preset.id).toBe(true);
