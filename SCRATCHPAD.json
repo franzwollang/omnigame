@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-01T18:20-05:00",
+  "turn": 32,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M9",
+    "issue": "next-missing-mechanism",
+    "goal": "Pick smallest new seam after capture-by-replacement"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Merged M8 honesty from 0dda onto b777",
+    "M9: movement.capture=replace + Replace Race + tests; closed P3 capture"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "handleMove overwrite lands replace; pieceCaptured kernel event mirrors shotResult",
+    "Schema forbids replace×simultaneous / hex / placement.capture"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "P3 next-missing-mechanism; then P4 CI / semantics refresh"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Cloud: pick smallest next seam (query/phases/sim sliding/joint UCT)",
   "blockers": []
 }

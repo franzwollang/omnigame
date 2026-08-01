@@ -24,12 +24,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 
 | ID | Focus | Status |
 |---|---|---|
-| M8 | Composition honesty (debt + sandbox/agent truth) | `in progress` |
-| M9 | Next missing mechanism (default: capture-by-replacement) | `not started` |
+| M8 | Composition honesty (debt + sandbox/agent truth) | `done` |
+| M9 | Next missing mechanism (capture-by-replacement) | `done` |
 
-**Optimizing for this marathon:** P0 debt closed (Agent joint-move + schema
-forbid simultaneous×sliding + `isNoop` harden). Continue **P1 → P3** in
-`OPEN_ISSUES.md` without asking which fork.
+**Optimizing for this marathon:** M9 capture-by-replacement closed. Pick
+**P3 next-missing-mechanism** (smallest new seam) then P4 CI / semantics
+refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -44,7 +44,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥289** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥302** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -56,9 +56,9 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Task selection (no user ask)
 
-1. Work the highest unfinished **P0 → P1 → P2 → P3** item in `OPEN_ISSUES.md`.  
-2. When P0–P2 composition/honesty items are done, start **P3**
-   `capture-by-replacement` using its mini-spec in OPEN_ISSUES.  
+1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
+   (P0–P2 / M8 closed).  
+2. Start **P3** `capture-by-replacement` (M9) using its mini-spec in OPEN_ISSUES.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
 4. After each landed item: update OPEN_ISSUES (resolve + log), PLANNING status,
@@ -94,38 +94,48 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ## What exists today (summary)
 
 Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
+**Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race
+preset demonstrates `capture = replace`.
+
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
-variants, flip + liberties capture, point/positional/situational ko, observation
-(hit/miss + fog), fleet placement, Move (orthogonal/diagonal/king + sliding
-range on rectangle), tick/Life, simultaneous place/move (incl. ordered, hidden
-commit-reveal, multi-action), multi-step turns, delayed place/gravity, in-turn
-phases (place→move / place→fire / place→move→fire + `connect_or_destroy`).
+variants, flip + liberties capture, **move capture-by-replacement**, point/
+positional/situational ko, observation (hit/miss + fog), fleet placement, Move
+(orthogonal/diagonal/king + sliding range on rectangle), tick/Life, simultaneous
+place/move (incl. ordered, hidden commit-reveal, multi-action), multi-step turns,
+delayed place/gravity, in-turn phases (place→move / place→fire / place→move→fire
++ `connect_or_destroy`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
-Lite, Slide Race, Simultaneous Step Race, Place Move & Fire Lite, Go Lite
-variants, etc.).
+Lite, Slide Race, Replace Race, Simultaneous Step Race, Place Move & Fire Lite,
+Go Lite variants, etc.).
 
-**Form honesty:** form covers many turn/placement knobs but **not**
-`movement.*` or `turn.phases` — JSON/presets for those until P1 closes.
+**Form honesty:** form exposes turn schedule/budget/delay/**phases**,
+`movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
+observation, etc., plus an in-UI “Form coverage” callout for remaining
+JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
+`placement.capture`, …).
 
-**Not yet:** capture-by-replacement; full Go; hex/graph sliding; joint UCT under
-simultaneous; CI workflows; Guess Who / query operator (deferred).
+**Not yet:** full Go; hex/graph sliding; joint UCT under simultaneous;
+simultaneous replace capture; CI workflows; Guess Who / query operator
+(deferred under next-missing-mechanism).
 
 ## Phase 2 exit criteria
 
 ### M8 — Composition honesty
 
-- Simultaneous × sliding closed (schema forbid **or** apply-time path check + tests)
-- Sandbox Agent step works for simultaneous **move** (joint move)
-- Form exposes movement (+ phases) **or** README explicitly marks JSON-only
-- `isNoop` includes phase budget / ko / positionHistory fields
-- Known agent-search limitation under simultaneous documented or improved
+- Simultaneous × sliding closed (schema forbid **or** apply-time path check + tests) — **done**
+- Sandbox Agent step works for simultaneous **move** (joint move) — **done**
+- Form exposes movement (+ phases) **or** README explicitly marks JSON-only — **done** (controls + in-UI coverage callout)
+- `isNoop` includes phase budget / ko / positionHistory fields — **done**
+- Known agent-search limitation under simultaneous documented or improved — **done** (Agent UI label + README agents blurb)
 
 ### M9 — Capture-by-replacement
 
-- Schema + kernel path for move onto occupied enemy cell (replace)
-- Preset + transcript/replay tests
-- Contracts/validation; no forked per-game engine
+- Schema + kernel path for move onto occupied enemy cell (replace) — **done**
+- Preset + transcript/replay tests — **done** (Replace Race)
+- Contracts/validation; no forked per-game engine — **done**
+- Out of scope still deferred: multi-jump, capture chains, hex/graph replace,
+  simultaneous replace
 
 ## Sequencing notes
 

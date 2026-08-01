@@ -112,6 +112,12 @@ export type KernelEvent =
 			result: ShotResult;
 			player: Player;
 	  }
+	| {
+			type: "pieceCaptured";
+			position: Position;
+			captured: Player;
+			by: Player;
+	  }
 	| { type: "phaseChanged"; phase: "placement" | "combat" }
 	| { type: "tickApplied"; generation: number }
 	| { type: "ignored"; action: KernelAction; reason: IllegalReason }
@@ -219,6 +225,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: ${formatAction(event.action)}`;
 		case "shotResult":
 			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
+		case "pieceCaptured":
+			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
 		case "phaseChanged":
 			return `phase → ${event.phase}`;
 		case "tickApplied":
@@ -316,6 +324,26 @@ function applyStep(
 				position: action.position,
 				result: marked,
 				player: state.currentPlayer
+			});
+		}
+	}
+
+	if (
+		action.type === "move" &&
+		config.movement?.capture === "replace" &&
+		actor !== "simultaneous"
+	) {
+		const prior = getCell(state.grid, action.to);
+		if (
+			(prior === "X" || prior === "O") &&
+			prior !== actor &&
+			getCell(nextState.grid, action.to) === actor
+		) {
+			events.push({
+				type: "pieceCaptured",
+				position: action.to,
+				captured: prior,
+				by: actor
 			});
 		}
 	}

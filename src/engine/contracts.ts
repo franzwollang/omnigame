@@ -100,7 +100,15 @@ export const Contracts = {
 		provides: ["ResolvedCell"],
 		slots: [{ type: "PlacementPolicy", value: "move" }],
 		hooks: ["validateInput", "applyPlacement"],
-		invariants: ["movesOwnPieceToEmptyCell"]
+		invariants: ["movesOwnPieceToLegalDestination"]
+	}),
+	MovementReplaceCapture: (): FeatureContract => ({
+		id: "MovementReplaceCapture",
+		requires: ["ResolvedCell", "CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: ["replaceClearsEnemyThenLands", "pathEmptyExceptDestination"]
 	}),
 	PlacementDirect: (): FeatureContract => ({
 		id: "PlacementDirect",

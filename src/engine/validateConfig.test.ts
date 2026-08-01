@@ -209,4 +209,17 @@ describe("validateConfig", () => {
 			result.errors.some((e) => e.toLowerCase().includes("range"))
 		).toBe(true);
 	});
+
+	it("rejects simultaneous move with movement.capture = replace", () => {
+		const base = examplePresets["simultaneous-step-race"].config;
+		const bad = {
+			...base,
+			movement: { ...base.movement!, capture: "replace" as const }
+		};
+		const result = validateConfig(bad);
+		expect(result.ok).toBe(false);
+		expect(
+			result.errors.some((e) => e.toLowerCase().includes("replace"))
+		).toBe(true);
+	});
 });

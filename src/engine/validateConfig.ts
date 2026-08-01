@@ -36,6 +36,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.input.mode === "column") features.push(Contracts.InputTargetColumn());
 	if (cfg.input.mode === "row") features.push(Contracts.InputTargetRow());
 	if (cfg.input.mode === "move") features.push(Contracts.InputMove());
+	if (cfg.movement?.capture === "replace") {
+		features.push(Contracts.MovementReplaceCapture());
+	}
 
 	// Placement policy (mode or gravity.enabled sugar — macros expand the latter)
 	const gravityImplied =
