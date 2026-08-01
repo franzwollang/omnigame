@@ -225,6 +225,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: ${formatAction(event.action)}`;
 		case "shotResult":
 			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
+		case "pieceCaptured":
+			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
 		case "phaseChanged":
 			return `phase → ${event.phase}`;
 		case "tickApplied":

@@ -44,7 +44,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥289** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥302** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -94,12 +94,16 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ## What exists today (summary)
 
 Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
+**Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race
+preset demonstrates `capture = replace`.
+
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
-variants, flip + liberties capture, point/positional/situational ko, observation
-(hit/miss + fog), fleet placement, Move (orthogonal/diagonal/king + sliding
-range on rectangle), tick/Life, simultaneous place/move (incl. ordered, hidden
-commit-reveal, multi-action), multi-step turns, delayed place/gravity, in-turn
-phases (place→move / place→fire / place→move→fire + `connect_or_destroy`).
+variants, flip + liberties capture, **move capture-by-replacement**, point/
+positional/situational ko, observation (hit/miss + fog), fleet placement, Move
+(orthogonal/diagonal/king + sliding range on rectangle), tick/Life, simultaneous
+place/move (incl. ordered, hidden commit-reveal, multi-action), multi-step turns,
+delayed place/gravity, in-turn phases (place→move / place→fire / place→move→fire
++ `connect_or_destroy`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, Replace Race, Simultaneous Step Race, Place Move & Fire Lite,

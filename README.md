@@ -110,7 +110,7 @@ fields (`scheduler`, graph `nodes`/`edges`, `initial`, `placements`,
 - `pnpm run dev` — Next.js sandbox
 - `pnpm run build` / `start` — production
 - `pnpm run typecheck` / `lint`
-- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥289 tests)
+- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥302 tests)
 - Green gate: `pnpm install && pnpm typecheck && pnpm test`
 
 Open work and marathon queue: `OPEN_ISSUES.md` / `PLANNING.md` (not this README).

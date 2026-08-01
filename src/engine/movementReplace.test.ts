@@ -7,7 +7,7 @@ import {
 } from "@/engine/movement";
 import { playerIdOf, type KernelAction } from "@/engine/kernel";
 import { createInitialState } from "@/engine/reducer";
-import { getCell } from "@/engine/types";
+import { getCell, setCell } from "@/engine/types";
 import { examplePresets } from "@/presets/registry";
 import { validateConfig } from "@/engine/validateConfig";
 import { replayActions } from "@/ir/gameIr";
@@ -52,11 +52,11 @@ describe("capture-by-replacement helpers", () => {
 		const { gameConfig } = compileConfig(
 			examplePresets["replace-race"].config
 		);
-		// Seed a second X adjacent so ownership check is visible.
 		const state = createInitialState(gameConfig);
-		const cells = state.grid.cells.map((row) => [...row]);
-		cells[1]![1] = "X";
-		const grid = { ...state.grid, cells };
+		const grid = {
+			...state.grid,
+			cells: setCell(state.grid, { row: 1, col: 1 }, "X")
+		};
 		expect(
 			canMove(grid, { row: 1, col: 2 }, { row: 1, col: 1 }, "X", REPLACE)
 		).toBe(false);
@@ -86,9 +86,10 @@ describe("capture-by-replacement helpers", () => {
 		).toBe(true);
 
 		// Blocker at (2,2) stops the ray before O — cannot jump.
-		const blockedCells = state.grid.cells.map((row) => [...row]);
-		blockedCells[2]![2] = "O";
-		const blocked = { ...state.grid, cells: blockedCells };
+		const blocked = {
+			...state.grid,
+			cells: setCell(state.grid, { row: 2, col: 2 }, "O")
+		};
 		expect(
 			canMove(blocked, from, { row: 0, col: 2 }, "X", SLIDE_REPLACE)
 		).toBe(false);
@@ -163,11 +164,11 @@ describe("Replace Race (movement.capture = replace)", () => {
 
 	it("replays the capture win faithfully", () => {
 		const cfg = examplePresets["replace-race"].config;
-		const { kernel } = compileConfig(cfg);
+		const { gameConfig } = compileConfig(cfg);
 		const actions: KernelAction[] = [
 			{ type: "move", from: { row: 1, col: 2 }, to: { row: 0, col: 2 } }
 		];
-		const replay = replayActions(kernel, actions, cfg.rng.seed);
+		const replay = replayActions(gameConfig, actions, cfg.rng.seed);
 		expect(replay.finalState.status).toBe("won");
 		expect(replay.finalState.winner).toBe("X");
 		expect(getCell(replay.finalState.grid, { row: 0, col: 2 })).toBe("X");
