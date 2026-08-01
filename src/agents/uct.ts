@@ -52,6 +52,10 @@ export function actionKey(action: KernelAction): string {
 		}
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
+		case "query":
+			return `query:${action.trait}=${action.value}`;
+		case "guess":
+			return `guess:${action.id}`;
 	}
 }
 
@@ -79,7 +83,10 @@ function stateFingerprint(state: GameState): string {
 			? `X:${state.fleetProgress.X.shipIndex}:${state.fleetProgress.X.done}:${state.fleetProgress.X.cells.map((c) => `${c.row},${c.col}`).join(";")}|O:${state.fleetProgress.O.shipIndex}:${state.fleetProgress.O.done}:${state.fleetProgress.O.cells.map((c) => `${c.row},${c.col}`).join(";")}`
 			: "",
 		state.grid.cells.join(","),
-		state.hidden?.cells.join(",") ?? ""
+		state.hidden?.cells.join(",") ?? "",
+		state.deduction
+			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${state.deduction.lastQuery.trait}=${state.deduction.lastQuery.value}:${state.deduction.lastQuery.answer}` : ""}`
+			: ""
 	].join("|");
 }
 

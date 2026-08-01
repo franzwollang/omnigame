@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-01T18:35-05:00",
+  "turn": 34,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M10",
+    "issue": "next-missing-mechanism",
+    "goal": "Guess Who Lite landed; next seam or P4"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced M8+M9 from b777 onto 34ac",
+    "M10: Guess Who Lite deduction query/guess + identify_secret",
+    "Green gate: typecheck + 311 tests"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Deduction secrets via runSeeded; queryAnswered/guessResult mirror shotResult",
+    "Sandbox maps deduction→cell for canvas; JSON/preset for play"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "P3 next seam (sim sliding / joint UCT / richer phases) or P4 CI/semantics"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []
 }

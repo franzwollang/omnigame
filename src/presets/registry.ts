@@ -1460,6 +1460,88 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"replace-race": definePreset({
+		id: "replace-race",
+		name: "Replace Race",
+		tags: ["move", "capture", "replace", "reach-row", "5x5", "mechanism"],
+		description:
+			"Orthogonal step race with capture-by-replacement: move onto an enemy cell to remove it, then land. Unlocks movement.capture = replace — empty-dest Move cannot express attrition.",
+		config: {
+			metadata: { name: "Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X one step from O on the target row — capture lands and wins.
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"guess-who-lite": definePreset({
+		id: "guess-who-lite",
+		name: "Guess Who Lite",
+		tags: ["deduction", "query", "observation", "mechanism", "mvp"],
+		description:
+			"4-character roster; ask yes/no trait queries; guess opponent secret to win. Unlocks query + guess operators (README Guess Who-like MVP).",
+		config: {
+			metadata: { name: "Guess Who Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"simultaneous-step-race": definePreset({
 		id: "simultaneous-step-race",
 		name: "Simultaneous Step Race",
