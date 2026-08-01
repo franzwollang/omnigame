@@ -31,6 +31,7 @@ import {
 	usesPlacementPhase
 } from "@/engine/fleet";
 import {
+	canJointSimultaneousMoves,
 	canMove,
 	legalDestinations,
 	movementBoardFrom
@@ -1035,7 +1036,8 @@ export function explainKernelAction(
 		};
 	}
 
-	// Joint move: both seat moves must be legal on the pre-round board.
+	// Joint move: joint resolve uses vacated-origin path checks; ordered uses
+	// independent pre-round canMove (schema keeps ordered at range 1).
 	if (action.type === "simultaneousMove") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
 			return {
@@ -1053,23 +1055,32 @@ export function explainKernelAction(
 			};
 		}
 		const board = movementBoardFrom(config);
-		const xOk = canMove(
-			state.grid,
-			action.moves.X.from,
-			action.moves.X.to,
-			"X",
-			movement,
-			board
-		);
-		const oOk = canMove(
-			state.grid,
-			action.moves.O.from,
-			action.moves.O.to,
-			"O",
-			movement,
-			board
-		);
-		if (xOk && oOk) return { legal: true };
+		const resolveOrder = config.resolveOrder ?? "joint";
+		const ok =
+			resolveOrder === "joint"
+				? canJointSimultaneousMoves(
+						state.grid,
+						action.moves,
+						movement,
+						board
+					)
+				: canMove(
+						state.grid,
+						action.moves.X.from,
+						action.moves.X.to,
+						"X",
+						movement,
+						board
+					) &&
+					canMove(
+						state.grid,
+						action.moves.O.from,
+						action.moves.O.to,
+						"O",
+						movement,
+						board
+					);
+		if (ok) return { legal: true };
 		return {
 			legal: false,
 			reason: "invalid_destination",

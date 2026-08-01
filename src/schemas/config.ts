@@ -114,6 +114,8 @@ export const zConfig = z
 		 * (blocker-aware ray walk; range 1 = adjacent only).
 		 * `capture: "replace"` — move onto enemy clears occupant then lands
 		 * (rectangle + move input; path empty except destination).
+		 * Joint simultaneous + range > 1 uses vacated-origin path checks;
+		 * ordered simultaneous still requires range = 1.
 		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
 		 */
 		movement: z
@@ -908,14 +910,18 @@ export const zConfig = z
 							"simultaneous move is incompatible with commitReveal (deferred)"
 					});
 				}
-				// Apply-time path revalidation for ordered/joint sliding is not
-				// implemented; forbid range > 1 under simultaneous until it is.
-				if ((cfg.movement?.range ?? 1) > 1) {
+				// Joint simultaneous sliding uses vacated-origin path checks.
+				// Ordered resolve still lacks sequential path revalidation.
+				if (
+					(cfg.movement?.range ?? 1) > 1 &&
+					(cfg.turn.resolveOrder === "x_first" ||
+						cfg.turn.resolveOrder === "o_first")
+				) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "range"],
 						message:
-							"simultaneous move requires movement.range = 1 (sliding path integrity deferred)"
+							"ordered simultaneous move requires movement.range = 1 (sequential sliding path integrity deferred)"
 					});
 				}
 				if (cfg.movement?.capture === "replace") {

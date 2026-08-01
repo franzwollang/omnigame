@@ -1582,6 +1582,46 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"simultaneous-slide-race": definePreset({
+		id: "simultaneous-slide-race",
+		name: "Simultaneous Slide Race",
+		tags: ["move", "slide", "range", "reach-row", "simultaneous", "5x5", "mechanism"],
+		description:
+			"Joint simultaneous rook slides (range 4). Paths validated on a vacated-origin board so a vacating piece does not block the other. Unlocks simultaneous × sliding — not ordered resolve or replace capture.",
+		config: {
+			metadata: { name: "Simultaneous Slide Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "joint-slider-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "joint-slider-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"simultaneous-hex-step-race": definePreset({
 		id: "simultaneous-hex-step-race",
 		name: "Simultaneous Hex Step Race",

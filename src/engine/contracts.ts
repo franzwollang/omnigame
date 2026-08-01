@@ -358,7 +358,8 @@ export const Contracts = {
 		hooks: ["validateInput", "applyEffects"],
 		invariants: [
 			"jointMovePerRound",
-			"sameDestinationConflictNeitherOrFirst"
+			"sameDestinationConflictNeitherOrFirst",
+			"jointSlidePathsOnVacatedOrigins"
 		]
 	}),
 	/**

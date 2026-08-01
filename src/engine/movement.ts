@@ -6,7 +6,7 @@
  * orthogonal only, range 1 (replace is rectangle-only via schema).
  */
 import type { Grid, Position, Player } from "@/engine/types";
-import { getCell } from "@/engine/types";
+import { getCell, setCell } from "@/engine/types";
 import { inBounds, step } from "@/engine/adjacency";
 import {
 	neighbors,
@@ -217,6 +217,41 @@ export function canMove(
 	}
 	return legalDestinations(grid, from, config, wrapOrBoard).some(
 		(n) => n.row === to.row && n.col === to.col
+	);
+}
+
+export type JointMoveSpec = { from: Position; to: Position };
+
+/**
+ * Joint simultaneous move legality: both paths validated on a board where
+ * both origins are vacated (so a vacating piece does not block the other).
+ * Same-destination pairs still return true here; apply resolves conflict.
+ */
+export function canJointSimultaneousMoves(
+	grid: Grid,
+	moves: { X: JointMoveSpec; O: JointMoveSpec },
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false
+): boolean {
+	if (getCell(grid, moves.X.from) !== "X") return false;
+	if (getCell(grid, moves.O.from) !== "O") return false;
+
+	let cells = setCell(grid, moves.X.from, null);
+	cells = setCell({ ...grid, cells }, moves.O.from, null);
+	const vacated: Grid = { ...grid, cells };
+
+	const withX: Grid = {
+		...vacated,
+		cells: setCell(vacated, moves.X.from, "X")
+	};
+	const withO: Grid = {
+		...vacated,
+		cells: setCell(vacated, moves.O.from, "O")
+	};
+
+	return (
+		canMove(withX, moves.X.from, moves.X.to, "X", config, wrapOrBoard) &&
+		canMove(withO, moves.O.from, moves.O.to, "O", config, wrapOrBoard)
 	);
 }
 

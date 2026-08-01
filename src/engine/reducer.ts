@@ -41,6 +41,7 @@ import {
 	type FleetConfig
 } from "@/engine/fleet";
 import {
+	canJointSimultaneousMoves,
 	canMove,
 	movementBoardFrom,
 	type MovementConfig
@@ -935,8 +936,10 @@ function applySimultaneousMovePair(
 
 /**
  * Simultaneous schedule + move input: both seats submit one {from,to}.
- * Each move validated with canMove on the pre-round board. Same destination
- * under joint → neither; ordered → first seat wins the cell when both claim it.
+ * Joint resolve validates on a vacated-origin board (sliding path integrity).
+ * Ordered resolve validates each seat with canMove on the pre-round board
+ * (range > 1 forbidden by schema). Same destination under joint → neither;
+ * ordered → first seat wins the cell when both claim it.
  * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(
@@ -951,13 +954,14 @@ function handleSimultaneousMove(
 	if (!movement) return state;
 
 	const board = movementBoardFrom(config);
-	const wrap = board.wrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
 
-	if (
-		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, board) ||
-		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, board)
-	) {
+	const legal =
+		resolveOrder === "joint"
+			? canJointSimultaneousMoves(state.grid, moves, movement, board)
+			: canMove(state.grid, moves.X.from, moves.X.to, "X", movement, board) &&
+				canMove(state.grid, moves.O.from, moves.O.to, "O", movement, board);
+	if (!legal) {
 		return state;
 	}
 

@@ -57,12 +57,17 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	const topology = (form.watch("grid.topology") as string | undefined) ?? "rectangle";
 	const schedule =
 		(form.watch("turn.schedule") as string | undefined) ?? "alternating";
+	const resolveOrder =
+		(form.watch("turn.resolveOrder") as string | undefined) ?? "joint";
 	const phases = form.watch("turn.phases") as string[] | undefined;
 	const phasesNeedMove = Array.isArray(phases) && phases.includes("move");
 	const showMovement = inputMode === "move" || phasesNeedMove;
 	const hexOrGraph = topology === "hex_offset" || topology === "graph";
 	const simultaneousMove = schedule === "simultaneous" && inputMode === "move";
-	const rangeMax = hexOrGraph || simultaneousMove ? 1 : 8;
+	const orderedSimMove =
+		simultaneousMove &&
+		(resolveOrder === "x_first" || resolveOrder === "o_first");
+	const rangeMax = hexOrGraph || orderedSimMove ? 1 : 8;
 
 	const ensureMovement = () => {
 		const current = form.getValues("movement");
@@ -555,8 +560,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<p className="text-xs text-muted-foreground">
 										Required for input.mode = move and for phases that
 										include move. Diagonal/king and range &gt; 1 are
-										rectangle-only; simultaneous move requires range = 1.
-										Replace capture is rectangle + alternating move only.
+										rectangle-only; joint simultaneous allows sliding
+										(vacated-origin paths); ordered simultaneous still
+										requires range = 1. Replace capture is rectangle +
+										alternating move only.
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
