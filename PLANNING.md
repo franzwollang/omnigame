@@ -16,8 +16,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`.
 | M6 | Debug tooling + baseline agents | `done` |
 | M7 | Infinite library / config explorer | `done` |
 
-**Optimizing for this phase:** Sliding `movement.range` landed (Slide Race).
-Hand off to the next **missing mechanism** (see `OPEN_ISSUES.md`).
+**Optimizing for this phase:** Post-`#47` stack is on main (through sliding
+`movement.range`). Prefer **composition honesty** (simultaneous × sliding) and
+the next true missing mechanism over more recombinations — see `OPEN_ISSUES.md`.
 
 ## Decisions (locked)
 
@@ -125,15 +126,21 @@ Working sandbox slice (see README “Current implementation status”):
 - **Sliding range:** `movement.range` 1..8 on rectangle (blocker-aware ray walk);
   Slide Race preset; hex/graph remain range 1
 
-Not yet: full Go rules; phases hex/graph lift; capture-by-replacement piece
-tables; richer multi-phase machines beyond fleet + in-turn phases.
+Not yet: full Go rules; capture-by-replacement piece tables; richer multi-phase
+machines beyond fleet + in-turn phases; hex/graph `range > 1`.
+
+**Known composition debt (see OPEN_ISSUES):** simultaneous move + `range > 1`
+does not re-check path blockers at apply time; sandbox form lacks movement
+controls.
 
 ## Milestone exit criteria
 
 ### M0 — Honesty pass + Effect foothold
 
 - Unsupported schema fields are removed from the form **or** marked unsupported (no silent no-ops).
-- Prefer narrowing schema for `realtime`, non-down gravity, `pop_out_top`, `wrap` until Kernel+Effect — unless a one-liner is trivial and tested.
+- Prefer narrowing unsupported fields until Kernel+Effect — unless a one-liner is
+  trivial and tested. (Many former “narrow until later” knobs — wrap, pop-out
+  variants, simultaneous, phases, sliding — are now landed; see “What exists today”.)
 - Reversi preset labeled honestly (or endgame fixed — prefer label in M0).
 - `effect` package installed; one small pure module (e.g. seeded RNG or Option helpers) proves the dependency.
 - Minimal test harness + transcript tests for TTT / Connect 4 / one capture sequence.

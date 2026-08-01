@@ -1,22 +1,21 @@
 {
-  "updated_at": "2026-07-25T15:22-05:00",
-  "turn": 27,
+  "updated_at": "2026-08-01T16:10-05:00",
+  "turn": 28,
   "focus": {
     "milestone": null,
-    "issue": "next-missing-mechanism",
-    "goal": "Hand off after sliding movement.range"
+    "issue": "simultaneous-sliding-path-integrity",
+    "goal": "Post-merge review debt tracked; next mechanism TBD"
   },
   "recent": [
-    "Synced bad2 tip onto 6bcc",
-    "Landed movement.range slide 1..8 + Slide Race",
-    "288 tests green; typecheck clean"
+    "Merged tip PR #47 (39 commits: pop_out_top→sliding) into main",
+    "288/288 tests; review: simultaneous×sliding path hole + form gap"
   ],
   "discoveries": [
-    "Range>1 = blocker-aware ray walk; hex/graph stay range 1"
+    "Ordered simultaneous + range>1 can path-jump in applySimultaneousMovePair"
   ],
   "open_threads": [
-    "No GitHub Actions yet; tooling-node-pnpm CI pin still open"
+    "Prefer fix composition debt vs new mechanism for next cloud pass?"
   ],
-  "next_step": "Cloud agent: pick capture-by-replacement or richer phase machines",
+  "next_step": "User/agents: fix simultaneous-sliding or pick capture-by-replacement",
   "blockers": []
 }
