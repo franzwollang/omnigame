@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T17:45-05:00",
-  "turn": 30,
+  "updated_at": "2026-08-01T17:55-05:00",
+  "turn": 31,
   "focus": {
-    "milestone": "M8",
-    "issue": "simultaneous-agent-search",
-    "goal": "Label or improve MCTS/UCT under simultaneous"
+    "milestone": "M9",
+    "issue": "capture-by-replacement",
+    "goal": "Schema+kernel replace capture on move; Replace Race preset"
   },
   "recent": [
-    "P0: agent joint-move + forbid sliding×simultaneous + isNoop",
-    "P1: form movement + phases controls + coverage callout"
+    "P1: form movement + phases controls + coverage callout",
+    "P2: Agent UI/README label MCTS/UCT random under simultaneous; M8 done"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
+    "MCTS/UCT already random-fallback under simultaneous in agents",
     "Form watch can strip unregistered fields — register movement/phases"
   ],
   "open_threads": [
-    "P2 agent-search label/UCT; P3 capture-by-replacement"
+    "P3 capture-by-replacement mini-spec; then next-missing-mechanism"
   ],
-  "next_step": "Cloud: close simultaneous-agent-search (UI label or joint root)",
+  "next_step": "Cloud: implement movement.capture=replace + Replace Race + tests",
   "blockers": []
 }

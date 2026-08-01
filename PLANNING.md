@@ -24,12 +24,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 
 | ID | Focus | Status |
 |---|---|---|
-| M8 | Composition honesty (debt + sandbox/agent truth) | `in progress` |
+| M8 | Composition honesty (debt + sandbox/agent truth) | `done` |
 | M9 | Next missing mechanism (default: capture-by-replacement) | `not started` |
 
-**Optimizing for this marathon:** P0 debt closed; **P1 form honesty closed**
-(movement + phases controls + in-UI coverage callout). Continue **P2 → P3**
-in `OPEN_ISSUES.md` without asking which fork.
+**Optimizing for this marathon:** M8 composition honesty closed (P0–P2).
+Start **P3 capture-by-replacement** (M9) per mini-spec in `OPEN_ISSUES.md`
+without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -56,10 +56,9 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Task selection (no user ask)
 
-1. Work the highest unfinished **P2 → P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P1 closed).  
-2. When P2 composition/honesty items are done, start **P3**
-   `capture-by-replacement` using its mini-spec in OPEN_ISSUES.  
+1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
+   (P0–P2 / M8 closed).  
+2. Start **P3** `capture-by-replacement` (M9) using its mini-spec in OPEN_ISSUES.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
 4. After each landed item: update OPEN_ISSUES (resolve + log), PLANNING status,
@@ -118,11 +117,11 @@ simultaneous; CI workflows; Guess Who / query operator (deferred).
 
 ### M8 — Composition honesty
 
-- Simultaneous × sliding closed (schema forbid **or** apply-time path check + tests)
-- Sandbox Agent step works for simultaneous **move** (joint move)
+- Simultaneous × sliding closed (schema forbid **or** apply-time path check + tests) — **done**
+- Sandbox Agent step works for simultaneous **move** (joint move) — **done**
 - Form exposes movement (+ phases) **or** README explicitly marks JSON-only — **done** (controls + in-UI coverage callout)
-- `isNoop` includes phase budget / ko / positionHistory fields
-- Known agent-search limitation under simultaneous documented or improved
+- `isNoop` includes phase budget / ko / positionHistory fields — **done**
+- Known agent-search limitation under simultaneous documented or improved — **done** (Agent UI label + README agents blurb)
 
 ### M9 — Capture-by-replacement
 
