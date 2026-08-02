@@ -297,7 +297,8 @@ semantics doc refresh; simultaneous deduction / OR / 3+ clause AND.
 - Preset `guess-who-commit-lite` (`wrongGuess: end_turn`) + transcript/replay
   tests — **done**
 - Out of scope: simultaneous deduction; deduction + phases; batch eliminate;
-  trait conjunction queries; full canvas UI
+  full canvas UI
+- Out of scope closed by M24: trait conjunction queries
 
 ### M24 — Guess Who trait-conjunction queries (AND)
 
