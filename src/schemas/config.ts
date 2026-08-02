@@ -143,7 +143,7 @@ export const zConfig = z
 				range: z.number().int().min(1).max(8).default(1),
 				capture: z.enum(["none", "replace"]).default("none"),
 				/** Graph-only: chain-walk (default) or hop-ball BFS. */
-				graphReach: z.enum(["chain", "hop"]).default("chain")
+				graphReach: z.enum(["chain", "hop"]).optional()
 			})
 			.strict()
 			.optional(),

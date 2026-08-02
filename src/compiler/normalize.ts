@@ -80,7 +80,9 @@ export function flattenToGameConfig(config: Config): GameConfig {
 					adjacency: config.movement.adjacency,
 					range: config.movement.range,
 					capture: config.movement.capture ?? "none",
-					graphReach: config.movement.graphReach ?? "chain"
+					...(config.movement.graphReach
+						? { graphReach: config.movement.graphReach }
+						: {})
 				}
 			: undefined,
 		targetRows: config.objective.targetRows,
