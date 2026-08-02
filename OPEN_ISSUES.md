@@ -2,70 +2,28 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P1 → P2 → P3 → P4** in order (P0 composition bugs
-closed in prep). Do not ask which fork — honesty first, then capture-by-replacement.
+**Marathon rule:** Work **P3 → P4** in order (M31 graph hop-ball closed). Do
+not ask which fork — pick the smallest new seam under
+`next-missing-mechanism`, then P4 tooling/docs.
 
 ---
 
 ## Immediate (prioritized)
 
-### P1 — sandbox-form-honesty
+### P3 — next-missing-mechanism
 
-**Problem:** Form does not expose `movement.adjacency` / `movement.range` or
-`turn.phases`. README Usage now notes JSON-only; still prefer form controls or a
-durable in-UI “JSON-only” affordance.
+Graph hop-ball (`movement.graphReach = hop` + Graph Hop Race) landed as M31.
+Chain-walk remains the default; hop BFS may turn at junctions.
 
-**Acceptance:**
+Pick the smallest remaining new seam that existing primitives cannot express,
+e.g.:
 
-- [ ] Add form controls for movement (+ `turn.phases` when relevant), **or**
-      durable UI copy (not only README) that those fields are JSON/preset-only
-- [ ] No impression that the form covers the full schema
+- fire→move phase reorder (only if a new seam / anchor appears)
+- Simultaneous deduction compound / commitReveal / joint UCT (extensions of M30)
+- Higher compoundArity demos / OR-arity presets only if a new seam appears
 
-### P2 — simultaneous-agent-search
-
-**Problem:** Tiny MCTS / UCT fall back to uniform random among seat legals under
-`schedule = simultaneous`; greedy skips lookahead. Joint action space is never
-searched.
-
-**Acceptance:**
-
-- [ ] Label Agent UI: “random under simultaneous” for MCTS/UCT, **or**
-- [ ] Root search over joint actions via `stepJoint` / `stepPly` for ≥1 agent
-- [ ] Test or README agents blurb documents the limitation
-
-### P3 — capture-by-replacement (default next mechanism)
-
-**Why existing primitives fail:** Move only allows empty destinations.
-Chess-like / attrition races need **move onto enemy → remove occupant**.
-Liberties/flip capture are place-centric, not move-replace.
-
-**Mini-spec:**
-
-- Schema: e.g. `movement.capture = "none" | "replace"` (name OK if documented);
-  rectangle foothold; require `input.mode = move`
-- Kernel/reducer: enemy cells legal destinations when replace on; apply clears
-  occupant then lands; emit events
-- Illegal: own-piece destination; sliding path empty except destination
-- Preset: **Replace Race** (reach_row + replace)
-- Tests: transcript, replay, validateConfig rejects bad combos
-- Out of scope: multi-jump checkers, capture chains, hex/graph (unless free)
-
-**Acceptance:**
-
-- [ ] Schema + contracts + kernel path
-- [ ] Preset + transcript/replay tests
-- [ ] PLANNING M9 → `done`; hand off next mechanism
-
-### P3 — next-missing-mechanism (after capture)
-
-Only after capture-by-replacement. Pick smallest new seam, e.g.:
-
-- Guess Who-like query / commit (README MVP anchor)
-- Richer multi-phase machines beyond current `turn.phases`
-- Apply-time simultaneous sliding (re-open composition)
-- Hex/graph `range > 1` (only if a new seam appears)
-
-**Acceptance:** schema + kernel + preset + tests; mechanism-first.
+**Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
+exhaust `references/` or recombine covered primitives).
 
 ### P4 — tooling-ci
 
@@ -78,7 +36,17 @@ Only after capture-by-replacement. Pick smallest new seam, e.g.:
 
 **Acceptance:**
 
-- [ ] Sync compact draft with current kernel events/state/phases
+- [ ] Sync compact draft with current kernel events/state/phases (incl.
+      `pieceCaptured`, `queryAnswered` / `guessResult` / `candidateEliminated`,
+      simultaneous, phases incl. move→fire + deduction query→eliminate, joint
+      + ordered sliding, joint + ordered simultaneous replace, simultaneous
+      slide+replace, joint replace vacated-origin hybrid, joint UCT under open
+      + multi-action + commitReveal simultaneous, hex cube-axis sliding, graph
+      chain-walk sliding, **graph hop-ball** (`graphReach`), hex + graph replace
+      capture, Guess Who manual eliminate / `autoEliminate`, trait-conjunction
+      `queryShape: and`, trait-disjunction `queryShape: or`, `compoundArity` /
+      3-clause AND, deduction in-turn phases, simultaneous deduction joint
+      query/guess)
 
 ---
 
@@ -90,5 +58,9 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 
 ### deferred-mvp-anchors
 
-Guess Who-like / full Go remain deferred under post-capture
-`next-missing-mechanism`.
+Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite +
+Commit Lite + Commit Phases Lite + And Lite + Or Lite + And3 Lite +
+**Simultaneous Guess Who Lite** cover query/guess + hypothesis eliminate +
+same-turn query→eliminate + 2-clause AND/OR + N-clause AND via `compoundArity`
++ joint simultaneous query/guess. **Graph Hop Race** covers hop-ball BFS
+(fire→move / simultaneous deduction extensions still open).

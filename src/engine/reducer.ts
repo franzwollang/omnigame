@@ -7,7 +7,9 @@ import type {
 	Player,
 	CellValue,
 	Grid,
-	PendingPlace
+	PendingPlace,
+	DeductionCharacter,
+	QueryEvent
 } from "./types";
 import {
 	asPlacementList,
@@ -40,6 +42,8 @@ import {
 	type FleetConfig
 } from "@/engine/fleet";
 import {
+	canJointSimultaneousMoves,
+	canOrderedSimultaneousMoves,
 	canMove,
 	movementBoardFrom,
 	type MovementConfig
@@ -54,6 +58,18 @@ import {
 	type GridTopology
 } from "@/engine/topology";
 import { getCell as readCell } from "@/engine/types";
+import {
+	answerQuery,
+	answerQueryConjunction,
+	answerQueryDisjunction,
+	assignSecrets,
+	canEliminate,
+	eliminateAfterQuery,
+	eliminateAfterQueryConjunction,
+	eliminateAfterQueryDisjunction,
+	isGuessCorrect,
+	validCompoundClauses
+} from "@/engine/deduction";
 
 export type InitialSeed = {
 	row: number;
@@ -73,7 +89,7 @@ export type GameConfig = {
 	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column" | "row" | "move";
+	inputMode?: "cell" | "column" | "row" | "move" | "deduction";
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
@@ -94,7 +110,7 @@ export type GameConfig = {
 	koRule?: KoRule;
 	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
-	observationMode?: "full" | "hit_miss" | "fog";
+	observationMode?: "full" | "hit_miss" | "fog" | "deduction";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
 	fogRadius?: number;
 	fogMetric?: "chebyshev" | "manhattan";
@@ -104,6 +120,7 @@ export type GameConfig = {
 		| "connect_or_destroy"
 		| "reach_row"
 		| "area_control"
+		| "identify_secret"
 		| "none";
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
@@ -129,11 +146,14 @@ export type GameConfig = {
 	 */
 	resolveOrder?: "joint" | "x_first" | "o_first";
 	/**
-	 * Ordered in-turn action types (place→move, place→fire, or
-	 * place→move→fire) before handoff. When set, GameState.turnPhaseIndex
-	 * tracks the active phase.
+	 * Ordered in-turn action types (place→move / place→fire /
+	 * place→move→fire / move→fire, or deduction query→eliminate /
+	 * query→guess / query→eliminate→guess) before handoff. When set,
+	 * GameState.turnPhaseIndex tracks the active phase.
 	 */
-	turnPhases?: Array<"place" | "move" | "fire">;
+	turnPhases?: Array<
+		"place" | "move" | "fire" | "query" | "eliminate" | "guess"
+	>;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -143,6 +163,20 @@ export type GameConfig = {
 	 * placement (place onto hidden) then transitions to combat (fire).
 	 */
 	fleet?: FleetConfig;
+	/** Seed for deduction secrets (from config.rng.seed). */
+	seed?: number;
+	/** Deduction / Guess Who-lite roster + traits. */
+	deduction?: {
+		roster: DeductionCharacter[];
+		traits: string[];
+		wrongGuess: "lose" | "end_turn";
+		/** When false, query answers without pruning; use eliminate actions. */
+		autoEliminate: boolean;
+		/** single (default), compound AND, or compound OR queries. */
+		queryShape: "single" | "and" | "or";
+		/** Exact clause count for and|or (default 2). */
+		compoundArity: number;
+	};
 	initial?: InitialSeed[];
 };
 
@@ -406,6 +440,17 @@ export function createInitialState(config: GameConfig): GameState {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
 	}
 
+	const deductionMode =
+		config.observationMode === "deduction" ||
+		config.inputMode === "deduction";
+	if (deductionMode && config.deduction) {
+		const rosterIds = config.deduction.roster.map((c) => c.id);
+		base.deduction = {
+			secret: assignSecrets(rosterIds, config.seed ?? 0),
+			eliminated: { X: [], O: [] }
+		};
+	}
+
 	if (seeds.length === 0) {
 		const koRule = resolveKoRule(config);
 		if (usesSuperkoHistory(koRule)) {
@@ -496,13 +541,358 @@ export function reduce(
 			return handleSimultaneousPlace(state, event.placements, config);
 		case "simultaneousMove":
 			return handleSimultaneousMove(state, event.moves, config);
+		case "simultaneousQuery":
+			return handleSimultaneousQuery(state, event.queries, config);
+		case "simultaneousGuess":
+			return handleSimultaneousGuess(state, event.guesses, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
+		case "query":
+			return handleQuery(state, event, config);
+		case "guess":
+			return handleGuess(state, event.id, config);
+		case "eliminate":
+			return handleEliminate(state, event.id, config);
 		case "reset":
 			return createInitialState(config);
 		default:
 			return state;
 	}
+}
+
+function isDeductionMode(config: GameConfig): boolean {
+	return (
+		(config.inputMode === "deduction" ||
+			config.observationMode === "deduction") &&
+		config.deduction != null
+	);
+}
+
+function handleQuery(
+	state: GameState,
+	event: QueryEvent,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	// Simultaneous games must use simultaneousQuery (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+
+	const shape = config.deduction.queryShape ?? "single";
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const autoEliminate = config.deduction.autoEliminate !== false;
+
+	let answer: boolean;
+	let lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
+	let eliminated: string[];
+
+	if (shape === "and" || shape === "or") {
+		const clauses = event.clauses;
+		const arity = config.deduction.compoundArity ?? 2;
+		if (
+			!clauses ||
+			!validCompoundClauses(clauses, config.deduction.traits, arity)
+		) {
+			return state;
+		}
+		// Reject single-atom fields on compound configs
+		if (event.trait !== undefined || event.value !== undefined) return state;
+
+		const op = shape;
+		answer =
+			op === "and"
+				? answerQueryConjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					)
+				: answerQueryDisjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					);
+		eliminated = autoEliminate
+			? op === "and"
+				? eliminateAfterQueryConjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+				: eliminateAfterQueryDisjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+			: state.deduction.eliminated[player];
+		lastQuery = {
+			by: player,
+			op,
+			clauses: clauses.map((c) => ({ trait: c.trait, value: c.value })),
+			answer
+		};
+	} else {
+		// single
+		if (event.clauses && event.clauses.length > 0) return state;
+		const trait = event.trait;
+		const value = event.value;
+		if (trait === undefined || value === undefined) return state;
+		if (!config.deduction.traits.includes(trait)) return state;
+
+		answer = answerQuery(
+			secretId,
+			config.deduction.roster,
+			trait,
+			value
+		);
+		eliminated = autoEliminate
+			? eliminateAfterQuery(
+					config.deduction.roster,
+					state.deduction.eliminated[player],
+					trait,
+					value,
+					answer
+				)
+			: state.deduction.eliminated[player];
+		lastQuery = { by: player, trait, value, answer };
+	}
+
+	const newMoveCount = state.moveCount + 1;
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				...state.deduction.eliminated,
+				[player]: eliminated
+			},
+			lastQuery
+		},
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+/**
+ * Resolve one seat's single-atom query against the opponent secret.
+ * Does not advance turn / moveCount (caller owns joint bookkeeping).
+ */
+function resolveSingleQueryForPlayer(
+	state: GameState,
+	player: Player,
+	event: QueryEvent,
+	config: GameConfig
+): {
+	ok: boolean;
+	eliminated: string[];
+	lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
+} | null {
+	if (!config.deduction || !state.deduction) return null;
+	if (event.clauses && event.clauses.length > 0) return null;
+	const trait = event.trait;
+	const value = event.value;
+	if (trait === undefined || value === undefined) return null;
+	if (!config.deduction.traits.includes(trait)) return null;
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const answer = answerQuery(
+		secretId,
+		config.deduction.roster,
+		trait,
+		value
+	);
+	const eliminated = eliminateAfterQuery(
+		config.deduction.roster,
+		state.deduction.eliminated[player],
+		trait,
+		value,
+		answer
+	);
+	return {
+		ok: true,
+		eliminated,
+		lastQuery: { by: player, trait, value, answer }
+	};
+}
+
+/** Joint simultaneous query: both seats ask; independent auto-prune. */
+function handleSimultaneousQuery(
+	state: GameState,
+	queries: { X: QueryEvent; O: QueryEvent },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if ((config.deduction.queryShape ?? "single") !== "single") return state;
+	if (config.deduction.autoEliminate === false) return state;
+
+	const x = resolveSingleQueryForPlayer(state, "X", queries.X, config);
+	const o = resolveSingleQueryForPlayer(state, "O", queries.O, config);
+	if (!x || !o) return state;
+
+	return {
+		...state,
+		moveCount: state.moveCount + 1,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				X: x.eliminated,
+				O: o.eliminated
+			},
+			lastQuery: undefined,
+			lastQueries: {
+				X: x.lastQuery,
+				O: o.lastQuery
+			}
+		}
+	};
+}
+
+/** Joint simultaneous guess: both identify; one correct → win; both → draw. */
+function handleSimultaneousGuess(
+	state: GameState,
+	guesses: { X: string; O: string },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(guesses.X) || !rosterIds.has(guesses.O)) return state;
+
+	const xCorrect = isGuessCorrect(state.deduction.secret.O, guesses.X);
+	const oCorrect = isGuessCorrect(state.deduction.secret.X, guesses.O);
+	const newMoveCount = state.moveCount + 1;
+
+	if (xCorrect && oCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "draw",
+			winner: null
+		};
+	}
+	if (xCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: "X"
+		};
+	}
+	if (oCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: "O"
+		};
+	}
+
+	// Both wrong: continue (wrongGuess lose would mutual-eliminate both seats).
+	return {
+		...state,
+		moveCount: newMoveCount
+	};
+}
+
+function handleGuess(
+	state: GameState,
+	id: string,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	// Simultaneous games must use simultaneousGuess (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const correct = isGuessCorrect(secretId, id);
+	const newMoveCount = state.moveCount + 1;
+
+	if (correct) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: player
+		};
+	}
+
+	if (config.deduction.wrongGuess === "lose") {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: opponent
+		};
+	}
+
+	// end_turn: handoff without win
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleEliminate(
+	state: GameState,
+	id: string,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	// Manual eliminate only when auto-prune is off (Commit(hypothesis) seam).
+	if (config.deduction.autoEliminate !== false) return state;
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+
+	const player = state.currentPlayer;
+	const already = state.deduction.eliminated[player];
+	if (!canEliminate(config.deduction.roster, already, id)) return state;
+
+	const newMoveCount = state.moveCount + 1;
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				...state.deduction.eliminated,
+				[player]: [...already, id]
+			}
+		},
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
 }
 
 function handlePass(state: GameState, config: GameConfig): GameState {
@@ -756,11 +1146,18 @@ export type SimultaneousMovePair = {
  * Apply one simultaneous move pair onto `grid` (joint or ordered).
  * Same destination under joint → neither moves. Ordered applies first seat
  * then second against the updated board (second may become illegal).
+ * Joint replace: after vacating both chosen origins, landing overwrites any
+ * remaining occupant (stationary enemy capture); a fleeing opponent whose
+ * origin is the landing cell leaves an empty square.
+ * Ordered replace: enemy destinations may be overwritten; same-dest still
+ * gives the cell to the first seat (second does not capture the fresh lander).
+ * Priority capture of a fleeing piece leaves second unable to apply.
  */
 function applySimultaneousMovePair(
 	grid: Grid,
 	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
-	resolveOrder: "joint" | "x_first" | "o_first"
+	resolveOrder: "joint" | "x_first" | "o_first",
+	capture: "none" | "replace" = "none"
 ): { grid: Grid; conflict: boolean; applied: { X: boolean; O: boolean } } {
 	const sameDest = positionsEqual(moves.X.to, moves.O.to);
 
@@ -768,7 +1165,7 @@ function applySimultaneousMovePair(
 		if (sameDest) {
 			return { grid, conflict: true, applied: { X: false, O: false } };
 		}
-		// Atomic: clear both origins, then land both destinations.
+		// Atomic: clear both origins, then land both destinations (overwrite OK).
 		let cells = setCell(grid, moves.X.from, null);
 		cells = setCell({ ...grid, cells }, moves.O.from, null);
 		cells = setCell({ ...grid, cells }, moves.X.to, "X");
@@ -788,7 +1185,13 @@ function applySimultaneousMovePair(
 	const tryApply = (seat: Player) => {
 		const m = moves[seat];
 		if (getCell(next, m.from) !== seat) return;
-		if (getCell(next, m.to) !== null) return;
+		const dest = getCell(next, m.to);
+		if (dest !== null) {
+			if (capture !== "replace") return;
+			if (dest === seat) return;
+			// Same-dest: first already claimed the cell — second does not capture.
+			if (sameDest && applied[first]) return;
+		}
 		let cells = setCell(next, m.from, null);
 		cells = setCell({ ...next, cells }, m.to, seat);
 		next = { ...next, cells };
@@ -802,8 +1205,13 @@ function applySimultaneousMovePair(
 
 /**
  * Simultaneous schedule + move input: both seats submit one {from,to}.
- * Each move validated with canMove on the pre-round board. Same destination
- * under joint → neither; ordered → first seat wins the cell when both claim it.
+ * Joint resolve validates on a vacated-origin board (sliding path integrity,
+ * including joint + replace: fleeing blockers clear the ray; stationary
+ * capture targets remain). Ordered resolve validates first seat pre-round,
+ * then second after simulating the first (sequential path / capture
+ * revalidation). Same destination under joint → neither; ordered → first seat
+ * wins the cell when both claim it. Ordered replace may overwrite enemies;
+ * priority can capture before prey flees.
  * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(
@@ -821,14 +1229,26 @@ function handleSimultaneousMove(
 	const wrap = board.wrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
 
-	if (
-		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, board) ||
-		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, board)
-	) {
+	const legal =
+		resolveOrder === "joint"
+			? canJointSimultaneousMoves(state.grid, moves, movement, board)
+			: canOrderedSimultaneousMoves(
+					state.grid,
+					moves,
+					movement,
+					resolveOrder,
+					board
+				);
+	if (!legal) {
 		return state;
 	}
 
-	const applied = applySimultaneousMovePair(state.grid, moves, resolveOrder);
+	const applied = applySimultaneousMovePair(
+		state.grid,
+		moves,
+		resolveOrder,
+		movement.capture ?? "none"
+	);
 	const workingGrid = applied.grid;
 	const nextBase: GameState = {
 		...state,

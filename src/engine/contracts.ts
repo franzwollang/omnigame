@@ -17,6 +17,7 @@ export type Slot =
 				| "connectOrDestroy"
 				| "reachRow"
 				| "areaControl"
+				| "identifySecret"
 				| "none";
 	  }
 	| { type: "Schedule"; value: "alternating" | "manualTick" | "simultaneous" };
@@ -100,7 +101,28 @@ export const Contracts = {
 		provides: ["ResolvedCell"],
 		slots: [{ type: "PlacementPolicy", value: "move" }],
 		hooks: ["validateInput", "applyPlacement"],
-		invariants: ["movesOwnPieceToEmptyCell"]
+		invariants: ["movesOwnPieceToLegalDestination"]
+	}),
+	InputDeduction: (): FeatureContract => ({
+		id: "InputDeduction",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["queryOrGuessOperators"]
+	}),
+	MovementReplaceCapture: (): FeatureContract => ({
+		id: "MovementReplaceCapture",
+		requires: ["ResolvedCell", "CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: [
+			"replaceClearsEnemyThenLands",
+			"pathEmptyExceptDestination",
+			"jointSimultaneousReplaceUsesRealBoardLegality",
+			"orderedSimultaneousReplaceSequentialCaptureApply"
+		]
 	}),
 	PlacementDirect: (): FeatureContract => ({
 		id: "PlacementDirect",
@@ -245,6 +267,14 @@ export const Contracts = {
 		hooks: [],
 		invariants: ["hidesCellsOutsideRadius"]
 	}),
+	ObservationDeduction: (): FeatureContract => ({
+		id: "ObservationDeduction",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: [],
+		invariants: ["hidesOpponentSecret"]
+	}),
 	DestroyHidden: (): FeatureContract => ({
 		id: "DestroyHidden",
 		requires: ["CellsWritable"],
@@ -281,6 +311,14 @@ export const Contracts = {
 		hooks: ["checkEnd"],
 		invariants: ["twoPassesEndGame", "scoreStonesPlusTerritory"]
 	}),
+	IdentifySecret: (): FeatureContract => ({
+		id: "IdentifySecret",
+		requires: [],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "identifySecret" }],
+		hooks: ["checkEnd"],
+		invariants: ["guessOpponentSecret"]
+	}),
 	OpenEnded: (): FeatureContract => ({
 		id: "OpenEnded",
 		requires: [],
@@ -301,7 +339,9 @@ export const Contracts = {
 		resolveOrder: "joint" | "x_first" | "o_first" = "joint"
 	): FeatureContract => ({
 		id: "ScheduleSimultaneous",
-		requires: ["CellsWritable", "ResolvedCell"],
+		// CellsWritable only — place/move supply ResolvedCell; deduction joint
+		// query/guess does not place (same pattern as ScheduleInTurnPhases).
+		requires: ["CellsWritable"],
 		provides: [],
 		slots: [{ type: "Schedule", value: "simultaneous" }],
 		hooks: ["validateInput", "applyEffects"],
@@ -310,6 +350,22 @@ export const Contracts = {
 			resolveOrder === "joint"
 				? "sameCellConflictNeitherApplies"
 				: "sameCellConflictFirstSeatWins"
+		]
+	}),
+	/**
+	 * Simultaneous deduction (input.mode = deduction under simultaneous).
+	 * Joint query or joint guess per round; no board placement.
+	 */
+	ScheduleSimultaneousDeduction: (): FeatureContract => ({
+		id: "ScheduleSimultaneousDeduction",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: [
+			"jointQueryOrGuessPerRound",
+			"independentSeatSecrets",
+			"jointUctDeferred"
 		]
 	}),
 	/**
@@ -325,12 +381,16 @@ export const Contracts = {
 		hooks: ["validateInput", "applyEffects"],
 		invariants: [
 			"jointMovePerRound",
-			"sameDestinationConflictNeitherOrFirst"
+			"sameDestinationConflictNeitherOrFirst",
+			"jointSlidePathsOnVacatedOrigins",
+			"jointReplaceCaptureRealBoardLegality"
 		]
 	}),
 	/**
 	 * Ordered simultaneous resolve (resolveOrder = x_first | o_first). Keeps
 	 * Schedule = simultaneous; earlier seat wins same-cell conflicts.
+	 * Sliding paths revalidated sequentially (first pre-round, second after).
+	 * Replace captures apply sequentially (priority can capture before flee).
 	 */
 	ScheduleOrderedResolve: (): FeatureContract => ({
 		id: "ScheduleOrderedResolve",
@@ -338,7 +398,12 @@ export const Contracts = {
 		provides: [],
 		slots: [],
 		hooks: ["applyEffects"],
-		invariants: ["sequentialApplyWithinRound", "sameCellConflictFirstSeatWins"]
+		invariants: [
+			"sequentialApplyWithinRound",
+			"sameCellConflictFirstSeatWins",
+			"orderedSlideSequentialPathRevalidation",
+			"orderedReplaceSequentialCaptureApply"
+		]
 	}),
 	/**
 	 * Hidden simultaneous (commit-then-reveal). Keeps Schedule = simultaneous;
@@ -397,13 +462,16 @@ export const Contracts = {
 		]
 	}),
 	/**
-	 * Ordered in-turn phase sequence (place→move, place→fire, or
-	 * place→move→fire before handoff). Distinct from ScheduleMultiStep
-	 * (N copies of one action type).
+	 * Ordered in-turn phase sequence (place→move / place→fire /
+	 * place→move→fire / move→fire, or deduction query→eliminate /
+	 * query→guess / query→eliminate→guess before handoff). Distinct from
+	 * ScheduleMultiStep (N copies of one action type). Board phases still
+	 * pull ResolvedCell from PlacementDirect / InputMove; deduction phases
+	 * only need the writable board scaffold.
 	 */
 	ScheduleInTurnPhases: (): FeatureContract => ({
 		id: "ScheduleInTurnPhases",
-		requires: ["CellsWritable", "ResolvedCell"],
+		requires: ["CellsWritable"],
 		provides: [],
 		slots: [],
 		hooks: ["validateInput", "nextTurn"],
