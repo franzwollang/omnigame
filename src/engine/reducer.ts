@@ -9,7 +9,6 @@ import type {
 	Grid,
 	PendingPlace,
 	DeductionCharacter,
-	QueryClause,
 	QueryEvent
 } from "./types";
 import {
@@ -169,8 +168,10 @@ export type GameConfig = {
 		wrongGuess: "lose" | "end_turn";
 		/** When false, query answers without pruning; use eliminate actions. */
 		autoEliminate: boolean;
-		/** single (default), 2-clause AND, or 2-clause OR queries. */
+		/** single (default), compound AND, or compound OR queries. */
 		queryShape: "single" | "and" | "or";
+		/** Exact clause count for and|or (default 2). */
+		compoundArity: number;
 	};
 	initial?: InitialSeed[];
 };
@@ -581,11 +582,13 @@ function handleQuery(
 
 	if (shape === "and" || shape === "or") {
 		const clauses = event.clauses;
-		if (!clauses || clauses.length !== 2) return state;
-		const [c0, c1] = clauses as [QueryClause, QueryClause];
-		if (c0.trait === c1.trait) return state;
-		const allowed = new Set(config.deduction.traits);
-		if (!allowed.has(c0.trait) || !allowed.has(c1.trait)) return state;
+		const arity = config.deduction.compoundArity ?? 2;
+		if (
+			!clauses ||
+			!validCompoundClauses(clauses, config.deduction.traits, arity)
+		) {
+			return state;
+		}
 		// Reject single-atom fields on compound configs
 		if (event.trait !== undefined || event.value !== undefined) return state;
 
@@ -620,10 +623,7 @@ function handleQuery(
 		lastQuery = {
 			by: player,
 			op,
-			clauses: [
-				{ trait: c0.trait, value: c0.value },
-				{ trait: c1.trait, value: c1.value }
-			],
+			clauses: clauses.map((c) => ({ trait: c.trait, value: c.value })),
 			answer
 		};
 	} else {

@@ -241,11 +241,17 @@ export const zConfig = z
 				/** When true (default), query auto-prunes inconsistent candidates. */
 				autoEliminate: z.boolean().default(true),
 				/**
-				 * Query atom shape: single trait=value, 2-clause AND
-				 * ("glasses and hat?"), or 2-clause OR ("glasses or hat?").
-				 * Default single keeps Guess Who Lite.
+				 * Query atom shape: single trait=value, compound AND
+				 * ("glasses and hat?"), or compound OR ("glasses or hat?").
+				 * Default single keeps Guess Who Lite. Clause count for
+				 * and/or is `compoundArity` (default 2).
 				 */
-				queryShape: z.enum(["single", "and", "or"]).default("single")
+				queryShape: z.enum(["single", "and", "or"]).default("single"),
+				/**
+				 * Exact clause count for queryShape and|or (default 2).
+				 * Ignored when queryShape is single. Must be ≤ traits.length.
+				 */
+				compoundArity: z.number().int().min(2).max(6).default(2)
 			})
 			.strict()
 			.optional(),
@@ -514,6 +520,18 @@ export const zConfig = z
 						path: ["deduction", "queryShape"],
 						message:
 							"deduction.queryShape 'and'/'or' requires at least 2 traits"
+					});
+				}
+				if (
+					((cfg.deduction.queryShape ?? "single") === "and" ||
+						(cfg.deduction.queryShape ?? "single") === "or") &&
+					(cfg.deduction.compoundArity ?? 2) > traitKeys.length
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "compoundArity"],
+						message:
+							"deduction.compoundArity must be ≤ deduction.traits.length"
 					});
 				}
 				const ids = new Set<string>();

@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T05:25-00:00",
-  "turn": 54,
+  "updated_at": "2026-08-02T05:40-00:00",
+  "turn": 55,
   "focus": {
-    "milestone": "M27",
+    "milestone": "M28",
     "issue": "next-missing-mechanism",
-    "goal": "Graph replace capture landed; hand off next seam or P4"
+    "goal": "compoundArity / Guess Who And3 Lite landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M26 from 6ac1 onto 860a",
-    "Landed M27 graph replace + graph-replace-race",
-    "449 green after typecheck+test"
+    "Synced M8–M27 from 860a onto 9fbb",
+    "Landed M28 compoundArity + guess-who-and3-lite",
+    "Green gate pending typecheck+test"
   ],
   "discoveries": [
-    "slideGraphDestinations needed replace branch (unlike hex which had it)"
+    "Prune helpers already N-general; only kernel/reducer arity=2 was hardwired"
   ],
   "open_threads": [
-    "Next: richer phases, 3+ AND, hop-ball, or P4 CI/semantics"
+    "Next: richer phases, hop-ball, simultaneous deduction, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (phases/3+AND/hop-ball) or P4 CI/semantics",
+  "next_step": "Pick next seam (phases/hop-ball/simultaneous deduction) or P4",
   "blockers": []
 }

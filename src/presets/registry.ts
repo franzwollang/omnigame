@@ -1847,6 +1847,84 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"guess-who-and3-lite": definePreset({
+		id: "guess-who-and3-lite",
+		name: "Guess Who And3 Lite",
+		tags: [
+			"deduction",
+			"query",
+			"conjunction",
+			"compound-arity",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"8-character 3-trait roster; each query is a 3-clause AND. Unlocks deduction.compoundArity > 2 — one-turn triple prune that no 2-clause AND can express.",
+		config: {
+			metadata: { name: "Guess Who And3 Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat", "beard"],
+				wrongGuess: "lose",
+				queryShape: "and",
+				compoundArity: 3,
+				roster: [
+					{
+						id: "ann",
+						traits: { glasses: true, hat: true, beard: true }
+					},
+					{
+						id: "bob",
+						traits: { glasses: true, hat: true, beard: false }
+					},
+					{
+						id: "cara",
+						traits: { glasses: true, hat: false, beard: true }
+					},
+					{
+						id: "dan",
+						traits: { glasses: true, hat: false, beard: false }
+					},
+					{
+						id: "eve",
+						traits: { glasses: false, hat: true, beard: true }
+					},
+					{
+						id: "fran",
+						traits: { glasses: false, hat: true, beard: false }
+					},
+					{
+						id: "gus",
+						traits: { glasses: false, hat: false, beard: true }
+					},
+					{
+						id: "hal",
+						traits: { glasses: false, hat: false, beard: false }
+					}
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"simultaneous-step-race": definePreset({
 		id: "simultaneous-step-race",
 		name: "Simultaneous Step Race",

@@ -44,10 +44,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M25 | Next missing mechanism (Guess Who trait-disjunction / OR) | `done` |
 | M26 | Next missing mechanism (hex replace capture) | `done` |
 | M27 | Next missing mechanism (graph replace capture) | `done` |
+| M28 | Next missing mechanism (compoundArity / 3-clause AND) | `done` |
 
-**Optimizing for this marathon:** M27 graph replace capture closed. Pick **P3
-next-missing-mechanism** (e.g. richer phases, 3+ clause AND, hop-ball) or
-**P4** CI / semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M28 compoundArity / Guess Who And3 Lite
+closed. Pick **P3 next-missing-mechanism** (e.g. richer phases, hop-ball,
+simultaneous deduction) or **P4** CI / semantics refresh — without asking
+which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -75,8 +77,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M27 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M27) — smallest new seam — or
+   (P0–P2 / M8–M28 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M28) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -118,9 +120,10 @@ Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/
 on rectangle | hex_offset | graph.
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
 `identify_secret`, query + guess), **Guess Who Commit Lite**
-(`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`), and
+(`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`),
 **Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction),
-**Guess Who Or Lite** (`queryShape: or` — 2-clause trait disjunction).
+**Guess Who Or Lite** (`queryShape: or` — 2-clause trait disjunction),
+**Guess Who And3 Lite** (`compoundArity: 3` — 3-clause AND).
 
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement** (incl.
@@ -133,13 +136,14 @@ sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→mov
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire**), **query +
 guess / identify_secret** + **manual eliminate** (`autoEliminate: false`) +
 **trait-conjunction queries** (`queryShape: and`) + **trait-disjunction
-queries** (`queryShape: or`).
+queries** (`queryShape: or`) + **N-clause compounds** (`compoundArity`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
 Replace Race, **Hex Replace Race**, **Graph Replace Race**, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
-Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
+Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**,
+**Guess Who And3 Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
@@ -348,6 +352,16 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
   **done**
 - Out of scope: hop-ball; multi-jump / capture chains; simultaneous graph
   replace demos (mechanism unlocked via shared legality)
+
+### M28 — Compound arity / 3-clause AND
+
+- Schema `deduction.compoundArity` (default 2; ≤ traits.length) for
+  `queryShape` and|or — **done**
+- Kernel/reducer validate exact arity + distinct traits;
+  `enumerateCompoundQueries` — **done**
+- Preset `guess-who-and3-lite` (3 traits × arity 3; 8 legal queries) +
+  transcript/replay + prune-≠-2-clause tests — **done**
+- Out of scope: simultaneous deduction; hop-ball; fire→move reorder
 
 ## Sequencing notes
 

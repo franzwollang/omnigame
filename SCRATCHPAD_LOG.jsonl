@@ -78,3 +78,4 @@
 {"ts":"2026-08-02T04:45-00:00","focus":"M26 hex replace","summary":"Synced efd3; unlocked replace on hex_offset + Hex Replace Race; 444 green","next":"Pick graph replace/phases/3+AND or P4 CI/semantics"}
 {"ts":"2026-08-02T05:20-00:00","focus":"M27 graph replace","summary":"Synced 6ac1; unlocked replace on graph + Graph Replace Race; ready for green gate","next":"Pick richer phases/3+AND/hop-ball or P4 CI/semantics"}
 {"ts":"2026-08-02T05:25-00:00","focus":"M27 graph replace","summary":"Green gate 449; typecheck+test pass after graph replace unlock","next":"Pick richer phases/3+AND/hop-ball or P4 CI/semantics"}
+{"ts":"2026-08-02T05:40-00:00","focus":"M28 compoundArity","summary":"Landed 3-clause AND via compoundArity + And3 Lite preset","next":"Pick next seam or P4 CI/semantics"}

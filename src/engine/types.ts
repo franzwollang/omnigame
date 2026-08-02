@@ -248,7 +248,7 @@ export type QueryEvent = {
 	/** Single-trait atom (queryShape single). */
 	trait?: string;
 	value?: boolean;
-	/** Two-clause compound (queryShape and | or). */
+	/** Multi-clause compound (queryShape and | or; length = compoundArity). */
 	clauses?: QueryClause[];
 };
 

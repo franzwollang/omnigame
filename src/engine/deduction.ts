@@ -197,36 +197,68 @@ export function candidatesInconsistentWithQueryDisjunction(
 }
 
 /**
- * Enumerate 2-clause compound queries over distinct traits (AND or OR configs).
+ * Enumerate k-clause compound queries over distinct traits (AND or OR configs).
+ * For n traits and arity k: C(n,k) × 2^k boolean combinations.
+ */
+export function enumerateCompoundQueries(
+	traits: readonly string[],
+	arity: number
+): Array<{ type: "query"; clauses: QueryClause[] }> {
+	const out: Array<{ type: "query"; clauses: QueryClause[] }> = [];
+	if (arity < 2 || arity > traits.length) return out;
+
+	const chosen: string[] = [];
+	const choose = (start: number) => {
+		if (chosen.length === arity) {
+			const n = arity;
+			const total = 1 << n;
+			for (let mask = 0; mask < total; mask++) {
+				const clauses: QueryClause[] = [];
+				for (let i = 0; i < n; i++) {
+					clauses.push({
+						trait: chosen[i]!,
+						value: (mask & (1 << i)) !== 0
+					});
+				}
+				out.push({ type: "query", clauses });
+			}
+			return;
+		}
+		for (let i = start; i < traits.length; i++) {
+			chosen.push(traits[i]!);
+			choose(i + 1);
+			chosen.pop();
+		}
+	};
+	choose(0);
+	return out;
+}
+
+/**
+ * Enumerate 2-clause compound queries (default compoundArity).
  * For n traits: C(n,2) × 4 boolean combinations.
  */
 export function enumerateTwoClauseQueries(
 	traits: readonly string[]
-): Array<{ type: "query"; clauses: [QueryClause, QueryClause] }> {
-	const out: Array<{ type: "query"; clauses: [QueryClause, QueryClause] }> =
-		[];
-	for (let i = 0; i < traits.length; i++) {
-		for (let j = i + 1; j < traits.length; j++) {
-			const a = traits[i]!;
-			const b = traits[j]!;
-			for (const va of [true, false] as const) {
-				for (const vb of [true, false] as const) {
-					out.push({
-						type: "query",
-						clauses: [
-							{ trait: a, value: va },
-							{ trait: b, value: vb }
-						]
-					});
-				}
-			}
-		}
-	}
-	return out;
+): Array<{ type: "query"; clauses: QueryClause[] }> {
+	return enumerateCompoundQueries(traits, 2);
 }
 
 /** @deprecated Prefer {@link enumerateTwoClauseQueries} (shared by and/or). */
 export const enumerateConjunctionQueries = enumerateTwoClauseQueries;
+
+/** True when clauses have distinct traits, length === arity, all in allowed set. */
+export function validCompoundClauses(
+	clauses: readonly QueryClause[],
+	traits: readonly string[],
+	arity: number
+): boolean {
+	if (clauses.length !== arity || arity < 2) return false;
+	const names = clauses.map((c) => c.trait);
+	if (new Set(names).size !== names.length) return false;
+	const allowed = new Set(traits);
+	return clauses.every((c) => allowed.has(c.trait));
+}
 
 /** Compact fingerprint for a query action or lastQuery payload. */
 export function formatQueryFingerprint(q: {

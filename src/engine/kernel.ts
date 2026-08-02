@@ -38,8 +38,9 @@ import {
 	movementBoardFrom
 } from "@/engine/movement";
 import {
-	enumerateTwoClauseQueries,
-	formatQueryFingerprint
+	enumerateCompoundQueries,
+	formatQueryFingerprint,
+	validCompoundClauses
 } from "@/engine/deduction";
 import {
 	allActivePositions,
@@ -724,7 +725,11 @@ function collectLegalActions(
 	if (inputMode === "deduction" && config.deduction) {
 		const shape = config.deduction.queryShape ?? "single";
 		if (shape === "and" || shape === "or") {
-			for (const q of enumerateTwoClauseQueries(config.deduction.traits)) {
+			const arity = config.deduction.compoundArity ?? 2;
+			for (const q of enumerateCompoundQueries(
+				config.deduction.traits,
+				arity
+			)) {
 				actions.push(q);
 			}
 		} else {
@@ -1325,7 +1330,11 @@ export function explainKernelAction(
 			const shape = config.deduction.queryShape ?? "single";
 			if (shape === "and" || shape === "or") {
 				const clauses = action.clauses;
-				if (!clauses || clauses.length !== 2) {
+				const arity = config.deduction.compoundArity ?? 2;
+				if (
+					!clauses ||
+					!validCompoundClauses(clauses, config.deduction.traits, arity)
+				) {
 					return {
 						legal: false,
 						reason: "illegal_or_noop",
@@ -1333,22 +1342,6 @@ export function explainKernelAction(
 					};
 				}
 				if (action.trait !== undefined || action.value !== undefined) {
-					return {
-						legal: false,
-						reason: "illegal_or_noop",
-						detail: detailFor("illegal_or_noop", action)
-					};
-				}
-				const [c0, c1] = clauses;
-				if (!c0 || !c1 || c0.trait === c1.trait) {
-					return {
-						legal: false,
-						reason: "illegal_or_noop",
-						detail: detailFor("illegal_or_noop", action)
-					};
-				}
-				const allowed = new Set(config.deduction.traits);
-				if (!allowed.has(c0.trait) || !allowed.has(c1.trait)) {
 					return {
 						legal: false,
 						reason: "illegal_or_noop",
