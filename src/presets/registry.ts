@@ -2285,6 +2285,58 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"double-simultaneous-step-race": definePreset({
+		id: "double-simultaneous-step-race",
+		name: "Double Simultaneous Step Race",
+		tags: [
+			"move",
+			"reach-row",
+			"simultaneous",
+			"actionsPerTurn",
+			"multi-action",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Each seat submits two orthogonal steps per simultaneous round; indexed pairs resolve jointly with mid-round reach_row checks. Same-piece chains allowed (to of step 1 = from of step 2). Unlocks actionsPerTurn > 1 under simultaneous move — not commitReveal, not sliding/replace.",
+		config: {
+			metadata: { name: "Double Simultaneous Step Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				actionsPerTurn: 2
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "double-runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "double-runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hidden-simultaneous-step-race": definePreset({
 		id: "hidden-simultaneous-step-race",
 		name: "Hidden Simultaneous Step Race",

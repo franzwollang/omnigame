@@ -3,13 +3,19 @@
  * commitReveal fresh-round plans (evaluated as simultaneousPlace /
  * simultaneousMove / simultaneousQuery / simultaneousGuess /
  * simultaneousEliminate).
- * Budget 1: scalar cartesian. Budget > 1: ordered distinct place tuples.
- * Deduction: kind-matched query×query + guess×guess + eliminate×eliminate
- * (budget 1; commitReveal maps commit* → open joints including commitEliminate
- * and commitMove).
+ * Budget 1: scalar cartesian. Budget > 1: ordered distinct place tuples or
+ * chained move sequences. Deduction: kind-matched query×query + guess×guess +
+ * eliminate×eliminate (budget 1; commitReveal maps commit* → open joints
+ * including commitEliminate and commitMove).
  */
-import type { GameState } from "@/engine/types";
-import { asPlacementList, pendingFingerprint } from "@/engine/types";
+import type { GameState, Grid, Player } from "@/engine/types";
+import {
+	asMoveList,
+	asPlacementList,
+	getCell,
+	pendingFingerprint,
+	setCell
+} from "@/engine/types";
 import type {
 	GameKernel,
 	KernelAction,
@@ -19,12 +25,19 @@ import {
 	jointEliminateFromActions,
 	jointGuessFromActions,
 	jointMoveFromActions,
+	jointMovesFromActions,
 	jointPlaceFromActions,
 	jointPlacesFromActions,
 	jointQueryFromActions,
 	playerOf
 } from "@/engine/kernel";
 import { formatQueryFingerprint } from "@/engine/deduction";
+import {
+	canMove,
+	legalDestinations,
+	movementBoardFrom
+} from "@/engine/movement";
+import { allActivePositions } from "@/engine/topology";
 
 /**
  * Open simultaneous place/move/deduction — joint cartesian is searchable
@@ -107,6 +120,62 @@ export function orderedDistinctPlaceTuples(
 	return out;
 }
 
+/**
+ * Ordered length-`budget` move chains for one seat, simulating solo sequential
+ * applies (same-piece chaining). Joint resolve still revalidates indexed pairs.
+ */
+export function orderedMoveChains(
+	kernel: GameKernel,
+	state: GameState,
+	player: PlayerId,
+	budget: number
+): KernelAction[][] {
+	if (budget <= 0) return [];
+	const seat: Player = playerOf(player);
+	const movement = kernel.config.movement;
+	if (!movement) return [];
+	const board = movementBoardFrom(kernel.config);
+	const out: KernelAction[][] = [];
+
+	const rec = (grid: Grid, picked: KernelAction[]) => {
+		if (picked.length === budget) {
+			out.push([...picked]);
+			return;
+		}
+		for (const from of allActivePositions(
+			grid,
+			kernel.config.topology ?? "rectangle",
+			kernel.config.graph
+		)) {
+			if (getCell(grid, from) !== seat) continue;
+			for (const to of legalDestinations(grid, from, movement, board)) {
+				if (!canMove(grid, from, to, seat, movement, board)) continue;
+				const action: KernelAction = { type: "move", from, to };
+				// Reject duplicate pairs within the chain.
+				if (
+					picked.some(
+						(p) =>
+							p.type === "move" &&
+							p.from.row === from.row &&
+							p.from.col === from.col &&
+							p.to.row === to.row &&
+							p.to.col === to.col
+					)
+				) {
+					continue;
+				}
+				let cells = setCell(grid, from, null);
+				cells = setCell({ ...grid, cells }, to, seat);
+				picked.push(action);
+				rec({ ...grid, cells }, picked);
+				picked.pop();
+			}
+		}
+	};
+	rec(state.grid, []);
+	return out;
+}
+
 function commitPlacesAsPlaceActions(
 	commits: readonly KernelAction[]
 ): KernelAction[] {
@@ -181,6 +250,20 @@ function enumeratePlaceJointsFromSeatPlaces(
 	return out;
 }
 
+function enumerateMoveJointsFromChains(
+	chains0: readonly KernelAction[][],
+	chains1: readonly KernelAction[][]
+): KernelAction[] {
+	const out: KernelAction[] = [];
+	for (const xs of chains0) {
+		for (const os of chains1) {
+			const joint = jointMovesFromActions(xs, os);
+			if (joint) out.push(joint);
+		}
+	}
+	return out;
+}
+
 /**
  * Kind-matched cartesian for simultaneous deduction:
  * query×query → `simultaneousQuery`, guess×guess → `simultaneousGuess`,
@@ -236,6 +319,12 @@ export function enumerateJointLegalActions(
 		return enumerateDeductionJointsFromSeatActions(a0, a1);
 	}
 	const budget = kernel.config.actionsPerTurn ?? 1;
+	if ((kernel.config.inputMode ?? "cell") === "move" && budget > 1) {
+		return enumerateMoveJointsFromChains(
+			orderedMoveChains(kernel, state, 0, budget),
+			orderedMoveChains(kernel, state, 1, budget)
+		);
+	}
 	return enumeratePlaceJointsFromSeatPlaces(a0, a1, budget);
 }
 
@@ -268,8 +357,8 @@ export function enumerateCommitRevealJoints(
 
 /**
  * Extract the per-seat atomic action from a joint place/move/query/guess/
- * eliminate for sandbox dual-`act`. `index` selects which place in a
- * multi-action array (default 0; ignored for move/query/guess/eliminate).
+ * eliminate for sandbox dual-`act`. `index` selects which place/move in a
+ * multi-action array (default 0; ignored for query/guess/eliminate).
  */
 export function seatComponentFromJoint(
 	joint: KernelAction,
@@ -284,8 +373,9 @@ export function seatComponentFromJoint(
 		return { type: "place", position: list[index]! };
 	}
 	if (joint.type === "simultaneousMove") {
-		if (index !== 0) return null;
-		const m = player === 0 ? joint.moves.X : joint.moves.O;
+		const list = asMoveList(player === 0 ? joint.moves.X : joint.moves.O);
+		if (index < 0 || index >= list.length) return null;
+		const m = list[index]!;
 		return { type: "move", from: m.from, to: m.to };
 	}
 	if (joint.type === "simultaneousQuery") {
@@ -334,8 +424,9 @@ export function seatCommitFromJoint(
 		};
 	}
 	if (joint.type === "simultaneousMove") {
-		if (index !== 0) return null;
-		const m = player === 0 ? joint.moves.X : joint.moves.O;
+		const list = asMoveList(player === 0 ? joint.moves.X : joint.moves.O);
+		if (index < 0 || index >= list.length) return null;
+		const m = list[index]!;
 		return {
 			type: "commitMove",
 			player: playerOf(player),
@@ -379,8 +470,8 @@ export function seatCommitFromJoint(
 }
 
 /**
- * How many atomic picks a joint encodes per seat (1 for moves / scalar place /
- * query / guess / eliminate).
+ * How many atomic picks a joint encodes per seat (1 for scalar move / place /
+ * query / guess / eliminate; N for multi-action place or move arrays).
  */
 export function jointSeatBudget(joint: KernelAction): number {
 	if (joint.type === "simultaneousPlace") {
@@ -389,8 +480,13 @@ export function jointSeatBudget(joint: KernelAction): number {
 			asPlacementList(joint.placements.O).length
 		);
 	}
+	if (joint.type === "simultaneousMove") {
+		return Math.max(
+			asMoveList(joint.moves.X).length,
+			asMoveList(joint.moves.O).length
+		);
+	}
 	if (
-		joint.type === "simultaneousMove" ||
 		joint.type === "simultaneousQuery" ||
 		joint.type === "simultaneousGuess" ||
 		joint.type === "simultaneousEliminate"

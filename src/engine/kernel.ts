@@ -7,11 +7,14 @@
 import { Effect } from "effect";
 import type { GameState, Player, Position, QueryClause } from "@/engine/types";
 import {
+	asMoveList,
 	asPlacementList,
 	getCell,
 	isCellPending,
 	listHasPosition,
-	positionsEqual
+	movesEqual,
+	positionsEqual,
+	type MovePair
 } from "@/engine/types";
 import {
 	createInitialState,
@@ -72,8 +75,8 @@ export type KernelAction =
 	| {
 			type: "simultaneousMove";
 			moves: {
-				X: { from: Position; to: Position };
-				O: { from: Position; to: Position };
+				X: MovePair | MovePair[];
+				O: MovePair | MovePair[];
 			};
 	  }
 	| {
@@ -272,9 +275,13 @@ function formatAction(action: KernelAction): string {
 			return `joint place X${xPart} O${oPart}`;
 		}
 		case "simultaneousMove": {
-			const fmt = (m: { from: Position; to: Position }) =>
+			const xs = asMoveList(action.moves.X);
+			const os = asMoveList(action.moves.O);
+			const fmt = (m: MovePair) =>
 				`(${m.from.row},${m.from.col})→(${m.to.row},${m.to.col})`;
-			return `joint move X${fmt(action.moves.X)} O${fmt(action.moves.O)}`;
+			const xPart = xs.map(fmt).join("+");
+			const oPart = os.map(fmt).join("+");
+			return `joint move X${xPart} O${oPart}`;
 		}
 		case "simultaneousQuery":
 			return `joint query X${formatQueryFingerprint(action.queries.X)} O${formatQueryFingerprint(action.queries.O)}`;
@@ -462,15 +469,20 @@ function applyStep(
 		config.movement?.capture === "replace"
 	) {
 		const resolveOrder = config.resolveOrder ?? "joint";
+		// Multi-action + replace is schema-forbidden; normalize to scalar pairs.
+		const moves = {
+			X: asMoveList(action.moves.X)[0]!,
+			O: asMoveList(action.moves.O)[0]!
+		};
 		if (resolveOrder === "joint") {
 			for (const seat of ["X", "O"] as const) {
-				const m = action.moves[seat];
+				const m = moves[seat];
 				const prior = getCell(state.grid, m.to);
 				if (prior !== "X" && prior !== "O") continue;
 				if (prior === seat) continue;
 				// Fleeing piece: opponent left this cell in the same round — not a capture.
 				const opp = prior;
-				const oppMove = action.moves[opp];
+				const oppMove = moves[opp];
 				const oppFled =
 					oppMove.from.row === m.to.row && oppMove.from.col === m.to.col;
 				if (oppFled) continue;
@@ -488,13 +500,11 @@ function applyStep(
 			const second: "X" | "O" = first === "X" ? "O" : "X";
 			let sim = state.grid;
 			for (const seat of [first, second] as const) {
-				const m = action.moves[seat];
+				const m = moves[seat];
 				if (getCell(sim, m.from) !== seat) continue;
 				const dest = getCell(sim, m.to);
 				const isEnemy = (dest === "X" || dest === "O") && dest !== seat;
-				const sameDest =
-					action.moves.X.to.row === action.moves.O.to.row &&
-					action.moves.X.to.col === action.moves.O.to.col;
+				const sameDest = positionsEqual(moves.X.to, moves.O.to);
 				if (dest !== null) {
 					if (!isEnemy) continue;
 					if (sameDest && seat === second) continue;
@@ -1493,7 +1503,7 @@ export function explainKernelAction(
 
 	// Joint move: joint resolve uses vacated-origin path checks (incl. replace
 	// slides through fleeing blockers); ordered uses sequential path / capture
-	// revalidation.
+	// revalidation. Multi-action: indexed pairs revalidated on post-prior board.
 	if (action.type === "simultaneousMove") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
 			return {
@@ -1512,27 +1522,71 @@ export function explainKernelAction(
 		}
 		const board = movementBoardFrom(config);
 		const resolveOrder = config.resolveOrder ?? "joint";
-		const ok =
-			resolveOrder === "joint"
-				? canJointSimultaneousMoves(
-						state.grid,
-						action.moves,
-						movement,
-						board
-					)
-				: canOrderedSimultaneousMoves(
-						state.grid,
-						action.moves,
-						movement,
-						resolveOrder,
-						board
-					);
-		if (ok) return { legal: true };
-		return {
-			legal: false,
-			reason: "invalid_destination",
-			detail: detailFor("invalid_destination", action)
-		};
+		const budget = config.actionsPerTurn ?? 1;
+		const xs = asMoveList(action.moves.X);
+		const os = asMoveList(action.moves.O);
+		if (xs.length !== budget || os.length !== budget) {
+			return {
+				legal: false,
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
+			};
+		}
+		for (let i = 0; i < xs.length; i++) {
+			for (let j = i + 1; j < xs.length; j++) {
+				if (movesEqual(xs[i]!, xs[j]!)) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			}
+		}
+		for (let i = 0; i < os.length; i++) {
+			for (let j = i + 1; j < os.length; j++) {
+				if (movesEqual(os[i]!, os[j]!)) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			}
+		}
+		// Probe sequential legality the same way the reducer applies.
+		let probeGrid = state.grid;
+		for (let i = 0; i < budget; i++) {
+			const pair = { X: xs[i]!, O: os[i]! };
+			const ok =
+				resolveOrder === "joint"
+					? canJointSimultaneousMoves(probeGrid, pair, movement, board)
+					: canOrderedSimultaneousMoves(
+							probeGrid,
+							pair,
+							movement,
+							resolveOrder,
+							board
+						);
+			if (!ok) {
+				return {
+					legal: false,
+					reason: "invalid_destination",
+					detail: detailFor("invalid_destination", action)
+				};
+			}
+			const after = reduce(
+				{ ...state, grid: probeGrid, status: "playing" },
+				{
+					type: "simultaneousMove",
+					moves: { X: pair.X, O: pair.O }
+				},
+				{ ...config, actionsPerTurn: 1 }
+			);
+			probeGrid = after.grid;
+			if (after.status !== "playing") break;
+		}
+		return { legal: true };
 	}
 
 	// Joint query: both seat queries must match queryShape and be legal.
@@ -2357,13 +2411,14 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		}
 		case "simultaneousMove": {
 			if (b.type !== "simultaneousMove") return false;
-			const moveEq = (
-				m: { from: Position; to: Position },
-				n: { from: Position; to: Position }
-			) =>
-				positionsEqual(m.from, n.from) && positionsEqual(m.to, n.to);
+			const aX = asMoveList(a.moves.X);
+			const aO = asMoveList(a.moves.O);
+			const bX = asMoveList(b.moves.X);
+			const bO = asMoveList(b.moves.O);
+			if (aX.length !== bX.length || aO.length !== bO.length) return false;
 			return (
-				moveEq(a.moves.X, b.moves.X) && moveEq(a.moves.O, b.moves.O)
+				aX.every((m, i) => movesEqual(m, bX[i]!)) &&
+				aO.every((m, i) => movesEqual(m, bO[i]!))
 			);
 		}
 		case "simultaneousQuery": {
@@ -2509,6 +2564,33 @@ export function jointEliminateFromActions(
 	return {
 		type: "simultaneousEliminate",
 		eliminations: { X: action0.id, O: action1.id }
+	};
+}
+
+/**
+ * Build a multi-action simultaneous move from N move actions per seat.
+ * Lengths must match; returns null on mismatch or non-move actions.
+ */
+export function jointMovesFromActions(
+	actions0: readonly KernelAction[],
+	actions1: readonly KernelAction[]
+): KernelAction | null {
+	if (actions0.length === 0 || actions0.length !== actions1.length) return null;
+	const xs: MovePair[] = [];
+	const os: MovePair[] = [];
+	for (let i = 0; i < actions0.length; i++) {
+		const a = actions0[i]!;
+		const b = actions1[i]!;
+		if (a.type !== "move" || b.type !== "move") return null;
+		xs.push({ from: a.from, to: a.to });
+		os.push({ from: b.from, to: b.to });
+	}
+	return {
+		type: "simultaneousMove",
+		moves: {
+			X: xs.length === 1 ? xs[0]! : xs,
+			O: os.length === 1 ? os[0]! : os
+		}
 	};
 }
 
@@ -2709,11 +2791,11 @@ export function createGameKernel(config: GameConfig): GameKernel {
 
 /**
  * Advance one decision ply: alternating single action, or simultaneous joint
- * place when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
+ * place/move when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
  * `legalActions` for the given player (called once, or twice when joint).
  * Under commitReveal, picks commits until each seat fills its per-round budget
  * (final commit auto-reveals). Under open multi-action simultaneous, picks
- * `actionsPerTurn` places per seat then joint-resolves.
+ * `actionsPerTurn` places or chained moves per seat then joint-resolves.
  */
 export function stepPly(
 	kernel: GameKernel,
@@ -2811,7 +2893,46 @@ export function stepPly(
 			if (!a0 || !a1) return null;
 			return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
 		}
-		// Multi-action open simultaneous: collect N distinct places per seat.
+		// Multi-action open simultaneous: collect N places or chained moves per seat.
+		if ((kernel.config.inputMode ?? "cell") === "move") {
+			const pickNMoves = (pid: PlayerId): KernelAction[] | null => {
+				const seat = playerOf(pid);
+				const movement = kernel.config.movement;
+				if (!movement) return null;
+				const board = movementBoardFrom(kernel.config);
+				let grid = state.grid;
+				const picked: KernelAction[] = [];
+				for (let i = 0; i < budget; i++) {
+					const legal: KernelAction[] = [];
+					for (const from of allActivePositions(
+						grid,
+						kernel.config.topology ?? "rectangle",
+						kernel.config.graph
+					)) {
+						if (getCell(grid, from) !== seat) continue;
+						for (const to of legalDestinations(grid, from, movement, board)) {
+							if (canMove(grid, from, to, seat, movement, board)) {
+								legal.push({ type: "move", from, to });
+							}
+						}
+					}
+					const action = pickFor(pid, legal);
+					if (!action || action.type !== "move") return null;
+					// Solo-apply for chain continuation (joint may still conflict).
+					let cells = setCell(grid, action.from, null);
+					cells = setCell({ ...grid, cells }, action.to, seat);
+					grid = { ...grid, cells };
+					picked.push(action);
+				}
+				return picked;
+			};
+			const xs = pickNMoves(0);
+			const os = pickNMoves(1);
+			if (!xs || !os) return null;
+			const joint = jointMovesFromActions(xs, os);
+			if (!joint) return null;
+			return kernel.stepSync(state, joint, seed);
+		}
 		const pickN = (pid: PlayerId): KernelAction[] | null => {
 			const picked: KernelAction[] = [];
 			const used = new Set<string>();

@@ -439,7 +439,7 @@ export const Contracts = {
 	}),
 	/**
 	 * Multi-action simultaneous rounds (actionsPerTurn > 1 under simultaneous).
-	 * Each seat submits N places; joint resolve applies indexed pairs.
+	 * Each seat submits N places or N moves; joint resolve applies indexed pairs.
 	 */
 	ScheduleMultiActionSimultaneous: (): FeatureContract => ({
 		id: "ScheduleMultiActionSimultaneous",

@@ -12,13 +12,16 @@ import type {
 	QueryEvent
 } from "./types";
 import {
+	asMoveList,
 	asPlacementList,
 	getCell,
 	isCellPending,
 	listHasPosition,
+	movesEqual,
 	positionsEqual,
 	setCell,
-	toIndex
+	toIndex,
+	type MovePair
 } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
@@ -1243,10 +1246,7 @@ function handleSimultaneousPlace(
 	};
 }
 
-export type SimultaneousMovePair = {
-	from: Position;
-	to: Position;
-};
+export type SimultaneousMovePair = MovePair;
 
 /**
  * Apply one simultaneous move pair onto `grid` (joint or ordered).
@@ -1310,7 +1310,10 @@ function applySimultaneousMovePair(
 }
 
 /**
- * Simultaneous schedule + move input: both seats submit one {from,to}.
+ * Simultaneous schedule + move input: both seats submit one {from,to} (scalar)
+ * or N moves each (`actionsPerTurn` > 1). Arrays apply indexed pairs as
+ * sequential sub-steps with win checks after each — unlike place, each index
+ * is revalidated on the post-prior-step board so same-piece chains work.
  * Joint resolve validates on a vacated-origin board (sliding path integrity,
  * including joint + replace: fleeing blockers clear the ray; stationary
  * capture targets remain). Ordered resolve validates first seat pre-round,
@@ -1318,11 +1321,14 @@ function applySimultaneousMovePair(
  * revalidation). Same destination under joint → neither; ordered → first seat
  * wins the cell when both claim it. Ordered replace may overwrite enemies;
  * priority can capture before prey flees.
- * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
+ * After each sub-step, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(
 	state: GameState,
-	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
+	moves: {
+		X: SimultaneousMovePair | SimultaneousMovePair[];
+		O: SimultaneousMovePair | SimultaneousMovePair[];
+	},
 	config: GameConfig
 ): GameState {
 	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
@@ -1334,99 +1340,134 @@ function handleSimultaneousMove(
 	const board = movementBoardFrom(config);
 	const wrap = board.wrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
+	const budget = resolveActionsPerTurn(config);
+	const xs = asMoveList(moves.X);
+	const os = asMoveList(moves.O);
 
-	const legal =
-		resolveOrder === "joint"
-			? canJointSimultaneousMoves(state.grid, moves, movement, board)
-			: canOrderedSimultaneousMoves(
-					state.grid,
-					moves,
-					movement,
-					resolveOrder,
-					board
-				);
-	if (!legal) {
-		return state;
+	if (xs.length !== budget || os.length !== budget) return state;
+
+	// Within-seat duplicate {from,to} pairs are illegal for the whole joint.
+	for (let i = 0; i < xs.length; i++) {
+		for (let j = i + 1; j < xs.length; j++) {
+			if (movesEqual(xs[i]!, xs[j]!)) return state;
+		}
+	}
+	for (let i = 0; i < os.length; i++) {
+		for (let j = i + 1; j < os.length; j++) {
+			if (movesEqual(os[i]!, os[j]!)) return state;
+		}
 	}
 
-	const applied = applySimultaneousMovePair(
-		state.grid,
-		moves,
-		resolveOrder,
-		movement.capture ?? "none"
-	);
-	const workingGrid = applied.grid;
-	const nextBase: GameState = {
+	let workingGrid = state.grid;
+	const clearedCommits = { committedMoves: undefined as undefined };
+
+	for (let i = 0; i < budget; i++) {
+		const pair = { X: xs[i]!, O: os[i]! };
+		const legal =
+			resolveOrder === "joint"
+				? canJointSimultaneousMoves(workingGrid, pair, movement, board)
+				: canOrderedSimultaneousMoves(
+						workingGrid,
+						pair,
+						movement,
+						resolveOrder,
+						board
+					);
+		if (!legal) {
+			return state;
+		}
+
+		const applied = applySimultaneousMovePair(
+			workingGrid,
+			pair,
+			resolveOrder,
+			movement.capture ?? "none"
+		);
+		workingGrid = applied.grid;
+
+		const nextBase: GameState = {
+			...state,
+			...clearedCommits,
+			grid: workingGrid,
+			moveCount: state.moveCount + 1
+		};
+
+		const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
+		if (!shouldCheckWin) {
+			if (i === budget - 1) return nextBase;
+			continue;
+		}
+
+		if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
+			const xTarget = config.targetRows?.X;
+			const oTarget = config.targetRows?.O;
+			const xWins =
+				applied.applied.X &&
+				xTarget != null &&
+				pair.X.to.row === xTarget &&
+				getCell(workingGrid, pair.X.to) === "X";
+			const oWins =
+				applied.applied.O &&
+				oTarget != null &&
+				pair.O.to.row === oTarget &&
+				getCell(workingGrid, pair.O.to) === "O";
+			if (xWins && oWins) {
+				return { ...nextBase, status: "draw", winner: null };
+			}
+			if (xWins) {
+				return { ...nextBase, status: "won", winner: "X" };
+			}
+			if (oWins) {
+				return { ...nextBase, status: "won", winner: "O" };
+			}
+			if (i === budget - 1) return nextBase;
+			continue;
+		}
+
+		if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
+			const topology = config.topology ?? "rectangle";
+			const xWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"X",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			const oWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"O",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			if (xWins && oWins) {
+				return { ...nextBase, status: "draw", winner: null };
+			}
+			if (xWins) {
+				return { ...nextBase, status: "won", winner: "X" };
+			}
+			if (oWins) {
+				return { ...nextBase, status: "won", winner: "O" };
+			}
+		}
+
+		if (i === budget - 1) return nextBase;
+	}
+
+	return {
 		...state,
+		...clearedCommits,
 		grid: workingGrid,
-		moveCount: state.moveCount + 1,
-		committedMoves: undefined
+		moveCount: state.moveCount + 1
 	};
-
-	const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
-	if (!shouldCheckWin) return nextBase;
-
-	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
-		const xTarget = config.targetRows?.X;
-		const oTarget = config.targetRows?.O;
-		const xWins =
-			applied.applied.X &&
-			xTarget != null &&
-			moves.X.to.row === xTarget &&
-			getCell(workingGrid, moves.X.to) === "X";
-		const oWins =
-			applied.applied.O &&
-			oTarget != null &&
-			moves.O.to.row === oTarget &&
-			getCell(workingGrid, moves.O.to) === "O";
-		if (xWins && oWins) {
-			return { ...nextBase, status: "draw", winner: null };
-		}
-		if (xWins) {
-			return { ...nextBase, status: "won", winner: "X" };
-		}
-		if (oWins) {
-			return { ...nextBase, status: "won", winner: "O" };
-		}
-		return nextBase;
-	}
-
-	if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
-		const topology = config.topology ?? "rectangle";
-		const xWins = Boolean(
-			checkWinner(
-				workingGrid,
-				"X",
-				config.winLength,
-				config.adjacency,
-				topology,
-				config.graph,
-				wrap
-			)
-		);
-		const oWins = Boolean(
-			checkWinner(
-				workingGrid,
-				"O",
-				config.winLength,
-				config.adjacency,
-				topology,
-				config.graph,
-				wrap
-			)
-		);
-		if (xWins && oWins) {
-			return { ...nextBase, status: "draw", winner: null };
-		}
-		if (xWins) {
-			return { ...nextBase, status: "won", winner: "X" };
-		}
-		if (oWins) {
-			return { ...nextBase, status: "won", winner: "O" };
-		}
-	}
-
-	return nextBase;
 }
 
 /**

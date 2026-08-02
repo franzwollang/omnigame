@@ -8,6 +8,7 @@ import {
 	createGameKernel,
 	formatKernelEvent,
 	jointMoveFromActions,
+	jointMovesFromActions,
 	jointPlaceFromActions,
 	jointPlacesFromActions,
 	type GameKernel,
@@ -17,7 +18,11 @@ import {
 	type PlayerId,
 	type Seed
 } from "@/engine/kernel";
-import { listHasPosition, positionsEqual } from "@/engine/types";
+import { listHasPosition, positionsEqual, setCell, type MovePair } from "@/engine/types";
+import {
+	canMove,
+	movementBoardFrom
+} from "@/engine/movement";
 import {
 	createInitialTurnContext,
 	type TurnContext
@@ -42,15 +47,20 @@ function turnContextFor(state: GameState): TurnContext {
 }
 
 export type PendingPlacements = Partial<Record<Player, Position[]>>;
-export type PendingMoves = Partial<
-	Record<Player, { from: Position; to: Position }>
->;
+export type PendingMoves = Partial<Record<Player, MovePair[]>>;
 
 function commitLen(
 	commits: GameState["committedPlacements"],
 	player: Player
 ): number {
 	return commits?.[player]?.length ?? 0;
+}
+
+function pendingMoveLen(
+	pending: PendingMoves,
+	player: Player
+): number {
+	return pending[player]?.length ?? 0;
 }
 
 export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
@@ -185,8 +195,8 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				if (!state.committedMoves?.O) return "O";
 				return null;
 			}
-			if (!pendingMoves.X) return "X";
-			if (!pendingMoves.O) return "O";
+			if (pendingMoveLen(pendingMoves, "X") < actionsPerRound) return "X";
+			if (pendingMoveLen(pendingMoves, "O") < actionsPerRound) return "O";
 			return null;
 		}
 		if (commitReveal) {
@@ -259,15 +269,28 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 					setSelectedFrom(null);
 					return;
 				}
-				const seat: Player | null = !pendingMovesRef.current.X
-					? "X"
-					: !pendingMovesRef.current.O
-						? "O"
-						: null;
+				const seat: Player | null =
+					pendingMoveLen(pendingMovesRef.current, "X") < actionsPerRound
+						? "X"
+						: pendingMoveLen(pendingMovesRef.current, "O") < actionsPerRound
+							? "O"
+							: null;
 				if (!seat) return;
 				const selected = selectedFromRef.current;
 				const occupant = getCell(stateRef.current.grid, pos);
+				const ownPending = pendingMovesRef.current[seat] ?? [];
 				if (!selected) {
+					// Continue a chain from the last submitted destination when possible.
+					if (ownPending.length > 0) {
+						const lastTo = ownPending[ownPending.length - 1]!.to;
+						if (positionsEqual(lastTo, pos) || occupant === seat) {
+							selectedFromRef.current = positionsEqual(lastTo, pos)
+								? lastTo
+								: pos;
+							setSelectedFrom(selectedFromRef.current);
+						}
+						return;
+					}
 					if (occupant === seat) {
 						selectedFromRef.current = pos;
 						setSelectedFrom(pos);
@@ -279,43 +302,80 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 					setSelectedFrom(null);
 					return;
 				}
-				if (occupant === seat) {
+				if (occupant === seat && ownPending.length === 0) {
 					selectedFromRef.current = pos;
 					setSelectedFrom(pos);
 					return;
 				}
-				const moveAction: KernelAction = {
-					type: "move",
-					from: selected,
-					to: pos
-				};
-				const explained = kernel.explainAction(
-					stateRef.current,
-					seat === "X" ? 0 : 1,
-					moveAction
-				);
-				if (!explained.legal) {
+				// Validate against a board with this seat's prior pending moves applied solo.
+				let probe = stateRef.current.grid;
+				for (const prior of ownPending) {
+					let cells = setCell(probe, prior.from, null);
+					cells = setCell({ ...probe, cells }, prior.to, seat);
+					probe = { ...probe, cells };
+				}
+				const movement = config.movement;
+				const moveOk =
+					!!movement &&
+					canMove(
+						probe,
+						selected,
+						pos,
+						seat,
+						movement,
+						movementBoardFrom(config)
+					);
+				if (!moveOk) {
 					setLastIllegal({
-						reason: explained.reason,
-						detail: explained.detail
+						reason: "invalid_destination",
+						detail: "Illegal move for this simultaneous round"
 					});
 					return;
 				}
 				setLastIllegal(null);
+				const nextOwn = [...ownPending, { from: selected, to: pos }];
 				const nextPending: PendingMoves = {
 					...pendingMovesRef.current,
-					[seat]: { from: selected, to: pos }
+					[seat]: nextOwn
 				};
 				pendingMovesRef.current = nextPending;
 				setPendingMoves(nextPending);
 				selectedFromRef.current = null;
 				setSelectedFrom(null);
-				if (nextPending.X && nextPending.O) {
-					const joint = jointMoveFromActions(
-						{ type: "move", from: nextPending.X.from, to: nextPending.X.to },
-						{ type: "move", from: nextPending.O.from, to: nextPending.O.to }
-					);
+				const nx = pendingMoveLen(nextPending, "X");
+				const no = pendingMoveLen(nextPending, "O");
+				if (nx === actionsPerRound && no === actionsPerRound) {
+					const joint =
+						actionsPerRound <= 1
+							? jointMoveFromActions(
+									{
+										type: "move",
+										from: nextPending.X![0]!.from,
+										to: nextPending.X![0]!.to
+									},
+									{
+										type: "move",
+										from: nextPending.O![0]!.from,
+										to: nextPending.O![0]!.to
+									}
+								)
+							: jointMovesFromActions(
+									nextPending.X!.map((m) => ({
+										type: "move" as const,
+										from: m.from,
+										to: m.to
+									})),
+									nextPending.O!.map((m) => ({
+										type: "move" as const,
+										from: m.from,
+										to: m.to
+									}))
+								);
 					if (joint) applyAction(joint);
+				} else if (nextOwn.length < actionsPerRound) {
+					// Auto-select landing cell to continue a same-piece chain.
+					selectedFromRef.current = pos;
+					setSelectedFrom(pos);
 				}
 				return;
 			}
@@ -483,6 +543,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		},
 		[
 			applyAction,
+			config,
 			config.observationMode,
 			config.inputMode,
 			config.turnPhases,

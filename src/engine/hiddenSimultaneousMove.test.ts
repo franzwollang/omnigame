@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compileConfig, compileToGameConfig } from "@/compiler";
 import { zConfig } from "@/schemas/config";
 import { examplePresets } from "@/presets/registry";
-import { getCell, toIndex } from "@/engine/types";
+import { getCell, toIndex, asMoveList } from "@/engine/types";
 import {
 	stepPly,
 	type KernelAction
@@ -301,27 +301,31 @@ describe("agents: commitReveal move joints", () => {
 		);
 		const state = kernel.initialState();
 		const joints = enumerateCommitRevealJoints(kernel, state);
-		const joint = joints.find(
-			(j) =>
-				j.type === "simultaneousMove" &&
-				j.moves.X.from.row === 4 &&
-				j.moves.X.from.col === 2 &&
-				j.moves.X.to.row === 3 &&
-				j.moves.X.to.col === 2
-		);
+		const joint = joints.find((j) => {
+			if (j.type !== "simultaneousMove") return false;
+			const x = asMoveList(j.moves.X)[0]!;
+			return (
+				x.from.row === 4 &&
+				x.from.col === 2 &&
+				x.to.row === 3 &&
+				x.to.col === 2
+			);
+		});
 		expect(joint?.type).toBe("simultaneousMove");
 		if (joint?.type !== "simultaneousMove") throw new Error("expected joint");
+		const xMove = asMoveList(joint.moves.X)[0]!;
+		const oMove = asMoveList(joint.moves.O)[0]!;
 		expect(seatCommitFromJoint(joint, 0)).toEqual({
 			type: "commitMove",
 			player: "X",
-			from: joint.moves.X.from,
-			to: joint.moves.X.to
+			from: xMove.from,
+			to: xMove.to
 		});
 		expect(seatCommitFromJoint(joint, 1)).toEqual({
 			type: "commitMove",
 			player: "O",
-			from: joint.moves.O.from,
-			to: joint.moves.O.to
+			from: oMove.from,
+			to: oMove.to
 		});
 	});
 });

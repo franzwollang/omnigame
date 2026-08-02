@@ -4,7 +4,7 @@
  * live state matches a prior tree node.
  */
 import type { GameState } from "@/engine/types";
-import { asPlacementList, pendingFingerprint } from "@/engine/types";
+import { asMoveList, asPlacementList, pendingFingerprint } from "@/engine/types";
 import type {
 	GameKernel,
 	KernelAction,
@@ -101,7 +101,9 @@ export function actionKey(action: KernelAction): string {
 		case "simultaneousMove": {
 			const fmt = (m: { from: { row: number; col: number }; to: { row: number; col: number } }) =>
 				`${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`;
-			return `jointMove:${fmt(action.moves.X)}|${fmt(action.moves.O)}`;
+			const xs = asMoveList(action.moves.X);
+			const os = asMoveList(action.moves.O);
+			return `jointMove:${xs.map(fmt).join("+")}|${os.map(fmt).join("+")}`;
 		}
 		case "simultaneousQuery":
 			return `jointQuery:${formatQueryFingerprint(action.queries.X)}|${formatQueryFingerprint(action.queries.O)}`;

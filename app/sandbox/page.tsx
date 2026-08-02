@@ -649,10 +649,10 @@ export default function GamePage() {
 											: select {simultaneousSeat ?? "X"}&apos;s piece then
 											destination
 											{pendingMoves.X
-												? ` (X ${pendingMoves.X.from.row},${pendingMoves.X.from.col}→${pendingMoves.X.to.row},${pendingMoves.X.to.col})`
+												? ` (X ${pendingMoves.X.map((m) => `${m.from.row},${m.from.col}→${m.to.row},${m.to.col}`).join("+")})`
 												: ""}
 											{pendingMoves.O
-												? ` (O ${pendingMoves.O.from.row},${pendingMoves.O.from.col}→${pendingMoves.O.to.row},${pendingMoves.O.to.col})`
+												? ` (O ${pendingMoves.O.map((m) => `${m.from.row},${m.from.col}→${m.to.row},${m.to.col}`).join("+")})`
 												: ""}
 											; same destination →{" "}
 											{resolveOrder === "joint"

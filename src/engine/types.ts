@@ -117,8 +117,8 @@ export type GameState = {
 	committedPlacements?: Partial<Record<Player, Position[]>>;
 	/**
 	 * Hidden simultaneous move: per-seat private {from,to} commit. Cleared after
-	 * joint reveal (`simultaneousMove`). Budget is always 1 under simultaneous
-	 * move (actionsPerTurn > 1 forbidden).
+	 * joint reveal (`simultaneousMove`). Budget is always 1 under commitReveal
+	 * move (multi-action open simultaneous move is separate).
 	 */
 	committedMoves?: Partial<Record<Player, { from: Position; to: Position }>>;
 	/**
@@ -173,8 +173,23 @@ export function asPlacementList(
 	return Array.isArray(p) ? [...p] : [p];
 }
 
+/** One simultaneous move relocation. */
+export type MovePair = { from: Position; to: Position };
+
+/** Normalize a simultaneous move payload to a move-pair list. */
+export function asMoveList(
+	m: MovePair | readonly MovePair[] | undefined
+): MovePair[] {
+	if (!m) return [];
+	return Array.isArray(m) ? [...m] : [m];
+}
+
 export function positionsEqual(a: Position, b: Position): boolean {
 	return a.row === b.row && a.col === b.col;
+}
+
+export function movesEqual(a: MovePair, b: MovePair): boolean {
+	return positionsEqual(a.from, b.from) && positionsEqual(a.to, b.to);
 }
 
 /** True when `list` already contains `pos`. */
@@ -238,12 +253,15 @@ export type SimultaneousPlaceEvent = {
 	};
 };
 
-/** Joint move round: both seats submit one {from,to} relocation. */
+/**
+ * Joint move round: both seats submit one {from,to} (scalar) or N moves each
+ * for multi-action simultaneous rounds (`actionsPerTurn` > 1).
+ */
 export type SimultaneousMoveEvent = {
 	type: "simultaneousMove";
 	moves: {
-		X: { from: Position; to: Position };
-		O: { from: Position; to: Position };
+		X: MovePair | MovePair[];
+		O: MovePair | MovePair[];
 	};
 };
 

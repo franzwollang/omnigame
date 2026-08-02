@@ -61,7 +61,7 @@ export const zConfig = z
 				/**
 				 * Actions before schedule handoff: under alternating, successful
 				 * places before the opponent's turn; under simultaneous, places
-				 * each seat submits per joint round (move rounds are always 1). Default 1.
+				 * or moves each seat submits per joint round. Default 1.
 				 */
 				actionsPerTurn: z.number().int().min(1).max(8).optional(),
 				/**
@@ -989,15 +989,9 @@ export const zConfig = z
 			if (simMove) {
 				// reach_row pairing enforced below with moveInput !== reachRow
 				// Topology-aware movement: rectangle | hex_offset | graph
-				// commitReveal allowed (Hidden Simultaneous Step Race / commitMove).
-				if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["turn", "actionsPerTurn"],
-						message:
-							"simultaneous move does not support actionsPerTurn > 1"
-					});
-				}
+				// commitReveal allowed (Hidden Simultaneous Step Race / commitMove)
+				// at budget 1; multi-action open simultaneous move is gated in the
+				// multiStep block below (range 1, no replace, no commitReveal).
 				// Joint simultaneous sliding / replace: vacated-origin paths
 				// (stationary enemies stay; fleers clear the ray).
 				// Ordered simultaneous: sequential path / capture revalidation.
@@ -1031,10 +1025,11 @@ export const zConfig = z
 						"placement.delayTurns > 0 requires turn.schedule = 'alternating' (not simultaneous)"
 				});
 			}
-			// Multi-action simultaneous place (actionsPerTurn > 1) is allowed on
-			// rectangle | hex_offset | graph — same topologies as single-action
-			// simultaneous place. Alternating multi-step uses the same topologies.
-			// Simultaneous move is single-action on rectangle | hex_offset | graph.
+			// Multi-action simultaneous place/move (actionsPerTurn > 1) is allowed
+			// on rectangle | hex_offset | graph — same topologies as single-action
+			// simultaneous. Alternating multi-step uses the same topologies.
+			// Multi-action simultaneous move: open joint only, range 1, no replace
+			// (see multiStep block).
 		} else if (cfg.turn.commitReveal === true) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
@@ -1067,66 +1062,137 @@ export const zConfig = z
 						"actionsPerTurn > 1 requires turn.schedule = 'alternating' or 'simultaneous'"
 				});
 			}
-			if (cfg.objective.mode !== "n_in_a_row") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["objective", "mode"],
-					message: "actionsPerTurn > 1 requires objective.mode = 'n_in_a_row'"
-				});
-			}
-			if (cfg.input.mode !== "cell") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "actionsPerTurn > 1 requires input.mode = 'cell'"
-				});
-			}
-			if (gravityImplied || captureEnabled) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["placement"],
-					message:
-						"actionsPerTurn > 1 requires direct placement without capture/gravity"
-				});
-			}
-			if (hitMiss) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["observation", "mode"],
-					message: "actionsPerTurn > 1 is incompatible with hit_miss observation"
-				});
-			}
-			if (fog) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["observation", "mode"],
-					message: "actionsPerTurn > 1 is incompatible with fog observation"
-				});
-			}
-			if (moveInput) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message: "actionsPerTurn > 1 is incompatible with move input"
-				});
-			}
-			if (cfg.fleet) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["fleet"],
-					message: "actionsPerTurn > 1 is incompatible with fleet placement"
-				});
-			}
-			// Alternating multi-step and simultaneous multi-action both allow
-			// rectangle | hex_offset | graph (same topologies as single-action
-			// place / simultaneous). Other topology gates stay above.
-			if (delayedPlace) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["placement", "delayTurns"],
-					message:
-						"actionsPerTurn > 1 is incompatible with placement.delayTurns > 0"
-				});
+
+			const multiActionSimMove =
+				cfg.turn.schedule === "simultaneous" && moveInput;
+
+			if (multiActionSimMove) {
+				// Open simultaneous multi-move: reach_row + range-1 + no replace.
+				if (cfg.turn.commitReveal === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "commitReveal"],
+						message:
+							"actionsPerTurn > 1 under simultaneous move is incompatible with commitReveal (open joint only)"
+					});
+				}
+				if (cfg.objective.mode !== "reach_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"actionsPerTurn > 1 under simultaneous move requires objective.mode = 'reach_row'"
+					});
+				}
+				if (cfg.movement && cfg.movement.range !== 1) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "range"],
+						message:
+							"actionsPerTurn > 1 under simultaneous move requires movement.range = 1 (sliding deferred)"
+					});
+				}
+				if (cfg.movement && cfg.movement.capture === "replace") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "capture"],
+						message:
+							"actionsPerTurn > 1 under simultaneous move is incompatible with capture replace (deferred)"
+					});
+				}
+				if (hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"actionsPerTurn > 1 is incompatible with hit_miss observation"
+					});
+				}
+				if (fog) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message: "actionsPerTurn > 1 is incompatible with fog observation"
+					});
+				}
+				if (cfg.fleet) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["fleet"],
+						message: "actionsPerTurn > 1 is incompatible with fleet placement"
+					});
+				}
+				if (delayedPlace) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["placement", "delayTurns"],
+						message:
+							"actionsPerTurn > 1 is incompatible with placement.delayTurns > 0"
+					});
+				}
+			} else {
+				if (cfg.objective.mode !== "n_in_a_row") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message: "actionsPerTurn > 1 requires objective.mode = 'n_in_a_row'"
+					});
+				}
+				if (cfg.input.mode !== "cell") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["input", "mode"],
+						message: "actionsPerTurn > 1 requires input.mode = 'cell'"
+					});
+				}
+				if (gravityImplied || captureEnabled) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["placement"],
+						message:
+							"actionsPerTurn > 1 requires direct placement without capture/gravity"
+					});
+				}
+				if (hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"actionsPerTurn > 1 is incompatible with hit_miss observation"
+					});
+				}
+				if (fog) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message: "actionsPerTurn > 1 is incompatible with fog observation"
+					});
+				}
+				if (moveInput) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["input", "mode"],
+						message: "actionsPerTurn > 1 is incompatible with move input"
+					});
+				}
+				if (cfg.fleet) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["fleet"],
+						message: "actionsPerTurn > 1 is incompatible with fleet placement"
+					});
+				}
+				// Alternating multi-step and simultaneous multi-action place both allow
+				// rectangle | hex_offset | graph (same topologies as single-action
+				// place / simultaneous). Other topology gates stay above.
+				if (delayedPlace) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["placement", "delayTurns"],
+						message:
+							"actionsPerTurn > 1 is incompatible with placement.delayTurns > 0"
+					});
+				}
 			}
 		}
 
