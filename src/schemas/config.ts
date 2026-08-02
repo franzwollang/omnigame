@@ -114,9 +114,10 @@ export const zConfig = z
 		 * (blocker-aware ray walk; range 1 = adjacent only).
 		 * `capture: "replace"` — move onto enemy clears occupant then lands
 		 * (rectangle + move input; path empty except destination).
-		 * Joint simultaneous + replace is allowed at range 1 (real-board
-		 * legality so capture targets stay visible). Ordered replace and
-		 * simultaneous slide+replace are deferred.
+		 * Simultaneous + replace is allowed at range 1: joint uses real-board
+		 * legality so capture targets stay visible; ordered uses sequential
+		 * capture apply (priority can capture before prey flees). Simultaneous
+		 * slide+replace (range > 1) remains deferred.
 		 * Joint simultaneous + range > 1 uses vacated-origin path checks;
 		 * ordered simultaneous + range > 1 uses sequential path revalidation.
 		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
@@ -915,19 +916,10 @@ export const zConfig = z
 				}
 				// Joint simultaneous sliding uses vacated-origin path checks.
 				// Ordered simultaneous sliding uses sequential path revalidation.
-				// Joint replace (range 1) uses real-board legality; ordered /
-				// slide+replace remain deferred.
+				// Simultaneous replace (range 1): joint = real-board legality;
+				// ordered = sequential capture apply. Slide+replace deferred.
 				if (cfg.movement?.capture === "replace") {
 					const range = cfg.movement.range ?? 1;
-					const resolveOrder = cfg.turn.resolveOrder ?? "joint";
-					if (resolveOrder !== "joint") {
-						ctx.addIssue({
-							code: z.ZodIssueCode.custom,
-							path: ["movement", "capture"],
-							message:
-								"movement.capture = 'replace' under simultaneous requires resolveOrder = 'joint' (ordered replace deferred)"
-						});
-					}
 					if (range > 1) {
 						ctx.addIssue({
 							code: z.ZodIssueCode.custom,

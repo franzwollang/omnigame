@@ -273,6 +273,8 @@ export function canJointSimultaneousMoves(
  * simulating the first seat's move (sequential path revalidation).
  * Same-destination conflict: both paths must be legal on the pre-round board
  * (apply gives the cell to the first seat).
+ * Replace: if first captures the piece second is moving, second is treated as
+ * a legal noop (apply will skip them) so priority can capture before flee.
  */
 export function canOrderedSimultaneousMoves(
 	grid: Grid,
@@ -314,6 +316,16 @@ export function canOrderedSimultaneousMoves(
 			config,
 			wrapOrBoard
 		);
+	}
+
+	// Priority capture of the piece second is moving — second becomes a noop.
+	if (
+		config.capture === "replace" &&
+		firstMove.to.row === secondMove.from.row &&
+		firstMove.to.col === secondMove.from.col
+	) {
+		const prior = getCell(grid, firstMove.to);
+		if (prior === second) return true;
 	}
 
 	let cells = setCell(grid, firstMove.from, null);

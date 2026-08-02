@@ -120,7 +120,8 @@ export const Contracts = {
 		invariants: [
 			"replaceClearsEnemyThenLands",
 			"pathEmptyExceptDestination",
-			"jointSimultaneousReplaceUsesRealBoardLegality"
+			"jointSimultaneousReplaceUsesRealBoardLegality",
+			"orderedSimultaneousReplaceSequentialCaptureApply"
 		]
 	}),
 	PlacementDirect: (): FeatureContract => ({
@@ -371,6 +372,7 @@ export const Contracts = {
 	 * Ordered simultaneous resolve (resolveOrder = x_first | o_first). Keeps
 	 * Schedule = simultaneous; earlier seat wins same-cell conflicts.
 	 * Sliding paths revalidated sequentially (first pre-round, second after).
+	 * Replace captures apply sequentially (priority can capture before flee).
 	 */
 	ScheduleOrderedResolve: (): FeatureContract => ({
 		id: "ScheduleOrderedResolve",
@@ -381,7 +383,8 @@ export const Contracts = {
 		invariants: [
 			"sequentialApplyWithinRound",
 			"sameCellConflictFirstSeatWins",
-			"orderedSlideSequentialPathRevalidation"
+			"orderedSlideSequentialPathRevalidation",
+			"orderedReplaceSequentialCaptureApply"
 		]
 	}),
 	/**

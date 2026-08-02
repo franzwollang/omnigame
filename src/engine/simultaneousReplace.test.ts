@@ -3,7 +3,7 @@ import { compileConfig } from "@/compiler";
 import { zConfig } from "@/schemas/config";
 import { examplePresets } from "@/presets/registry";
 import { getCell } from "@/engine/types";
-import { canJointSimultaneousMoves } from "@/engine/movement";
+import { canJointSimultaneousMoves, canOrderedSimultaneousMoves } from "@/engine/movement";
 import { type KernelAction } from "@/engine/kernel";
 import { replayActions } from "@/ir/gameIr";
 import { validateConfig } from "@/engine/validateConfig";
@@ -36,16 +36,10 @@ describe("schema: simultaneous × replace", () => {
 		expect(zConfig.safeParse(bad).success).toBe(false);
 	});
 
-	it("rejects ordered simultaneous + replace", () => {
-		const base = examplePresets["simultaneous-replace-race"].config;
-		const bad = {
-			...base,
-			turn: {
-				...base.turn,
-				resolveOrder: "x_first" as const
-			}
-		};
-		expect(zConfig.safeParse(bad).success).toBe(false);
+	it("accepts ordered simultaneous + replace at range 1", () => {
+		const cfg = examplePresets["ordered-simultaneous-replace-race"].config;
+		expect(zConfig.safeParse(cfg).success).toBe(true);
+		expect(validateConfig(cfg).ok).toBe(true);
 	});
 
 	it("still rejects simultaneous-slide + replace", () => {
@@ -219,6 +213,159 @@ describe("Simultaneous Replace Race", () => {
 		expect(getCell(result.nextState.grid, { row: 1, col: 2 })).toBe("X");
 		expect(getCell(result.nextState.grid, { row: 1, col: 0 })).toBe("O");
 		expect(getCell(result.nextState.grid, { row: 1, col: 1 })).toBeNull();
+		expect(result.nextState.status).toBe("playing");
+	});
+});
+
+describe("canOrderedSimultaneousMoves replace sequential capture", () => {
+	it("x_first allows capture of a fleeing piece (second becomes noop)", () => {
+		const { kernel } = compileConfig(
+			examplePresets["ordered-simultaneous-replace-race"].config
+		);
+		const state = kernel.initialState(42);
+		const moves = {
+			X: { from: { row: 1, col: 2 }, to: { row: 0, col: 2 } },
+			O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+		};
+		expect(
+			canOrderedSimultaneousMoves(state.grid, moves, REPLACE, "x_first")
+		).toBe(true);
+		expect(
+			canOrderedSimultaneousMoves(state.grid, moves, NONE, "x_first")
+		).toBe(false);
+	});
+
+	it("o_first allows flee then land on vacated cell", () => {
+		const { kernel } = compileConfig(
+			examplePresets["ordered-simultaneous-replace-race"].config
+		);
+		const state = kernel.initialState(42);
+		const moves = {
+			X: { from: { row: 1, col: 2 }, to: { row: 0, col: 2 } },
+			O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+		};
+		expect(
+			canOrderedSimultaneousMoves(state.grid, moves, REPLACE, "o_first")
+		).toBe(true);
+	});
+});
+
+describe("Ordered Simultaneous Replace Race", () => {
+	it("compiles with ordered resolve + replace", () => {
+		const cfg = examplePresets["ordered-simultaneous-replace-race"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.movement?.capture).toBe("replace");
+		expect(gameConfig.turnSchedule).toBe("simultaneous");
+		expect(gameConfig.resolveOrder).toBe("x_first");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(getCell(state.grid, { row: 1, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("O");
+	});
+
+	it("x_first: X captures before O flees (pieceCaptured + win)", () => {
+		const cfg = examplePresets["ordered-simultaneous-replace-race"].config;
+		const { kernel } = compileConfig(cfg);
+		const action: Extract<KernelAction, { type: "simultaneousMove" }> = {
+			type: "simultaneousMove",
+			moves: {
+				X: { from: { row: 1, col: 2 }, to: { row: 0, col: 2 } },
+				O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+			}
+		};
+		let state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
+		const result = kernel.stepSync(state, action);
+		expect(
+			result.events.some(
+				(e) =>
+					e.type === "pieceCaptured" &&
+					e.position.row === 0 &&
+					e.position.col === 2 &&
+					e.captured === "O" &&
+					e.by === "X"
+			)
+		).toBe(true);
+		expect(result.events.some((e) => e.type === "terminal")).toBe(true);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 1 })).toBeNull();
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+	});
+
+	it("o_first: O flees before X lands — no pieceCaptured, X still wins row", () => {
+		const cfg = {
+			...examplePresets["ordered-simultaneous-replace-race"].config,
+			turn: {
+				mode: "turn" as const,
+				schedule: "simultaneous" as const,
+				resolveOrder: "o_first" as const
+			}
+		};
+		const { kernel } = compileConfig(cfg);
+		const action: Extract<KernelAction, { type: "simultaneousMove" }> = {
+			type: "simultaneousMove",
+			moves: {
+				X: { from: { row: 1, col: 2 }, to: { row: 0, col: 2 } },
+				O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+			}
+		};
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
+		const result = kernel.stepSync(state, action);
+		expect(result.events.some((e) => e.type === "pieceCaptured")).toBe(
+			false
+		);
+		expect(getCell(result.nextState.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(result.nextState.grid, { row: 0, col: 1 })).toBe("O");
+		expect(result.nextState.status).toBe("won");
+		expect(result.nextState.winner).toBe("X");
+	});
+
+	it("replays the x_first capture-before-flee win faithfully", () => {
+		const cfg = examplePresets["ordered-simultaneous-replace-race"].config;
+		const { gameConfig } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousMove",
+				moves: {
+					X: { from: { row: 1, col: 2 }, to: { row: 0, col: 2 } },
+					O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+				}
+			}
+		];
+		const replay = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 1 })).toBeNull();
+	});
+
+	it("ordered same-dest with replace: first seat wins, second does not capture", () => {
+		const cfg = {
+			...examplePresets["ordered-simultaneous-replace-race"].config,
+			initial: [
+				{ row: 1, col: 2, player: "X" as const, visibility: "public" as const },
+				{ row: 0, col: 2, player: "O" as const, visibility: "public" as const },
+				{ row: 1, col: 0, player: "O" as const, visibility: "public" as const }
+			]
+		};
+		const { kernel } = compileConfig(cfg);
+		const action: Extract<KernelAction, { type: "simultaneousMove" }> = {
+			type: "simultaneousMove",
+			moves: {
+				X: { from: { row: 1, col: 2 }, to: { row: 1, col: 1 } },
+				O: { from: { row: 1, col: 0 }, to: { row: 1, col: 1 } }
+			}
+		};
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
+		const result = kernel.stepSync(state, action);
+		expect(getCell(result.nextState.grid, { row: 1, col: 1 })).toBe("X");
+		expect(getCell(result.nextState.grid, { row: 1, col: 0 })).toBe("O");
+		expect(result.events.some((e) => e.type === "pieceCaptured")).toBe(
+			false
+		);
 		expect(result.nextState.status).toBe("playing");
 	});
 });

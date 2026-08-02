@@ -378,24 +378,56 @@ function applyStep(
 		action.type === "simultaneousMove" &&
 		config.movement?.capture === "replace"
 	) {
-		for (const seat of ["X", "O"] as const) {
-			const m = action.moves[seat];
-			const prior = getCell(state.grid, m.to);
-			if (prior !== "X" && prior !== "O") continue;
-			if (prior === seat) continue;
-			// Fleeing piece: opponent left this cell in the same round — not a capture.
-			const opp = prior;
-			const oppMove = action.moves[opp];
-			const oppFled =
-				oppMove.from.row === m.to.row && oppMove.from.col === m.to.col;
-			if (oppFled) continue;
-			if (getCell(nextState.grid, m.to) !== seat) continue;
-			events.push({
-				type: "pieceCaptured",
-				position: m.to,
-				captured: prior,
-				by: seat
-			});
+		const resolveOrder = config.resolveOrder ?? "joint";
+		if (resolveOrder === "joint") {
+			for (const seat of ["X", "O"] as const) {
+				const m = action.moves[seat];
+				const prior = getCell(state.grid, m.to);
+				if (prior !== "X" && prior !== "O") continue;
+				if (prior === seat) continue;
+				// Fleeing piece: opponent left this cell in the same round — not a capture.
+				const opp = prior;
+				const oppMove = action.moves[opp];
+				const oppFled =
+					oppMove.from.row === m.to.row && oppMove.from.col === m.to.col;
+				if (oppFled) continue;
+				if (getCell(nextState.grid, m.to) !== seat) continue;
+				events.push({
+					type: "pieceCaptured",
+					position: m.to,
+					captured: prior,
+					by: seat
+				});
+			}
+		} else {
+			// Ordered: emit captures in apply order when a seat overwrites an enemy.
+			const first: "X" | "O" = resolveOrder === "x_first" ? "X" : "O";
+			const second: "X" | "O" = first === "X" ? "O" : "X";
+			let sim = state.grid;
+			for (const seat of [first, second] as const) {
+				const m = action.moves[seat];
+				if (getCell(sim, m.from) !== seat) continue;
+				const dest = getCell(sim, m.to);
+				const isEnemy = (dest === "X" || dest === "O") && dest !== seat;
+				const sameDest =
+					action.moves.X.to.row === action.moves.O.to.row &&
+					action.moves.X.to.col === action.moves.O.to.col;
+				if (dest !== null) {
+					if (!isEnemy) continue;
+					if (sameDest && seat === second) continue;
+				}
+				if (isEnemy) {
+					events.push({
+						type: "pieceCaptured",
+						position: m.to,
+						captured: dest,
+						by: seat
+					});
+				}
+				let cells = setCell(sim, m.from, null);
+				cells = setCell({ ...sim, cells }, m.to, seat);
+				sim = { ...sim, cells };
+			}
 		}
 	}
 

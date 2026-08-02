@@ -894,11 +894,15 @@ export type SimultaneousMovePair = {
  * Joint replace: after vacating both chosen origins, landing overwrites any
  * remaining occupant (stationary enemy capture); a fleeing opponent whose
  * origin is the landing cell leaves an empty square.
+ * Ordered replace: enemy destinations may be overwritten; same-dest still
+ * gives the cell to the first seat (second does not capture the fresh lander).
+ * Priority capture of a fleeing piece leaves second unable to apply.
  */
 function applySimultaneousMovePair(
 	grid: Grid,
 	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
-	resolveOrder: "joint" | "x_first" | "o_first"
+	resolveOrder: "joint" | "x_first" | "o_first",
+	capture: "none" | "replace" = "none"
 ): { grid: Grid; conflict: boolean; applied: { X: boolean; O: boolean } } {
 	const sameDest = positionsEqual(moves.X.to, moves.O.to);
 
@@ -926,7 +930,13 @@ function applySimultaneousMovePair(
 	const tryApply = (seat: Player) => {
 		const m = moves[seat];
 		if (getCell(next, m.from) !== seat) return;
-		if (getCell(next, m.to) !== null) return;
+		const dest = getCell(next, m.to);
+		if (dest !== null) {
+			if (capture !== "replace") return;
+			if (dest === seat) return;
+			// Same-dest: first already claimed the cell — second does not capture.
+			if (sameDest && applied[first]) return;
+		}
 		let cells = setCell(next, m.from, null);
 		cells = setCell({ ...next, cells }, m.to, seat);
 		next = { ...next, cells };
@@ -943,9 +953,11 @@ function applySimultaneousMovePair(
  * Joint resolve validates on a vacated-origin board (sliding path integrity),
  * or on the real board when movement.capture = replace (capture targets stay
  * visible). Ordered resolve validates first seat pre-round, then second after
- * simulating the first (sequential path revalidation). Same destination under
- * joint → neither; ordered → first seat wins the cell when both claim it.
- * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
+ * simulating the first (sequential path / capture revalidation). Same
+ * destination under joint → neither; ordered → first seat wins the cell when
+ * both claim it. Ordered replace may overwrite enemies; priority can capture
+ * before prey flees. After resolve, reach_row (or n_in_a_row) win checks;
+ * mutual → draw.
  */
 function handleSimultaneousMove(
 	state: GameState,
@@ -976,7 +988,12 @@ function handleSimultaneousMove(
 		return state;
 	}
 
-	const applied = applySimultaneousMovePair(state.grid, moves, resolveOrder);
+	const applied = applySimultaneousMovePair(
+		state.grid,
+		moves,
+		resolveOrder,
+		movement.capture ?? "none"
+	);
 	const workingGrid = applied.grid;
 	const nextBase: GameState = {
 		...state,
