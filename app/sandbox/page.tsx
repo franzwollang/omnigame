@@ -17,9 +17,12 @@ import { useGameEngine } from "@/engine/useGameEngine";
 import {
 	formatKernelEvent,
 	highlightCellsForActions,
+	jointEliminateFromActions,
+	jointGuessFromActions,
 	jointMoveFromActions,
 	jointPlaceFromActions,
-	jointPlacesFromActions
+	jointPlacesFromActions,
+	jointQueryFromActions
 } from "@/engine/kernel";
 import type { KernelAction, PlayerId } from "@/engine/kernel";
 import { compileToGameConfig } from "@/compiler";
@@ -135,6 +138,11 @@ export default function GamePage() {
 		currentConfig?.turn.schedule === "simultaneous";
 	const enableSimultaneousMove =
 		enableSimultaneous && currentConfig?.input.mode === "move";
+	const enableSimultaneousDeduction =
+		enableSimultaneous && currentConfig?.input.mode === "deduction";
+	const enableJointAgentSearch = enableSimultaneous;
+	const enableCommitRevealDeductionJoint =
+		enableSimultaneousDeduction && commitReveal;
 	const enablePass = currentConfig?.objective.mode === "area_control";
 	const eventLines = useMemo(
 		() => eventLog.map(formatKernelEvent),
@@ -159,6 +167,28 @@ export default function GamePage() {
 		if (side === "simultaneous") {
 			const budget = actionsPerRound;
 			if (commitReveal) {
+				if (enableSimultaneousDeduction) {
+					const seat: PlayerId | null = !gameState.committedDeduction
+						?.X
+						? 0
+						: !gameState.committedDeduction?.O
+							? 1
+							: null;
+					if (seat === null) return;
+					const action = agentRef.current.act(kernel, gameState, seat);
+					if (action) dispatchAction(action);
+					return;
+				}
+				if ((engineConfig.inputMode ?? "cell") === "move") {
+					const xLen = gameState.committedMoves?.X?.length ?? 0;
+					const oLen = gameState.committedMoves?.O?.length ?? 0;
+					const seat: PlayerId | null =
+						xLen < budget ? 0 : oLen < budget ? 1 : null;
+					if (seat === null) return;
+					const action = agentRef.current.act(kernel, gameState, seat);
+					if (action) dispatchAction(action);
+					return;
+				}
 				const xLen = gameState.committedPlacements?.X?.length ?? 0;
 				const oLen = gameState.committedPlacements?.O?.length ?? 0;
 				const seat: PlayerId | null =
@@ -173,7 +203,11 @@ export default function GamePage() {
 				const a1 = agentRef.current.act(kernel, gameState, 1);
 				if (!a0 || !a1) return;
 				const joint =
-					jointPlaceFromActions(a0, a1) ?? jointMoveFromActions(a0, a1);
+					jointPlaceFromActions(a0, a1) ??
+					jointMoveFromActions(a0, a1) ??
+					jointQueryFromActions(a0, a1) ??
+					jointGuessFromActions(a0, a1) ??
+					jointEliminateFromActions(a0, a1);
 				if (joint) dispatchAction(joint);
 				return;
 			}
@@ -543,8 +577,14 @@ export default function GamePage() {
 							<option value="random">random</option>
 							<option value="greedy">greedy</option>
 							<option value="hunt">hunt</option>
-							<option value="mcts">mcts</option>
-							<option value="uct">uct</option>
+							<option value="mcts">
+								mcts
+								{enableJointAgentSearch ? " (joint search)" : ""}
+							</option>
+							<option value="uct">
+								uct
+								{enableJointAgentSearch ? " (joint search)" : ""}
+							</option>
 						</select>
 						<Button
 							variant="outline"
@@ -555,11 +595,30 @@ export default function GamePage() {
 								legalActionsList.length === 0
 							}
 							onClick={stepAgent}
-							title="Play one kernel legal action from the selected agent"
+							title={
+								enableSimultaneous &&
+								(agentKind === "mcts" || agentKind === "uct")
+									? enableCommitRevealDeductionJoint
+										? "Under commitReveal simultaneous deduction, MCTS/UCT search fresh-round joint query/guess/eliminate plans (sequential commitQuery/commitGuess/commitEliminate)"
+										: "Under simultaneous, MCTS/UCT search joint place/move/query/guess/eliminate (open) or commitReveal fresh-round place/move/deduction plans"
+									: "Play one kernel legal action from the selected agent"
+							}
 						>
 							Agent step
 						</Button>
 					</div>
+					{enableSimultaneous &&
+						(agentKind === "mcts" ||
+							agentKind === "uct" ||
+							agentKind === "greedy") && (
+							<p className="mt-1 font-mono text-xs text-muted-foreground">
+								{agentKind === "greedy"
+									? "Greedy skips lookahead under simultaneous (single place/move/query/guess is a no-op until joint)."
+									: enableCommitRevealDeductionJoint
+										? "MCTS/UCT: commitReveal deduction fresh-round joint query/guess/eliminate plan search (sequential commitQuery/commitGuess/commitEliminate)."
+										: "MCTS/UCT: joint place/move/query/guess/eliminate search under open simultaneous (incl. multi-action place); commitReveal fresh-round joint place/move/deduction plan search (sequential commits)."}
+							</p>
+						)}
 					{enableTick && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Life Lite: place cells, then Tick for B3/S23 step
@@ -569,22 +628,42 @@ export default function GamePage() {
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							{enableSimultaneousMove ? (
 								<>
-									Simultaneous move
-									{resolveOrder !== "joint"
-										? ` (${resolveOrder})`
-										: ""}
-									: select {simultaneousSeat ?? "X"}&apos;s piece then
-									destination
-									{pendingMoves.X
-										? ` (X ${pendingMoves.X.from.row},${pendingMoves.X.from.col}→${pendingMoves.X.to.row},${pendingMoves.X.to.col})`
-										: ""}
-									{pendingMoves.O
-										? ` (O ${pendingMoves.O.from.row},${pendingMoves.O.from.col}→${pendingMoves.O.to.row},${pendingMoves.O.to.col})`
-										: ""}
-									; same destination →{" "}
-									{resolveOrder === "joint"
-										? "neither moves"
-										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+									{commitReveal ? (
+										<>
+											Hidden simultaneous move
+											{actionsPerRound > 1
+												? ` (${actionsPerRound}/round)`
+												: ""}
+											: select {simultaneousSeat ?? "X"}
+											&apos;s piece then destination (own commit
+											destination
+											{actionsPerRound > 1 ? "s" : ""} overlaid;
+											opponent hidden); board reveals when both fill
+											budget; same destination →{" "}
+											{resolveOrder === "joint"
+												? "neither moves"
+												: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+										</>
+									) : (
+										<>
+											Simultaneous move
+											{resolveOrder !== "joint"
+												? ` (${resolveOrder})`
+												: ""}
+											: select {simultaneousSeat ?? "X"}&apos;s piece then
+											destination
+											{pendingMoves.X
+												? ` (X ${pendingMoves.X.map((m) => `${m.from.row},${m.from.col}→${m.to.row},${m.to.col}`).join("+")})`
+												: ""}
+											{pendingMoves.O
+												? ` (O ${pendingMoves.O.map((m) => `${m.from.row},${m.from.col}→${m.to.row},${m.to.col}`).join("+")})`
+												: ""}
+											; same destination →{" "}
+											{resolveOrder === "joint"
+												? "neither moves"
+												: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+										</>
+									)}
 								</>
 							) : commitReveal ? (
 								<>
@@ -741,7 +820,11 @@ export default function GamePage() {
 							? popOutRow
 							: undefined
 					}
-					inputMode={currentConfig?.input.mode ?? "cell"}
+					inputMode={
+						currentConfig?.input.mode === "deduction"
+							? "cell"
+							: (currentConfig?.input.mode ?? "cell")
+					}
 					topology={currentConfig?.grid.topology ?? "rectangle"}
 					graph={engineConfig.graph}
 					highlightCells={highlightCells}
