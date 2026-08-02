@@ -5,13 +5,18 @@
  * legality probes the reducer / observation rules.
  */
 import { Effect } from "effect";
-import type { GameState, Player, Position } from "@/engine/types";
+import type { GameState, Player, Position, QueryClause } from "@/engine/types";
 import {
+	asMoveList,
 	asPlacementList,
+	applySoloMoves,
 	getCell,
 	isCellPending,
+	listHasMove,
 	listHasPosition,
-	positionsEqual
+	movesEqual,
+	positionsEqual,
+	type MovePair
 } from "@/engine/types";
 import {
 	createInitialState,
@@ -31,10 +36,19 @@ import {
 	usesPlacementPhase
 } from "@/engine/fleet";
 import {
+	canJointSimultaneousMoves,
+	canOrderedSimultaneousMoves,
 	canMove,
+	jumpDestinations,
+	jumpMid,
 	legalDestinations,
 	movementBoardFrom
 } from "@/engine/movement";
+import {
+	enumerateCompoundQueries,
+	formatQueryFingerprint,
+	validCompoundClauses
+} from "@/engine/deduction";
 import {
 	allActivePositions,
 	isActivePosition
@@ -49,6 +63,7 @@ export type KernelAction =
 	| { type: "place"; position: Position }
 	| { type: "move"; from: Position; to: Position }
 	| { type: "fire"; position: Position }
+	| { type: "reveal"; position: Position }
 	| { type: "activateColumn"; col: number }
 	| { type: "activateRow"; row: number }
 	| { type: "popOutColumn"; col: number }
@@ -65,15 +80,51 @@ export type KernelAction =
 	| {
 			type: "simultaneousMove";
 			moves: {
-				X: { from: Position; to: Position };
-				O: { from: Position; to: Position };
+				X: MovePair | MovePair[];
+				O: MovePair | MovePair[];
 			};
+	  }
+	| {
+			type: "simultaneousQuery";
+			queries: {
+				X: { type: "query"; trait?: string; value?: boolean; clauses?: QueryClause[] };
+				O: { type: "query"; trait?: string; value?: boolean; clauses?: QueryClause[] };
+			};
+	  }
+	| {
+			type: "simultaneousGuess";
+			guesses: { X: string; O: string };
+	  }
+	| {
+			type: "simultaneousEliminate";
+			eliminations: { X: string; O: string };
 	  }
 	| {
 			type: "commitPlace";
 			player: Player;
 			position: Position;
-	  };
+	  }
+	| {
+			type: "commitMove";
+			player: Player;
+			from: Position;
+			to: Position;
+	  }
+	| {
+			type: "commitQuery";
+			player: Player;
+			query: {
+				type: "query";
+				trait?: string;
+				value?: boolean;
+				clauses?: QueryClause[];
+			};
+	  }
+	| { type: "commitGuess"; player: Player; id: string }
+	| { type: "commitEliminate"; player: Player; id: string }
+	| { type: "query"; trait?: string; value?: boolean; clauses?: QueryClause[] }
+	| { type: "guess"; id: string }
+	| { type: "eliminate"; id: string };
 
 /** Structured legality failure codes for debug UI / agents. */
 export type IllegalReason =
@@ -111,6 +162,43 @@ export type KernelEvent =
 			position: Position;
 			result: ShotResult;
 			player: Player;
+	  }
+	| {
+			type: "cellsRevealed";
+			positions: Position[];
+			counts: number[];
+			player: Player;
+	  }
+	| {
+			type: "mineHit";
+			position: Position;
+			player: Player;
+	  }
+	| {
+			type: "pieceCaptured";
+			position: Position;
+			captured: Player;
+			by: Player;
+	  }
+	| {
+			type: "queryAnswered";
+			player: Player;
+			trait?: string;
+			value?: boolean;
+			clauses?: QueryClause[];
+			op?: "and" | "or";
+			answer: boolean;
+	  }
+	| {
+			type: "guessResult";
+			player: Player;
+			targetId: string;
+			correct: boolean;
+	  }
+	| {
+			type: "candidateEliminated";
+			player: Player;
+			id: string;
 	  }
 	| { type: "phaseChanged"; phase: "placement" | "combat" }
 	| { type: "tickApplied"; generation: number }
@@ -183,6 +271,8 @@ function formatAction(action: KernelAction): string {
 			return `move (${action.from.row},${action.from.col})→(${action.to.row},${action.to.col})`;
 		case "fire":
 			return `fire (${action.position.row},${action.position.col})`;
+		case "reveal":
+			return `reveal (${action.position.row},${action.position.col})`;
 		case "activateColumn":
 			return `column ${action.col}`;
 		case "activateRow":
@@ -203,12 +293,36 @@ function formatAction(action: KernelAction): string {
 			return `joint place X${xPart} O${oPart}`;
 		}
 		case "simultaneousMove": {
-			const fmt = (m: { from: Position; to: Position }) =>
+			const xs = asMoveList(action.moves.X);
+			const os = asMoveList(action.moves.O);
+			const fmt = (m: MovePair) =>
 				`(${m.from.row},${m.from.col})→(${m.to.row},${m.to.col})`;
-			return `joint move X${fmt(action.moves.X)} O${fmt(action.moves.O)}`;
+			const xPart = xs.map(fmt).join("+");
+			const oPart = os.map(fmt).join("+");
+			return `joint move X${xPart} O${oPart}`;
 		}
+		case "simultaneousQuery":
+			return `joint query X${formatQueryFingerprint(action.queries.X)} O${formatQueryFingerprint(action.queries.O)}`;
+		case "simultaneousGuess":
+			return `joint guess X${action.guesses.X} O${action.guesses.O}`;
+		case "simultaneousEliminate":
+			return `joint eliminate X${action.eliminations.X} O${action.eliminations.O}`;
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
+		case "commitMove":
+			return `commitMove ${action.player} (${action.from.row},${action.from.col})→(${action.to.row},${action.to.col})`;
+		case "commitQuery":
+			return `commitQuery ${action.player} ${formatQueryFingerprint(action.query)}`;
+		case "commitGuess":
+			return `commitGuess ${action.player} ${action.id}`;
+		case "commitEliminate":
+			return `commitEliminate ${action.player} ${action.id}`;
+		case "query":
+			return `query ${formatQueryFingerprint(action)}`;
+		case "guess":
+			return `guess ${action.id}`;
+		case "eliminate":
+			return `eliminate ${action.id}`;
 	}
 }
 
@@ -219,6 +333,23 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: ${formatAction(event.action)}`;
 		case "shotResult":
 			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
+		case "cellsRevealed":
+			return `${event.player}: revealed ${event.positions.length} cell(s)`;
+		case "mineHit":
+			return `${event.player}: mine at (${event.position.row},${event.position.col})`;
+		case "pieceCaptured":
+			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
+		case "queryAnswered":
+			return `${event.player}: query ${formatQueryFingerprint({
+				trait: event.trait,
+				value: event.value,
+				clauses: event.clauses,
+				op: event.op
+			})} → ${event.answer}`;
+		case "guessResult":
+			return `${event.player}: guess ${event.targetId} → ${event.correct ? "correct" : "wrong"}`;
+		case "candidateEliminated":
+			return `${event.player}: eliminate ${event.id}`;
 		case "phaseChanged":
 			return `phase → ${event.phase}`;
 		case "tickApplied":
@@ -240,13 +371,20 @@ function isNoop(before: GameState, after: GameState): boolean {
 		(before.phase ?? "combat") === (after.phase ?? "combat") &&
 		(before.turnPhaseIndex ?? 0) === (after.turnPhaseIndex ?? 0) &&
 		(before.actionsRemaining ?? null) === (after.actionsRemaining ?? null) &&
+		(before.mustContinueFrom?.row ?? null) ===
+			(after.mustContinueFrom?.row ?? null) &&
+		(before.mustContinueFrom?.col ?? null) ===
+			(after.mustContinueFrom?.col ?? null) &&
 		(before.koPoint?.row ?? null) === (after.koPoint?.row ?? null) &&
 		(before.koPoint?.col ?? null) === (after.koPoint?.col ?? null) &&
 		before.grid.cells === after.grid.cells &&
 		before.hidden?.cells === after.hidden?.cells &&
 		before.pendingPlaces === after.pendingPlaces &&
 		before.committedPlacements === after.committedPlacements &&
-		before.positionHistory === after.positionHistory
+		before.committedMoves === after.committedMoves &&
+		before.committedDeduction === after.committedDeduction &&
+		before.positionHistory === after.positionHistory &&
+		before.deduction === after.deduction
 	);
 }
 
@@ -274,7 +412,11 @@ function applyStep(
 	const nextState = reduce(state, action, config);
 	if (isNoop(state, nextState)) {
 		const probePlayer =
-			action.type === "commitPlace"
+			action.type === "commitPlace" ||
+			action.type === "commitMove" ||
+			action.type === "commitQuery" ||
+			action.type === "commitGuess" ||
+			action.type === "commitEliminate"
 				? playerIdOf(action.player)
 				: (config.turnSchedule ?? "alternating") === "simultaneous"
 					? 0
@@ -297,9 +439,17 @@ function applyStep(
 	}
 
 	const actor: Player | "simultaneous" =
-		action.type === "simultaneousPlace" || action.type === "simultaneousMove"
+		action.type === "simultaneousPlace" ||
+		action.type === "simultaneousMove" ||
+		action.type === "simultaneousQuery" ||
+		action.type === "simultaneousGuess" ||
+		action.type === "simultaneousEliminate"
 			? "simultaneous"
-			: action.type === "commitPlace"
+			: 		action.type === "commitPlace" ||
+				  action.type === "commitMove" ||
+				  action.type === "commitQuery" ||
+				  action.type === "commitGuess" ||
+				  action.type === "commitEliminate"
 				? action.player
 				: state.currentPlayer;
 	const events: KernelEvent[] = [
@@ -317,6 +467,327 @@ function applyStep(
 				result: marked,
 				player: state.currentPlayer
 			});
+		}
+	}
+
+	if (action.type === "reveal") {
+		const marked = getCell(nextState.grid, action.position);
+		if (marked === "mine") {
+			events.push({
+				type: "mineHit",
+				position: action.position,
+				player: state.currentPlayer
+			});
+		} else {
+			const positions: Position[] = [];
+			const counts: number[] = [];
+			for (let r = 0; r < nextState.grid.height; r++) {
+				for (let c = 0; c < nextState.grid.width; c++) {
+					const before = getCell(state.grid, { row: r, col: c });
+					const after = getCell(nextState.grid, { row: r, col: c });
+					if (
+						before === null &&
+						typeof after === "number" &&
+						after >= 0 &&
+						after <= 8
+					) {
+						positions.push({ row: r, col: c });
+						counts.push(after);
+					}
+				}
+			}
+			if (positions.length > 0) {
+				events.push({
+					type: "cellsRevealed",
+					positions,
+					counts,
+					player: state.currentPlayer
+				});
+			}
+		}
+	}
+
+	if (
+		action.type === "move" &&
+		config.movement?.capture === "replace" &&
+		actor !== "simultaneous"
+	) {
+		const prior = getCell(state.grid, action.to);
+		if (
+			(prior === "X" || prior === "O") &&
+			prior !== actor &&
+			getCell(nextState.grid, action.to) === actor
+		) {
+			events.push({
+				type: "pieceCaptured",
+				position: action.to,
+				captured: prior,
+				by: actor
+			});
+		}
+	}
+
+	if (
+		action.type === "move" &&
+		config.movement?.capture === "jump" &&
+		actor !== "simultaneous" &&
+		(actor === "X" || actor === "O")
+	) {
+		const mid = jumpMid(action.from, action.to, config.movement);
+		if (mid) {
+			const prior = getCell(state.grid, mid);
+			if (
+				(prior === "X" || prior === "O") &&
+				prior !== actor &&
+				getCell(nextState.grid, mid) === null &&
+				getCell(nextState.grid, action.to) === actor
+			) {
+				events.push({
+					type: "pieceCaptured",
+					position: mid,
+					captured: prior,
+					by: actor
+				});
+			}
+		}
+	}
+
+	if (
+		action.type === "simultaneousMove" &&
+		config.movement?.capture === "replace"
+	) {
+		const resolveOrder = config.resolveOrder ?? "joint";
+		// Multi-action + replace is schema-forbidden; normalize to scalar pairs.
+		const moves = {
+			X: asMoveList(action.moves.X)[0]!,
+			O: asMoveList(action.moves.O)[0]!
+		};
+		if (resolveOrder === "joint") {
+			for (const seat of ["X", "O"] as const) {
+				const m = moves[seat];
+				const prior = getCell(state.grid, m.to);
+				if (prior !== "X" && prior !== "O") continue;
+				if (prior === seat) continue;
+				// Fleeing piece: opponent left this cell in the same round — not a capture.
+				const opp = prior;
+				const oppMove = moves[opp];
+				const oppFled =
+					oppMove.from.row === m.to.row && oppMove.from.col === m.to.col;
+				if (oppFled) continue;
+				if (getCell(nextState.grid, m.to) !== seat) continue;
+				events.push({
+					type: "pieceCaptured",
+					position: m.to,
+					captured: prior,
+					by: seat
+				});
+			}
+		} else {
+			// Ordered: emit captures in apply order when a seat overwrites an enemy.
+			const first: "X" | "O" = resolveOrder === "x_first" ? "X" : "O";
+			const second: "X" | "O" = first === "X" ? "O" : "X";
+			let sim = state.grid;
+			for (const seat of [first, second] as const) {
+				const m = moves[seat];
+				if (getCell(sim, m.from) !== seat) continue;
+				const dest = getCell(sim, m.to);
+				const isEnemy = (dest === "X" || dest === "O") && dest !== seat;
+				const sameDest = positionsEqual(moves.X.to, moves.O.to);
+				if (dest !== null) {
+					if (!isEnemy) continue;
+					if (sameDest && seat === second) continue;
+				}
+				if (isEnemy) {
+					events.push({
+						type: "pieceCaptured",
+						position: m.to,
+						captured: dest,
+						by: seat
+					});
+				}
+				let cells = setCell(sim, m.from, null);
+				cells = setCell({ ...sim, cells }, m.to, seat);
+				sim = { ...sim, cells };
+			}
+		}
+	}
+
+	if (action.type === "query") {
+		const lq = nextState.deduction?.lastQuery;
+		if (lq) {
+			events.push({
+				type: "queryAnswered",
+				player: lq.by,
+				trait: lq.trait,
+				value: lq.value,
+				clauses: lq.clauses,
+				op: lq.op,
+				answer: lq.answer
+			});
+		}
+	}
+
+	if (action.type === "simultaneousQuery") {
+		for (const seat of ["X", "O"] as const) {
+			const lq = nextState.deduction?.lastQueries?.[seat];
+			if (!lq) continue;
+			events.push({
+				type: "queryAnswered",
+				player: lq.by,
+				trait: lq.trait,
+				value: lq.value,
+				clauses: lq.clauses,
+				op: lq.op,
+				answer: lq.answer
+			});
+		}
+	}
+
+	// commitQuery reveal: same queryAnswered events as simultaneousQuery
+	if (
+		action.type === "commitQuery" &&
+		nextState.moveCount > state.moveCount &&
+		nextState.deduction?.lastQueries
+	) {
+		for (const seat of ["X", "O"] as const) {
+			const lq = nextState.deduction.lastQueries[seat];
+			if (!lq) continue;
+			events.push({
+				type: "queryAnswered",
+				player: lq.by,
+				trait: lq.trait,
+				value: lq.value,
+				clauses: lq.clauses,
+				op: lq.op,
+				answer: lq.answer
+			});
+		}
+	}
+
+	if (action.type === "simultaneousGuess") {
+		for (const seat of ["X", "O"] as const) {
+			const opponent: Player = seat === "X" ? "O" : "X";
+			const secretId = state.deduction?.secret[opponent];
+			const correct =
+				secretId !== undefined && secretId === action.guesses[seat];
+			events.push({
+				type: "guessResult",
+				player: seat,
+				targetId: action.guesses[seat],
+				correct
+			});
+		}
+	}
+
+	// commitGuess reveal: emit guessResult from committed pair
+	if (
+		action.type === "commitGuess" &&
+		nextState.moveCount > state.moveCount
+	) {
+		const commits = state.committedDeduction ?? {};
+		const xId =
+			commits.X?.kind === "guess"
+				? commits.X.id
+				: action.player === "X"
+					? action.id
+					: undefined;
+		const oId =
+			commits.O?.kind === "guess"
+				? commits.O.id
+				: action.player === "O"
+					? action.id
+					: undefined;
+		if (xId !== undefined && oId !== undefined) {
+			for (const [seat, targetId] of [
+				["X", xId],
+				["O", oId]
+			] as const) {
+				const opponent: Player = seat === "X" ? "O" : "X";
+				const secretId = state.deduction?.secret[opponent];
+				const correct =
+					secretId !== undefined && secretId === targetId;
+				events.push({
+					type: "guessResult",
+					player: seat,
+					targetId,
+					correct
+				});
+			}
+		}
+	}
+
+	// commitEliminate reveal: emit candidateEliminated from committed pair
+	if (
+		action.type === "commitEliminate" &&
+		nextState.moveCount > state.moveCount
+	) {
+		const commits = state.committedDeduction ?? {};
+		const xId =
+			commits.X?.kind === "eliminate"
+				? commits.X.id
+				: action.player === "X"
+					? action.id
+					: undefined;
+		const oId =
+			commits.O?.kind === "eliminate"
+				? commits.O.id
+				: action.player === "O"
+					? action.id
+					: undefined;
+		if (xId !== undefined && oId !== undefined) {
+			for (const [seat, id] of [
+				["X", xId],
+				["O", oId]
+			] as const) {
+				const before = new Set(state.deduction?.eliminated[seat] ?? []);
+				const after = nextState.deduction?.eliminated[seat] ?? [];
+				if (!before.has(id) && after.includes(id)) {
+					events.push({
+						type: "candidateEliminated",
+						player: seat,
+						id
+					});
+				}
+			}
+		}
+	}
+
+	if (action.type === "guess" && actor !== "simultaneous") {
+		const opponent: Player = actor === "X" ? "O" : "X";
+		const secretId = state.deduction?.secret[opponent];
+		const correct = secretId !== undefined && secretId === action.id;
+		events.push({
+			type: "guessResult",
+			player: actor,
+			targetId: action.id,
+			correct
+		});
+	}
+
+	if (action.type === "eliminate" && actor !== "simultaneous") {
+		const before = new Set(state.deduction?.eliminated[actor] ?? []);
+		const after = nextState.deduction?.eliminated[actor] ?? [];
+		if (!before.has(action.id) && after.includes(action.id)) {
+			events.push({
+				type: "candidateEliminated",
+				player: actor,
+				id: action.id
+			});
+		}
+	}
+
+	if (action.type === "simultaneousEliminate") {
+		for (const seat of ["X", "O"] as const) {
+			const id = action.eliminations[seat];
+			const before = new Set(state.deduction?.eliminated[seat] ?? []);
+			const after = nextState.deduction?.eliminated[seat] ?? [];
+			if (!before.has(id) && after.includes(id)) {
+				events.push({
+					type: "candidateEliminated",
+					player: seat,
+					id
+				});
+			}
 		}
 	}
 
@@ -460,6 +931,31 @@ function canFireCell(
 	return true;
 }
 
+/** Jump-chain continuation: only leaps from mustContinueFrom. */
+function collectJumpChainActions(
+	config: GameConfig,
+	state: GameState,
+	actingPlayer: Player
+): KernelAction[] | null {
+	const chainFrom = state.mustContinueFrom;
+	if (!chainFrom || config.movement?.capture !== "jump") return null;
+	const movement = config.movement;
+	if (!movement) return [];
+	if (getCell(state.grid, chainFrom) !== actingPlayer) return [];
+	const board = movementBoardFrom(config);
+	const actions: KernelAction[] = [];
+	for (const to of jumpDestinations(
+		state.grid,
+		chainFrom,
+		movement,
+		board,
+		actingPlayer
+	)) {
+		actions.push({ type: "move", from: chainFrom, to });
+	}
+	return actions;
+}
+
 function collectLegalActions(
 	config: GameConfig,
 	state: GameState,
@@ -475,8 +971,25 @@ function collectLegalActions(
 	const inputMode = config.inputMode ?? "cell";
 	const overflow = config.overflow ?? "reject";
 	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
+	const floodReveal = (config.observationMode ?? "full") === "flood_reveal";
 	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
 	const actingPlayer = simultaneous ? playerOf(player) : state.currentPlayer;
+
+	const jumpChain = collectJumpChainActions(config, state, actingPlayer);
+	if (jumpChain) return jumpChain;
+
+	if (floodReveal) {
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (getCell(state.grid, position) === null) {
+				actions.push({ type: "reveal", position });
+			}
+		}
+		return actions;
+	}
 
 	if (simultaneous) {
 		const commitReveal = config.commitReveal === true;
@@ -484,10 +997,41 @@ function collectLegalActions(
 		const budget = config.actionsPerTurn ?? 1;
 
 		// Simultaneous move: per-seat {from,to}; compose via stepJoint.
+		// Under commitReveal, emit private commitMove until both seats reveal.
 		if (inputMode === "move") {
 			const movement = config.movement;
 			if (!movement) return [];
 			const board = movementBoardFrom(config);
+			if (commitReveal) {
+				const own = state.committedMoves?.[acting] ?? [];
+				if (own.length >= budget) return [];
+				const probe = applySoloMoves(state.grid, acting, own);
+				for (const from of allActivePositions(
+					probe,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (getCell(probe, from) !== acting) continue;
+					for (const to of legalDestinations(
+						probe,
+						from,
+						movement,
+						board
+					)) {
+						if (!canMove(probe, from, to, acting, movement, board)) {
+							continue;
+						}
+						if (listHasMove(own, { from, to })) continue;
+						actions.push({
+							type: "commitMove",
+							player: acting,
+							from,
+							to
+						});
+					}
+				}
+				return actions;
+			}
 			for (const from of allActivePositions(
 				state.grid,
 				config.topology ?? "rectangle",
@@ -497,6 +1041,100 @@ function collectLegalActions(
 				for (const to of legalDestinations(state.grid, from, movement, board)) {
 					if (canMove(state.grid, from, to, acting, movement, board)) {
 						actions.push({ type: "move", from, to });
+					}
+				}
+			}
+			return actions;
+		}
+
+		// Simultaneous deduction: per-seat query or guess; compose via stepJoint.
+		// Under commitReveal, emit private commits until both seats reveal.
+		if (inputMode === "deduction" && config.deduction) {
+			if (commitReveal) {
+				const own = state.committedDeduction?.[acting];
+				if (own) return [];
+				const opponent: Player = acting === "X" ? "O" : "X";
+				const oppCommit = state.committedDeduction?.[opponent];
+				const allowQuery = !oppCommit || oppCommit.kind === "query";
+				const allowGuess = !oppCommit || oppCommit.kind === "guess";
+				const allowEliminate =
+					config.deduction.autoEliminate === false &&
+					(!oppCommit || oppCommit.kind === "eliminate");
+				if (allowQuery) {
+					const shape = config.deduction.queryShape ?? "single";
+					if (shape === "and" || shape === "or") {
+						const arity = config.deduction.compoundArity ?? 2;
+						for (const q of enumerateCompoundQueries(
+							config.deduction.traits,
+							arity
+						)) {
+							actions.push({
+								type: "commitQuery",
+								player: acting,
+								query: q
+							});
+						}
+					} else {
+						for (const trait of config.deduction.traits) {
+							actions.push({
+								type: "commitQuery",
+								player: acting,
+								query: { type: "query", trait, value: true }
+							});
+							actions.push({
+								type: "commitQuery",
+								player: acting,
+								query: { type: "query", trait, value: false }
+							});
+						}
+					}
+				}
+				if (allowGuess || allowEliminate) {
+					const eliminated = new Set(
+						state.deduction?.eliminated[acting] ?? []
+					);
+					for (const character of config.deduction.roster) {
+						if (!eliminated.has(character.id)) {
+							if (allowGuess) {
+								actions.push({
+									type: "commitGuess",
+									player: acting,
+									id: character.id
+								});
+							}
+							if (allowEliminate) {
+								actions.push({
+									type: "commitEliminate",
+									player: acting,
+									id: character.id
+								});
+							}
+						}
+					}
+				}
+				return actions;
+			}
+			const shape = config.deduction.queryShape ?? "single";
+			if (shape === "and" || shape === "or") {
+				const arity = config.deduction.compoundArity ?? 2;
+				for (const q of enumerateCompoundQueries(
+					config.deduction.traits,
+					arity
+				)) {
+					actions.push(q);
+				}
+			} else {
+				for (const trait of config.deduction.traits) {
+					actions.push({ type: "query", trait, value: true });
+					actions.push({ type: "query", trait, value: false });
+				}
+			}
+			const eliminated = new Set(state.deduction?.eliminated[acting] ?? []);
+			for (const character of config.deduction.roster) {
+				if (!eliminated.has(character.id)) {
+					actions.push({ type: "guess", id: character.id });
+					if (config.deduction.autoEliminate === false) {
+						actions.push({ type: "eliminate", id: character.id });
 					}
 				}
 			}
@@ -545,6 +1183,54 @@ function collectLegalActions(
 		)) {
 			if (canPlaceCell(state, position, config)) {
 				actions.push({ type: "place", position });
+			}
+		}
+		return actions;
+	}
+
+	if (inputMode === "deduction" && config.deduction) {
+		const turnPhases = config.turnPhases;
+		const phase =
+			turnPhases && turnPhases.length > 0
+				? (turnPhases[state.turnPhaseIndex ?? 0] ?? "query")
+				: null;
+		const allowQuery = phase === null || phase === "query";
+		// Eliminate phase also allows guess (commit after hearing the answer).
+		const allowEliminate = phase === null || phase === "eliminate";
+		const allowGuess =
+			phase === null || phase === "eliminate" || phase === "guess";
+
+		if (allowQuery) {
+			const shape = config.deduction.queryShape ?? "single";
+			if (shape === "and" || shape === "or") {
+				const arity = config.deduction.compoundArity ?? 2;
+				for (const q of enumerateCompoundQueries(
+					config.deduction.traits,
+					arity
+				)) {
+					actions.push(q);
+				}
+			} else {
+				for (const trait of config.deduction.traits) {
+					actions.push({ type: "query", trait, value: true });
+					actions.push({ type: "query", trait, value: false });
+				}
+			}
+		}
+		const eliminated = new Set(
+			state.deduction?.eliminated[state.currentPlayer] ?? []
+		);
+		for (const character of config.deduction.roster) {
+			if (!eliminated.has(character.id)) {
+				if (allowGuess) {
+					actions.push({ type: "guess", id: character.id });
+				}
+				if (
+					allowEliminate &&
+					config.deduction.autoEliminate === false
+				) {
+					actions.push({ type: "eliminate", id: character.id });
+				}
 			}
 		}
 		return actions;
@@ -907,6 +1593,13 @@ export function explainKernelAction(
 				detail: detailFor("mode_mismatch", action)
 			};
 		}
+		if ((config.inputMode ?? "cell") === "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
 		const budget = config.actionsPerTurn ?? 1;
 		const xs = asPlacementList(action.placements.X);
 		const os = asPlacementList(action.placements.O);
@@ -942,7 +1635,9 @@ export function explainKernelAction(
 		};
 	}
 
-	// Joint move: both seat moves must be legal on the pre-round board.
+	// Joint move: joint resolve uses vacated-origin path checks (incl. replace
+	// slides through fleeing blockers); ordered uses sequential path / capture
+	// revalidation. Multi-action: indexed pairs revalidated on post-prior board.
 	if (action.type === "simultaneousMove") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
 			return {
@@ -960,27 +1655,187 @@ export function explainKernelAction(
 			};
 		}
 		const board = movementBoardFrom(config);
-		const xOk = canMove(
-			state.grid,
-			action.moves.X.from,
-			action.moves.X.to,
-			"X",
-			movement,
-			board
-		);
-		const oOk = canMove(
-			state.grid,
-			action.moves.O.from,
-			action.moves.O.to,
-			"O",
-			movement,
-			board
-		);
-		if (xOk && oOk) return { legal: true };
+		const resolveOrder = config.resolveOrder ?? "joint";
+		const budget = config.actionsPerTurn ?? 1;
+		const xs = asMoveList(action.moves.X);
+		const os = asMoveList(action.moves.O);
+		if (xs.length !== budget || os.length !== budget) {
+			return {
+				legal: false,
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
+			};
+		}
+		for (let i = 0; i < xs.length; i++) {
+			for (let j = i + 1; j < xs.length; j++) {
+				if (movesEqual(xs[i]!, xs[j]!)) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			}
+		}
+		for (let i = 0; i < os.length; i++) {
+			for (let j = i + 1; j < os.length; j++) {
+				if (movesEqual(os[i]!, os[j]!)) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			}
+		}
+		// Probe sequential legality the same way the reducer applies.
+		let probeGrid = state.grid;
+		for (let i = 0; i < budget; i++) {
+			const pair = { X: xs[i]!, O: os[i]! };
+			const ok =
+				resolveOrder === "joint"
+					? canJointSimultaneousMoves(probeGrid, pair, movement, board)
+					: canOrderedSimultaneousMoves(
+							probeGrid,
+							pair,
+							movement,
+							resolveOrder,
+							board
+						);
+			if (!ok) {
+				return {
+					legal: false,
+					reason: "invalid_destination",
+					detail: detailFor("invalid_destination", action)
+				};
+			}
+			const after = reduce(
+				{ ...state, grid: probeGrid, status: "playing" },
+				{
+					type: "simultaneousMove",
+					moves: { X: pair.X, O: pair.O }
+				},
+				{ ...config, actionsPerTurn: 1 }
+			);
+			probeGrid = after.grid;
+			if (after.status !== "playing") break;
+		}
+		return { legal: true };
+	}
+
+	// Joint query: both seat queries must match queryShape and be legal.
+	if (action.type === "simultaneousQuery") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (!config.deduction) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const shape = config.deduction.queryShape ?? "single";
+		const qOk = (q: {
+			trait?: string;
+			value?: boolean;
+			clauses?: QueryClause[];
+		}) => {
+			if (shape === "and" || shape === "or") {
+				const arity = config.deduction!.compoundArity ?? 2;
+				return (
+					!!q.clauses &&
+					validCompoundClauses(q.clauses, config.deduction!.traits, arity) &&
+					q.trait === undefined &&
+					q.value === undefined
+				);
+			}
+			return (
+				q.trait !== undefined &&
+				q.value !== undefined &&
+				!(q.clauses && q.clauses.length > 0) &&
+				config.deduction!.traits.includes(q.trait)
+			);
+		};
+		if (qOk(action.queries.X) && qOk(action.queries.O)) {
+			return { legal: true };
+		}
 		return {
 			legal: false,
-			reason: "invalid_destination",
-			detail: detailFor("invalid_destination", action)
+			reason: "illegal_or_noop",
+			detail: detailFor("illegal_or_noop", action)
+		};
+	}
+
+	// Joint guess: both ids must be on roster and not already eliminated for that seat.
+	if (action.type === "simultaneousGuess") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (!config.deduction) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+		const xElim = new Set(state.deduction?.eliminated.X ?? []);
+		const oElim = new Set(state.deduction?.eliminated.O ?? []);
+		if (
+			rosterIds.has(action.guesses.X) &&
+			rosterIds.has(action.guesses.O) &&
+			!xElim.has(action.guesses.X) &&
+			!oElim.has(action.guesses.O)
+		) {
+			return { legal: true };
+		}
+		return {
+			legal: false,
+			reason: "illegal_or_noop",
+			detail: detailFor("illegal_or_noop", action)
+		};
+	}
+
+	// Joint eliminate: both ids on roster, not already eliminated, manual mode.
+	if (action.type === "simultaneousEliminate") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (!config.deduction || config.deduction.autoEliminate !== false) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+		const xElim = new Set(state.deduction?.eliminated.X ?? []);
+		const oElim = new Set(state.deduction?.eliminated.O ?? []);
+		if (
+			rosterIds.has(action.eliminations.X) &&
+			rosterIds.has(action.eliminations.O) &&
+			!xElim.has(action.eliminations.X) &&
+			!oElim.has(action.eliminations.O)
+		) {
+			return { legal: true };
+		}
+		return {
+			legal: false,
+			reason: "illegal_or_noop",
+			detail: detailFor("illegal_or_noop", action)
 		};
 	}
 
@@ -1025,7 +1880,193 @@ export function explainKernelAction(
 		return { legal: true };
 	}
 
-	// In-turn phases: place/move/fire must match the active phase
+	if (action.type === "commitMove") {
+		if (
+			!simultaneous ||
+			!config.commitReveal ||
+			(config.inputMode ?? "cell") !== "move"
+		) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (playerIdOf(action.player) !== player) {
+			return {
+				legal: false,
+				reason: "wrong_player",
+				detail: detailFor("wrong_player", action)
+			};
+		}
+		const budget = config.actionsPerTurn ?? 1;
+		const own = state.committedMoves?.[action.player] ?? [];
+		if (own.length >= budget) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		if (listHasMove(own, { from: action.from, to: action.to })) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		const movement = config.movement;
+		if (!movement) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const board = movementBoardFrom(config);
+		const probe = applySoloMoves(state.grid, action.player, own);
+		if (
+			!canMove(
+				probe,
+				action.from,
+				action.to,
+				action.player,
+				movement,
+				board
+			)
+		) {
+			return {
+				legal: false,
+				reason: "invalid_destination",
+				detail: detailFor("invalid_destination", action)
+			};
+		}
+		return { legal: true };
+	}
+
+	if (
+		action.type === "commitQuery" ||
+		action.type === "commitGuess" ||
+		action.type === "commitEliminate"
+	) {
+		if (
+			!simultaneous ||
+			!config.commitReveal ||
+			(config.inputMode ?? "cell") !== "deduction" ||
+			!config.deduction
+		) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (playerIdOf(action.player) !== player) {
+			return {
+				legal: false,
+				reason: "wrong_player",
+				detail: detailFor("wrong_player", action)
+			};
+		}
+		if (state.committedDeduction?.[action.player]) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		const opponent: Player = action.player === "X" ? "O" : "X";
+		const oppCommit = state.committedDeduction?.[opponent];
+		if (action.type === "commitQuery") {
+			if (oppCommit && oppCommit.kind !== "query") {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const shape = config.deduction.queryShape ?? "single";
+			if (shape === "and" || shape === "or") {
+				const arity = config.deduction.compoundArity ?? 2;
+				if (
+					!validCompoundClauses(
+						action.query.clauses ?? [],
+						config.deduction.traits,
+						arity
+					)
+				) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			} else {
+				if (
+					action.query.trait === undefined ||
+					action.query.value === undefined ||
+					!config.deduction.traits.includes(action.query.trait)
+				) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			}
+			return { legal: true };
+		}
+		if (action.type === "commitEliminate") {
+			if (config.deduction.autoEliminate !== false) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (oppCommit && oppCommit.kind !== "eliminate") {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+			const eliminated = new Set(
+				state.deduction?.eliminated[action.player] ?? []
+			);
+			if (!rosterIds.has(action.id) || eliminated.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			return { legal: true };
+		}
+		// commitGuess
+		if (oppCommit && oppCommit.kind !== "guess") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+		const eliminated = new Set(
+			state.deduction?.eliminated[action.player] ?? []
+		);
+		if (!rosterIds.has(action.id) || eliminated.has(action.id)) {
+			return {
+				legal: false,
+				reason: "illegal_or_noop",
+				detail: detailFor("illegal_or_noop", action)
+			};
+		}
+		return { legal: true };
+	}
+
+	// In-turn phases: place/move/fire/query/eliminate/guess must match active phase
 	const turnPhases = config.turnPhases;
 	if (turnPhases && turnPhases.length > 0) {
 		const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
@@ -1044,6 +2085,32 @@ export function explainKernelAction(
 			};
 		}
 		if (action.type === "fire" && phase !== "fire") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "query" && phase !== "query") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "eliminate" && phase !== "eliminate") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		// Guess allowed during eliminate (after answer) or dedicated guess phase
+		if (
+			action.type === "guess" &&
+			phase !== "guess" &&
+			phase !== "eliminate"
+		) {
 			return {
 				legal: false,
 				reason: "wrong_phase",
@@ -1111,6 +2178,144 @@ export function explainKernelAction(
 					legal: false,
 					reason: "own_ship",
 					detail: detailFor("own_ship", action)
+				};
+			}
+			break;
+		}
+		case "reveal": {
+			if ((config.observationMode ?? "full") !== "flood_reveal") {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (getCell(state.grid, action.position) !== null) {
+				return {
+					legal: false,
+					reason: "cell_occupied",
+					detail: detailFor("cell_occupied", action)
+				};
+			}
+			break;
+		}
+		case "query": {
+			if (inputMode !== "deduction" || !config.deduction) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const shape = config.deduction.queryShape ?? "single";
+			if (shape === "and" || shape === "or") {
+				const clauses = action.clauses;
+				const arity = config.deduction.compoundArity ?? 2;
+				if (
+					!clauses ||
+					!validCompoundClauses(clauses, config.deduction.traits, arity)
+				) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+				if (action.trait !== undefined || action.value !== undefined) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			} else {
+				if (action.clauses && action.clauses.length > 0) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+				if (
+					action.trait === undefined ||
+					action.value === undefined ||
+					!config.deduction.traits.includes(action.trait)
+				) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			}
+			break;
+		}
+		case "guess": {
+			if (inputMode !== "deduction" || !config.deduction) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const rosterIds = new Set(
+				config.deduction.roster.map((c) => c.id)
+			);
+			if (!rosterIds.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			const eliminated = new Set(
+				state.deduction?.eliminated[state.currentPlayer] ?? []
+			);
+			if (eliminated.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			break;
+		}
+		case "eliminate": {
+			if (inputMode !== "deduction" || !config.deduction) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (config.deduction.autoEliminate !== false) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const rosterIds = new Set(
+				config.deduction.roster.map((c) => c.id)
+			);
+			if (!rosterIds.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			const eliminatedSeat = simultaneous
+				? playerOf(player)
+				: state.currentPlayer;
+			const eliminated = new Set(
+				state.deduction?.eliminated[eliminatedSeat] ?? []
+			);
+			if (eliminated.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
 				};
 			}
 			break;
@@ -1331,6 +2536,7 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 	switch (a.type) {
 		case "place":
 		case "fire":
+		case "reveal":
 			return (
 				b.type === a.type &&
 				a.position.row === b.position.row &&
@@ -1367,15 +2573,37 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		}
 		case "simultaneousMove": {
 			if (b.type !== "simultaneousMove") return false;
-			const moveEq = (
-				m: { from: Position; to: Position },
-				n: { from: Position; to: Position }
-			) =>
-				positionsEqual(m.from, n.from) && positionsEqual(m.to, n.to);
+			const aX = asMoveList(a.moves.X);
+			const aO = asMoveList(a.moves.O);
+			const bX = asMoveList(b.moves.X);
+			const bO = asMoveList(b.moves.O);
+			if (aX.length !== bX.length || aO.length !== bO.length) return false;
 			return (
-				moveEq(a.moves.X, b.moves.X) && moveEq(a.moves.O, b.moves.O)
+				aX.every((m, i) => movesEqual(m, bX[i]!)) &&
+				aO.every((m, i) => movesEqual(m, bO[i]!))
 			);
 		}
+		case "simultaneousQuery": {
+			if (b.type !== "simultaneousQuery") return false;
+			return (
+				formatQueryFingerprint(a.queries.X) ===
+					formatQueryFingerprint(b.queries.X) &&
+				formatQueryFingerprint(a.queries.O) ===
+					formatQueryFingerprint(b.queries.O)
+			);
+		}
+		case "simultaneousGuess":
+			return (
+				b.type === "simultaneousGuess" &&
+				a.guesses.X === b.guesses.X &&
+				a.guesses.O === b.guesses.O
+			);
+		case "simultaneousEliminate":
+			return (
+				b.type === "simultaneousEliminate" &&
+				a.eliminations.X === b.eliminations.X &&
+				a.eliminations.O === b.eliminations.O
+			);
 		case "commitPlace":
 			return (
 				b.type === "commitPlace" &&
@@ -1383,6 +2611,43 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 				a.position.row === b.position.row &&
 				a.position.col === b.position.col
 			);
+		case "commitMove":
+			return (
+				b.type === "commitMove" &&
+				a.player === b.player &&
+				a.from.row === b.from.row &&
+				a.from.col === b.from.col &&
+				a.to.row === b.to.row &&
+				a.to.col === b.to.col
+			);
+		case "commitQuery":
+			return (
+				b.type === "commitQuery" &&
+				a.player === b.player &&
+				formatQueryFingerprint(a.query) ===
+					formatQueryFingerprint(b.query)
+			);
+		case "commitGuess":
+			return (
+				b.type === "commitGuess" &&
+				a.player === b.player &&
+				a.id === b.id
+			);
+		case "commitEliminate":
+			return (
+				b.type === "commitEliminate" &&
+				a.player === b.player &&
+				a.id === b.id
+			);
+		case "query":
+			return (
+				b.type === "query" &&
+				formatQueryFingerprint(a) === formatQueryFingerprint(b)
+			);
+		case "guess":
+			return b.type === "guess" && a.id === b.id;
+		case "eliminate":
+			return b.type === "eliminate" && a.id === b.id;
 	}
 }
 
@@ -1409,6 +2674,84 @@ export function jointMoveFromActions(
 		moves: {
 			X: { from: action0.from, to: action0.to },
 			O: { from: action1.from, to: action1.to }
+		}
+	};
+}
+
+/** Build a joint query action from two per-player query actions. */
+export function jointQueryFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "query" || action1.type !== "query") return null;
+	return {
+		type: "simultaneousQuery",
+		queries: {
+			X: {
+				type: "query",
+				trait: action0.trait,
+				value: action0.value,
+				clauses: action0.clauses
+			},
+			O: {
+				type: "query",
+				trait: action1.trait,
+				value: action1.value,
+				clauses: action1.clauses
+			}
+		}
+	};
+}
+
+/** Build a joint guess action from two per-player guess actions. */
+export function jointGuessFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "guess" || action1.type !== "guess") return null;
+	return {
+		type: "simultaneousGuess",
+		guesses: { X: action0.id, O: action1.id }
+	};
+}
+
+/** Build a joint eliminate action from two per-player eliminate actions. */
+export function jointEliminateFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "eliminate" || action1.type !== "eliminate") {
+		return null;
+	}
+	return {
+		type: "simultaneousEliminate",
+		eliminations: { X: action0.id, O: action1.id }
+	};
+}
+
+/**
+ * Build a multi-action simultaneous move from N move actions per seat.
+ * Lengths must match; returns null on mismatch or non-move actions.
+ */
+export function jointMovesFromActions(
+	actions0: readonly KernelAction[],
+	actions1: readonly KernelAction[]
+): KernelAction | null {
+	if (actions0.length === 0 || actions0.length !== actions1.length) return null;
+	const xs: MovePair[] = [];
+	const os: MovePair[] = [];
+	for (let i = 0; i < actions0.length; i++) {
+		const a = actions0[i]!;
+		const b = actions1[i]!;
+		if (a.type !== "move" || b.type !== "move") return null;
+		xs.push({ from: a.from, to: a.to });
+		os.push({ from: b.from, to: b.to });
+	}
+	return {
+		type: "simultaneousMove",
+		moves: {
+			X: xs.length === 1 ? xs[0]! : xs,
+			O: os.length === 1 ? os[0]! : os
 		}
 	};
 }
@@ -1464,10 +2807,12 @@ export function highlightCellsForActions(
 		switch (action.type) {
 			case "place":
 			case "fire":
+			case "reveal":
 			case "commitPlace":
 				push(action.position);
 				break;
 			case "move":
+			case "commitMove":
 				if (selected) {
 					if (
 						action.from.row === selected.row &&
@@ -1551,7 +2896,10 @@ export function createGameKernel(config: GameConfig): GameKernel {
 	): Effect.Effect<StepResult> => {
 		const built =
 			jointPlaceFromActions(joint[0], joint[1]) ??
-			jointMoveFromActions(joint[0], joint[1]);
+			jointMoveFromActions(joint[0], joint[1]) ??
+			jointQueryFromActions(joint[0], joint[1]) ??
+			jointGuessFromActions(joint[0], joint[1]) ??
+			jointEliminateFromActions(joint[0], joint[1]);
 		if (!built) {
 			return Effect.sync(() => ({
 				nextState: state,
@@ -1572,8 +2920,11 @@ export function createGameKernel(config: GameConfig): GameKernel {
 
 	return {
 		config,
-		initialState(_seed?: Seed) {
-			return createInitialState(config);
+		initialState(seed?: Seed) {
+			return createInitialState({
+				...config,
+				seed: seed ?? config.seed
+			});
 		},
 		currentPlayer(state) {
 			if ((config.turnSchedule ?? "alternating") === "simultaneous") {
@@ -1603,11 +2954,11 @@ export function createGameKernel(config: GameConfig): GameKernel {
 
 /**
  * Advance one decision ply: alternating single action, or simultaneous joint
- * place when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
+ * place/move when `currentPlayer` is `"simultaneous"`. `pickFor` selects among
  * `legalActions` for the given player (called once, or twice when joint).
  * Under commitReveal, picks commits until each seat fills its per-round budget
  * (final commit auto-reveals). Under open multi-action simultaneous, picks
- * `actionsPerTurn` places per seat then joint-resolves.
+ * `actionsPerTurn` places or chained moves per seat then joint-resolves.
  */
 export function stepPly(
 	kernel: GameKernel,
@@ -1619,39 +2970,132 @@ export function stepPly(
 	if (side === "simultaneous") {
 		const budget = kernel.config.actionsPerTurn ?? 1;
 		if (kernel.config.commitReveal) {
+			const deduction =
+				(kernel.config.inputMode ?? "cell") === "deduction";
+			const moveMode = (kernel.config.inputMode ?? "cell") === "move";
 			let s = state;
 			let last: StepResult | null = null;
-			// Fill each seat's commit budget; reveal fires when both are full.
+			// Fill each seat's commit; reveal fires when both are ready.
 			let guard = budget * 2 + 2;
 			while (guard-- > 0 && s.status === "playing") {
-				const xLen = s.committedPlacements?.X?.length ?? 0;
-				const oLen = s.committedPlacements?.O?.length ?? 0;
-				if (xLen >= budget && oLen >= budget) break;
-				const pid: PlayerId = xLen < budget ? 0 : 1;
-				const legal = kernel.legalActions(s, pid);
-				const action = pickFor(pid, legal);
-				if (!action) return last;
-				last = kernel.stepSync(s, action, seed);
-				s = last.nextState;
-				if (s.status !== "playing") return last;
-				// After reveal, committedPlacements clears — stop.
-				if (
-					(s.committedPlacements?.X?.length ?? 0) === 0 &&
-					(s.committedPlacements?.O?.length ?? 0) === 0 &&
-					s.moveCount > state.moveCount
-				) {
-					return last;
+				if (deduction) {
+					const xReady = s.committedDeduction?.X != null;
+					const oReady = s.committedDeduction?.O != null;
+					if (xReady && oReady) break;
+					const pid: PlayerId = !xReady ? 0 : 1;
+					const legal = kernel.legalActions(s, pid);
+					const action = pickFor(pid, legal);
+					if (!action) return last;
+					last = kernel.stepSync(s, action, seed);
+					s = last.nextState;
+					if (s.status !== "playing") return last;
+					if (
+						s.committedDeduction?.X == null &&
+						s.committedDeduction?.O == null &&
+						s.moveCount > state.moveCount
+					) {
+						return last;
+					}
+				} else if (moveMode) {
+					const xLen = s.committedMoves?.X?.length ?? 0;
+					const oLen = s.committedMoves?.O?.length ?? 0;
+					if (xLen >= budget && oLen >= budget) break;
+					const pid: PlayerId = xLen < budget ? 0 : 1;
+					const legal = kernel.legalActions(s, pid);
+					const action = pickFor(pid, legal);
+					if (!action) return last;
+					last = kernel.stepSync(s, action, seed);
+					s = last.nextState;
+					if (s.status !== "playing") return last;
+					// After reveal, committedMoves clears — stop.
+					if (
+						(s.committedMoves?.X?.length ?? 0) === 0 &&
+						(s.committedMoves?.O?.length ?? 0) === 0 &&
+						s.moveCount > state.moveCount
+					) {
+						return last;
+					}
+				} else {
+					const xLen = s.committedPlacements?.X?.length ?? 0;
+					const oLen = s.committedPlacements?.O?.length ?? 0;
+					if (xLen >= budget && oLen >= budget) break;
+					const pid: PlayerId = xLen < budget ? 0 : 1;
+					const legal = kernel.legalActions(s, pid);
+					const action = pickFor(pid, legal);
+					if (!action) return last;
+					last = kernel.stepSync(s, action, seed);
+					s = last.nextState;
+					if (s.status !== "playing") return last;
+					// After reveal, committedPlacements clears — stop.
+					if (
+						(s.committedPlacements?.X?.length ?? 0) === 0 &&
+						(s.committedPlacements?.O?.length ?? 0) === 0 &&
+						s.moveCount > state.moveCount
+					) {
+						return last;
+					}
 				}
 			}
 			return last;
 		}
 		if (budget <= 1) {
-			const a0 = pickFor(0, kernel.legalActions(state, 0));
-			const a1 = pickFor(1, kernel.legalActions(state, 1));
+			const legal0 = kernel.legalActions(state, 0);
+			const legal1 = kernel.legalActions(state, 1);
+			// Simultaneous deduction: both seats must submit the same action
+			// kind (query+query or guess+guess) for joint resolve.
+			if ((kernel.config.inputMode ?? "cell") === "deduction") {
+				const a0 = pickFor(0, legal0);
+				if (!a0) return null;
+				const matching = legal1.filter((a) => a.type === a0.type);
+				const a1 = pickFor(1, matching.length > 0 ? matching : legal1);
+				if (!a1) return null;
+				return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
+			}
+			const a0 = pickFor(0, legal0);
+			const a1 = pickFor(1, legal1);
 			if (!a0 || !a1) return null;
 			return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
 		}
-		// Multi-action open simultaneous: collect N distinct places per seat.
+		// Multi-action open simultaneous: collect N places or chained moves per seat.
+		if ((kernel.config.inputMode ?? "cell") === "move") {
+			const pickNMoves = (pid: PlayerId): KernelAction[] | null => {
+				const seat = playerOf(pid);
+				const movement = kernel.config.movement;
+				if (!movement) return null;
+				const board = movementBoardFrom(kernel.config);
+				let grid = state.grid;
+				const picked: KernelAction[] = [];
+				for (let i = 0; i < budget; i++) {
+					const legal: KernelAction[] = [];
+					for (const from of allActivePositions(
+						grid,
+						kernel.config.topology ?? "rectangle",
+						kernel.config.graph
+					)) {
+						if (getCell(grid, from) !== seat) continue;
+						for (const to of legalDestinations(grid, from, movement, board)) {
+							if (canMove(grid, from, to, seat, movement, board)) {
+								legal.push({ type: "move", from, to });
+							}
+						}
+					}
+					const action = pickFor(pid, legal);
+					if (!action || action.type !== "move") return null;
+					// Solo-apply for chain continuation (joint may still conflict).
+					let cells = setCell(grid, action.from, null);
+					cells = setCell({ ...grid, cells }, action.to, seat);
+					grid = { ...grid, cells };
+					picked.push(action);
+				}
+				return picked;
+			};
+			const xs = pickNMoves(0);
+			const os = pickNMoves(1);
+			if (!xs || !os) return null;
+			const joint = jointMovesFromActions(xs, os);
+			if (!joint) return null;
+			return kernel.stepSync(state, joint, seed);
+		}
 		const pickN = (pid: PlayerId): KernelAction[] | null => {
 			const picked: KernelAction[] = [];
 			const used = new Set<string>();

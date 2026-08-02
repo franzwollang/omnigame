@@ -59,6 +59,12 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		observationMode: config.observation.mode,
 		fogRadius: config.observation.radius,
 		fogMetric: config.observation.metric,
+		hazards: config.hazards
+			? {
+					count: config.hazards.count,
+					firstRevealSafe: config.hazards.firstRevealSafe === true
+				}
+			: undefined,
 		objectiveMode: config.objective.mode,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
@@ -78,12 +84,30 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		movement: config.movement
 			? {
 					adjacency: config.movement.adjacency,
-					range: config.movement.range
+					range: config.movement.range,
+					capture: config.movement.capture ?? "none",
+					...(config.movement.graphReach
+						? { graphReach: config.movement.graphReach }
+						: {})
 				}
 			: undefined,
 		targetRows: config.objective.targetRows,
 		fleet: config.fleet
 			? { ships: [...config.fleet.ships] }
+			: undefined,
+		seed: config.rng.seed,
+		deduction: config.deduction
+			? {
+					roster: config.deduction.roster.map((c) => ({
+						id: c.id,
+						traits: { ...c.traits }
+					})),
+					traits: [...config.deduction.traits],
+					wrongGuess: config.deduction.wrongGuess,
+					autoEliminate: config.deduction.autoEliminate ?? true,
+					queryShape: config.deduction.queryShape ?? "single",
+					compoundArity: config.deduction.compoundArity ?? 2
+				}
 			: undefined,
 		initial: config.initial
 	};
