@@ -1420,6 +1420,59 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"move-fire-lite": definePreset({
+		id: "move-fire-lite",
+		name: "Move & Fire Lite",
+		tags: [
+			"phases",
+			"move",
+			"fire",
+			"hit-miss",
+			"5x5",
+			"destroy-hidden",
+			"mechanism"
+		],
+		description:
+			"Each turn: move your public spotter one step, then fire one shot. Fixed hidden fleets; sink to win. Unlocks turn.phases starting with move (no place) — not place→fire or place→move→fire.",
+		config: {
+			metadata: { name: "Move & Fire Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "alternating",
+				phases: ["move", "fire"]
+			},
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			objective: { mode: "destroy_hidden" },
+			tokens: [
+				{
+					id: "x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "X", visibility: "owner" },
+				{ row: 0, col: 1, player: "X", visibility: "owner" },
+				{ row: 4, col: 3, player: "O", visibility: "owner" },
+				{ row: 4, col: 4, player: "O", visibility: "owner" }
+			]
+		}
+	}),
 	"step-race": definePreset({
 		id: "step-race",
 		name: "Step Race",
@@ -1460,6 +1513,471 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"replace-race": definePreset({
+		id: "replace-race",
+		name: "Replace Race",
+		tags: ["move", "capture", "replace", "reach-row", "5x5", "mechanism"],
+		description:
+			"Orthogonal step race with capture-by-replacement: move onto an enemy cell to remove it, then land. Unlocks movement.capture = replace — empty-dest Move cannot express attrition.",
+		config: {
+			metadata: { name: "Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X one step from O on the target row — capture lands and wins.
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"hex-replace-race": definePreset({
+		id: "hex-replace-race",
+		name: "Hex Replace Race",
+		tags: [
+			"move",
+			"capture",
+			"replace",
+			"reach-row",
+			"hex",
+			"topology",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Cube-axis step race on odd-r hex with capture-by-replacement: move onto an enemy cell to remove it, then land. Unlocks movement.capture = replace on hex_offset — rectangle Replace Race cannot express hex attrition; graph replace is Graph Replace Race.",
+		config: {
+			metadata: { name: "Hex Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hex-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Odd-r: (1,2) is a cube-axis neighbor of (0,2) — capture lands and wins.
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"graph-replace-race": definePreset({
+		id: "graph-replace-race",
+		name: "Graph Replace Race",
+		tags: [
+			"move",
+			"capture",
+			"replace",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Chain-walk step race on two parallel graph lanes with capture-by-replacement: move onto an enemy node to remove it, then land. Unlocks movement.capture = replace on graph — rectangle/hex Replace Race cannot express graph-edge attrition.",
+		config: {
+			metadata: { name: "Graph Replace Race", version: 1 },
+			grid: {
+				width: 2,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Lane 0: X one edge from O on the target row — capture lands and wins.
+				{ row: 1, col: 0, player: "X", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"guess-who-lite": definePreset({
+		id: "guess-who-lite",
+		name: "Guess Who Lite",
+		tags: ["deduction", "query", "observation", "mechanism", "mvp"],
+		description:
+			"4-character roster; ask yes/no trait queries; guess opponent secret to win. Unlocks query + guess operators (README Guess Who-like MVP).",
+		config: {
+			metadata: { name: "Guess Who Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"guess-who-commit-lite": definePreset({
+		id: "guess-who-commit-lite",
+		name: "Guess Who Commit Lite",
+		tags: ["deduction", "query", "eliminate", "observation", "mechanism"],
+		description:
+			"Same roster as Guess Who Lite, but queries only answer yes/no — players manually eliminate candidates (Commit hypothesis). Wrong guess ends the turn (no instant loss).",
+		config: {
+			metadata: { name: "Guess Who Commit Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "end_turn",
+				autoEliminate: false,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"guess-who-commit-phases-lite": definePreset({
+		id: "guess-who-commit-phases-lite",
+		name: "Guess Who Commit Phases Lite",
+		tags: [
+			"deduction",
+			"query",
+			"eliminate",
+			"phases",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"Same Commit Lite roster, but each turn is query→eliminate in-turn phases — ask, then flip a candidate before handoff. Unlocks deduction turn.phases (cannot mix with place/move/fire).",
+		config: {
+			metadata: { name: "Guess Who Commit Phases Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "alternating",
+				phases: ["query", "eliminate"]
+			},
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "end_turn",
+				autoEliminate: false,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"guess-who-and-lite": definePreset({
+		id: "guess-who-and-lite",
+		name: "Guess Who And Lite",
+		tags: ["deduction", "query", "conjunction", "observation", "mechanism"],
+		description:
+			"Same 4-character roster as Guess Who Lite, but each query is a 2-clause AND (e.g. glasses and hat?). Unlocks deduction.queryShape = and — compound pruning atomic queries cannot express in one turn.",
+		config: {
+			metadata: { name: "Guess Who And Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				queryShape: "and",
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"guess-who-or-lite": definePreset({
+		id: "guess-who-or-lite",
+		name: "Guess Who Or Lite",
+		tags: ["deduction", "query", "disjunction", "observation", "mechanism"],
+		description:
+			"Same 4-character roster as Guess Who And Lite, but each query is a 2-clause OR (e.g. glasses or hat?). Unlocks deduction.queryShape = or — compound disjunction pruning neither atomics nor AND can express in one turn.",
+		config: {
+			metadata: { name: "Guess Who Or Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				queryShape: "or",
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"guess-who-and3-lite": definePreset({
+		id: "guess-who-and3-lite",
+		name: "Guess Who And3 Lite",
+		tags: [
+			"deduction",
+			"query",
+			"conjunction",
+			"compound-arity",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"8-character 3-trait roster; each query is a 3-clause AND. Unlocks deduction.compoundArity > 2 — one-turn triple prune that no 2-clause AND can express.",
+		config: {
+			metadata: { name: "Guess Who And3 Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat", "beard"],
+				wrongGuess: "lose",
+				queryShape: "and",
+				compoundArity: 3,
+				roster: [
+					{
+						id: "ann",
+						traits: { glasses: true, hat: true, beard: true }
+					},
+					{
+						id: "bob",
+						traits: { glasses: true, hat: true, beard: false }
+					},
+					{
+						id: "cara",
+						traits: { glasses: true, hat: false, beard: true }
+					},
+					{
+						id: "dan",
+						traits: { glasses: true, hat: false, beard: false }
+					},
+					{
+						id: "eve",
+						traits: { glasses: false, hat: true, beard: true }
+					},
+					{
+						id: "fran",
+						traits: { glasses: false, hat: true, beard: false }
+					},
+					{
+						id: "gus",
+						traits: { glasses: false, hat: false, beard: true }
+					},
+					{
+						id: "hal",
+						traits: { glasses: false, hat: false, beard: false }
+					}
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"simultaneous-step-race": definePreset({
 		id: "simultaneous-step-race",
 		name: "Simultaneous Step Race",
@@ -1495,6 +2013,368 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			],
 			placements: [],
 			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"simultaneous-replace-race": definePreset({
+		id: "simultaneous-replace-race",
+		name: "Simultaneous Replace Race",
+		tags: [
+			"move",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Joint simultaneous step with replace capture: X can take a stationary O on the target row while O moves a second piece. Joint legality uses vacated-origin paths (same as joint slides) so fleers clear rays while stationary targets stay. Unlocks simultaneous × replace — ordered replace is Ordered Simultaneous Replace Race; slide+replace is Simultaneous Slide Replace Race.",
+		config: {
+			metadata: { name: "Simultaneous Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "sim-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "sim-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X one step from stationary O prey on target row; O also has a runner.
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"ordered-simultaneous-replace-race": definePreset({
+		id: "ordered-simultaneous-replace-race",
+		name: "Ordered Simultaneous Replace Race",
+		tags: [
+			"move",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"resolve-order",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"X-first ordered simultaneous step with replace: priority order decides capture-before-flee vs flee-before-capture. Sequential capture apply — not joint real-board overwrite. Unlocks ordered simultaneous × replace (range 1); slide+replace is Ordered Simultaneous Slide Replace Race.",
+		config: {
+			metadata: { name: "Ordered Simultaneous Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				resolveOrder: "x_first"
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "ordered-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "ordered-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X one step from O prey on target row; O can flee sideways same round.
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"simultaneous-slide-race": definePreset({
+		id: "simultaneous-slide-race",
+		name: "Simultaneous Slide Race",
+		tags: ["move", "slide", "range", "reach-row", "simultaneous", "5x5", "mechanism"],
+		description:
+			"Joint simultaneous rook slides (range 4). Paths validated on a vacated-origin board so a vacating piece does not block the other. Unlocks simultaneous × sliding — not ordered resolve or replace capture.",
+		config: {
+			metadata: { name: "Simultaneous Slide Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "joint-slider-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "joint-slider-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"ordered-simultaneous-slide-race": definePreset({
+		id: "ordered-simultaneous-slide-race",
+		name: "Ordered Simultaneous Slide Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"reach-row",
+			"simultaneous",
+			"resolve-order",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"X-first ordered simultaneous rook slides (range 4). Second seat path revalidated after the first seat moves — priority order changes sliding legality, not only same-cell ties. Unlocks ordered simultaneous × sliding.",
+		config: {
+			metadata: { name: "Ordered Simultaneous Slide Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				resolveOrder: "x_first"
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "ordered-slider-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "ordered-slider-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"simultaneous-slide-replace-race": definePreset({
+		id: "simultaneous-slide-replace-race",
+		name: "Simultaneous Slide Replace Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Joint simultaneous rook slide (range 4) with replace: X slides onto a stationary O on the target row while O moves a runner. Vacated-origin legality clears fleeing blockers on the path while stationary capture targets stay. Unlocks simultaneous × slide × replace.",
+		config: {
+			metadata: { name: "Simultaneous Slide Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "joint-slide-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "joint-slide-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X slides four steps onto stationary O prey; O also has a runner.
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"simultaneous-slide-replace-flee-race": definePreset({
+		id: "simultaneous-slide-replace-flee-race",
+		name: "Simultaneous Slide Replace Flee Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Joint simultaneous rook slide (range 4) with replace: O starts on X's ray and flees sideways so X's path clears under vacated-origin hybrid legality. Stationary capture remains Simultaneous Slide Replace Race; ordered flee/land is Ordered Simultaneous Slide Replace Race. Unlocks joint replace path-through-fleeing.",
+		config: {
+			metadata: {
+				name: "Simultaneous Slide Replace Flee Race",
+				version: 1
+			},
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "joint-slide-flee-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "joint-slide-flee-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// O sits on X's ray and must flee for the slide to be legal jointly.
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"ordered-simultaneous-slide-replace-race": definePreset({
+		id: "ordered-simultaneous-slide-replace-race",
+		name: "Ordered Simultaneous Slide Replace Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"resolve-order",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"X-first ordered simultaneous rook slide (range 4) with replace: priority decides capture-before-flee vs flee-then-land on the vacated cell. Sequential path/capture revalidation — not joint real-board overwrite. Unlocks ordered simultaneous × slide × replace.",
+		config: {
+			metadata: {
+				name: "Ordered Simultaneous Slide Replace Race",
+				version: 1
+			},
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				resolveOrder: "x_first"
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "ordered-slide-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "ordered-slide-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X four steps from O prey; O can flee sideways same round.
 				{ row: 4, col: 2, player: "X", visibility: "public" },
 				{ row: 0, col: 2, player: "O", visibility: "public" }
 			]
@@ -1614,6 +2494,81 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"graph-slide-race": definePreset({
+		id: "graph-slide-race",
+		name: "Graph Slide Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Chain-walk slide race on two parallel graph lanes (range 4). Unlocks movement.range > 1 on graph — blocker-aware walk along unique forward edge chains (no turning at junctions; distinct from fog hop-ball BFS). Flee spurs that raise mid-path degree stop the chain.",
+		config: {
+			metadata: { name: "Graph Slide Race", version: 1 },
+			grid: {
+				width: 2,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-slider-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-slider-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 0, col: 1, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-step-race": definePreset({
 		id: "hex-step-race",
 		name: "Hex Step Race",
@@ -1642,6 +2597,54 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				},
 				{
 					id: "hex-alt-runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"hex-slide-race": definePreset({
+		id: "hex-slide-race",
+		name: "Hex Slide Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"reach-row",
+			"hex",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Cube-axis slide race on odd-r hex (range 4). Unlocks movement.range > 1 on hex_offset — blocker-aware ray walk along the six cube directions that range-1 hex neighbors cannot express.",
+		config: {
+			metadata: { name: "Hex Slide Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hex-slider-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-slider-o",
 					label: "O",
 					players: ["O"],
 					asset: { type: "image", url: "/assets/tokens/o.png" }
