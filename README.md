@@ -66,6 +66,7 @@ These are built from the same shared schema and operators.
 - **Simultaneous Guess Who Commit Lite** (`autoEliminate: false` + joint eliminate under simultaneous)
 - **Simultaneous Guess Who And Lite** (joint simultaneous 2-clause AND queries)
 - **Hidden Simultaneous Guess Who Lite** (`commitReveal` under simultaneous deduction)
+- **Hidden Simultaneous Guess Who Commit Lite** (`commitReveal` + `autoEliminate: false` + `commitEliminate`)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
@@ -184,19 +185,18 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   hop-ball BFS (`movement.graphReach = hop`; may turn at junctions) —
   Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Hop Race** /
   **Graph Replace Race**
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Guess Who Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3 / Simultaneous / Simultaneous And / **Hidden Simultaneous**); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query / pending commit); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who Commit Phases Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** / **Simultaneous Guess Who Lite** / **Simultaneous Guess Who Commit Lite** / **Simultaneous Guess Who And Lite** / **Hidden Simultaneous Guess Who Lite** presets
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3 / Simultaneous / Simultaneous And / **Hidden Simultaneous** / **Hidden Simultaneous Commit**); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query / pending commit); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who Commit Phases Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** / **Simultaneous Guess Who Lite** / **Simultaneous Guess Who Commit Lite** / **Simultaneous Guess Who And Lite** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite** presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder,
-commitEliminate under commitReveal, and a larger set of reusable
-operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder
+(only with anchor), and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -386,7 +386,9 @@ The goal is to converge on a “complete-ish” primitive set by implementing a 
   `simultaneousQuery` / `simultaneousGuess` under `schedule = simultaneous`;
   **Simultaneous Guess Who And Lite** — joint compound AND under simultaneous;
   **Hidden Simultaneous Guess Who Lite** — `commitReveal` + `commitQuery` /
-  `commitGuess` (private commits then joint reveal)
+  `commitGuess` (private commits then joint reveal); **Hidden Simultaneous
+  Guess Who Commit Lite** — `commitReveal` + `autoEliminate: false` +
+  `commitEliminate` (manual prune under hidden commits)
 - **Go-lite / territory fill**: place + adjacency/liberty constraints + area scoring (simplified)  
   Stresses: stepping + constraints + scoring
 
@@ -471,15 +473,15 @@ simultaneous compound deduction / Simultaneous Guess Who And Lite (M32),
 simultaneous deduction commitReveal / Hidden Simultaneous Guess Who Lite (M33),
 joint UCT/MCTS under open simultaneous deduction (M34), simultaneous deduction
 manual eliminate / Simultaneous Guess Who Commit Lite (M35), commitReveal
-deduction joint UCT / Hidden Simultaneous Guess Who Lite plan search (M36).
+deduction joint UCT / Hidden Simultaneous Guess Who Lite plan search (M36),
+commitEliminate / Hidden Simultaneous Guess Who Commit Lite (M37).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor, commitEliminate) or P4 CI / semantics refresh
+  fire→move only with anchor) or P4 CI / semantics refresh
 - Deferred: full Go rules; CI workflows; `docs/semantics.md` refresh vs current
-  kernel events; fire→move reorder; commitReveal + manual eliminate
-  (`commitEliminate`)
+  kernel events; fire→move reorder (recombination without anchor)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

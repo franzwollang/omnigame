@@ -36,7 +36,7 @@ describe("schema: simultaneous × deduction", () => {
 		expect(gameConfig.deduction?.autoEliminate).toBe(true);
 	});
 
-	it("allows autoEliminate false and compound queryShape; rejects phases; allows commitReveal only with autoEliminate true", () => {
+	it("allows autoEliminate false and compound queryShape; rejects phases; allows commitReveal with autoEliminate false", () => {
 		const base = preset();
 		expect(
 			zConfig.safeParse({
@@ -101,7 +101,7 @@ describe("schema: simultaneous × deduction", () => {
 				},
 				deduction: { ...base.deduction!, autoEliminate: false }
 			}).success
-		).toBe(false);
+		).toBe(true);
 	});
 });
 

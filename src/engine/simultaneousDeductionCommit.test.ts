@@ -26,7 +26,7 @@ describe("schema: simultaneous × deduction manual eliminate", () => {
 		expect(gameConfig.commitReveal).not.toBe(true);
 	});
 
-	it("rejects autoEliminate false under commitReveal and under phases", () => {
+	it("accepts autoEliminate false under commitReveal; rejects phases", () => {
 		const base = preset();
 		expect(
 			zConfig.safeParse({
@@ -37,7 +37,7 @@ describe("schema: simultaneous × deduction manual eliminate", () => {
 					commitReveal: true
 				}
 			}).success
-		).toBe(false);
+		).toBe(true);
 
 		expect(
 			zConfig.safeParse({
