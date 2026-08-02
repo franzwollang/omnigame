@@ -2,9 +2,9 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M40 commitReveal multi-action
-move closed). Do not ask which fork — pick the smallest new seam under
-`next-missing-mechanism`, then P4 tooling/docs.
+**Marathon rule:** Work **P3 → P4** in order (P4 tooling-ci closed). Do not ask
+which fork — pick the smallest new seam under `next-missing-mechanism`, or
+finish **P4 semantics-doc-refresh**.
 
 ---
 
@@ -14,6 +14,7 @@ move closed). Do not ask which fork — pick the smallest new seam under
 
 CommitReveal + multi-action simultaneous move (`actionsPerTurn > 1` under
 `commitReveal` move / Hidden Double Simultaneous Step Race) landed as M40.
+P4 tooling-ci landed (`.github/workflows/ci.yml`).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -22,17 +23,14 @@ e.g.:
   reject as recombination)
 - commitReveal + slide/replace demos (kernel complete — preset-only unless a
   new seam appears)
+- multi-action slide/replace under simultaneous (deferred composition; only if
+  a new seam appears — not a recombination demo)
 - `queryShape: not` (reject unless nested AST / new pruning class)
 - Full Go rules (large; prefer smaller seams first)
 - Realtime / continuous scheduler (large)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
-
-### P4 — tooling-ci
-
-- [ ] Optional `.github/workflows` pinning Node ≥20.19 + pnpm 10.5.2
-      (`typecheck` + `test`)
 
 ### P4 — semantics-doc-refresh
 
@@ -86,3 +84,4 @@ move. **Hidden Double Simultaneous Step Race** covers commitReveal +
 `actionsPerTurn > 1` under simultaneous move. Graph Hop Race covers hop-ball
 BFS. Open simultaneous deduction joint UCT covers agent search over
 query/guess(/eliminate) cartesian (fire→move still open if an anchor appears).
+CI green gate: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).

@@ -57,10 +57,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M38 | Next missing mechanism (commitMove / commitReveal simultaneous move) | `done` |
 | M39 | Next missing mechanism (multi-action simultaneous move) | `done` |
 | M40 | Next missing mechanism (commitReveal multi-action move) | `done` |
+| M41 | Tooling CI (GitHub Actions typecheck + test) | `done` |
 
-**Optimizing for this marathon:** M40 commitReveal + multi-action simultaneous
-move closed. Pick **P3 next-missing-mechanism** (e.g. fire→move only with
-anchor) or **P4** CI / semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M41 CI workflow landed. Pick **P3
+next-missing-mechanism** (e.g. fire→move only with anchor) or **P4
+semantics-doc-refresh** — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -88,9 +89,9 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M40 closed).  
+   (P0–P2 / M8–M41 closed).  
 2. Start **P3** `next-missing-mechanism` (post-M40) — smallest new seam — or
-   P4 CI / semantics.  
+   P4 semantics-doc-refresh.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
 4. After each landed item: update OPEN_ISSUES (resolve + log), PLANNING status,
@@ -172,8 +173,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** full Go; CI workflows; semantics doc refresh; fire→move reorder
-(only with anchor).
+**Not yet:** full Go; semantics doc refresh; fire→move reorder (only with
+anchor). CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
 
 ## Phase 2 exit criteria
 
@@ -569,6 +570,15 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 - Sandbox: sequential commitMove + chain auto-select — **done**
 - Preset `hidden-double-simultaneous-step-race` + tests; 571 green — **done**
 - Out of scope: multi-action slide/replace under commitReveal; fire→move
+
+### M41 — Tooling CI
+
+- `.github/workflows/ci.yml` on push/PR to `main` — **done**
+- Pin Node `20.19` + pnpm `10.5.2` (`package.json` engines / packageManager) —
+  **done**
+- Steps: `pnpm install --frozen-lockfile` → `pnpm typecheck` → `pnpm test` —
+  **done**
+- Local green gate: 571 tests — **done**
 
 ## Sequencing notes
 

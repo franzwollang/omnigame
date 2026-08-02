@@ -486,9 +486,10 @@ simultaneous move / Hidden Double Simultaneous Step Race (M40).
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor) or P4 CI / semantics refresh
-- Deferred: full Go rules; CI workflows; `docs/semantics.md` refresh vs current
-  kernel events; fire→move reorder (recombination without anchor)
+  fire→move only with anchor) or P4 semantics-doc-refresh
+- Deferred: full Go rules; `docs/semantics.md` refresh vs current kernel
+  events; fire→move reorder (recombination without anchor)
+- CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 
