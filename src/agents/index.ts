@@ -5,10 +5,16 @@ export { createTinyMctsAgent } from "@/agents/mcts";
 export { createUctAgent, actionKey } from "@/agents/uct";
 export { createHuntAgent, pickHuntFireAction } from "@/agents/hunt";
 export {
+	activeCommitSeat,
+	canSearchCommitRevealJoint,
 	canSearchJointActions,
+	commitRevealRoundFingerprint,
+	enumerateCommitRevealJoints,
 	enumerateJointLegalActions,
+	isFreshCommitRound,
 	jointSeatBudget,
 	orderedDistinctPlaceTuples,
+	seatCommitFromJoint,
 	seatComponentFromJoint
 } from "@/agents/jointLegal";
 

@@ -36,10 +36,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M17 | Next missing mechanism (joint replace vacated-origin hybrid) | `done` |
 | M18 | Next missing mechanism (joint UCT/MCTS under simultaneous) | `done` |
 | M19 | Next missing mechanism (joint UCT under multi-action simultaneous) | `done` |
+| M20 | Next missing mechanism (joint UCT/MCTS under commitReveal) | `done` |
 
-**Optimizing for this marathon:** M19 multi-action joint UCT closed. Pick **P3
-next-missing-mechanism** (e.g. commitReveal joint search) or **P4** CI /
-semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M20 commitReveal joint UCT closed. Pick **P3
+next-missing-mechanism** (e.g. hex/graph sliding, richer phases, richer Guess
+Who) or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -54,7 +55,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥385** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥396** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -67,8 +68,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M18 closed; M19 in flight).  
-2. Start **P3** `next-missing-mechanism` (post-M19) — smallest new seam — or
+   (P0–P2 / M8–M20 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M20) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -133,8 +134,8 @@ observation, etc., plus an in-UI “Form coverage” callout for remaining
 JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 `placement.capture`, `deduction.*` / `identify_secret`, …).
 
-**Not yet:** full Go; hex/graph sliding; joint UCT under `commitReveal`; CI
-workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
+**Not yet:** full Go; hex/graph sliding; CI workflows; richer Guess Who
+commit/hypothesis beyond query+guess MVP.
 
 ## Phase 2 exit criteria
 
@@ -228,18 +229,31 @@ workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
 - Immediate joint-win shortcut; sandbox Agent UI + README labels updated — **done**
 - Tests on `simultaneous-ttt` (enumerate, consistency, win, playout) — **done**
 - Out of scope closed by M19: multi-action joint cartesian
-- Out of scope still deferred: `commitReveal` joint search; Nash/maximin
-  adversarial joint policy
+- Out of scope closed by M20: `commitReveal` joint search
+- Out of scope still deferred: Nash/maximin adversarial joint policy
 
 ### M19 — Joint UCT / MCTS under multi-action simultaneous
 
 - Extend `canSearchJointActions` / `enumerateJointLegalActions` to
-  `actionsPerTurn > 1` (ordered distinct place tuples × cartesian) — **in progress**
-- Per-seat pick cursor on joint decision cache for sandbox multi-`act` — **in progress**
-- Flat MCTS samples large cartesians; UCT searches full untried set — **in progress**
+  `actionsPerTurn > 1` (ordered distinct place tuples × cartesian) — **done**
+- Per-seat pick cursor on joint decision cache for sandbox multi-`act` — **done**
+- Flat MCTS samples large cartesians; UCT searches full untried set — **done**
 - Tests on `double-place-simultaneous-ttt` (5184 enum, coordinated picks,
-  mid-round win, playout) — **in progress**
-- Out of scope: `commitReveal` joint search; Nash/maximin joint policy
+  mid-round win, playout) — **done**
+- Out of scope closed by M20: `commitReveal` joint search
+- Out of scope still deferred: Nash/maximin joint policy
+
+### M20 — Joint UCT / MCTS under commitReveal
+
+- `enumerateCommitRevealJoints` on fresh rounds (81 for Hidden Simultaneous TTT);
+  round fingerprint ignores `committedPlacements` — **done**
+- UCT + flat MCTS search reveal joints via `simultaneousPlace`; cache sequential
+  `commitPlace` for sandbox X-then-O clicks — **done**
+- Mid-round without cache: per-seat search over `commitPlace` — **done**
+- Tests on `hidden-simultaneous-ttt` (enum, partial disable, sequential cache,
+  win, playout) — **done**
+- Out of scope: Nash/maximin; observe()-limited imperfect-info search;
+  commitReveal + simultaneous move (schema blocked)
 
 ## Sequencing notes
 

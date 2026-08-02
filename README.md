@@ -387,9 +387,12 @@ Baseline agents (enough to prove the ABI):
 **Simultaneous search:** Under open `turn.schedule = simultaneous` (place or
 move; any `actionsPerTurn`, including multi-action place rounds), MCTS and UCT
 search the joint action cartesian (`simultaneousPlace` / `simultaneousMove`) and
-cache the decision so sandbox dual-/multi-`act` stays consistent. **Still random
-per seat:** `commitReveal` (joint commit tree deferred). Greedy still skips
-lookahead under simultaneous.
+cache the decision so sandbox dual-/multi-`act` stays consistent. Under
+`commitReveal`, they search fresh-round reveal joints (same cartesian, evaluated
+via `simultaneousPlace`) and cache sequential `commitPlace` emissions so
+sandbox X-then-O clicks stay on one plan. Mid-round commits without a cached
+plan fall back to per-seat search. Greedy still skips lookahead under
+simultaneous.
 
 ## Suggested module structure (directional)
 
@@ -422,12 +425,13 @@ Simultaneous Replace Race (M14), simultaneous slide+replace / Simultaneous +
 Ordered Slide Replace Race (M15), move→fire in-turn phases / Move & Fire Lite
 (M16), vacated-origin hybrid for joint replace paths / Simultaneous Slide
 Replace Flee Race (M17), joint UCT/MCTS under open simultaneous (M18), joint
-UCT/MCTS under multi-action simultaneous (M19).
+UCT/MCTS under multi-action simultaneous (M19), joint UCT/MCTS under
+commitReveal / Hidden Simultaneous TTT (M20).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  commitReveal joint search, richer phases, hex/graph sliding)
+  richer phases, hex/graph sliding, richer Guess Who commit/hypothesis)
   or P4 CI / semantics refresh
 - Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
   workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess

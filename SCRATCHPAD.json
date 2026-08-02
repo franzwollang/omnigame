@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T02:26-00:00",
-  "turn": 44,
+  "updated_at": "2026-08-02T02:50-00:00",
+  "turn": 45,
   "focus": {
-    "milestone": "M19",
+    "milestone": "M20",
     "issue": "next-missing-mechanism",
-    "goal": "Joint UCT/MCTS under multi-action simultaneous"
+    "goal": "Joint UCT/MCTS under commitReveal"
   },
   "recent": [
-    "Synced M8–M18 from 8bb5 onto bada",
-    "Extended canSearchJointActions + ordered place tuples",
-    "Per-seat pick cursor; flat MCTS samples large cartesians"
+    "Synced M8–M19 from bada onto a211",
+    "enumerateCommitRevealJoints + round fingerprint cache",
+    "UCT/MCTS emit sequential commitPlace from searched plan"
   ],
   "discoveries": [
-    "Empty 3×3 budget-2 = 5184 joints; skip win-scan if count+budget < winLen",
-    "Modulo pick cursor preserves M18 dual-act re-read behavior"
+    "simultaneousPlace legal under commitReveal for reveal sim",
+    "Round FP ignores commits so X-then-O sandbox clicks share plan"
   ],
   "open_threads": [
-    "After green: mark M19 done; next commitReveal joint or P4"
+    "After green: mark M20 done; next hex/graph sliding, phases, or P4"
   ],
-  "next_step": "Green gate then resolve M19; hand off commitReveal joint or P4",
+  "next_step": "Green gate then resolve M20; hand off next seam or P4",
   "blockers": []
 }

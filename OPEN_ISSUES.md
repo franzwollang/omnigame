@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M19 multi-action joint UCT closed).
+**Marathon rule:** Work **P3 → P4** in order (M20 commitReveal joint UCT closed).
 Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,12 +12,11 @@ Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Joint UCT/MCTS over multi-action open simultaneous (`actionsPerTurn > 1`)
-landed as M19.
+Joint UCT/MCTS under `commitReveal` (fresh-round reveal plans + sequential
+`commitPlace` cache) landed as M20 on `hidden-simultaneous-ttt`.
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
-- Joint search under `commitReveal` (multi-step commit tree)
 - Further phase sequences beyond place→* and move→fire (only if a new seam appears)
 - Hex/graph `range > 1` (only if a new seam appears)
 - Richer Guess Who commit/hypothesis beyond query+guess MVP
@@ -40,7 +39,7 @@ exhaust `references/` or recombine covered primitives).
       `pieceCaptured`, `queryAnswered` / `guessResult`, simultaneous, phases
       incl. move→fire, joint + ordered sliding, joint + ordered simultaneous
       replace, simultaneous slide+replace, joint replace vacated-origin hybrid,
-      joint UCT under open + multi-action simultaneous)
+      joint UCT under open + multi-action + commitReveal simultaneous)
 
 ---
 

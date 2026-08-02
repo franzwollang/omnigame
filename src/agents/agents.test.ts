@@ -7,11 +7,15 @@ import {
 	createRandomAgent,
 	createTinyMctsAgent,
 	createUctAgent,
+	canSearchCommitRevealJoint,
 	canSearchJointActions,
+	enumerateCommitRevealJoints,
 	enumerateJointLegalActions,
+	isFreshCommitRound,
 	jointSeatBudget,
 	orderedDistinctPlaceTuples,
 	pickHuntFireAction,
+	seatCommitFromJoint,
 	seatComponentFromJoint
 } from "@/agents";
 import { examplePresets } from "@/presets/registry";
@@ -332,7 +336,7 @@ describe("joint UCT/MCTS under simultaneous (M18)", () => {
 		expect(joints.every((a) => a.type === "simultaneousPlace")).toBe(true);
 	});
 
-	it("does not search joint under commitReveal", () => {
+	it("open joint search stays off under commitReveal (use commitReveal joints)", () => {
 		const hidden = compileConfig(
 			examplePresets["hidden-simultaneous-ttt"].config
 		);
@@ -602,6 +606,172 @@ describe("joint UCT/MCTS under multi-action simultaneous (M19)", () => {
 			const joint = jointPlacesFromActions(xs, os);
 			expect(joint).not.toBeNull();
 			state = kernel.stepSync(state, joint!).nextState;
+			guard += 1;
+		}
+		expect(state.status === "won" || state.status === "draw").toBe(true);
+	});
+});
+
+describe("joint UCT/MCTS under commitReveal (M20)", () => {
+	it("enumerates 81 reveal joints on empty hidden-simultaneous-ttt", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-ttt"].config
+		);
+		const state = kernel.initialState();
+		expect(canSearchJointActions(kernel)).toBe(false);
+		expect(canSearchCommitRevealJoint(kernel, state)).toBe(true);
+		expect(isFreshCommitRound(state)).toBe(true);
+		const joints = enumerateCommitRevealJoints(kernel, state);
+		expect(joints).toHaveLength(81);
+		expect(joints.every((a) => a.type === "simultaneousPlace")).toBe(true);
+	});
+
+	it("disables commitReveal joint enum after a partial commit", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState();
+		state = kernel.stepSync(state, {
+			type: "commitPlace",
+			player: "X",
+			position: { row: 0, col: 0 }
+		}).nextState;
+		expect(isFreshCommitRound(state)).toBe(false);
+		expect(canSearchCommitRevealJoint(kernel, state)).toBe(false);
+		expect(enumerateCommitRevealJoints(kernel, state)).toHaveLength(0);
+	});
+
+	it("uct sequential commits return coordinated plan across seats", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-ttt"].config
+		);
+		const state = kernel.initialState(3);
+		const agent = createUctAgent(3, { simulations: 48 });
+		const xCommit = agent.act(kernel, state, 0);
+		expect(xCommit?.type).toBe("commitPlace");
+		if (xCommit?.type !== "commitPlace") throw new Error("expected commit");
+		expect(xCommit.player).toBe("X");
+
+		// Simulate sequential sandbox: X commits, then O acts on updated state.
+		const afterX = kernel.stepSync(state, xCommit).nextState;
+		const oCommit = agent.act(kernel, afterX, 1);
+		expect(oCommit?.type).toBe("commitPlace");
+		if (oCommit?.type !== "commitPlace") throw new Error("expected commit");
+		expect(oCommit.player).toBe("O");
+
+		const joint = {
+			type: "simultaneousPlace" as const,
+			placements: {
+				X: xCommit.position,
+				O: oCommit.position
+			}
+		};
+		expect(seatCommitFromJoint(joint, 0)).toEqual(xCommit);
+		expect(seatCommitFromJoint(joint, 1)).toEqual(oCommit);
+
+		// Cache wrap on the fresh board still yields the same X pick.
+		expect(agent.act(kernel, state, 0)).toEqual(xCommit);
+	});
+
+	it("uct takes an immediate winning commit plan for X", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState();
+		state = {
+			...state,
+			grid: {
+				...state.grid,
+				cells: setCell(
+					{
+						...state.grid,
+						cells: setCell(
+							{
+								...state.grid,
+								cells: setCell(state.grid, { row: 0, col: 0 }, "X")
+							},
+							{ row: 0, col: 1 },
+							"X"
+						)
+					},
+					{ row: 1, col: 0 },
+					"O"
+				)
+			},
+			moveCount: 3
+		};
+		const agent = createUctAgent(7, { simulations: 40 });
+		const xCommit = agent.act(kernel, state, 0);
+		expect(xCommit).toEqual({
+			type: "commitPlace",
+			player: "X",
+			position: { row: 0, col: 2 }
+		});
+		const afterX = kernel.stepSync(state, xCommit!).nextState;
+		const oCommit = agent.act(kernel, afterX, 1);
+		expect(oCommit?.type).toBe("commitPlace");
+		expect(oCommit).not.toEqual({
+			type: "commitPlace",
+			player: "O",
+			position: { row: 0, col: 2 }
+		});
+		const revealed = kernel.stepSync(afterX, oCommit!).nextState;
+		expect(revealed.status).toBe("won");
+		expect(revealed.winner).toBe("X");
+	});
+
+	it("mcts takes an immediate winning commit for X", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState();
+		state = {
+			...state,
+			grid: {
+				...state.grid,
+				cells: setCell(
+					{
+						...state.grid,
+						cells: setCell(
+							{
+								...state.grid,
+								cells: setCell(state.grid, { row: 0, col: 0 }, "X")
+							},
+							{ row: 0, col: 1 },
+							"X"
+						)
+					},
+					{ row: 1, col: 0 },
+					"O"
+				)
+			},
+			moveCount: 3
+		};
+		const agent = createTinyMctsAgent(5, { rolloutsPerAction: 8 });
+		const pick = agent.act(kernel, state, 0);
+		expect(pick).toEqual({
+			type: "commitPlace",
+			player: "X",
+			position: { row: 0, col: 2 }
+		});
+	});
+
+	it("uct completes a short hidden-simultaneous-ttt playout via commits", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState(11);
+		const uct = createUctAgent(11, { simulations: 32, reuseTree: true });
+		let guard = 0;
+		while (state.status === "playing" && guard < 12) {
+			expect(kernel.currentPlayer(state)).toBe("simultaneous");
+			const xCommit = uct.act(kernel, state, 0);
+			expect(xCommit?.type).toBe("commitPlace");
+			state = kernel.stepSync(state, xCommit!).nextState;
+			if (state.status !== "playing") break;
+			const oCommit = uct.act(kernel, state, 1);
+			expect(oCommit?.type).toBe("commitPlace");
+			state = kernel.stepSync(state, oCommit!).nextState;
 			guard += 1;
 		}
 		expect(state.status === "won" || state.status === "draw").toBe(true);
