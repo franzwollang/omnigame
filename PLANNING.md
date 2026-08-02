@@ -42,9 +42,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M23 | Next missing mechanism (Guess Who manual commit / eliminate) | `done` |
 | M24 | Next missing mechanism (Guess Who trait-conjunction / AND) | `done` |
 | M25 | Next missing mechanism (Guess Who trait-disjunction / OR) | `done` |
+| M26 | Next missing mechanism (hex replace capture) | `done` |
 
-**Optimizing for this marathon:** M25 Guess Who OR queries closed. Pick **P3
-next-missing-mechanism** (e.g. richer phases, hex/graph replace, 3+ clause AND)
+**Optimizing for this marathon:** M26 hex replace capture closed. Pick **P3
+next-missing-mechanism** (e.g. graph replace, richer phases, 3+ clause AND)
 or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
@@ -60,7 +61,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥438** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥444** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -73,8 +74,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M24 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M24) — smallest new seam — or
+   (P0–P2 / M8–M26 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M26) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -87,7 +88,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 - No exhausting `references/` as a checklist (mechanism-first only)  
 - No Effect Schema migration; no arbitrary user code in specs  
 - No weakening / skipping tests to go green  
-- No hex/graph `capture: replace` until a new seam forces it  
+- No graph `capture: replace` until a new seam forces it  
 - No hop-ball graph range until a game needs turning mid-slide  
 - Do not treat `docs/scratchpad.md` as current backlog  
 
@@ -112,8 +113,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ## What exists today (summary)
 
 Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
-**Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race
-preset demonstrates `capture = replace`.
+**Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race /
+**Hex Replace Race** demonstrate `capture = replace` on rectangle | hex_offset.
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
 `identify_secret`, query + guess), **Guess Who Commit Lite**
 (`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`), and
@@ -125,7 +126,7 @@ variants, flip + liberties capture, **move capture-by-replacement** (incl.
 **joint + ordered simultaneous replace** and **slide+replace**), point/positional/situational ko,
 observation (hit/miss + fog + **deduction**), fleet placement, Move
 (orthogonal/diagonal/king + sliding range on rectangle **and hex_offset cube
-axes** + **graph edge chain-walk**; replace rectangle-only), tick/Life, simultaneous
+axes** + **graph edge chain-walk**; replace on rectangle | hex_offset), tick/Life, simultaneous
 place/move (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
 sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire**), **query +
@@ -135,7 +136,7 @@ queries** (`queryShape: or`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
-Replace Race, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
+Replace Race, **Hex Replace Race**, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
@@ -147,7 +148,7 @@ JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 `placement.capture`, `deduction.*` / `identify_secret`, …). Range 2–8 unlocked
 for rectangle, hex, and graph (chain-walk).
 
-**Not yet:** full Go; hop-ball graph range; hex/graph replace; CI workflows;
+**Not yet:** full Go; hop-ball graph range; graph replace; CI workflows;
 semantics doc refresh; simultaneous deduction / 3+ clause AND.
 
 ## Phase 2 exit criteria
@@ -165,7 +166,8 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
 - Schema + kernel path for move onto occupied enemy cell (replace) — **done**
 - Preset + transcript/replay tests — **done** (Replace Race)
 - Contracts/validation; no forked per-game engine — **done**
-- Out of scope still deferred: multi-jump, capture chains, hex/graph replace
+- Out of scope still deferred: multi-jump, capture chains, graph replace
+  (hex replace closed by M26)
 
 ### M10 — Guess Who Lite (query + guess)
 
@@ -201,7 +203,7 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
 - Preset `simultaneous-replace-race` + transcript/replay + `pieceCaptured` — **done**
 - Out of scope closed by M14: ordered replace
 - Out of scope closed by M15: simultaneous slide+replace
-- Out of scope: hex/graph replace
+- Out of scope closed by M26: hex replace; remaining: graph replace
 
 ### M14 — Ordered simultaneous replace
 
@@ -209,14 +211,14 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
 - Schema allows ordered replace at range 1; priority capture-before-flee — **done**
 - Preset `ordered-simultaneous-replace-race` + transcript/replay + `pieceCaptured` — **done**
 - Out of scope closed by M15: simultaneous slide+replace
-- Out of scope: hex/graph replace
+- Out of scope closed by M26: hex replace; remaining: graph replace
 
 ### M15 — Simultaneous slide + replace
 
 - Schema allows simultaneous + `capture: replace` + `range > 1` (joint + ordered) — **done**
 - Joint vacated-origin hybrid + ordered sequential path/capture — **done** (hybrid closed in M17)
 - Presets `simultaneous-slide-replace-race` + `ordered-simultaneous-slide-replace-race` + tests — **done**
-- Out of scope: hex/graph replace
+- Out of scope closed by M26: hex replace; remaining: graph replace
 - Out of scope closed by M17: vacated-origin hybrid for joint replace paths
 
 ### M16 — Move→fire in-turn phases
@@ -234,7 +236,8 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
   replace — **done**
 - Preset `simultaneous-slide-replace-flee-race` + legality/apply/replay tests — **done**
 - Stationary capture + static blockers + seat-swap unchanged — **done**
-- Out of scope: hex/graph replace; joint UCT over simultaneous actions
+- Out of scope closed by M26: hex replace; remaining: graph replace; joint UCT
+  over simultaneous actions (later closed by M18)
   (closed by M18 for open simultaneous budget-1)
 
 ### M18 — Joint UCT / MCTS under simultaneous
@@ -280,17 +283,17 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
 - Preset `hex-slide-race` + destination / blocker / win+replay tests — **done**
 - Form range max unlocked for hex (graph stays 1 until M22) — **done**
 - Out of scope closed by M22: graph sliding
-- Out of scope: hex/graph replace capture
+- Out of scope closed by M26: hex replace; remaining: graph replace capture
 
 ### M22 — Graph chain-walk sliding
 
 - Schema accepts `graph` + move + `reach_row` + `movement.range` 2..8 — **done**
 - `slideGraphDestinations` walks unique forward edge chains (blocker parity;
-  junctions stop — no turning mid-slide); replace still rectangle-only — **done**
+  junctions stop — no turning mid-slide); replace deferred on graph — **done**
 - Preset `graph-slide-race` + destination / blocker / junction / win+replay
   tests — **done**
 - Form range max unlocked for graph — **done**
-- Out of scope: hop-ball graph range; hex/graph replace capture
+- Out of scope: hop-ball graph range; graph replace capture (hex closed by M26)
 
 ### M23 — Guess Who manual commit (eliminate)
 
@@ -324,6 +327,16 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
 - Preset `guess-who-or-lite` + transcript/replay tests — **done**
 - Out of scope: NOT / 3+ clause AND/OR; simultaneous deduction; deduction +
   phases; full canvas UI
+
+### M26 — Hex replace capture
+
+- Schema allows `movement.capture = replace` on `hex_offset` (graph still
+  deferred) — **done**
+- Kernel already had hex cube-axis replace in `slideHexDestinations`; form
+  enables replace for hex; clears on graph — **done**
+- Preset `hex-replace-race` + transcript/replay + sliding cube-axis tests —
+  **done**
+- Out of scope: graph replace; hop-ball; multi-jump / capture chains
 
 ## Sequencing notes
 

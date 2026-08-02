@@ -75,3 +75,4 @@
 {"ts":"2026-08-02T03:50-00:00","focus":"M23 Guess Who commit","summary":"Synced 6b5f; landed eliminate+autoEliminate+guess-who-commit-lite; typecheck+415 green","next":"Pick richer phases/hex-graph replace or P4 CI/semantics"}
 {"ts":"2026-08-02T04:10-00:00","focus":"M24 Guess Who AND","summary":"Landed queryShape=and + guess-who-and-lite after syncing e30c; 426 green","next":"Pick next seam or P4 CI/semantics"}
 {"ts":"2026-08-02T04:24-00:00","focus":"M25 Guess Who OR","summary":"Landed queryShape=or + guess-who-or-lite after syncing 0418; ready for green gate","next":"Pick next seam or P4 CI/semantics"}
+{"ts":"2026-08-02T04:45-00:00","focus":"M26 hex replace","summary":"Synced efd3; unlocked replace on hex_offset + Hex Replace Race; 444 green","next":"Pick graph replace/phases/3+AND or P4 CI/semantics"}

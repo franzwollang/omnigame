@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T04:40-00:00",
-  "turn": 51,
+  "updated_at": "2026-08-02T04:45-00:00",
+  "turn": 52,
   "focus": {
-    "milestone": "M25",
+    "milestone": "M26",
     "issue": "next-missing-mechanism",
-    "goal": "Guess Who OR queries landed; hand off next seam or P4"
+    "goal": "Hex replace capture landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M24 from 0418 onto efd3",
-    "Landed M25 queryShape=or + guess-who-or-lite",
-    "OR prune ≠ AND prune on same clauses"
+    "Synced M8–M25 from efd3 onto 6ac1",
+    "Landed M26 hex replace + hex-replace-race",
+    "444 green after typecheck+test"
   ],
   "discoveries": [
-    "OR NO prunes match-any; AND NO prunes match-all",
-    "Shared enumerateTwoClauseQueries for and/or; lastQuery.op distinguishes"
+    "slideHexDestinations already had replace; schema/form were the gate",
+    "Odd-r same column ≠ cube-axis ray (use NW/NE for slide replace)"
   ],
   "open_threads": [
-    "Next: richer phases, hex/graph replace, 3+ AND, or P4 CI/semantics"
+    "Next: graph replace, richer phases, 3+ AND, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (phases/replace/3+AND) or P4 CI/semantics refresh",
+  "next_step": "Pick next seam (graph replace/phases/3+AND) or P4 CI/semantics",
   "blockers": []
 }
