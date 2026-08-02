@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T18:50-05:00",
-  "turn": 35,
+  "updated_at": "2026-08-01T19:10-05:00",
+  "turn": 36,
   "focus": {
-    "milestone": "M11",
+    "milestone": "M12",
     "issue": "next-missing-mechanism",
-    "goal": "Joint simultaneous sliding landed; next seam or P4"
+    "goal": "Ordered simultaneous sliding landed; next seam or P4"
   },
   "recent": [
-    "Synced M8–M10 from 34ac onto a376",
-    "M11: joint simultaneous sliding + Simultaneous Slide Race",
-    "Green gate: typecheck + 323 tests"
+    "Synced M8–M11 from a376 onto a776",
+    "M12: ordered simultaneous sliding + Ordered Simultaneous Slide Race",
+    "Green gate: typecheck + 331 tests"
   ],
   "discoveries": [
-    "Vacated-origin canJointSimultaneousMoves; ordered still range=1",
-    "Joint swap now legal (pre-round occupied dest no longer blocks)"
+    "canOrderedSimultaneousMoves: first pre-round, second after first",
+    "Same-dest ordered conflict still first-seat wins (pre-round second check)"
   ],
   "open_threads": [
-    "P3 next seam (ordered sim slide / joint UCT / replace) or P4 CI/semantics"
+    "P3 next seam (sim replace / joint UCT / richer phases) or P4 CI/semantics"
   ],
   "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []

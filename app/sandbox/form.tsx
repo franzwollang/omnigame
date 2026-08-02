@@ -55,10 +55,13 @@ function keyToPhases(key: PhaseKey): ("place" | "move" | "fire")[] | undefined {
 export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	const inputMode = form.watch("input.mode") as string | undefined;
 	const topology = (form.watch("grid.topology") as string | undefined) ?? "rectangle";
+	const schedule =
+		(form.watch("turn.schedule") as string | undefined) ?? "alternating";
 	const phases = form.watch("turn.phases") as string[] | undefined;
 	const phasesNeedMove = Array.isArray(phases) && phases.includes("move");
 	const showMovement = inputMode === "move" || phasesNeedMove;
 	const hexOrGraph = topology === "hex_offset" || topology === "graph";
+	const simultaneousMove = schedule === "simultaneous" && inputMode === "move";
 	const rangeMax = hexOrGraph ? 1 : 8;
 
 	const ensureMovement = () => {
