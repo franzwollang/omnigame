@@ -7,7 +7,8 @@ import type {
 	Player,
 	CellValue,
 	Grid,
-	PendingPlace
+	PendingPlace,
+	DeductionCharacter
 } from "./types";
 import {
 	asPlacementList,
@@ -40,6 +41,8 @@ import {
 	type FleetConfig
 } from "@/engine/fleet";
 import {
+	canJointSimultaneousMoves,
+	canOrderedSimultaneousMoves,
 	canMove,
 	movementBoardFrom,
 	type MovementConfig
@@ -54,6 +57,12 @@ import {
 	type GridTopology
 } from "@/engine/topology";
 import { getCell as readCell } from "@/engine/types";
+import {
+	answerQuery,
+	assignSecrets,
+	eliminateAfterQuery,
+	isGuessCorrect
+} from "@/engine/deduction";
 
 export type InitialSeed = {
 	row: number;
@@ -73,7 +82,7 @@ export type GameConfig = {
 	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column" | "row" | "move";
+	inputMode?: "cell" | "column" | "row" | "move" | "deduction";
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
@@ -94,7 +103,7 @@ export type GameConfig = {
 	koRule?: KoRule;
 	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
-	observationMode?: "full" | "hit_miss" | "fog";
+	observationMode?: "full" | "hit_miss" | "fog" | "deduction";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
 	fogRadius?: number;
 	fogMetric?: "chebyshev" | "manhattan";
@@ -104,6 +113,7 @@ export type GameConfig = {
 		| "connect_or_destroy"
 		| "reach_row"
 		| "area_control"
+		| "identify_secret"
 		| "none";
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
@@ -143,6 +153,14 @@ export type GameConfig = {
 	 * placement (place onto hidden) then transitions to combat (fire).
 	 */
 	fleet?: FleetConfig;
+	/** Seed for deduction secrets (from config.rng.seed). */
+	seed?: number;
+	/** Deduction / Guess Who-lite roster + traits. */
+	deduction?: {
+		roster: DeductionCharacter[];
+		traits: string[];
+		wrongGuess: "lose" | "end_turn";
+	};
 	initial?: InitialSeed[];
 };
 
@@ -406,6 +424,17 @@ export function createInitialState(config: GameConfig): GameState {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
 	}
 
+	const deductionMode =
+		config.observationMode === "deduction" ||
+		config.inputMode === "deduction";
+	if (deductionMode && config.deduction) {
+		const rosterIds = config.deduction.roster.map((c) => c.id);
+		base.deduction = {
+			secret: assignSecrets(rosterIds, config.seed ?? 0),
+			eliminated: { X: [], O: [] }
+		};
+	}
+
 	if (seeds.length === 0) {
 		const koRule = resolveKoRule(config);
 		if (usesSuperkoHistory(koRule)) {
@@ -498,11 +527,117 @@ export function reduce(
 			return handleSimultaneousMove(state, event.moves, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
+		case "query":
+			return handleQuery(state, event.trait, event.value, config);
+		case "guess":
+			return handleGuess(state, event.id, config);
 		case "reset":
 			return createInitialState(config);
 		default:
 			return state;
 	}
+}
+
+function isDeductionMode(config: GameConfig): boolean {
+	return (
+		(config.inputMode === "deduction" ||
+			config.observationMode === "deduction") &&
+		config.deduction != null
+	);
+}
+
+function handleQuery(
+	state: GameState,
+	trait: string,
+	value: boolean,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if (!config.deduction.traits.includes(trait)) return state;
+
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const answer = answerQuery(
+		secretId,
+		config.deduction.roster,
+		trait,
+		value
+	);
+	const eliminated = eliminateAfterQuery(
+		config.deduction.roster,
+		state.deduction.eliminated[player],
+		trait,
+		value,
+		answer
+	);
+	const newMoveCount = state.moveCount + 1;
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				...state.deduction.eliminated,
+				[player]: eliminated
+			},
+			lastQuery: { by: player, trait, value, answer }
+		},
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleGuess(
+	state: GameState,
+	id: string,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const correct = isGuessCorrect(secretId, id);
+	const newMoveCount = state.moveCount + 1;
+
+	if (correct) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: player
+		};
+	}
+
+	if (config.deduction.wrongGuess === "lose") {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: opponent
+		};
+	}
+
+	// end_turn: handoff without win
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
 }
 
 function handlePass(state: GameState, config: GameConfig): GameState {
@@ -756,6 +891,9 @@ export type SimultaneousMovePair = {
  * Apply one simultaneous move pair onto `grid` (joint or ordered).
  * Same destination under joint → neither moves. Ordered applies first seat
  * then second against the updated board (second may become illegal).
+ * Joint replace: after vacating both chosen origins, landing overwrites any
+ * remaining occupant (stationary enemy capture); a fleeing opponent whose
+ * origin is the landing cell leaves an empty square.
  */
 function applySimultaneousMovePair(
 	grid: Grid,
@@ -768,7 +906,7 @@ function applySimultaneousMovePair(
 		if (sameDest) {
 			return { grid, conflict: true, applied: { X: false, O: false } };
 		}
-		// Atomic: clear both origins, then land both destinations.
+		// Atomic: clear both origins, then land both destinations (overwrite OK).
 		let cells = setCell(grid, moves.X.from, null);
 		cells = setCell({ ...grid, cells }, moves.O.from, null);
 		cells = setCell({ ...grid, cells }, moves.X.to, "X");
@@ -802,8 +940,11 @@ function applySimultaneousMovePair(
 
 /**
  * Simultaneous schedule + move input: both seats submit one {from,to}.
- * Each move validated with canMove on the pre-round board. Same destination
- * under joint → neither; ordered → first seat wins the cell when both claim it.
+ * Joint resolve validates on a vacated-origin board (sliding path integrity),
+ * or on the real board when movement.capture = replace (capture targets stay
+ * visible). Ordered resolve validates first seat pre-round, then second after
+ * simulating the first (sequential path revalidation). Same destination under
+ * joint → neither; ordered → first seat wins the cell when both claim it.
  * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(
@@ -821,10 +962,17 @@ function handleSimultaneousMove(
 	const wrap = board.wrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
 
-	if (
-		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, board) ||
-		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, board)
-	) {
+	const legal =
+		resolveOrder === "joint"
+			? canJointSimultaneousMoves(state.grid, moves, movement, board)
+			: canOrderedSimultaneousMoves(
+					state.grid,
+					moves,
+					movement,
+					resolveOrder,
+					board
+				);
+	if (!legal) {
 		return state;
 	}
 
