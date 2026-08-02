@@ -127,6 +127,24 @@ describe("buildFeatureContracts", () => {
 		);
 		expect(go.map((c) => c.id)).not.toContain("Capture");
 		expect(go.map((c) => c.id)).not.toContain("NInARow");
+
+		const guess = buildFeatureContracts(
+			examplePresets["guess-who-lite"].config
+		);
+		expect(guess.map((c) => c.id).sort()).toEqual(
+			[
+				"BoardWritable",
+				"IdentifySecret",
+				"InputDeduction",
+				"ObservationDeduction"
+			].sort()
+		);
+		expect(guess.map((c) => c.id)).not.toContain("NInARow");
+		expect(guess.map((c) => c.id)).not.toContain("PlacementDirect");
+		expect(checkContracts(guess)).toEqual([]);
+		expect(validateConfig(examplePresets["guess-who-lite"].config).ok).toBe(
+			true
+		);
 		expect(go.map((c) => c.id)).not.toContain("AdjacencyProvided");
 		expect(checkContracts(go)).toEqual([]);
 	});
@@ -197,16 +215,52 @@ describe("validateConfig", () => {
 		expect(result.errors.some((e) => e.includes("overflow"))).toBe(true);
 	});
 
-	it("rejects simultaneous move with movement.range > 1", () => {
+	it("accepts ordered simultaneous move with movement.range > 1", () => {
 		const base = examplePresets["simultaneous-step-race"].config;
-		const bad = {
+		const ok = {
+			...base,
+			movement: { ...base.movement!, range: 4 as const },
+			turn: {
+				mode: "turn" as const,
+				schedule: "simultaneous" as const,
+				resolveOrder: "x_first" as const
+			}
+		};
+		const result = validateConfig(ok);
+		expect(result.ok).toBe(true);
+	});
+
+	it("accepts joint simultaneous move with movement.range > 1", () => {
+		const base = examplePresets["simultaneous-step-race"].config;
+		const ok = {
 			...base,
 			movement: { ...base.movement!, range: 4 as const }
 		};
-		const result = validateConfig(bad);
-		expect(result.ok).toBe(false);
-		expect(
-			result.errors.some((e) => e.toLowerCase().includes("range"))
-		).toBe(true);
+		const result = validateConfig(ok);
+		expect(result.ok).toBe(true);
+	});
+
+	it("accepts joint simultaneous move with movement.capture = replace (range 1)", () => {
+		const base = examplePresets["simultaneous-step-race"].config;
+		const ok = {
+			...base,
+			movement: { ...base.movement!, capture: "replace" as const }
+		};
+		const result = validateConfig(ok);
+		expect(result.ok).toBe(true);
+	});
+
+	it("accepts simultaneous replace with movement.range > 1", () => {
+		const base = examplePresets["simultaneous-step-race"].config;
+		const ok = {
+			...base,
+			movement: {
+				...base.movement!,
+				range: 4 as const,
+				capture: "replace" as const
+			}
+		};
+		const result = validateConfig(ok);
+		expect(result.ok).toBe(true);
 	});
 });
