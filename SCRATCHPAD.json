@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T08:50-00:00",
-  "turn": 66,
+  "updated_at": "2026-08-02T08:55-00:00",
+  "turn": 67,
   "focus": {
     "milestone": "M38",
     "issue": "next-missing-mechanism",
     "goal": "commitMove landed; hand off next seam or P4"
   },
   "recent": [
-    "Landed M37 commitEliminate + Hidden Simultaneous Guess Who Commit Lite",
+    "Synced M8–M37 from aaa9 onto 8286",
     "Landed M38 commitMove + Hidden Simultaneous Step Race",
-    "549 green; fire→move still deferred without anchor"
+    "551 green; PR #78; fire→move still deferred without anchor"
   ],
   "discoveries": [
     "Schema previously forbade simultaneous move × commitReveal"
   ],
   "open_threads": [
-    "Next: fire→move only with anchor, or P4 CI/semantics"
+    "Next: multi-action sim move / queryShape not / P4 CI"
   ],
-  "next_step": "Pick fire→move (anchor only) or P4 CI/semantics",
+  "next_step": "Pick next seam (not fire→move) or P4 CI/semantics",
   "blockers": []
 }
