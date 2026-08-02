@@ -50,6 +50,8 @@ These are built from the same shared schema and operators.
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Diagonal Step Race** (`movement.adjacency = diagonal` ferz step + reach_row)
 - **Slide Race** (`movement.range > 1` blocker-aware orthogonal slide + reach_row)
+- **Replace Race** (`movement.capture = replace` — move onto enemy clears then lands)
+- **Guess Who Lite** (deduction query/guess + identify_secret)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
@@ -72,7 +74,15 @@ These are built from the same shared schema and operators.
 - **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
 - **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
 - **Place, Move & Fire Lite** (`turn.phases: ["place","move","fire"]` + `connect_or_destroy`)
+- **Move & Fire Lite** (`turn.phases: ["move","fire"]` — reposition spotter then fire; no place)
 - **Simultaneous Step Race** (`simultaneous` + `move` joint resolve; same-destination conflict)
+- **Simultaneous Slide Race** (`simultaneous` + `movement.range > 1`; vacated-origin path checks)
+- **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
+- **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
+- **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
+- **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; vacated-origin hybrid)
+- **Simultaneous Slide Replace Flee Race** (joint slide through fleeing blocker on the ray)
+- **Ordered Simultaneous Slide Replace Race** (`resolveOrder` + slide+replace; sequential path/capture)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -99,16 +109,17 @@ Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/da
 (although no toggle added yet), and editor scroll position is preserved on format.
 
 The form syncs two-ways with the JSON editor for many knobs (`metadata`, `grid`,
-`turn` schedule/budget/delay, placement, win, …). **JSON/presets only (for now):**
-`movement.adjacency` / `movement.range`, and `turn.phases` — see
-`OPEN_ISSUES.md` `sandbox-form-honesty`.
+`turn` schedule/budget/delay/**phases**, **movement**, placement, win, …). A
+dashed “Form coverage” callout in the Form tab lists remaining JSON/preset-only
+fields (`scheduler`, graph `nodes`/`edges`, `initial`, `placements`,
+`placement.capture`, …).
 
 ## Scripts
 
 - `pnpm run dev` — Next.js sandbox
 - `pnpm run build` / `start` — production
 - `pnpm run typecheck` / `lint`
-- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥289 tests)
+- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥374 tests)
 - Green gate: `pnpm install && pnpm typecheck && pnpm test`
 
 Open work and marathon queue: `OPEN_ISSUES.md` / `PLANNING.md` (not this README).
@@ -129,7 +140,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
   **rectangle** and **hex_offset** (graph wrap = explicit edges); Toroidal TTT +
   Toroidal Hex Connect Lite presets
-- **Inputs**: cell-click, column-activation, row-activation, and piece move (`input.mode = "cell" | "column" | "row" | "move"`)
+- **Inputs**: cell-click, column-activation, row-activation, piece move, and
+  deduction query/guess (`input.mode = "cell" | "column" | "row" | "move" | "deduction"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
   - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
@@ -140,22 +152,32 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Movement**: piece steps/slides via `{ type: "move", from, to }` with
   `movement.adjacency` = `orthogonal` | `diagonal` | `king` and sliding
   `movement.range` 1..8 on rectangle (Step Race / Diagonal Step Race /
-  Slide Race / Simultaneous Step Race); hex_offset / graph
-  use topology neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph
-  Step Race
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
-- **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
+  Slide Race / Simultaneous Step Race / **Simultaneous Slide Race** / **Ordered
+  Simultaneous Slide Race**); joint simultaneous slides use vacated-origin path
+  checks; ordered simultaneous slides revalidate the second seat after the first;
+  `movement.capture = replace` moves onto an enemy cell (path empty except
+  destination) — Replace Race / **Simultaneous Replace Race** (joint range 1;
+  vacated-origin paths; stationary replace still required) /
+  **Ordered Simultaneous Replace Race** (sequential capture apply; priority can
+  capture before prey flees) / **Simultaneous Slide Replace Race** (joint
+  slide+replace; path-through-fleeing) / **Simultaneous Slide Replace
+  Flee Race** (demo of slide through a vacating blocker) / **Ordered
+  Simultaneous Slide Replace Race** (ordered slide+replace; sequential
+  path/capture); hex_offset / graph use topology neighbors (orthogonal, range
+  1) — Hex Step Race / Simultaneous Hex/Graph Step Race
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite)
+- **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, capture-by-replacement
-piece tables, richer multi-phase machines, and a larger set of reusable
-operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
+machines, joint simultaneous search, richer Guess Who commit/hypothesis beyond
+query+guess MVP, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -236,8 +258,8 @@ Turn logic is declarative:
 - N players
 - schedule: alternating, simultaneous place or move (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action place rounds), or multi-step alternating
 - phases: in-turn `turn.phases` (place→move, place→fire, place→move→fire with
-  `connect_or_destroy`); game-long fleet placement → combat; hex-graph phase
-  lifts still expanding
+  `connect_or_destroy`, or move→fire); game-long fleet placement → combat;
+  hex-graph phase lifts still expanding
 - action points / per-turn budgets
 
 ### 6) Observation primitive (high leverage; optional early, core later)
@@ -332,7 +354,9 @@ The goal is to converge on a “complete-ish” primitive set by implementing a 
 - **Battleship-lite**: hidden placement, hit/miss observation, sink objective  
   Stresses: partial info + connectivity constraints + phases
 - **Guess Who-like**: predicate queries over an attribute set  
-  Stresses: query operator + hypothesis/commit actions + race objective
+  Stresses: query operator + hypothesis/commit actions + race objective  
+  **Landed (MVP):** Guess Who Lite — `deduction` input/observation,
+  `identify_secret`, query + guess (richer commit/hypothesis still deferred)
 - **Go-lite / territory fill**: place + adjacency/liberty constraints + area scoring (simplified)  
   Stresses: stepping + constraints + scoring
 
@@ -354,10 +378,16 @@ Don’t commit to heavy theory early, but keep the seam clean:
 Baseline agents (enough to prove the ABI):
 
 - random legal
-- greedy 1-ply (win / block / heuristics)
+- greedy 1-ply (win / block / heuristics; under `simultaneous`, skips
+  lookahead because a single seat action is a no-op until joint resolve)
 - hunt (hit/miss observe → target after hits, parity search)
 - tiny flat MCTS
 - UCT tree search (UCB1 + optional tree reuse)
+
+**Simultaneous limitation:** MCTS and UCT fall back to uniform random among
+the current seat’s `legalActions` when `turn.schedule = simultaneous` (joint
+action space is not searched yet). The sandbox Agent UI labels this as
+“random if simultaneous.”
 
 ## Suggested module structure (directional)
 
@@ -381,12 +411,24 @@ liberties/ko/superko, simultaneous / multi-step / delayed / in-turn phases, libr
 explorer, debug overlays, baseline agents. Details: README status section +
 `PLANNING.md`.
 
+**Landed (Phase 2 so far):** composition honesty (M8), capture-by-replacement /
+Replace Race (M9), Guess Who Lite query+guess / `identify_secret` (M10), joint
+simultaneous sliding / Simultaneous Slide Race (M11), ordered simultaneous
+sliding / Ordered Simultaneous Slide Race (M12), joint simultaneous replace /
+Simultaneous Replace Race (M13), ordered simultaneous replace / Ordered
+Simultaneous Replace Race (M14), simultaneous slide+replace / Simultaneous +
+Ordered Slide Replace Race (M15), move→fire in-turn phases / Move & Fire Lite
+(M16), vacated-origin hybrid for joint replace paths / Simultaneous Slide
+Replace Flee Race (M17).
+
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- Composition honesty: form movement/phases, simultaneous agent-search quality
-- **Next mechanism (default):** capture-by-replacement on move
-- Deferred: Guess Who-like query operator; full Go rules; hex/graph `range > 1`;
-  apply-time simultaneous sliding; CI workflows
+- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. joint
+  UCT / MCTS over simultaneous actions, richer phases beyond move→fire) or P4
+  CI / semantics
+- Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
+  workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
+  Who commit/hypothesis beyond query+guess
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
