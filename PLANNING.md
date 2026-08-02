@@ -35,10 +35,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M16 | Next missing mechanism (move→fire in-turn phases) | `done` |
 | M17 | Next missing mechanism (joint replace vacated-origin hybrid) | `done` |
 | M18 | Next missing mechanism (joint UCT/MCTS under simultaneous) | `done` |
+| M19 | Next missing mechanism (joint UCT under multi-action simultaneous) | `in progress` |
 
-**Optimizing for this marathon:** M18 joint UCT closed. Pick **P3
-next-missing-mechanism** (smallest remaining seam) or **P4** CI / semantics
-refresh — without asking which fork.
+**Optimizing for this marathon:** M19 joint multi-action UCT. Then **P3
+next-missing-mechanism** (e.g. commitReveal joint search) or **P4** CI /
+semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -66,8 +67,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M18 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M18) — smallest new seam — or
+   (P0–P2 / M8–M18 closed; M19 in flight).  
+2. Start **P3** `next-missing-mechanism` (post-M19) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -132,9 +133,8 @@ observation, etc., plus an in-UI “Form coverage” callout for remaining
 JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 `placement.capture`, `deduction.*` / `identify_secret`, …).
 
-**Not yet:** full Go; hex/graph sliding; joint UCT under
-`commitReveal` / multi-action simultaneous; CI workflows; richer Guess Who
-commit/hypothesis beyond query+guess MVP.
+**Not yet:** full Go; hex/graph sliding; joint UCT under `commitReveal`; CI
+workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
 
 ## Phase 2 exit criteria
 
@@ -227,8 +227,19 @@ commit/hypothesis beyond query+guess MVP.
   **done**
 - Immediate joint-win shortcut; sandbox Agent UI + README labels updated — **done**
 - Tests on `simultaneous-ttt` (enumerate, consistency, win, playout) — **done**
-- Out of scope still deferred: `commitReveal` joint search; multi-action joint
-  cartesian; Nash/maximin adversarial joint policy
+- Out of scope closed by M19: multi-action joint cartesian
+- Out of scope still deferred: `commitReveal` joint search; Nash/maximin
+  adversarial joint policy
+
+### M19 — Joint UCT / MCTS under multi-action simultaneous
+
+- Extend `canSearchJointActions` / `enumerateJointLegalActions` to
+  `actionsPerTurn > 1` (ordered distinct place tuples × cartesian) — **in progress**
+- Per-seat pick cursor on joint decision cache for sandbox multi-`act` — **in progress**
+- Flat MCTS samples large cartesians; UCT searches full untried set — **in progress**
+- Tests on `double-place-simultaneous-ttt` (5184 enum, coordinated picks,
+  mid-round win, playout) — **in progress**
+- Out of scope: `commitReveal` joint search; Nash/maximin joint policy
 
 ## Sequencing notes
 

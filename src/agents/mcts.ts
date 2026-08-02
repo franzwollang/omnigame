@@ -12,12 +12,32 @@ import { createHuntAgent } from "@/agents/hunt";
 import {
 	canSearchJointActions,
 	enumerateJointLegalActions,
+	jointSeatBudget,
 	jointStateFingerprint,
 	seatComponentFromJoint
 } from "@/agents/jointLegal";
 
+/** Cap flat root scoring when multi-action cartesian explodes (e.g. 5184). */
+const MAX_FLAT_JOINT_EVALS = 96;
+
 function cloneAction(action: KernelAction): KernelAction {
 	return structuredClone(action);
+}
+
+function mayWinThisJointRound(
+	kernel: GameKernel,
+	state: GameState,
+	player: PlayerId
+): boolean {
+	const winLen = kernel.config.winLength;
+	if (winLen == null || winLen <= 0) return true;
+	const token = playerOf(player);
+	let count = 0;
+	for (const c of state.grid.cells) {
+		if (c === token) count += 1;
+	}
+	const budget = kernel.config.actionsPerTurn ?? 1;
+	return count + budget >= winLen;
 }
 
 function rolloutValue(
@@ -71,17 +91,49 @@ function scoreRootAction(
 	return sum / rolloutsPerAction;
 }
 
+/** Partial Fisher–Yates sample when the joint cartesian is too large for flat eval. */
+function sampleJoints(
+	joints: readonly KernelAction[],
+	next: () => number,
+	cap: number
+): KernelAction[] {
+	if (joints.length <= cap) return [...joints];
+	const copy = [...joints];
+	const out: KernelAction[] = [];
+	for (let i = 0; i < cap; i++) {
+		const j = i + Math.floor(next() * (copy.length - i));
+		const tmp = copy[i]!;
+		copy[i] = copy[j]!;
+		copy[j] = tmp;
+		out.push(copy[i]!);
+	}
+	return out;
+}
+
 type JointDecisionCache = {
 	fingerprint: string;
 	joint: KernelAction;
+	nextIndex: { 0: number; 1: number };
 };
+
+function seatPickFromCache(
+	cache: JointDecisionCache,
+	player: PlayerId
+): KernelAction | null {
+	const budget = jointSeatBudget(cache.joint);
+	if (budget <= 0) return null;
+	const idx = cache.nextIndex[player] % budget;
+	cache.nextIndex[player] = idx + 1;
+	return seatComponentFromJoint(cache.joint, player, idx);
+}
 
 /**
  * Tiny flat MCTS-ish: for each legal root action, run N random rollouts via
  * `kernel.stepSync` and pick the best mean score. Under open simultaneous
- * (budget 1), evaluates joint place/move actions and caches the decision for
- * dual-`act` consistency. On hit/miss configs, delegates to the observation
- * hunt agent (no hidden-fleet rollouts).
+ * (any budget, no commitReveal), evaluates joint place/move actions and
+ * caches the decision for dual-/multi-`act` consistency. Large multi-action
+ * cartesians are sampled to keep flat eval bounded. On hit/miss configs,
+ * delegates to the observation hunt agent (no hidden-fleet rollouts).
  */
 export function createTinyMctsAgent(
 	seed: Seed = 0,
@@ -113,35 +165,44 @@ export function createTinyMctsAgent(
 				(kernel.config.turnSchedule ?? "alternating") === "simultaneous";
 
 			if (simultaneous && !canSearchJointActions(kernel)) {
-				// commitReveal / multi-action: joint cartesian deferred.
+				// commitReveal: joint commit tree deferred.
 				return cloneAction(legal[Math.floor(next() * legal.length)]!);
 			}
 
 			if (simultaneous) {
 				const fp = jointStateFingerprint(state);
 				if (jointCache && jointCache.fingerprint === fp) {
-					const seat = seatComponentFromJoint(jointCache.joint, player);
+					const seat = seatPickFromCache(jointCache, player);
 					return seat ? cloneAction(seat) : null;
 				}
 
 				const joints = enumerateJointLegalActions(kernel, state);
 				if (joints.length === 0) return null;
 
-				for (const joint of joints) {
-					const after = kernel.stepSync(state, joint).nextState;
-					if (
-						after.status === "won" &&
-						after.winner === playerOf(player)
-					) {
-						jointCache = { fingerprint: fp, joint };
-						const seat = seatComponentFromJoint(joint, player);
-						return seat ? cloneAction(seat) : null;
+				const freshCache = (joint: KernelAction): JointDecisionCache => ({
+					fingerprint: fp,
+					joint,
+					nextIndex: { 0: 0, 1: 0 }
+				});
+
+				if (mayWinThisJointRound(kernel, state, player)) {
+					for (const joint of joints) {
+						const after = kernel.stepSync(state, joint).nextState;
+						if (
+							after.status === "won" &&
+							after.winner === playerOf(player)
+						) {
+							jointCache = freshCache(joint);
+							const seat = seatPickFromCache(jointCache, player);
+							return seat ? cloneAction(seat) : null;
+						}
 					}
 				}
 
-				let best = joints[0]!;
+				const scored = sampleJoints(joints, next, MAX_FLAT_JOINT_EVALS);
+				let best = scored[0]!;
 				let bestScore = Number.NEGATIVE_INFINITY;
-				for (const joint of joints) {
+				for (const joint of scored) {
 					const mean = scoreRootAction(
 						kernel,
 						state,
@@ -156,8 +217,8 @@ export function createTinyMctsAgent(
 						best = joint;
 					}
 				}
-				jointCache = { fingerprint: fp, joint: best };
-				const seat = seatComponentFromJoint(best, player);
+				jointCache = freshCache(best);
+				const seat = seatPickFromCache(jointCache, player);
 				return seat ? cloneAction(seat) : null;
 			}
 

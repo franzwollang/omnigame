@@ -9,11 +9,16 @@ import {
 	createUctAgent,
 	canSearchJointActions,
 	enumerateJointLegalActions,
+	jointSeatBudget,
+	orderedDistinctPlaceTuples,
 	pickHuntFireAction,
 	seatComponentFromJoint
 } from "@/agents";
 import { examplePresets } from "@/presets/registry";
-import { jointPlaceFromActions } from "@/engine/kernel";
+import {
+	jointPlaceFromActions,
+	jointPlacesFromActions
+} from "@/engine/kernel";
 import type { KernelAction } from "@/engine/kernel";
 import type { CellValue } from "@/engine/types";
 import { setCell } from "@/engine/types";
@@ -327,7 +332,7 @@ describe("joint UCT/MCTS under simultaneous (M18)", () => {
 		expect(joints.every((a) => a.type === "simultaneousPlace")).toBe(true);
 	});
 
-	it("does not search joint under commitReveal / multi-action", () => {
+	it("does not search joint under commitReveal", () => {
 		const hidden = compileConfig(
 			examplePresets["hidden-simultaneous-ttt"].config
 		);
@@ -338,11 +343,6 @@ describe("joint UCT/MCTS under simultaneous (M18)", () => {
 				hidden.kernel.initialState()
 			)
 		).toHaveLength(0);
-
-		const multi = compileConfig(
-			examplePresets["double-place-simultaneous-ttt"].config
-		);
-		expect(canSearchJointActions(multi.kernel)).toBe(false);
 	});
 
 	it("uct dual-act returns consistent joint seat components", () => {
@@ -462,6 +462,146 @@ describe("joint UCT/MCTS under simultaneous (M18)", () => {
 			expect(a1).not.toBeNull();
 			const result = kernel.stepJointSync(state, { 0: a0!, 1: a1! });
 			state = result.nextState;
+			guard += 1;
+		}
+		expect(state.status === "won" || state.status === "draw").toBe(true);
+	});
+});
+
+describe("joint UCT/MCTS under multi-action simultaneous (M19)", () => {
+	it("enumerates 5184 joint double-places on empty double-place-simultaneous-ttt", () => {
+		const { kernel } = compileConfig(
+			examplePresets["double-place-simultaneous-ttt"].config
+		);
+		const state = kernel.initialState();
+		expect(canSearchJointActions(kernel)).toBe(true);
+		expect(kernel.config.actionsPerTurn).toBe(2);
+		const places = kernel.legalActions(state, 0);
+		expect(places).toHaveLength(9);
+		expect(orderedDistinctPlaceTuples(places, 2)).toHaveLength(72);
+		const joints = enumerateJointLegalActions(kernel, state);
+		expect(joints).toHaveLength(5184);
+		expect(joints.every((a) => a.type === "simultaneousPlace")).toBe(true);
+		const sample = joints[0]!;
+		expect(sample.type).toBe("simultaneousPlace");
+		if (sample.type === "simultaneousPlace") {
+			expect(jointSeatBudget(sample)).toBe(2);
+		}
+	});
+
+	it("uct multi-act returns coordinated length-2 picks per seat", () => {
+		const { kernel } = compileConfig(
+			examplePresets["double-place-simultaneous-ttt"].config
+		);
+		const state = kernel.initialState(5);
+		const agent = createUctAgent(5, { simulations: 40 });
+		const x0 = agent.act(kernel, state, 0);
+		const x1 = agent.act(kernel, state, 0);
+		const o0 = agent.act(kernel, state, 1);
+		const o1 = agent.act(kernel, state, 1);
+		expect(x0?.type).toBe("place");
+		expect(x1?.type).toBe("place");
+		expect(o0?.type).toBe("place");
+		expect(o1?.type).toBe("place");
+		expect(x0).not.toEqual(x1);
+		expect(o0).not.toEqual(o1);
+		const joint = jointPlacesFromActions([x0!, x1!], [o0!, o1!]);
+		expect(joint).not.toBeNull();
+		const explained = kernel.explainAction(state, 0, joint!);
+		expect(explained.legal).toBe(true);
+		// Cache wrap: re-reading seat 0 yields the same ordered pair.
+		expect(agent.act(kernel, state, 0)).toEqual(x0);
+		expect(agent.act(kernel, state, 0)).toEqual(x1);
+	});
+
+	it("uct takes an immediate mid-round joint win for X", () => {
+		const { kernel } = compileConfig(
+			examplePresets["double-place-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState();
+		// X has top-row threat; index-0 place at (0,2) wins before later picks.
+		state = {
+			...state,
+			grid: {
+				...state.grid,
+				cells: (() => {
+					const cells = [...state.grid.cells];
+					cells[0] = "X";
+					cells[1] = "X";
+					return cells;
+				})()
+			},
+			moveCount: 2
+		};
+		const agent = createUctAgent(9, { simulations: 24 });
+		const x0 = agent.act(kernel, state, 0);
+		const x1 = agent.act(kernel, state, 0);
+		expect(x0).toEqual({ type: "place", position: { row: 0, col: 2 } });
+		expect(x1?.type).toBe("place");
+		expect(x1).not.toEqual(x0);
+		const o0 = agent.act(kernel, state, 1);
+		const o1 = agent.act(kernel, state, 1);
+		expect(o0?.type).toBe("place");
+		expect(o1?.type).toBe("place");
+		// O must not collide on the winning cell at index 0.
+		expect(o0).not.toEqual({
+			type: "place",
+			position: { row: 0, col: 2 }
+		});
+		const joint = jointPlacesFromActions([x0!, x1!], [o0!, o1!]);
+		expect(joint).not.toBeNull();
+		const after = kernel.stepSync(state, joint!).nextState;
+		expect(after.status).toBe("won");
+		expect(after.winner).toBe("X");
+	});
+
+	it("mcts takes an immediate mid-round joint win for X", () => {
+		const { kernel } = compileConfig(
+			examplePresets["double-place-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState();
+		state = {
+			...state,
+			grid: {
+				...state.grid,
+				cells: (() => {
+					const cells = [...state.grid.cells];
+					cells[0] = "X";
+					cells[1] = "X";
+					return cells;
+				})()
+			},
+			moveCount: 2
+		};
+		const agent = createTinyMctsAgent(3, { rolloutsPerAction: 4 });
+		const x0 = agent.act(kernel, state, 0);
+		expect(x0).toEqual({ type: "place", position: { row: 0, col: 2 } });
+	});
+
+	it("uct completes a short double-place-simultaneous-ttt playout", () => {
+		const { kernel } = compileConfig(
+			examplePresets["double-place-simultaneous-ttt"].config
+		);
+		let state = kernel.initialState(13);
+		const uct = createUctAgent(13, { simulations: 28, reuseTree: true });
+		let guard = 0;
+		while (state.status === "playing" && guard < 8) {
+			expect(kernel.currentPlayer(state)).toBe("simultaneous");
+			const xs: KernelAction[] = [];
+			const os: KernelAction[] = [];
+			for (let i = 0; i < 2; i++) {
+				const a = uct.act(kernel, state, 0);
+				expect(a).not.toBeNull();
+				xs.push(a!);
+			}
+			for (let i = 0; i < 2; i++) {
+				const a = uct.act(kernel, state, 1);
+				expect(a).not.toBeNull();
+				os.push(a!);
+			}
+			const joint = jointPlacesFromActions(xs, os);
+			expect(joint).not.toBeNull();
+			state = kernel.stepSync(state, joint!).nextState;
 			guard += 1;
 		}
 		expect(state.status === "won" || state.status === "draw").toBe(true);

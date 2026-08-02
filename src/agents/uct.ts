@@ -18,6 +18,7 @@ import { createHuntAgent } from "@/agents/hunt";
 import {
 	canSearchJointActions,
 	enumerateJointLegalActions,
+	jointSeatBudget,
 	jointStateFingerprint,
 	seatComponentFromJoint
 } from "@/agents/jointLegal";
@@ -29,7 +30,37 @@ const DEFAULT_EXPLORATION = Math.SQRT1_2; // ≈ 0.707 — common UCT constant
 type JointDecisionCache = {
 	fingerprint: string;
 	joint: KernelAction;
+	/** Next place-index per seat for multi-action dual-`act` (mod budget). */
+	nextIndex: { 0: number; 1: number };
 };
+
+function seatPickFromCache(
+	cache: JointDecisionCache,
+	player: PlayerId
+): KernelAction | null {
+	const budget = jointSeatBudget(cache.joint);
+	if (budget <= 0) return null;
+	const idx = cache.nextIndex[player] % budget;
+	cache.nextIndex[player] = idx + 1;
+	return seatComponentFromJoint(cache.joint, player, idx);
+}
+
+/** Skip exhaustive joint win scan when this seat cannot reach n-in-a-row this round. */
+function mayWinThisJointRound(
+	kernel: GameKernel,
+	state: GameState,
+	player: PlayerId
+): boolean {
+	const winLen = kernel.config.winLength;
+	if (winLen == null || winLen <= 0) return true;
+	const token = playerOf(player);
+	let count = 0;
+	for (const c of state.grid.cells) {
+		if (c === token) count += 1;
+	}
+	const budget = kernel.config.actionsPerTurn ?? 1;
+	return count + budget >= winLen;
+}
 
 export function actionKey(action: KernelAction): string {
 	switch (action.type) {
@@ -277,8 +308,9 @@ export type UctOptions = {
 
 /**
  * UCT (UCB1) Monte Carlo tree search over `kernel.legalActions` / `stepSync`.
- * Under open simultaneous (budget 1), searches the joint place/move cartesian
- * and caches the chosen joint so sandbox dual-`act` calls stay consistent.
+ * Under open simultaneous (any `actionsPerTurn`, no commitReveal), searches
+ * the joint place/move cartesian and caches the chosen joint so sandbox
+ * dual-/multi-`act` calls stay consistent (per-seat pick cursor).
  * On hit/miss configs, delegates to the observation hunt agent (no hidden
  * fleet rollouts under partial information).
  */
@@ -313,31 +345,39 @@ export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 				(kernel.config.turnSchedule ?? "alternating") === "simultaneous";
 
 			if (simultaneous && !canSearchJointActions(kernel)) {
-				// commitReveal / multi-action: joint cartesian deferred — random seat legal.
+				// commitReveal: joint commit tree deferred — random seat legal.
 				return cloneAction(legal[Math.floor(next() * legal.length)]!);
 			}
 
 			if (simultaneous) {
 				const fp = jointStateFingerprint(state);
 				if (jointCache && jointCache.fingerprint === fp) {
-					const seat = seatComponentFromJoint(jointCache.joint, player);
+					const seat = seatPickFromCache(jointCache, player);
 					return seat ? cloneAction(seat) : null;
 				}
 
 				const joints = enumerateJointLegalActions(kernel, state);
 				if (joints.length === 0) return null;
 
+				const freshCache = (joint: KernelAction): JointDecisionCache => ({
+					fingerprint: fp,
+					joint,
+					nextIndex: { 0: 0, 1: 0 }
+				});
+
 				// Immediate joint win for the requesting seat.
-				for (const joint of joints) {
-					const after = kernel.stepSync(state, joint).nextState;
-					if (
-						after.status === "won" &&
-						after.winner === playerOf(player)
-					) {
-						jointCache = { fingerprint: fp, joint };
-						priorRoot = null;
-						const seat = seatComponentFromJoint(joint, player);
-						return seat ? cloneAction(seat) : null;
+				if (mayWinThisJointRound(kernel, state, player)) {
+					for (const joint of joints) {
+						const after = kernel.stepSync(state, joint).nextState;
+						if (
+							after.status === "won" &&
+							after.winner === playerOf(player)
+						) {
+							jointCache = freshCache(joint);
+							priorRoot = null;
+							const seat = seatPickFromCache(jointCache, player);
+							return seat ? cloneAction(seat) : null;
+						}
 					}
 				}
 
@@ -361,9 +401,9 @@ export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 				}
 
 				const bestJoint = bestRootAction(root) ?? joints[0]!;
-				jointCache = { fingerprint: fp, joint: bestJoint };
+				jointCache = freshCache(bestJoint);
 				priorRoot = reuseTree ? root : null;
-				const seat = seatComponentFromJoint(bestJoint, player);
+				const seat = seatPickFromCache(jointCache, player);
 				return seat ? cloneAction(seat) : null;
 			}
 

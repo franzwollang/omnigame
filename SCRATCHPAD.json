@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T02:05-00:00",
-  "turn": 43,
+  "updated_at": "2026-08-02T02:26-00:00",
+  "turn": 44,
   "focus": {
-    "milestone": "M18",
+    "milestone": "M19",
     "issue": "next-missing-mechanism",
-    "goal": "Joint UCT/MCTS under open simultaneous landed; next seam or P4"
+    "goal": "Joint UCT/MCTS under multi-action simultaneous"
   },
   "recent": [
-    "Synced M8–M17 from 0916 onto 8bb5",
-    "M18: enumerateJointLegalActions + UCT/MCTS joint root search",
-    "Dual-act cache; UI/README labels; simultaneous-ttt tests"
+    "Synced M8–M18 from 8bb5 onto bada",
+    "Extended canSearchJointActions + ordered place tuples",
+    "Per-seat pick cursor; flat MCTS samples large cartesians"
   ],
   "discoveries": [
-    "Open simultaneous budget-1 is searchable; commitReveal/multi still random",
-    "Sandbox dual-act needs joint decision cache for consistency"
+    "Empty 3×3 budget-2 = 5184 joints; skip win-scan if count+budget < winLen",
+    "Modulo pick cursor preserves M18 dual-act re-read behavior"
   ],
   "open_threads": [
-    "P3 next seam (commitReveal/multi joint) or P4 CI/semantics"
+    "After green: mark M19 done; next commitReveal joint or P4"
   ],
-  "next_step": "Cloud: pick remaining joint-search seam or P4 tooling-ci / semantics refresh",
+  "next_step": "Green gate then resolve M19; hand off commitReveal joint or P4",
   "blockers": []
 }

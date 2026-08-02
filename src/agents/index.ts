@@ -7,6 +7,8 @@ export { createHuntAgent, pickHuntFireAction } from "@/agents/hunt";
 export {
 	canSearchJointActions,
 	enumerateJointLegalActions,
+	jointSeatBudget,
+	orderedDistinctPlaceTuples,
 	seatComponentFromJoint
 } from "@/agents/jointLegal";
 
