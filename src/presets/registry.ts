@@ -2124,7 +2124,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Chain-walk slide race on two parallel graph lanes (range 4). Unlocks movement.range > 1 on graph — blocker-aware walk along explicit edge chains that range-1 graph neighbors cannot express (no turning at junctions).",
+			"Chain-walk slide race on two parallel graph lanes (range 4). Unlocks movement.range > 1 on graph — blocker-aware walk along unique forward edge chains (no turning at junctions; distinct from fog hop-ball BFS). Flee spurs that raise mid-path degree stop the chain.",
 		config: {
 			metadata: { name: "Graph Slide Race", version: 1 },
 			grid: {

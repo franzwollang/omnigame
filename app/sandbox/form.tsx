@@ -640,9 +640,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														/>
 													</FormControl>
 													<p className="text-xs text-muted-foreground">
-														1 = adjacent step; 2–8 = sliding ray on
+														1 = adjacent step; 2–8 = sliding on
 														rectangle deltas, hex cube axes, or graph
-														edge chains (stops at occupied / edge /
+														edge chains (stops at occupied / dead-end /
 														junction).
 													</p>
 													<FormMessage />

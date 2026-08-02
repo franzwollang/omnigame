@@ -401,6 +401,23 @@ describe("Graph Slide Race (movement.range > 1 on graph)", () => {
 		expect(ok.success).toBe(true);
 	});
 
+	it("range 1 matches empty-neighbor destinations", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-slide-race"].config
+		);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 0 };
+		const step1: MovementConfig = { adjacency: "orthogonal", range: 1 };
+		expect(legalDestinations(state.grid, from, step1, board)).toEqual([
+			{ row: 3, col: 0 }
+		]);
+	});
+
 	it("lists multi-cell chain destinations and stops at blockers", () => {
 		const { gameConfig } = compileConfig(
 			examplePresets["graph-slide-race"].config
