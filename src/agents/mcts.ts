@@ -9,6 +9,12 @@ import { playerOf, stepPly } from "@/engine/kernel";
 import { mulberry32 } from "@/engine/rng";
 import type { Agent } from "@/agents/types";
 import { createHuntAgent } from "@/agents/hunt";
+import {
+	canSearchJointActions,
+	enumerateJointLegalActions,
+	jointStateFingerprint,
+	seatComponentFromJoint
+} from "@/agents/jointLegal";
 
 function cloneAction(action: KernelAction): KernelAction {
 	return structuredClone(action);
@@ -39,10 +45,43 @@ function rolloutValue(
 	return 0;
 }
 
+function scoreRootAction(
+	kernel: GameKernel,
+	state: GameState,
+	action: KernelAction,
+	player: PlayerId,
+	next: () => number,
+	rolloutsPerAction: number,
+	depthLimit: number
+): number {
+	let sum = 0;
+	for (let i = 0; i < rolloutsPerAction; i++) {
+		const after = kernel.stepSync(state, action).nextState;
+		if (after.status === "won" && after.winner === playerOf(player)) {
+			sum += 1;
+			continue;
+		}
+		if (after.status === "won") {
+			sum -= 1;
+			continue;
+		}
+		if (after.status === "draw") continue;
+		sum += rolloutValue(kernel, after, player, next, depthLimit);
+	}
+	return sum / rolloutsPerAction;
+}
+
+type JointDecisionCache = {
+	fingerprint: string;
+	joint: KernelAction;
+};
+
 /**
  * Tiny flat MCTS-ish: for each legal root action, run N random rollouts via
- * `kernel.stepSync` and pick the best mean score. On hit/miss configs, delegates
- * to the observation hunt agent (no hidden-fleet rollouts).
+ * `kernel.stepSync` and pick the best mean score. Under open simultaneous
+ * (budget 1), evaluates joint place/move actions and caches the decision for
+ * dual-`act` consistency. On hit/miss configs, delegates to the observation
+ * hunt agent (no hidden-fleet rollouts).
  */
 export function createTinyMctsAgent(
 	seed: Seed = 0,
@@ -51,12 +90,14 @@ export function createTinyMctsAgent(
 	const rolloutsPerAction = opts?.rolloutsPerAction ?? 12;
 	const depthLimit = opts?.depthLimit ?? 24;
 	let next = mulberry32(seed >>> 0);
+	let jointCache: JointDecisionCache | null = null;
 	const hunt = createHuntAgent(seed);
 
 	return {
 		kind: "mcts",
 		reset(s: Seed) {
 			next = mulberry32(s >>> 0);
+			jointCache = null;
 			hunt.reset(s);
 		},
 		act(kernel: GameKernel, state: GameState, player: PlayerId): KernelAction | null {
@@ -68,29 +109,70 @@ export function createTinyMctsAgent(
 				return pick ? cloneAction(pick) : null;
 			}
 
-			// Single place cannot step under simultaneous — random seat choice.
-			if ((kernel.config.turnSchedule ?? "alternating") === "simultaneous") {
+			const simultaneous =
+				(kernel.config.turnSchedule ?? "alternating") === "simultaneous";
+
+			if (simultaneous && !canSearchJointActions(kernel)) {
+				// commitReveal / multi-action: joint cartesian deferred.
 				return cloneAction(legal[Math.floor(next() * legal.length)]!);
+			}
+
+			if (simultaneous) {
+				const fp = jointStateFingerprint(state);
+				if (jointCache && jointCache.fingerprint === fp) {
+					const seat = seatComponentFromJoint(jointCache.joint, player);
+					return seat ? cloneAction(seat) : null;
+				}
+
+				const joints = enumerateJointLegalActions(kernel, state);
+				if (joints.length === 0) return null;
+
+				for (const joint of joints) {
+					const after = kernel.stepSync(state, joint).nextState;
+					if (
+						after.status === "won" &&
+						after.winner === playerOf(player)
+					) {
+						jointCache = { fingerprint: fp, joint };
+						const seat = seatComponentFromJoint(joint, player);
+						return seat ? cloneAction(seat) : null;
+					}
+				}
+
+				let best = joints[0]!;
+				let bestScore = Number.NEGATIVE_INFINITY;
+				for (const joint of joints) {
+					const mean = scoreRootAction(
+						kernel,
+						state,
+						joint,
+						player,
+						next,
+						rolloutsPerAction,
+						depthLimit
+					);
+					if (mean > bestScore) {
+						bestScore = mean;
+						best = joint;
+					}
+				}
+				jointCache = { fingerprint: fp, joint: best };
+				const seat = seatComponentFromJoint(best, player);
+				return seat ? cloneAction(seat) : null;
 			}
 
 			let best = legal[0]!;
 			let bestScore = Number.NEGATIVE_INFINITY;
 			for (const action of legal) {
-				let sum = 0;
-				for (let i = 0; i < rolloutsPerAction; i++) {
-					const after = kernel.stepSync(state, action).nextState;
-					if (after.status === "won" && after.winner === playerOf(player)) {
-						sum += 1;
-						continue;
-					}
-					if (after.status === "won") {
-						sum -= 1;
-						continue;
-					}
-					if (after.status === "draw") continue;
-					sum += rolloutValue(kernel, after, player, next, depthLimit);
-				}
-				const mean = sum / rolloutsPerAction;
+				const mean = scoreRootAction(
+					kernel,
+					state,
+					action,
+					player,
+					next,
+					rolloutsPerAction,
+					depthLimit
+				);
 				if (mean > bestScore) {
 					bestScore = mean;
 					best = action;

@@ -384,10 +384,12 @@ Baseline agents (enough to prove the ABI):
 - tiny flat MCTS
 - UCT tree search (UCB1 + optional tree reuse)
 
-**Simultaneous limitation:** MCTS and UCT fall back to uniform random among
-the current seat’s `legalActions` when `turn.schedule = simultaneous` (joint
-action space is not searched yet). The sandbox Agent UI labels this as
-“random if simultaneous.”
+**Simultaneous search:** Under open `turn.schedule = simultaneous` with
+`actionsPerTurn = 1` (place or move), MCTS and UCT search the joint action
+cartesian (`simultaneousPlace` / `simultaneousMove`) and cache the decision so
+sandbox dual-`act` stays consistent. **Still random per seat:** `commitReveal`
+and `actionsPerTurn > 1` (joint multi-action search deferred). Greedy still
+skips lookahead under simultaneous.
 
 ## Suggested module structure (directional)
 
@@ -419,13 +421,13 @@ Simultaneous Replace Race (M13), ordered simultaneous replace / Ordered
 Simultaneous Replace Race (M14), simultaneous slide+replace / Simultaneous +
 Ordered Slide Replace Race (M15), move→fire in-turn phases / Move & Fire Lite
 (M16), vacated-origin hybrid for joint replace paths / Simultaneous Slide
-Replace Flee Race (M17).
+Replace Flee Race (M17), joint UCT/MCTS under open simultaneous (M18).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. joint
-  UCT / MCTS over simultaneous actions, richer phases beyond move→fire) or P4
-  CI / semantics
+- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
+  commitReveal / multi-action joint search, richer phases, hex/graph sliding)
+  or P4 CI / semantics refresh
 - Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
   workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
   Who commit/hypothesis beyond query+guess

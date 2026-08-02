@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M17 joint replace hybrid closed).
+**Marathon rule:** Work **P3 → P4** in order (M18 joint UCT closed).
 Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,14 +12,14 @@ Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Vacated-origin hybrid for joint replace paths (slide through fleeing blockers)
-landed as M17 (`simultaneous-slide-replace-flee-race`).
+Joint UCT/MCTS over open simultaneous place/move (budget 1) landed as M18.
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
-- Joint UCT / MCTS over simultaneous actions (deeper than labeled random)
+- Joint search under `commitReveal` or `actionsPerTurn > 1`
 - Further phase sequences beyond place→* and move→fire (only if a new seam appears)
 - Hex/graph `range > 1` (only if a new seam appears)
+- Richer Guess Who commit/hypothesis beyond query+guess MVP
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -38,7 +38,8 @@ exhaust `references/` or recombine covered primitives).
 - [ ] Sync compact draft with current kernel events/state/phases (incl.
       `pieceCaptured`, `queryAnswered` / `guessResult`, simultaneous, phases
       incl. move→fire, joint + ordered sliding, joint + ordered simultaneous
-      replace, simultaneous slide+replace, joint replace vacated-origin hybrid)
+      replace, simultaneous slide+replace, joint replace vacated-origin hybrid,
+      joint UCT under open simultaneous)
 
 ---
 

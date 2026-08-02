@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T01:50-00:00",
-  "turn": 42,
+  "updated_at": "2026-08-02T02:05-00:00",
+  "turn": 43,
   "focus": {
-    "milestone": "M17",
+    "milestone": "M18",
     "issue": "next-missing-mechanism",
-    "goal": "Joint replace vacated-origin hybrid landed; next seam or P4"
+    "goal": "Joint UCT/MCTS under open simultaneous landed; next seam or P4"
   },
   "recent": [
-    "Synced M8–M16 from 7ab6 onto 0916",
-    "M17: joint replace uses vacated-origin (same as slides)",
-    "Flee-race preset + tests; typecheck + 379 tests green"
+    "Synced M8–M17 from 0916 onto 8bb5",
+    "M18: enumerateJointLegalActions + UCT/MCTS joint root search",
+    "Dual-act cache; UI/README labels; simultaneous-ttt tests"
   ],
   "discoveries": [
-    "Joint replace needs no dest-restore; fleers already vacated on apply",
-    "Stationary replace still required; path-through-fleeing is the seam"
+    "Open simultaneous budget-1 is searchable; commitReveal/multi still random",
+    "Sandbox dual-act needs joint decision cache for consistency"
   ],
   "open_threads": [
-    "P3 next seam (joint UCT) or P4 CI/semantics"
+    "P3 next seam (commitReveal/multi joint) or P4 CI/semantics"
   ],
-  "next_step": "Cloud: pick joint UCT over simultaneous or P4 tooling-ci / semantics refresh",
+  "next_step": "Cloud: pick remaining joint-search seam or P4 tooling-ci / semantics refresh",
   "blockers": []
 }

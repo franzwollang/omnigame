@@ -34,10 +34,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M15 | Next missing mechanism (simultaneous slide+replace) | `done` |
 | M16 | Next missing mechanism (move→fire in-turn phases) | `done` |
 | M17 | Next missing mechanism (joint replace vacated-origin hybrid) | `done` |
+| M18 | Next missing mechanism (joint UCT/MCTS under simultaneous) | `done` |
 
-**Optimizing for this marathon:** M17 joint replace hybrid closed. Pick **P3
-next-missing-mechanism** (smallest new seam — default joint UCT) then P4 CI /
-semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M18 joint UCT closed. Pick **P3
+next-missing-mechanism** (smallest remaining seam) or **P4** CI / semantics
+refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -52,7 +53,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥374** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥385** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -65,8 +66,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M16 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M16) — smallest new seam — or
+   (P0–P2 / M8–M18 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M18) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -131,8 +132,9 @@ observation, etc., plus an in-UI “Form coverage” callout for remaining
 JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 `placement.capture`, `deduction.*` / `identify_secret`, …).
 
-**Not yet:** full Go; hex/graph sliding; joint UCT under simultaneous;
-CI workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
+**Not yet:** full Go; hex/graph sliding; joint UCT under
+`commitReveal` / multi-action simultaneous; CI workflows; richer Guess Who
+commit/hypothesis beyond query+guess MVP.
 
 ## Phase 2 exit criteria
 
@@ -215,6 +217,18 @@ CI workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
 - Preset `simultaneous-slide-replace-flee-race` + legality/apply/replay tests — **done**
 - Stationary capture + static blockers + seat-swap unchanged — **done**
 - Out of scope: hex/graph replace; joint UCT over simultaneous actions
+  (closed by M18 for open simultaneous budget-1)
+
+### M18 — Joint UCT / MCTS under simultaneous
+
+- Enumerate joint place/move cartesian (`enumerateJointLegalActions`) for open
+  simultaneous with `actionsPerTurn = 1` — **done**
+- UCT + flat MCTS root search over joint actions; dual-`act` decision cache —
+  **done**
+- Immediate joint-win shortcut; sandbox Agent UI + README labels updated — **done**
+- Tests on `simultaneous-ttt` (enumerate, consistency, win, playout) — **done**
+- Out of scope still deferred: `commitReveal` joint search; multi-action joint
+  cartesian; Nash/maximin adversarial joint policy
 
 ## Sequencing notes
 

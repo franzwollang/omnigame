@@ -545,11 +545,15 @@ export default function GamePage() {
 							<option value="hunt">hunt</option>
 							<option value="mcts">
 								mcts
-								{enableSimultaneous ? " (random if simultaneous)" : ""}
+								{enableSimultaneous
+									? " (joint search; random if commit/multi)"
+									: ""}
 							</option>
 							<option value="uct">
 								uct
-								{enableSimultaneous ? " (random if simultaneous)" : ""}
+								{enableSimultaneous
+									? " (joint search; random if commit/multi)"
+									: ""}
 							</option>
 						</select>
 						<Button
@@ -564,7 +568,7 @@ export default function GamePage() {
 							title={
 								enableSimultaneous &&
 								(agentKind === "mcts" || agentKind === "uct")
-									? "Under simultaneous, MCTS/UCT pick a random legal for the current seat (joint search deferred)"
+									? "Under open simultaneous, MCTS/UCT search joint place/move actions (commitReveal / multi-action still random per seat)"
 									: "Play one kernel legal action from the selected agent"
 							}
 						>
@@ -578,7 +582,7 @@ export default function GamePage() {
 							<p className="mt-1 font-mono text-xs text-muted-foreground">
 								{agentKind === "greedy"
 									? "Greedy skips lookahead under simultaneous (single place/move is a no-op until joint)."
-									: "MCTS/UCT: random among seat legals under simultaneous (joint action search deferred)."}
+									: "MCTS/UCT: joint place/move search under open simultaneous; commitReveal / multi-action still random per seat."}
 							</p>
 						)}
 					{enableTick && (
