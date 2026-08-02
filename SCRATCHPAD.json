@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T04:10-00:00",
-  "turn": 50,
+  "updated_at": "2026-08-02T04:40-00:00",
+  "turn": 51,
   "focus": {
-    "milestone": "M24",
+    "milestone": "M25",
     "issue": "next-missing-mechanism",
-    "goal": "Guess Who AND queries landed; hand off next seam or P4"
+    "goal": "Guess Who OR queries landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M23 from e30c onto 0418",
-    "Landed M24 queryShape=and + guess-who-and-lite",
-    "typecheck + 426 tests green"
+    "Synced M8–M24 from 0418 onto efd3",
+    "Landed M25 queryShape=or + guess-who-or-lite",
+    "OR prune ≠ AND prune on same clauses"
   ],
   "discoveries": [
-    "Compound NO prune ≠ any single atomic step (cara-only on glasses∧hat)",
-    "2 traits → 4 conjunction legals; 3 traits → 12"
+    "OR NO prunes match-any; AND NO prunes match-all",
+    "Shared enumerateTwoClauseQueries for and/or; lastQuery.op distinguishes"
   ],
   "open_threads": [
-    "Next: richer phases, hex/graph replace, OR queries, or P4 CI/semantics"
+    "Next: richer phases, hex/graph replace, 3+ AND, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (phases/replace/OR) or P4 CI/semantics refresh",
+  "next_step": "Pick next seam (phases/replace/3+AND) or P4 CI/semantics refresh",
   "blockers": []
 }

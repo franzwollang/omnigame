@@ -47,6 +47,7 @@ export type PlayerObservation = {
 			trait?: string;
 			value?: boolean;
 			clauses?: Array<{ trait: string; value: boolean }>;
+			op?: "and" | "or";
 			answer: boolean;
 		};
 	};

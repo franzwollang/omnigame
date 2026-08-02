@@ -41,10 +41,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M22 | Next missing mechanism (graph chain-walk sliding) | `done` |
 | M23 | Next missing mechanism (Guess Who manual commit / eliminate) | `done` |
 | M24 | Next missing mechanism (Guess Who trait-conjunction / AND) | `done` |
+| M25 | Next missing mechanism (Guess Who trait-disjunction / OR) | `done` |
 
-**Optimizing for this marathon:** M24 Guess Who AND queries closed. Pick **P3
-next-missing-mechanism** (e.g. richer phases, hex/graph replace, OR queries) or
-**P4** CI / semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M25 Guess Who OR queries closed. Pick **P3
+next-missing-mechanism** (e.g. richer phases, hex/graph replace, 3+ clause AND)
+or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -116,7 +117,8 @@ preset demonstrates `capture = replace`.
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
 `identify_secret`, query + guess), **Guess Who Commit Lite**
 (`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`), and
-**Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction).
+**Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction),
+**Guess Who Or Lite** (`queryShape: or` — 2-clause trait disjunction).
 
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement** (incl.
@@ -128,13 +130,14 @@ place/move (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
 sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire**), **query +
 guess / identify_secret** + **manual eliminate** (`autoEliminate: false`) +
-**trait-conjunction queries** (`queryShape: and`).
+**trait-conjunction queries** (`queryShape: and`) + **trait-disjunction
+queries** (`queryShape: or`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
 Replace Race, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
-Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
+Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
@@ -145,7 +148,7 @@ JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 for rectangle, hex, and graph (chain-walk).
 
 **Not yet:** full Go; hop-ball graph range; hex/graph replace; CI workflows;
-semantics doc refresh; simultaneous deduction / OR / 3+ clause AND.
+semantics doc refresh; simultaneous deduction / 3+ clause AND.
 
 ## Phase 2 exit criteria
 
@@ -173,6 +176,7 @@ semantics doc refresh; simultaneous deduction / OR / 3+ clause AND.
 - Out of scope closed by M23: richer commit/hypothesis (`eliminate` +
   `autoEliminate: false`)
 - Out of scope closed by M24: trait conjunction queries (`queryShape: and`)
+- Out of scope closed by M25: trait disjunction queries (`queryShape: or`)
 
 ### M11 — Joint simultaneous sliding
 
@@ -299,6 +303,7 @@ semantics doc refresh; simultaneous deduction / OR / 3+ clause AND.
 - Out of scope: simultaneous deduction; deduction + phases; batch eliminate;
   full canvas UI
 - Out of scope closed by M24: trait conjunction queries
+- Out of scope closed by M25: trait disjunction queries
 
 ### M24 — Guess Who trait-conjunction queries (AND)
 
@@ -306,7 +311,18 @@ semantics doc refresh; simultaneous deduction / OR / 3+ clause AND.
 - Kernel `{ type: "query", clauses }` (length 2); `answerQueryConjunction` /
   `eliminateAfterQueryConjunction`; legal enum C(n,2)×4 — **done**
 - Preset `guess-who-and-lite` + transcript/replay tests — **done**
-- Out of scope: OR / NOT / 3+ clause AND; simultaneous deduction; deduction +
+- Out of scope closed by M25: OR queries
+- Out of scope: NOT / 3+ clause AND; simultaneous deduction; deduction +
+  phases; full canvas UI
+
+### M25 — Guess Who trait-disjunction queries (OR)
+
+- Schema `deduction.queryShape` adds `"or"` (≥2 traits) — **done**
+- Kernel 2-clause OR answer/prune (`answerQueryDisjunction` /
+  `eliminateAfterQueryDisjunction`); shared `enumerateTwoClauseQueries`;
+  `lastQuery.op` / `queryAnswered.op` — **done**
+- Preset `guess-who-or-lite` + transcript/replay tests — **done**
+- Out of scope: NOT / 3+ clause AND/OR; simultaneous deduction; deduction +
   phases; full canvas UI
 
 ## Sequencing notes

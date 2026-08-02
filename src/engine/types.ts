@@ -138,8 +138,10 @@ export type DeductionLastQuery = {
 	/** Single-trait query (queryShape single). */
 	trait?: string;
 	value?: boolean;
-	/** Conjunction clauses (queryShape and). */
+	/** Multi-clause query (queryShape and | or). */
 	clauses?: QueryClause[];
+	/** Clause operator when `clauses` is set. */
+	op?: "and" | "or";
 };
 
 export type DeductionState = {
@@ -246,7 +248,7 @@ export type QueryEvent = {
 	/** Single-trait atom (queryShape single). */
 	trait?: string;
 	value?: boolean;
-	/** Two-clause AND (queryShape and). */
+	/** Two-clause compound (queryShape and | or). */
 	clauses?: QueryClause[];
 };
 

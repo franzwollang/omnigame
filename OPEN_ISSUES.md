@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M24 Guess Who AND queries closed).
+**Marathon rule:** Work **P3 → P4** in order (M25 Guess Who OR queries closed).
 Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,15 +12,16 @@ Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Guess Who trait-conjunction queries (`deduction.queryShape: "and"` + 2-clause
-`{ type: "query", clauses }`) landed as M24 with `guess-who-and-lite`.
+Guess Who trait-disjunction queries (`deduction.queryShape: "or"` + 2-clause
+`{ type: "query", clauses }` with OR prune) landed as M25 with
+`guess-who-or-lite`.
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
 - Further phase sequences beyond place→* and move→fire (only if a new seam appears)
 - Hex/graph `capture: replace` (only if a new seam forces it)
 - Hop-ball graph range (distinct from chain-walk — only if a game needs it)
-- Deduction + simultaneous / phases / OR / 3+ clause AND (only if forced)
+- Deduction + simultaneous / phases / 3+ clause AND (only if forced)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -42,7 +43,8 @@ exhaust `references/` or recombine covered primitives).
       ordered simultaneous replace, simultaneous slide+replace, joint replace
       vacated-origin hybrid, joint UCT under open + multi-action + commitReveal
       simultaneous, hex cube-axis sliding, graph chain-walk sliding, Guess Who
-      manual eliminate / `autoEliminate`, trait-conjunction `queryShape: and`)
+      manual eliminate / `autoEliminate`, trait-conjunction `queryShape: and`,
+      trait-disjunction `queryShape: or`)
 
 ---
 
@@ -55,5 +57,6 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 ### deferred-mvp-anchors
 
 Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite +
-Commit Lite + And Lite cover query/guess + hypothesis eliminate + 2-clause AND
-(simultaneous deduction / OR / richer phases still open).
+Commit Lite + And Lite + Or Lite cover query/guess + hypothesis eliminate +
+2-clause AND/OR (simultaneous deduction / 3+ clause AND / richer phases still
+open).

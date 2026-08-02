@@ -62,10 +62,12 @@ import { getCell as readCell } from "@/engine/types";
 import {
 	answerQuery,
 	answerQueryConjunction,
+	answerQueryDisjunction,
 	assignSecrets,
 	canEliminate,
 	eliminateAfterQuery,
 	eliminateAfterQueryConjunction,
+	eliminateAfterQueryDisjunction,
 	isGuessCorrect
 } from "@/engine/deduction";
 
@@ -167,8 +169,8 @@ export type GameConfig = {
 		wrongGuess: "lose" | "end_turn";
 		/** When false, query answers without pruning; use eliminate actions. */
 		autoEliminate: boolean;
-		/** single (default) or 2-clause AND queries. */
-		queryShape: "single" | "and";
+		/** single (default), 2-clause AND, or 2-clause OR queries. */
+		queryShape: "single" | "and" | "or";
 	};
 	initial?: InitialSeed[];
 };
@@ -577,31 +579,47 @@ function handleQuery(
 	let lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
 	let eliminated: string[];
 
-	if (shape === "and") {
+	if (shape === "and" || shape === "or") {
 		const clauses = event.clauses;
 		if (!clauses || clauses.length !== 2) return state;
 		const [c0, c1] = clauses as [QueryClause, QueryClause];
 		if (c0.trait === c1.trait) return state;
 		const allowed = new Set(config.deduction.traits);
 		if (!allowed.has(c0.trait) || !allowed.has(c1.trait)) return state;
-		// Reject single-atom fields on conjunction configs
+		// Reject single-atom fields on compound configs
 		if (event.trait !== undefined || event.value !== undefined) return state;
 
-		answer = answerQueryConjunction(
-			secretId,
-			config.deduction.roster,
-			clauses
-		);
+		const op = shape;
+		answer =
+			op === "and"
+				? answerQueryConjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					)
+				: answerQueryDisjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					);
 		eliminated = autoEliminate
-			? eliminateAfterQueryConjunction(
-					config.deduction.roster,
-					state.deduction.eliminated[player],
-					clauses,
-					answer
-				)
+			? op === "and"
+				? eliminateAfterQueryConjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+				: eliminateAfterQueryDisjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
 			: state.deduction.eliminated[player];
 		lastQuery = {
 			by: player,
+			op,
 			clauses: [
 				{ trait: c0.trait, value: c0.value },
 				{ trait: c1.trait, value: c1.value }

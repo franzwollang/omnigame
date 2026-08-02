@@ -163,6 +163,7 @@ describe("Guess Who And Lite play", () => {
 		});
 		expect(step.nextState.deduction!.lastQuery).toEqual({
 			by: "X",
+			op: "and",
 			clauses: [
 				{ trait: "glasses", value: true },
 				{ trait: "hat", value: true }
@@ -179,6 +180,7 @@ describe("Guess Who And Lite play", () => {
 		expect(answered).toMatchObject({
 			type: "queryAnswered",
 			player: "X",
+			op: "and",
 			clauses: [
 				{ trait: "glasses", value: true },
 				{ trait: "hat", value: true }

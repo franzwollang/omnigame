@@ -1679,6 +1679,48 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"guess-who-or-lite": definePreset({
+		id: "guess-who-or-lite",
+		name: "Guess Who Or Lite",
+		tags: ["deduction", "query", "disjunction", "observation", "mechanism"],
+		description:
+			"Same 4-character roster as Guess Who And Lite, but each query is a 2-clause OR (e.g. glasses or hat?). Unlocks deduction.queryShape = or — compound disjunction pruning neither atomics nor AND can express in one turn.",
+		config: {
+			metadata: { name: "Guess Who Or Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				queryShape: "or",
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"simultaneous-step-race": definePreset({
 		id: "simultaneous-step-race",
 		name: "Simultaneous Step Race",

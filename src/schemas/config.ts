@@ -240,10 +240,11 @@ export const zConfig = z
 				/** When true (default), query auto-prunes inconsistent candidates. */
 				autoEliminate: z.boolean().default(true),
 				/**
-				 * Query atom shape: single trait=value, or 2-clause AND
-				 * ("glasses and hat?"). Default single keeps Guess Who Lite.
+				 * Query atom shape: single trait=value, 2-clause AND
+				 * ("glasses and hat?"), or 2-clause OR ("glasses or hat?").
+				 * Default single keeps Guess Who Lite.
 				 */
-				queryShape: z.enum(["single", "and"]).default("single")
+				queryShape: z.enum(["single", "and", "or"]).default("single")
 			})
 			.strict()
 			.optional(),
@@ -503,14 +504,15 @@ export const zConfig = z
 					});
 				}
 				if (
-					(cfg.deduction.queryShape ?? "single") === "and" &&
+					((cfg.deduction.queryShape ?? "single") === "and" ||
+						(cfg.deduction.queryShape ?? "single") === "or") &&
 					traitKeys.length < 2
 				) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["deduction", "queryShape"],
 						message:
-							"deduction.queryShape 'and' requires at least 2 traits"
+							"deduction.queryShape 'and'/'or' requires at least 2 traits"
 					});
 				}
 				const ids = new Set<string>();

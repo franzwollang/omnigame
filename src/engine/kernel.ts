@@ -38,7 +38,7 @@ import {
 	movementBoardFrom
 } from "@/engine/movement";
 import {
-	enumerateConjunctionQueries,
+	enumerateTwoClauseQueries,
 	formatQueryFingerprint
 } from "@/engine/deduction";
 import {
@@ -133,6 +133,7 @@ export type KernelEvent =
 			trait?: string;
 			value?: boolean;
 			clauses?: QueryClause[];
+			op?: "and" | "or";
 			answer: boolean;
 	  }
 	| {
@@ -265,7 +266,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: query ${formatQueryFingerprint({
 				trait: event.trait,
 				value: event.value,
-				clauses: event.clauses
+				clauses: event.clauses,
+				op: event.op
 			})} → ${event.answer}`;
 		case "guessResult":
 			return `${event.player}: guess ${event.targetId} → ${event.correct ? "correct" : "wrong"}`;
@@ -459,6 +461,7 @@ function applyStep(
 				trait: lq.trait,
 				value: lq.value,
 				clauses: lq.clauses,
+				op: lq.op,
 				answer: lq.answer
 			});
 		}
@@ -720,8 +723,8 @@ function collectLegalActions(
 
 	if (inputMode === "deduction" && config.deduction) {
 		const shape = config.deduction.queryShape ?? "single";
-		if (shape === "and") {
-			for (const q of enumerateConjunctionQueries(config.deduction.traits)) {
+		if (shape === "and" || shape === "or") {
+			for (const q of enumerateTwoClauseQueries(config.deduction.traits)) {
 				actions.push(q);
 			}
 		} else {
@@ -1320,7 +1323,7 @@ export function explainKernelAction(
 				};
 			}
 			const shape = config.deduction.queryShape ?? "single";
-			if (shape === "and") {
+			if (shape === "and" || shape === "or") {
 				const clauses = action.clauses;
 				if (!clauses || clauses.length !== 2) {
 					return {

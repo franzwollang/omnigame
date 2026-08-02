@@ -56,6 +56,7 @@ These are built from the same shared schema and operators.
 - **Guess Who Lite** (deduction query/guess + identify_secret)
 - **Guess Who Commit Lite** (`autoEliminate: false` + eliminate + end_turn wrong guess)
 - **Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction queries)
+- **Guess Who Or Lite** (`queryShape: or` — 2-clause trait disjunction queries)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
@@ -173,8 +174,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   Simultaneous Graph Step Race / **Graph Slide Race**
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / And); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who And Lite** presets
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / And / Or); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who And Lite** / **Guess Who Or Lite** presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
@@ -182,7 +183,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
-machines, hex/graph replace capture, simultaneous deduction / OR queries /
+machines, hex/graph replace capture, simultaneous deduction /
 3+ clause AND, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
@@ -364,7 +365,8 @@ The goal is to converge on a “complete-ish” primitive set by implementing a 
   **Landed (MVP):** Guess Who Lite — `deduction` input/observation,
   `identify_secret`, query + guess; **Guess Who Commit Lite** —
   `autoEliminate: false` + `{ type: "eliminate" }` (manual hypothesis commit);
-  **Guess Who And Lite** — `queryShape: and` (2-clause trait conjunction)
+  **Guess Who And Lite** — `queryShape: and` (2-clause trait conjunction);
+  **Guess Who Or Lite** — `queryShape: or` (2-clause trait disjunction)
 - **Go-lite / territory fill**: place + adjacency/liberty constraints + area scoring (simplified)  
   Stresses: stepping + constraints + scoring
 
@@ -437,15 +439,16 @@ UCT/MCTS under multi-action simultaneous (M19), joint UCT/MCTS under
 commitReveal / Hidden Simultaneous TTT (M20), hex cube-axis sliding / Hex
 Slide Race (M21), graph chain-walk sliding / Graph Slide Race (M22), Guess Who
 manual commit / Guess Who Commit Lite (M23), Guess Who trait-conjunction
-queries / Guess Who And Lite (M24).
+queries / Guess Who And Lite (M24), Guess Who trait-disjunction queries /
+Guess Who Or Lite (M25).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  richer phases, hex/graph replace, OR queries) or P4 CI / semantics refresh
+  richer phases, hex/graph replace, 3+ clause AND) or P4 CI / semantics refresh
 - Deferred: full Go rules; hop-ball graph range; hex/graph replace; CI
   workflows; `docs/semantics.md` refresh vs current kernel events;
-  simultaneous deduction / OR / 3+ clause AND
+  simultaneous deduction / 3+ clause AND
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
