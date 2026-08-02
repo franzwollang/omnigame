@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compileConfig } from "@/compiler";
 import {
 	canMove,
+	hasAnyJumpCapture,
 	isJumpCapture,
 	jumpDestinations,
 	jumpMid,
@@ -274,5 +275,180 @@ describe("movement.capture = jump schema / validateConfig", () => {
 			}
 		};
 		expect(validateConfig(cfg).ok).toBe(false);
+	});
+
+	it("rejects mustCapture without jump capture", () => {
+		const cfg = {
+			...examplePresets["mandatory-jump-race"].config,
+			movement: {
+				adjacency: "diagonal" as const,
+				range: 1,
+				capture: "none" as const,
+				mustCapture: true
+			}
+		};
+		expect(validateConfig(cfg).ok).toBe(false);
+		expect(zConfig.safeParse(cfg).success).toBe(false);
+	});
+});
+
+describe("Mandatory Jump Race (movement.mustCapture)", () => {
+	const JUMP_MUST: MovementConfig = {
+		adjacency: "diagonal",
+		range: 1,
+		capture: "jump",
+		mustCapture: true
+	};
+
+	it("validates and compiles the mandatory-jump-race preset", () => {
+		const cfg = examplePresets["mandatory-jump-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const parsed = zConfig.safeParse(cfg);
+		expect(parsed.success).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.movement?.capture).toBe("jump");
+		expect(gameConfig.movement?.mustCapture).toBe(true);
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(getCell(state.grid, { row: 4, col: 2 })).toBe("X");
+		expect(hasAnyJumpCapture(state.grid, "X", JUMP_MUST)).toBe(true);
+	});
+
+	it("opening: quiet escape exists but mustCapture keeps only the jump", () => {
+		const cfg = examplePresets["mandatory-jump-race"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const from = { row: 4, col: 2 };
+		// Without mustCapture, quiet (3,3) is among legalDestinations.
+		const optional: MovementConfig = {
+			adjacency: "diagonal",
+			range: 1,
+			capture: "jump"
+		};
+		const dests = legalDestinations(state.grid, from, optional);
+		expect(dests.some((p) => p.row === 3 && p.col === 3)).toBe(true);
+		expect(dests.some((p) => p.row === 2 && p.col === 0)).toBe(true);
+		expect(canMove(state.grid, from, { row: 3, col: 3 }, "X", optional)).toBe(
+			true
+		);
+
+		const legal = kernel.legalActions(state, 0);
+		expect(legal).toHaveLength(1);
+		expect(legal[0]).toEqual({
+			type: "move",
+			from: { row: 4, col: 2 },
+			to: { row: 2, col: 0 }
+		});
+		expect(gameConfig.movement?.mustCapture).toBe(true);
+
+		const quiet: KernelAction = {
+			type: "move",
+			from: { row: 4, col: 2 },
+			to: { row: 3, col: 3 }
+		};
+		const ignored = kernel.stepSync(state, quiet);
+		expect(ignored.events[0]?.type).toBe("ignored");
+	});
+
+	it("optional jump-race still allows quiet when a jump exists elsewhere", () => {
+		// Board with quiet + jump; without mustCapture both stay legal.
+		const cfg = {
+			...examplePresets["mandatory-jump-race"].config,
+			metadata: { name: "Optional Jump Contrast", version: 1 },
+			movement: {
+				adjacency: "diagonal" as const,
+				range: 1,
+				capture: "jump" as const
+			}
+		};
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const legal = kernel.legalActions(state, 0);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 4 &&
+					a.from.col === 2 &&
+					a.to.row === 3 &&
+					a.to.col === 3
+			)
+		).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 4 &&
+					a.from.col === 2 &&
+					a.to.row === 2 &&
+					a.to.col === 0
+			)
+		).toBe(true);
+	});
+
+	it("chain second jump wins reach_row (transcript + replay)", () => {
+		const cfg = examplePresets["mandatory-jump-race"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const actions: KernelAction[] = [
+			{ type: "move", from: { row: 4, col: 2 }, to: { row: 2, col: 0 } },
+			{ type: "move", from: { row: 2, col: 0 }, to: { row: 0, col: 2 } }
+		];
+		let cur = state;
+		const events: Array<{ type: string }> = [];
+		for (const action of actions) {
+			const step = kernel.stepSync(cur, action);
+			events.push(...step.events);
+			cur = step.nextState;
+		}
+		expect(cur.status).toBe("won");
+		expect(cur.winner).toBe("X");
+		expect(cur.mustContinueFrom).toBeUndefined();
+		expect(events.filter((e) => e.type === "pieceCaptured")).toHaveLength(2);
+		expect(getCell(cur.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(cur.grid, { row: 3, col: 1 })).toBe(null);
+		expect(getCell(cur.grid, { row: 1, col: 1 })).toBe(null);
+
+		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replayed.status).toBe("won");
+		expect(replayed.winner).toBe("X");
+	});
+
+	it("when no jump exists, quiet moves remain legal under mustCapture", () => {
+		const cfg = examplePresets["mandatory-jump-race"].config;
+		const { kernel } = compileConfig(cfg);
+		// Clear both enemy mids so X has only quiet diagonals.
+		let state = kernel.initialState(cfg.rng.seed);
+		state = {
+			...state,
+			grid: {
+				...state.grid,
+				cells: setCell(
+					{ ...state.grid, cells: setCell(state.grid, { row: 3, col: 1 }, null) },
+					{ row: 1, col: 1 },
+					null
+				)
+			}
+		};
+		expect(hasAnyJumpCapture(state.grid, "X", JUMP_MUST)).toBe(false);
+		const legal = kernel.legalActions(state, 0);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 4 &&
+					a.from.col === 2 &&
+					a.to.row === 3 &&
+					a.to.col === 3
+			)
+		).toBe(true);
+		const quiet: KernelAction = {
+			type: "move",
+			from: { row: 4, col: 2 },
+			to: { row: 3, col: 3 }
+		};
+		const result = kernel.stepSync(state, quiet);
+		expect(result.events.some((e) => e.type === "ignored")).toBe(false);
+		expect(getCell(result.nextState.grid, { row: 3, col: 3 })).toBe("X");
+		expect(result.nextState.currentPlayer).toBe("O");
 	});
 });

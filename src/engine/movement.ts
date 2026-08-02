@@ -4,8 +4,11 @@
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
  * (path empty except destination). Optional `capture: "jump"` leaps over an
  * adjacent enemy to the empty cell beyond (rectangle foothold; quiet moves
- * stay range 1). Hex_offset: orthogonal cube-axis slides (range 1..8, same
- * blocker/replace rules). Graph: orthogonal chain-walk along explicit edges
+ * stay range 1). Optional `mustCapture: true` (jump only) forbids quiet moves
+ * at turn start when any jump exists for the acting seat (Checkers-lite
+ * mandatory capture; mid-chain still uses `mustContinueFrom`). Hex_offset:
+ * orthogonal cube-axis slides (range 1..8, same blocker/replace rules).
+ * Graph: orthogonal chain-walk along explicit edges
  * (range 1..8; no turning at junctions) **or** hop-ball BFS within range
  * (`graphReach: "hop"`; may turn at junctions) — same blocker/replace rules
  * as rectangle/hex. Jump capture is rectangle-only (not hex/graph).
@@ -37,6 +40,12 @@ export type MovementConfig = {
 	 * enemy to empty cell beyond (rectangle only). Default none.
 	 */
 	capture?: MovementCapture;
+	/**
+	 * When true with `capture: "jump"`, quiet (non-jump) moves are illegal at
+	 * turn start if the acting seat has any jump available from any owned
+	 * piece. Mid-chain `mustContinueFrom` is unchanged. Default false.
+	 */
+	mustCapture?: boolean;
 	/**
 	 * Graph-only path mode. `chain` = unique-forward edge walk (no junction
 	 * turns). `hop` = BFS within range (may turn at junctions). Ignored on
@@ -163,6 +172,31 @@ export function isJumpCapture(
 	return jumpDestinations(grid, from, config, wrapOrBoard, player).some(
 		(p) => p.row === to.row && p.col === to.col
 	);
+}
+
+/**
+ * True when the acting seat has at least one jump capture from any owned
+ * piece. Used by `mustCapture` turn-start filtering.
+ */
+export function hasAnyJumpCapture(
+	grid: Grid,
+	player: Player,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false
+): boolean {
+	if (config.capture !== "jump") return false;
+	const opts = boardOpts(wrapOrBoard);
+	if (opts.topology !== "rectangle") return false;
+	for (let row = 0; row < grid.height; row++) {
+		for (let col = 0; col < grid.width; col++) {
+			const from = { row, col };
+			if (getCell(grid, from) !== player) continue;
+			if (jumpDestinations(grid, from, config, wrapOrBoard, player).length > 0) {
+				return true;
+			}
+		}
+	}
+	return false;
 }
 
 /**

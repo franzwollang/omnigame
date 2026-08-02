@@ -134,7 +134,9 @@ export const zConfig = z
 		 * `capture: "jump"` — leap over an adjacent enemy to the empty cell
 		 * beyond (rectangle + alternating only; quiet moves stay range 1).
 		 * After a jump, further jumps from the landing cell keep the same
-		 * seat (`mustContinueFrom` chain). Distinct from replace and hop-ball.
+		 * seat (`mustContinueFrom` chain). Optional `mustCapture: true`
+		 * forbids quiet moves at turn start when any jump exists (Checkers-lite
+		 * mandatory capture). Distinct from replace and hop-ball.
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -146,6 +148,11 @@ export const zConfig = z
 					.default("orthogonal"),
 				range: z.number().int().min(1).max(8).default(1),
 				capture: z.enum(["none", "replace", "jump"]).default("none"),
+				/**
+				 * Jump-only: when true, quiet moves are illegal at turn start if
+				 * the acting seat has any available jump. Mid-chain unchanged.
+				 */
+				mustCapture: z.boolean().optional(),
 				/** Graph-only: chain-walk (default) or hop-ball BFS. */
 				graphReach: z.enum(["chain", "hop"]).optional()
 			})
@@ -1934,6 +1941,13 @@ export const zConfig = z
 						"movement.capture = 'jump' is incompatible with delayTurns"
 				});
 			}
+		} else if (cfg.movement?.mustCapture === true) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["movement", "mustCapture"],
+				message:
+					"movement.mustCapture requires movement.capture = 'jump'"
+			});
 		}
 
 		// Graph hop-ball: movement.graphReach = "hop" is graph-only

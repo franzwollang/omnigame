@@ -50,6 +50,7 @@ import {
 	canJointSimultaneousMoves,
 	canOrderedSimultaneousMoves,
 	canMove,
+	hasAnyJumpCapture,
 	isJumpCapture,
 	jumpDestinations,
 	jumpMid,
@@ -1821,6 +1822,26 @@ function handleMove(
 		) {
 			return state;
 		}
+	} else if (
+		movement.capture === "jump" &&
+		movement.mustCapture === true &&
+		!isJumpCapture(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		) &&
+		hasAnyJumpCapture(
+			state.grid,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		)
+	) {
+		// Turn-start mandatory capture: quiet moves illegal while any jump exists.
+		return state;
 	}
 
 	const board = movementBoardFrom(config);

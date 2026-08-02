@@ -137,6 +137,7 @@ export const Contracts = {
 			"quietMovesRangeOne",
 			"mandatoryChainWhenFurtherJumpsExist",
 			"mustContinueFromRestrictsLegality",
+			"mustCaptureForbidsQuietWhenJumpExists",
 			"alternatingOnlyNoSimultaneous"
 		]
 	}),

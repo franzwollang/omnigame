@@ -39,6 +39,7 @@ import {
 	canJointSimultaneousMoves,
 	canOrderedSimultaneousMoves,
 	canMove,
+	hasAnyJumpCapture,
 	jumpDestinations,
 	jumpMid,
 	legalDestinations,
@@ -1358,14 +1359,28 @@ function collectLegalActions(
 		const movement = config.movement;
 		if (!movement) return actions;
 		const board = movementBoardFrom(config);
+		const forceJumps =
+			movement.capture === "jump" &&
+			movement.mustCapture === true &&
+			hasAnyJumpCapture(state.grid, state.currentPlayer, movement, board);
 		for (const from of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
 			config.graph
 		)) {
 			if (getCell(state.grid, from) !== state.currentPlayer) continue;
-			for (const to of legalDestinations(state.grid, from, movement, board)) {
+			const dests = forceJumps
+				? jumpDestinations(
+						state.grid,
+						from,
+						movement,
+						board,
+						state.currentPlayer
+					)
+				: legalDestinations(state.grid, from, movement, board);
+			for (const to of dests) {
 				if (
+					forceJumps ||
 					canMove(state.grid, from, to, state.currentPlayer, movement, board)
 				) {
 					actions.push({ type: "move", from, to });

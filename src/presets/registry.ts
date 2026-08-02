@@ -1628,6 +1628,64 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"mandatory-jump-race": definePreset({
+		id: "mandatory-jump-race",
+		name: "Mandatory Jump Race",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"chain",
+			"reach-row",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Jump Race with Checkers-lite mandatory capture: when any jump exists for the acting seat, quiet diagonal steps are illegal at turn start (mustCapture). Opening X has both a quiet escape and a jump — only the jump is legal. Mid-chain still uses mustContinueFrom. Unlocks movement.mustCapture — optional jump (Jump Race) still allows quiet moves when jumps exist.",
+		config: {
+			metadata: { name: "Mandatory Jump Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "diagonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "mandatory-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "mandatory-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,2): quiet (3,3) exists AND jump over O(3,1)→(2,0).
+				// mustCapture forbids quiet; chain (2,0)→jump O(1,1)→(0,2) wins.
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-replace-race": definePreset({
 		id: "hex-replace-race",
 		name: "Hex Replace Race",

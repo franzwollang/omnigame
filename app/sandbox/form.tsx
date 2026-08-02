@@ -735,6 +735,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 																form.setValue("movement.range", 1, {
 																	shouldDirty: true
 																});
+															} else {
+																form.setValue(
+																	"movement.mustCapture",
+																	undefined,
+																	{ shouldDirty: true }
+																);
 															}
 														}}
 														disabled={
@@ -777,6 +783,34 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											</FormItem>
 										)}
 									/>
+									{captureValue === "jump" && (
+										<FormField
+											control={form.control}
+											name="movement.mustCapture"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Must capture</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															When any jump exists for the acting seat,
+															quiet (non-jump) moves are illegal at turn
+															start. Mid-chain jumps still use
+															mustContinueFrom.
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) => {
+																ensureMovement();
+																field.onChange(v);
+															}}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+									)}
 								</div>
 							)}
 
