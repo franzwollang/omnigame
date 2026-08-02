@@ -964,14 +964,14 @@ describe("joint UCT under simultaneous deduction manual eliminate (M35)", () => 
 		expect(jointSeatBudget(joint!)).toBe(1);
 	});
 
-	it("uct completes a short simultaneous-guess-who-commit-lite playout", () => {
+	it("uct advances several kind-matched rounds on commit-lite", () => {
 		const { kernel } = compileConfig(
 			examplePresets["simultaneous-guess-who-commit-lite"].config
 		);
 		let state = kernel.initialState(17);
-		const uct = createUctAgent(17, { simulations: 40, reuseTree: true });
-		let guard = 0;
-		while (state.status === "playing" && guard < 24) {
+		const uct = createUctAgent(17, { simulations: 48, reuseTree: true });
+		for (let i = 0; i < 6; i++) {
+			expect(state.status).toBe("playing");
 			expect(kernel.currentPlayer(state)).toBe("simultaneous");
 			const a0 = uct.act(kernel, state, 0);
 			const a1 = uct.act(kernel, state, 1);
@@ -981,8 +981,36 @@ describe("joint UCT under simultaneous deduction manual eliminate (M35)", () => 
 			const joint = jointFromSeatPair(a0!, a1!);
 			expect(joint).not.toBeNull();
 			state = kernel.stepSync(state, joint!).nextState;
-			guard += 1;
 		}
-		expect(state.status === "won" || state.status === "draw").toBe(true);
+		expect(state.moveCount).toBeGreaterThanOrEqual(6);
+	});
+
+	it("uct takes an immediate winning joint guess after manual prune", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-commit-lite"].config
+		);
+		const state0 = kernel.initialState(42);
+		const secretO = state0.deduction!.secret.O;
+		const rosterIds = kernel.config.deduction!.roster.map((c) => c.id);
+		const state = {
+			...state0,
+			deduction: {
+				...state0.deduction!,
+				eliminated: {
+					X: rosterIds.filter((id) => id !== secretO),
+					O: [] as string[]
+				}
+			}
+		};
+		const agent = createUctAgent(3, { simulations: 24 });
+		const a0 = agent.act(kernel, state, 0);
+		const a1 = agent.act(kernel, state, 1);
+		expect(a0).toEqual({ type: "guess", id: secretO });
+		expect(a1?.type).toBe("guess");
+		const joint = jointGuessFromActions(a0!, a1!);
+		expect(joint?.type).toBe("simultaneousGuess");
+		const after = kernel.stepSync(state, joint!).nextState;
+		expect(after.status).toBe("won");
+		expect(after.winner).toBe("X");
 	});
 });

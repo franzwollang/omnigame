@@ -51,11 +51,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M32 | Next missing mechanism (simultaneous compound deduction) | `done` |
 | M33 | Next missing mechanism (simultaneous deduction commitReveal) | `done` |
 | M34 | Next missing mechanism (joint UCT under simultaneous deduction) | `done` |
+| M35 | Next missing mechanism (simultaneous deduction manual eliminate) | `done` |
 
-**Optimizing for this marathon:** M34 simultaneous deduction joint UCT closed.
-Pick **P3 next-missing-mechanism** (e.g. manual eliminate under simultaneous,
-commitReveal deduction joint UCT, fire→move only with anchor) or **P4** CI /
-semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M35 simultaneous deduction manual eliminate
+closed. Pick **P3 next-missing-mechanism** (e.g. commitReveal deduction joint
+UCT, fire→move only with anchor) or **P4** CI / semantics refresh — without
+asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -70,7 +71,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥505** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥519** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -83,8 +84,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M34 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M34) — smallest new seam — or
+   (P0–P2 / M8–M35 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M35) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -131,8 +132,9 @@ on rectangle | hex_offset | graph.
 **Guess Who And3 Lite** (`compoundArity: 3` — 3-clause AND),
 **Simultaneous Guess Who Lite** (joint query/guess under simultaneous),
 **Simultaneous Guess Who And Lite** (joint compound AND under simultaneous),
-**Hidden Simultaneous Guess Who Lite** (`commitReveal` under simultaneous
-deduction — private query/guess then reveal).
+**Simultaneous Guess Who Commit Lite** (joint manual eliminate under
+simultaneous), **Hidden Simultaneous Guess Who Lite** (`commitReveal` under
+simultaneous deduction — private query/guess then reveal).
 
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement** (incl.
@@ -153,7 +155,8 @@ Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, **Graph Hop Race**, 
 Replace Race, **Hex Replace Race**, **Graph Replace Race**, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**,
-**Guess Who And3 Lite**, **Simultaneous Guess Who Lite**, **Simultaneous Guess Who And Lite**,
+**Guess Who And3 Lite**, **Simultaneous Guess Who Lite**, **Simultaneous Guess Who
+Commit Lite**, **Simultaneous Guess Who And Lite**,
 **Hidden Simultaneous Guess Who Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
@@ -166,7 +169,7 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; CI workflows; semantics doc refresh; fire→move reorder;
-simultaneous deduction manual eliminate; commitReveal deduction joint UCT.
+commitReveal deduction joint UCT.
 
 ## Phase 2 exit criteria
 
@@ -407,7 +410,8 @@ simultaneous deduction manual eliminate; commitReveal deduction joint UCT.
 - Out of scope closed by M32: compound queries under simultaneous
 - Out of scope closed by M33: commitReveal under simultaneous deduction
 - Out of scope closed by M34: joint UCT over open query/guess cartesian
-- Out of scope: manual eliminate; ordered; sandbox pendingQueries UI
+- Out of scope closed by M35: manual eliminate under simultaneous
+- Out of scope: ordered; sandbox pendingQueries UI
 - Out of scope still deferred: commitReveal deduction joint UCT
 
 ### M31 — Graph hop-ball range
@@ -463,8 +467,21 @@ simultaneous deduction manual eliminate; commitReveal deduction joint UCT.
   **done**
 - Tests: enum counts, dual-act consistency, immediate winning guess, short
   playout; 505 green — **done**
-- Out of scope: commitReveal deduction joint UCT; manual eliminate under
-  simultaneous; fire→move
+- Out of scope: commitReveal deduction joint UCT; fire→move
+- Out of scope closed by M35: manual eliminate under simultaneous
+
+### M35 — Simultaneous deduction manual eliminate
+
+- Schema: allow `autoEliminate: false` under open simultaneous deduction;
+  forbid with `commitReveal` — **done**
+- Kernel: `simultaneousEliminate` + manual `simultaneousQuery` (answers, no
+  prune); bare eliminate still noop under simultaneous — **done**
+- Agents: kind-matched `eliminate×eliminate` → 48 joints; sandbox compose
+  `jointEliminateFromActions` — **done**
+- Preset `simultaneous-guess-who-commit-lite` + schema/kernel/GameIR/agent
+  tests; 519 green — **done**
+- Out of scope: commitReveal + manual eliminate; simultaneous `turn.phases`;
+  commitReveal deduction joint UCT; fire→move
 
 ## Sequencing notes
 

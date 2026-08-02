@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T07:30-00:00",
-  "turn": 62,
+  "updated_at": "2026-08-02T07:50-00:00",
+  "turn": 63,
   "focus": {
-    "milestone": "M34",
+    "milestone": "M35",
     "issue": "next-missing-mechanism",
-    "goal": "joint UCT under simultaneous deduction landed; hand off next seam or P4"
+    "goal": "simultaneous deduction manual eliminate landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M33 from bad6 onto 0127",
-    "Landed M34 joint UCT/MCTS over open simultaneous deduction",
-    "505 green; commitReveal deduction joint UCT still deferred"
+    "Synced M8–M34 from 0127 onto da8d",
+    "Landed M35 simultaneousEliminate + Commit Lite preset",
+    "519 green; commitReveal deduction joint UCT still deferred"
   ],
   "discoveries": [
-    "Open deduction joint space is 32 (16 query×query + 16 guess×guess)"
+    "Manual simultaneous joint space is 48 (16+16+16 query/guess/eliminate)"
   ],
   "open_threads": [
-    "Next: manual eliminate under simultaneous, commitReveal deduction joint UCT, or P4"
+    "Next: commitReveal deduction joint UCT, fire→move only with anchor, or P4"
   ],
-  "next_step": "Pick next seam (manual elim / CR joint UCT) or P4 CI/semantics",
+  "next_step": "Pick commitReveal deduction joint UCT or P4 CI/semantics",
   "blockers": []
 }

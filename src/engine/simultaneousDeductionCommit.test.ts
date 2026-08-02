@@ -157,7 +157,7 @@ describe("kernel: simultaneousEliminate", () => {
 	});
 
 	it("GameIR replays query then eliminate rounds", () => {
-		const { kernel } = compileConfig(preset());
+		const { kernel, gameConfig } = compileConfig(preset());
 		const seed = 42;
 		const state0 = kernel.initialState(seed);
 		const actions: KernelAction[] = [
@@ -174,9 +174,12 @@ describe("kernel: simultaneousEliminate", () => {
 			(s, a) => kernel.stepSync(s, a).nextState,
 			state0
 		);
-		const replayed = replayActions(kernel, actions, seed);
-		expect(replayed.deduction?.eliminated).toEqual(live.deduction?.eliminated);
-		expect(replayed.moveCount).toBe(live.moveCount);
+		const { finalState, faithful } = replayActions(gameConfig, actions, seed);
+		expect(faithful).toBe(true);
+		expect(finalState.deduction?.eliminated).toEqual(
+			live.deduction?.eliminated
+		);
+		expect(finalState.moveCount).toBe(live.moveCount);
 	});
 
 	it("enumerates 48 kind-matched joints (16+16+16)", () => {
