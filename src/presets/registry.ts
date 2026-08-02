@@ -1227,6 +1227,43 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"memory-flip-lite": definePreset({
+		id: "memory-flip-lite",
+		name: "Memory Flip Lite",
+		tags: [
+			"observation",
+			"memory-flip",
+			"match-pairs",
+			"partial-info",
+			"4x4",
+			"mechanism"
+		],
+		description:
+			"Classic pair-matching: flip two tiles per turn; match stays and scores; mismatch re-hides. Unlocks memory_flip — not full Memory (no bonus turn / custom decks).",
+		config: {
+			metadata: { name: "Memory Flip Lite", version: 1 },
+			grid: { width: 4, height: 4, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating", actionsPerTurn: 2 },
+			rng: { seed: 42 },
+			input: { mode: "flip" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "memory_flip" },
+			memory: { pairCount: 8, bonusTurnOnMatch: false },
+			objective: { mode: "match_pairs" },
+			tokens: [
+				{ id: "pair-0", label: "A", players: ["X", "O"] },
+				{ id: "pair-1", label: "B", players: ["X", "O"] },
+				{ id: "pair-2", label: "C", players: ["X", "O"] },
+				{ id: "pair-3", label: "D", players: ["X", "O"] },
+				{ id: "pair-4", label: "E", players: ["X", "O"] },
+				{ id: "pair-5", label: "F", players: ["X", "O"] },
+				{ id: "pair-6", label: "G", players: ["X", "O"] },
+				{ id: "pair-7", label: "H", players: ["X", "O"] }
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"battleship-place": definePreset({
 		id: "battleship-place",
 		name: "Battleship Place",

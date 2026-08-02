@@ -4,11 +4,21 @@
 export type Player = "X" | "O";
 /** Revealed adjacent-mine count for flood-fill / Minesweeper-lite. */
 export type HazardCount = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+/** Face-up / matched pair mark for memory_flip (`mem:0` .. `mem:N-1`). */
+export type MemoryMark = `mem:${number}`;
 /**
  * Public cell marks: player tokens, hit/miss shot results, hazard counts,
- * or an exploded mine. Hidden layer may also hold `"mine"` markers.
+ * memory pair marks, or an exploded mine. Hidden layer may also hold
+ * `"mine"` markers or memory pair marks.
  */
-export type CellValue = Player | "hit" | "miss" | "mine" | HazardCount | null;
+export type CellValue =
+	| Player
+	| "hit"
+	| "miss"
+	| "mine"
+	| HazardCount
+	| MemoryMark
+	| null;
 export type Position = { row: number; col: number };
 
 export type Grid = {
@@ -148,6 +158,18 @@ export type GameState = {
 	mustContinueFrom?: Position;
 	/** Deduction / Guess Who-lite secrets + per-player eliminations. */
 	deduction?: DeductionState;
+	/**
+	 * Memory Flip / tile pair-matching: face-up buffer, matched mask, scores.
+	 * Present when observation.mode = memory_flip.
+	 */
+	memory?: MemoryState;
+};
+
+/** Memory Flip turn-local + score state (see `src/engine/memory.ts`). */
+export type MemoryState = {
+	faceUp: Position[];
+	matched: boolean[];
+	scores: { X: number; O: number };
 };
 
 export type DeductionCharacter = {
@@ -258,6 +280,12 @@ export type FireEvent = {
 /** Flood-fill / Minesweeper-lite: probe a cell (may open a region). */
 export type RevealEvent = {
 	type: "reveal";
+	position: Position;
+};
+
+/** Memory Flip: turn over one face-down tile. */
+export type FlipEvent = {
+	type: "flip";
 	position: Position;
 };
 
@@ -408,6 +436,7 @@ export type GameEvent =
 	| MoveEvent
 	| FireEvent
 	| RevealEvent
+	| FlipEvent
 	| ActivateColumnEvent
 	| ActivateRowEvent
 	| PopOutColumnEvent

@@ -733,6 +733,15 @@ export default function GamePage() {
 							board = draw)
 						</p>
 					)}
+					{currentConfig?.observation.mode === "memory_flip" && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							Memory flip: flip two tiles per turn — match scores; mismatch
+							re-hides
+							{gameState.memory
+								? ` · X ${gameState.memory.scores.X}–${gameState.memory.scores.O} O`
+								: ""}
+						</p>
+					)}
 					{currentConfig?.input.mode === "move" && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							{selectedFrom

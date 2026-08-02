@@ -580,6 +580,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="column">column</SelectItem>
 														<SelectItem value="row">row</SelectItem>
 														<SelectItem value="move">move</SelectItem>
+														<SelectItem value="flip">flip</SelectItem>
+														<SelectItem value="deduction">
+															deduction
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
@@ -837,13 +841,20 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="flood_reveal">
 															flood_reveal
 														</SelectItem>
+														<SelectItem value="memory_flip">
+															memory_flip
+														</SelectItem>
+														<SelectItem value="deduction">
+															deduction
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
 												hit_miss = Battleship-lite; fog = radius vision around
 												own pieces; flood_reveal = Minesweeper-lite region
-												reveal (needs hazards + clear_hazards).
+												reveal (needs hazards + clear_hazards); memory_flip =
+												pair matching (needs memory + match_pairs + flip).
 											</p>
 											<FormMessage />
 										</FormItem>
@@ -985,6 +996,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="clear_hazards">
 															clear_hazards
 														</SelectItem>
+														<SelectItem value="match_pairs">
+															match_pairs
+														</SelectItem>
+														<SelectItem value="identify_secret">
+															identify_secret
+														</SelectItem>
 														<SelectItem value="none">none</SelectItem>
 													</SelectContent>
 												</Select>
@@ -993,6 +1010,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												destroy_hidden↔hit_miss; connect_or_destroy↔
 												place→move→fire + hit_miss; reach_row↔move;
 												area_control↔liberties; clear_hazards↔flood_reveal;
+												match_pairs↔memory_flip; identify_secret↔deduction;
 												none↔tick.
 											</p>
 											<FormMessage />

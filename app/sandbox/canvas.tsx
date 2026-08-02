@@ -650,6 +650,53 @@ export default function SandboxCanvas({
 				marksGroup.add(mesh);
 				return;
 			}
+			// Memory Flip pair marks (`mem:0` ..) → token label by index / id
+			if (typeof value === "string" && value.startsWith("mem:")) {
+				const pairIdx = Number(value.slice(4));
+				const memToken =
+					tokenById.get(`pair-${pairIdx}`) ??
+					(Number.isInteger(pairIdx) ? tokens[pairIdx] : undefined);
+				const label =
+					memToken?.label ??
+					(Number.isInteger(pairIdx) ? String.fromCharCode(65 + (pairIdx % 26)) : "?");
+				if (memToken?.asset?.type === "image") {
+					let tex = textureCacheRef.current.get(memToken.asset.url);
+					if (!tex) {
+						tex = loader.load(memToken.asset.url);
+						textureCacheRef.current.set(memToken.asset.url, tex);
+					}
+					const mat = new THREE.MeshBasicMaterial({
+						map: tex,
+						transparent: true
+					});
+					const geo = new THREE.PlaneGeometry(cellSize * 0.8, cellSize * 0.8);
+					const sprite = new THREE.Mesh(geo, mat);
+					sprite.position.set(x, y, 0.001);
+					marksGroup.add(sprite);
+					return;
+				}
+				const canvas = document.createElement("canvas");
+				canvas.width = 128;
+				canvas.height = 128;
+				const ctx = canvas.getContext("2d");
+				if (ctx) {
+					ctx.fillStyle = "#0f172a";
+					ctx.font = "bold 64px sans-serif";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.fillText(label, 64, 64);
+					const tex = new THREE.CanvasTexture(canvas);
+					const mat = new THREE.MeshBasicMaterial({
+						map: tex,
+						transparent: true
+					});
+					const geo = new THREE.PlaneGeometry(cellSize * 0.7, cellSize * 0.7);
+					const mesh = new THREE.Mesh(geo, mat);
+					mesh.position.set(x, y, 0.001);
+					marksGroup.add(mesh);
+				}
+				return;
+			}
 			if (typeof value === "number") {
 				if (value === 0) {
 					// Open empty cell: light fill (no digit)

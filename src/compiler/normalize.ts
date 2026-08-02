@@ -65,6 +65,12 @@ export function flattenToGameConfig(config: Config): GameConfig {
 					firstRevealSafe: config.hazards.firstRevealSafe === true
 				}
 			: undefined,
+		memory: config.memory
+			? {
+					pairCount: config.memory.pairCount,
+					bonusTurnOnMatch: config.memory.bonusTurnOnMatch === true
+				}
+			: undefined,
 		objectiveMode: config.objective.mode,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,

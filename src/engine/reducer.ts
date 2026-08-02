@@ -85,6 +85,16 @@ import {
 	floodRevealRegion,
 	placeHazards
 } from "@/engine/hazards";
+import {
+	allPairsMatched,
+	emptyMatched,
+	hidePositions,
+	isFaceDown,
+	listHasPosition as memoryListHasPosition,
+	markMatched,
+	memoryIndex,
+	shufflePairDeck
+} from "@/engine/memory";
 
 export type InitialSeed = {
 	row: number;
@@ -104,7 +114,7 @@ export type GameConfig = {
 	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column" | "row" | "move" | "deduction";
+	inputMode?: "cell" | "column" | "row" | "move" | "deduction" | "flip";
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
@@ -125,7 +135,13 @@ export type GameConfig = {
 	koRule?: KoRule;
 	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
-	observationMode?: "full" | "hit_miss" | "fog" | "deduction" | "flood_reveal";
+	observationMode?:
+		| "full"
+		| "hit_miss"
+		| "fog"
+		| "deduction"
+		| "flood_reveal"
+		| "memory_flip";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
 	fogRadius?: number;
 	fogMetric?: "chebyshev" | "manhattan";
@@ -133,6 +149,11 @@ export type GameConfig = {
 	hazards?: {
 		count: number;
 		firstRevealSafe?: boolean;
+	};
+	/** Memory Flip / tile pair-matching deck. */
+	memory?: {
+		pairCount: number;
+		bonusTurnOnMatch?: boolean;
 	};
 	objectiveMode?:
 		| "n_in_a_row"
@@ -142,6 +163,7 @@ export type GameConfig = {
 		| "area_control"
 		| "identify_secret"
 		| "clear_hazards"
+		| "match_pairs"
 		| "none";
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
@@ -458,11 +480,13 @@ export function createInitialState(config: GameConfig): GameState {
 	const seeds = config.initial ?? [];
 	const hasOwner = seeds.some((p) => (p.visibility ?? "public") === "owner");
 	const floodReveal = config.observationMode === "flood_reveal";
+	const memoryFlip = config.observationMode === "memory_flip";
 	if (
 		hasOwner ||
 		config.observationMode === "hit_miss" ||
 		placement ||
-		floodReveal
+		floodReveal ||
+		memoryFlip
 	) {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
 	}
@@ -482,6 +506,24 @@ export function createInitialState(config: GameConfig): GameState {
 			};
 		}
 		// firstRevealSafe: defer mine placement until first reveal action
+	}
+
+	if (memoryFlip && config.memory) {
+		base.hidden = {
+			width: config.gridWidth,
+			height: config.gridHeight,
+			cells: shufflePairDeck(
+				config.gridWidth,
+				config.gridHeight,
+				config.memory.pairCount,
+				config.seed ?? 0
+			)
+		};
+		base.memory = {
+			faceUp: [],
+			matched: emptyMatched(config.gridWidth, config.gridHeight),
+			scores: { X: 0, O: 0 }
+		};
 	}
 
 	const deductionMode =
@@ -571,6 +613,8 @@ export function reduce(
 			return handleFire(state, event.position, config);
 		case "reveal":
 			return handleReveal(state, event.position, config);
+		case "flip":
+			return handleFlip(state, event.position, config);
 		case "activateColumn":
 			return handleActivateColumn(state, event.col, config);
 		case "activateRow":
@@ -2067,6 +2111,123 @@ function handleReveal(
 		currentPlayer: turn.currentPlayer,
 		actionsRemaining: turn.actionsRemaining,
 		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleFlip(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): GameState {
+	if ((config.observationMode ?? "full") !== "memory_flip") return state;
+	if ((config.objectiveMode ?? "n_in_a_row") !== "match_pairs") return state;
+	if (!config.memory) return state;
+	if (state.status !== "playing") return state;
+	if (!state.hidden || !state.memory) return state;
+	if (
+		pos.row < 0 ||
+		pos.row >= state.grid.height ||
+		pos.col < 0 ||
+		pos.col >= state.grid.width
+	) {
+		return state;
+	}
+
+	const mem = state.memory;
+	if (mem.faceUp.length >= 2) return state;
+	if (memoryListHasPosition(mem.faceUp, pos)) return state;
+	if (!isFaceDown(state.grid, mem.matched, pos)) return state;
+
+	const symbol = getCell(state.hidden, pos);
+	if (memoryIndex(symbol) === null) return state;
+
+	const revealed = setCell(state.grid, pos, symbol);
+	const faceUp = [...mem.faceUp, pos];
+	const newMoveCount = state.moveCount + 1;
+
+	// First flip of the pair: stay on seat, spend one action.
+	if (faceUp.length < 2) {
+		const turn = withTurnAdvanced(state, config);
+		return {
+			...state,
+			grid: { ...state.grid, cells: revealed },
+			memory: { ...mem, faceUp },
+			moveCount: newMoveCount,
+			currentPlayer: turn.currentPlayer,
+			actionsRemaining: turn.actionsRemaining
+		};
+	}
+
+	const [a, b] = faceUp as [Position, Position];
+	const symA = getCell(state.hidden, a);
+	const symB = getCell(state.hidden, b);
+	const matched = symA !== null && symA === symB;
+
+	if (matched) {
+		const nextMatched = markMatched(mem.matched, [a, b], state.grid.width);
+		const scores = {
+			...mem.scores,
+			[state.currentPlayer]: mem.scores[state.currentPlayer] + 1
+		};
+		const nextMemory = {
+			faceUp: [] as Position[],
+			matched: nextMatched,
+			scores
+		};
+		const next: GameState = {
+			...state,
+			grid: { ...state.grid, cells: revealed },
+			memory: nextMemory,
+			moveCount: newMoveCount
+		};
+
+		if (allPairsMatched(nextMatched)) {
+			const winner =
+				scores.X > scores.O ? "X" : scores.O > scores.X ? "O" : null;
+			return {
+				...next,
+				status: winner ? "won" : "draw",
+				winner,
+				currentPlayer: state.currentPlayer,
+				actionsRemaining: resolveActionsPerTurn(config)
+			};
+		}
+
+		if (config.memory.bonusTurnOnMatch === true) {
+			return {
+				...next,
+				currentPlayer: state.currentPlayer,
+				actionsRemaining: resolveActionsPerTurn(config)
+			};
+		}
+
+		const turn = withTurnAdvanced(
+			{ ...state, actionsRemaining: 1 },
+			config
+		);
+		return {
+			...next,
+			currentPlayer: turn.currentPlayer,
+			actionsRemaining: turn.actionsRemaining
+		};
+	}
+
+	// Mismatch: re-hide both synchronously, then hand off.
+	const hiddenCells = hidePositions(
+		{ ...state.grid, cells: revealed },
+		[a, b]
+	);
+	const turn = withTurnAdvanced(
+		{ ...state, actionsRemaining: 1 },
+		config
+	);
+	return {
+		...state,
+		grid: { ...state.grid, cells: hiddenCells },
+		memory: { ...mem, faceUp: [] },
+		moveCount: newMoveCount,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining
 	};
 }
 

@@ -83,6 +83,8 @@ export function actionKey(action: KernelAction): string {
 			return `fire:${action.position.row},${action.position.col}`;
 		case "reveal":
 			return `reveal:${action.position.row},${action.position.col}`;
+		case "flip":
+			return `flip:${action.position.row},${action.position.col}`;
 		case "activateColumn":
 			return `col:${action.col}`;
 		case "activateRow":
@@ -194,6 +196,9 @@ function stateFingerprint(state: GameState): string {
 		state.hidden?.cells.join(",") ?? "",
 		state.deduction
 			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${formatQueryFingerprint(state.deduction.lastQuery)}` : ""}`
+			: "",
+		state.memory
+			? `m:fu:${state.memory.faceUp.map((p) => `${p.row},${p.col}`).join("+")}|mt:${state.memory.matched.map((b) => (b ? "1" : "0")).join("")}|sc:${state.memory.scores.X},${state.memory.scores.O}`
 			: ""
 	].join("|");
 }

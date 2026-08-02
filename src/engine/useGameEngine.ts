@@ -572,6 +572,13 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				applyAction({ type: "reveal", position: pos });
 				return;
 			}
+			if (
+				(config.observationMode ?? "full") === "memory_flip" ||
+				(config.inputMode ?? "cell") === "flip"
+			) {
+				applyAction({ type: "flip", position: pos });
+				return;
+			}
 			const turnPhases = config.turnPhases;
 			const inTurnPhase =
 				turnPhases && turnPhases.length > 0

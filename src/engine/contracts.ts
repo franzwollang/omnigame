@@ -300,6 +300,14 @@ export const Contracts = {
 		hooks: ["validateInput"],
 		invariants: ["hidesUnrevealedHazards", "showsCountsOnly"]
 	}),
+	ObservationMemoryFlip: (): FeatureContract => ({
+		id: "ObservationMemoryFlip",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["hidesFaceDownSymbols", "showsFaceUpSymbols"]
+	}),
 	HazardLayout: (): FeatureContract => ({
 		id: "HazardLayout",
 		requires: ["CellsWritable"],
@@ -307,6 +315,14 @@ export const Contracts = {
 		slots: [],
 		hooks: ["applyPlacement"],
 		invariants: ["seededMineLayout"]
+	}),
+	MemoryDeck: (): FeatureContract => ({
+		id: "MemoryDeck",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyPlacement"],
+		invariants: ["seededPairLayout", "exactlyTwoOfEachPair"]
 	}),
 	DestroyHidden: (): FeatureContract => ({
 		id: "DestroyHidden",
@@ -323,6 +339,14 @@ export const Contracts = {
 		slots: [{ type: "EndCondition", value: "clearHazards" }],
 		hooks: ["checkEnd"],
 		invariants: ["mineHitLoses", "allSafeDraw"]
+	}),
+	MatchPairs: (): FeatureContract => ({
+		id: "MatchPairs",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "matchPairs" }],
+		hooks: ["checkEnd"],
+		invariants: ["scoreOnMatch", "allMatchedTerminal"]
 	}),
 	/**
 	 * Dual end for place→move→fire: n-in-a-row after place/move, or sink

@@ -9,6 +9,7 @@
  * Bootstrap: with no own pieces yet, the whole board is visible.
  * deduction: dummy empty board + public roster / own eliminations / own lastQuery.
  * flood_reveal: shared public counts / exploded mine; hidden mines stay secret.
+ * memory_flip: shared public face-up / matched marks; hidden deck stays secret.
  */
 import type { GameConfig } from "@/engine/reducer";
 import type {

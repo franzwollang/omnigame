@@ -114,7 +114,14 @@ export const zConfig = z
 		input: z
 			.object({
 				// move = piece relocation; cell/column/row = placement; deduction = query/guess
-				mode: z.enum(["cell", "column", "row", "move", "deduction"])
+				mode: z.enum([
+					"cell",
+					"column",
+					"row",
+					"move",
+					"deduction",
+					"flip"
+				])
 			})
 			.strict()
 			.default({ mode: "cell" as const }),
@@ -217,7 +224,14 @@ export const zConfig = z
 		observation: z
 			.object({
 				mode: z
-					.enum(["full", "hit_miss", "fog", "deduction", "flood_reveal"])
+					.enum([
+						"full",
+						"hit_miss",
+						"fog",
+						"deduction",
+						"flood_reveal",
+						"memory_flip"
+					])
 					.default("full"),
 				/** Vision radius when mode = fog (ignored otherwise). */
 				radius: z.number().int().min(0).max(32).default(1),
@@ -239,6 +253,19 @@ export const zConfig = z
 				count: z.number().int().min(1).max(999),
 				/** Defer mine placement until first reveal; avoid that cell. */
 				firstRevealSafe: z.boolean().default(false)
+			})
+			.strict()
+			.optional(),
+		/**
+		 * Memory Flip / tile pair-matching deck.
+		 * Board holds exactly two of each pair index; flip two per turn.
+		 */
+		memory: z
+			.object({
+				/** Distinct pair symbols; cells = 2 × pairCount. */
+				pairCount: z.number().int().min(2).max(999),
+				/** When true, scorer keeps the turn after a match. */
+				bonusTurnOnMatch: z.boolean().default(false)
 			})
 			.strict()
 			.optional(),
@@ -302,6 +329,7 @@ export const zConfig = z
 						"area_control",
 						"identify_secret",
 						"clear_hazards",
+						"match_pairs",
 						"none"
 					])
 					.default("n_in_a_row"),
@@ -390,6 +418,12 @@ export const zConfig = z
 		const hasHazardsBlock = cfg.hazards !== undefined;
 		const floodActive =
 			floodReveal || clearHazards || hasHazardsBlock;
+		const memoryFlip = cfg.observation.mode === "memory_flip";
+		const matchPairs = cfg.objective.mode === "match_pairs";
+		const flipInput = cfg.input.mode === "flip";
+		const hasMemoryBlock = cfg.memory !== undefined;
+		const memoryActive =
+			memoryFlip || matchPairs || flipInput || hasMemoryBlock;
 		const hasDeductionBlock = cfg.deduction !== undefined;
 		const deductionActive =
 			deductionInput || deductionObs || identifySecret || hasDeductionBlock;
@@ -462,12 +496,12 @@ export const zConfig = z
 					message: "flood_reveal is incompatible with fleet"
 				});
 			}
-			if (hitMiss || fog || deductionObs) {
+			if (hitMiss || fog || deductionObs || memoryFlip) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["observation", "mode"],
 					message:
-						"flood_reveal is incompatible with hit_miss / fog / deduction"
+						"flood_reveal is incompatible with hit_miss / fog / deduction / memory_flip"
 				});
 			}
 			if (deductionActive) {
@@ -548,6 +582,176 @@ export const zConfig = z
 			}
 		}
 
+		// Memory Flip / tile pair-matching: observation + objective + memory + flip lockstep
+		if (memoryActive) {
+			if (!memoryFlip) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"memory / match_pairs / flip requires observation.mode = 'memory_flip'"
+				});
+			}
+			if (!matchPairs) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message:
+						"memory_flip requires objective.mode = 'match_pairs'"
+				});
+			}
+			if (!hasMemoryBlock) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["memory"],
+					message: "memory_flip requires a memory block"
+				});
+			}
+			if (!flipInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "memory_flip requires input.mode = 'flip'"
+				});
+			}
+			if (cfg.win !== undefined) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["win"],
+					message: "memory_flip / match_pairs does not use win"
+				});
+			}
+			if (cfg.movement) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement"],
+					message: "memory_flip is incompatible with movement"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "memory_flip is incompatible with fleet"
+				});
+			}
+			if (cfg.hazards) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["hazards"],
+					message: "memory_flip is incompatible with hazards"
+				});
+			}
+			if (hitMiss || fog || deductionObs || floodReveal) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"memory_flip is incompatible with hit_miss / fog / deduction / flood_reveal"
+				});
+			}
+			if (deductionActive) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["deduction"],
+					message: "memory_flip is incompatible with deduction"
+				});
+			}
+			if (simultaneous) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "memory_flip is incompatible with simultaneous"
+				});
+			}
+			if (manualTick) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "memory_flip is incompatible with manual_tick"
+				});
+			}
+			if (inTurnPhases) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message: "memory_flip is incompatible with turn.phases"
+				});
+			}
+			if (actionsPerTurn !== 2) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message: "memory_flip requires actionsPerTurn = 2"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message: "memory_flip is incompatible with delayTurns"
+				});
+			}
+			if (gravityImplied || Boolean(cfg.placement.capture?.enabled)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"memory_flip requires direct placement without capture"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"memory_flip requires rectangle topology (hex/graph deferred)"
+				});
+			}
+			if (cfg.grid.wrap === true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "wrap"],
+					message: "memory_flip does not support wrap"
+				});
+			}
+			if ((cfg.initial?.length ?? 0) > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["initial"],
+					message: "memory_flip does not use initial seeds"
+				});
+			}
+			if (hasMemoryBlock) {
+				const cells = cfg.grid.width * cfg.grid.height;
+				const pairCount = cfg.memory!.pairCount;
+				if (cells % 2 !== 0) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["grid"],
+						message:
+							"memory_flip requires an even cell count (two tiles per pair)"
+					});
+				}
+				if (pairCount * 2 !== cells) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["memory", "pairCount"],
+						message:
+							"memory.pairCount must equal (width×height)/2"
+					});
+				}
+				if (cfg.tokens.length < pairCount) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["tokens"],
+						message:
+							"memory_flip requires tokens.length >= memory.pairCount (one token per pair symbol)"
+					});
+				}
+			}
+		}
+
 		// Deduction / Guess Who-lite: input + observation + objective + block lockstep
 		if (deductionActive) {
 			if (!deductionInput) {
@@ -607,7 +811,7 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["observation", "mode"],
 					message:
-						"deduction is incompatible with hit_miss / fog / flood_reveal observation"
+						"deduction is incompatible with hit_miss / fog / flood_reveal / memory_flip observation"
 				});
 			}
 			if (simultaneous) {

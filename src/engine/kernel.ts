@@ -65,6 +65,7 @@ export type KernelAction =
 	| { type: "move"; from: Position; to: Position }
 	| { type: "fire"; position: Position }
 	| { type: "reveal"; position: Position }
+	| { type: "flip"; position: Position }
 	| { type: "activateColumn"; col: number }
 	| { type: "activateRow"; row: number }
 	| { type: "popOutColumn"; col: number }
@@ -144,6 +145,7 @@ export type IllegalReason =
 	| "mode_mismatch"
 	| "not_applicable"
 	| "illegal_or_noop"
+	| "already_matched"
 	| "ship_shape"
 	| "wrong_phase"
 	| "already_committed";
@@ -174,6 +176,19 @@ export type KernelEvent =
 			type: "mineHit";
 			position: Position;
 			player: Player;
+	  }
+	| {
+			type: "tilesFlipped";
+			positions: Position[];
+			symbols: string[];
+			player: Player;
+	  }
+	| {
+			type: "pairResolved";
+			positions: Position[];
+			symbol: string | null;
+			matched: boolean;
+			scorer?: Player;
 	  }
 	| {
 			type: "pieceCaptured";
@@ -274,6 +289,8 @@ function formatAction(action: KernelAction): string {
 			return `fire (${action.position.row},${action.position.col})`;
 		case "reveal":
 			return `reveal (${action.position.row},${action.position.col})`;
+		case "flip":
+			return `flip (${action.position.row},${action.position.col})`;
 		case "activateColumn":
 			return `column ${action.col}`;
 		case "activateRow":
@@ -338,6 +355,18 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: revealed ${event.positions.length} cell(s)`;
 		case "mineHit":
 			return `${event.player}: mine at (${event.position.row},${event.position.col})`;
+		case "tilesFlipped":
+			return `${event.player}: flip ${event.positions
+				.map((p) => `(${p.row},${p.col})`)
+				.join(" ")} → ${event.symbols.join(",")}`;
+		case "pairResolved":
+			return event.matched
+				? `${event.scorer ?? "?"}: matched ${event.symbol ?? "?"} at ${event.positions
+						.map((p) => `(${p.row},${p.col})`)
+						.join("+")}`
+				: `mismatch at ${event.positions
+						.map((p) => `(${p.row},${p.col})`)
+						.join("+")}`;
 		case "pieceCaptured":
 			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
 		case "queryAnswered":
@@ -385,7 +414,8 @@ function isNoop(before: GameState, after: GameState): boolean {
 		before.committedMoves === after.committedMoves &&
 		before.committedDeduction === after.committedDeduction &&
 		before.positionHistory === after.positionHistory &&
-		before.deduction === after.deduction
+		before.deduction === after.deduction &&
+		before.memory === after.memory
 	);
 }
 
@@ -505,6 +535,44 @@ function applyStep(
 					player: state.currentPlayer
 				});
 			}
+		}
+	}
+
+	if (action.type === "flip") {
+		const beforeFace = state.memory?.faceUp.length ?? 0;
+		const afterFace = nextState.memory?.faceUp.length ?? 0;
+		if (nextState.moveCount > state.moveCount && state.hidden) {
+			const symbol = getCell(state.hidden, action.position);
+			if (typeof symbol === "string") {
+				events.push({
+					type: "tilesFlipped",
+					positions: [action.position],
+					symbols: [symbol],
+					player: state.currentPlayer
+				});
+			}
+		}
+		if (beforeFace === 1 && afterFace === 0) {
+			const faceUp = state.memory?.faceUp ?? [];
+			const positions =
+				faceUp.length === 1
+					? [faceUp[0]!, action.position]
+					: [action.position];
+			const matched =
+				(nextState.memory?.scores.X ?? 0) +
+					(nextState.memory?.scores.O ?? 0) >
+				(state.memory?.scores.X ?? 0) + (state.memory?.scores.O ?? 0);
+			const symbol =
+				matched && state.hidden
+					? (getCell(state.hidden, action.position) as string | null)
+					: null;
+			events.push({
+				type: "pairResolved",
+				positions,
+				symbol,
+				matched,
+				scorer: matched ? state.currentPlayer : undefined
+			});
 		}
 	}
 
@@ -973,6 +1041,7 @@ function collectLegalActions(
 	const overflow = config.overflow ?? "reject";
 	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
 	const floodReveal = (config.observationMode ?? "full") === "flood_reveal";
+	const memoryFlip = (config.observationMode ?? "full") === "memory_flip";
 	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
 	const actingPlayer = simultaneous ? playerOf(player) : state.currentPlayer;
 
@@ -988,6 +1057,29 @@ function collectLegalActions(
 			if (getCell(state.grid, position) === null) {
 				actions.push({ type: "reveal", position });
 			}
+		}
+		return actions;
+	}
+
+	if (memoryFlip || inputMode === "flip") {
+		const matched = state.memory?.matched;
+		const faceUp = state.memory?.faceUp ?? [];
+		if (!matched || faceUp.length >= 2) return actions;
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (getCell(state.grid, position) !== null) continue;
+			if (matched[position.row * state.grid.width + position.col]) continue;
+			if (
+				faceUp.some(
+					(p) => p.row === position.row && p.col === position.col
+				)
+			) {
+				continue;
+			}
+			actions.push({ type: "flip", position });
 		}
 		return actions;
 	}
@@ -1536,6 +1628,8 @@ function detailFor(reason: IllegalReason, action: KernelAction): string {
 			return "Cell is occupied";
 		case "must_flip":
 			return "Placement must flip at least one opponent disc";
+		case "already_matched":
+			return "Tile is already matched";
 		case "suicide":
 			return "Placement would leave a group with no liberties";
 		case "ko":
@@ -2214,6 +2308,64 @@ export function explainKernelAction(
 			}
 			break;
 		}
+		case "flip": {
+			if (
+				(config.observationMode ?? "full") !== "memory_flip" &&
+				(config.inputMode ?? "cell") !== "flip"
+			) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const matched = state.memory?.matched;
+			const faceUp = state.memory?.faceUp ?? [];
+			if (!matched || !state.memory) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (faceUp.length >= 2) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			const idx =
+				action.position.row * state.grid.width + action.position.col;
+			if (matched[idx]) {
+				return {
+					legal: false,
+					reason: "already_matched",
+					detail: detailFor("already_matched", action)
+				};
+			}
+			if (
+				faceUp.some(
+					(p) =>
+						p.row === action.position.row &&
+						p.col === action.position.col
+				)
+			) {
+				return {
+					legal: false,
+					reason: "cell_occupied",
+					detail: detailFor("cell_occupied", action)
+				};
+			}
+			if (getCell(state.grid, action.position) !== null) {
+				return {
+					legal: false,
+					reason: "cell_occupied",
+					detail: detailFor("cell_occupied", action)
+				};
+			}
+			break;
+		}
 		case "query": {
 			if (inputMode !== "deduction" || !config.deduction) {
 				return {
@@ -2552,6 +2704,7 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "place":
 		case "fire":
 		case "reveal":
+		case "flip":
 			return (
 				b.type === a.type &&
 				a.position.row === b.position.row &&
@@ -2823,6 +2976,7 @@ export function highlightCellsForActions(
 			case "place":
 			case "fire":
 			case "reveal":
+			case "flip":
 			case "commitPlace":
 				push(action.position);
 				break;

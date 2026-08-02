@@ -98,6 +98,10 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.ObservationFloodReveal());
 		if (cfg.hazards) features.push(Contracts.HazardLayout());
 	}
+	if (cfg.observation.mode === "memory_flip") {
+		features.push(Contracts.ObservationMemoryFlip());
+		if (cfg.memory) features.push(Contracts.MemoryDeck());
+	}
 	if (cfg.objective.mode === "destroy_hidden") {
 		features.push(Contracts.DestroyHidden());
 	} else if (cfg.objective.mode === "connect_or_destroy") {
@@ -110,6 +114,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.IdentifySecret());
 	} else if (cfg.objective.mode === "clear_hazards") {
 		features.push(Contracts.ClearHazards());
+	} else if (cfg.objective.mode === "match_pairs") {
+		features.push(Contracts.MatchPairs());
 	} else if (cfg.objective.mode === "none") {
 		features.push(Contracts.OpenEnded());
 	} else {
