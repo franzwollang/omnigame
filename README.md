@@ -79,6 +79,8 @@ These are built from the same shared schema and operators.
 - **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
 - **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
 - **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
+- **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; real-board paths)
+- **Ordered Simultaneous Slide Replace Race** (`resolveOrder` + slide+replace; sequential path/capture)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -155,9 +157,12 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   destination) — Replace Race / **Simultaneous Replace Race** (joint range 1;
   real-board legality so capture targets stay visible) / **Ordered Simultaneous
   Replace Race** (sequential capture apply; priority can capture before prey
-  flees); hex_offset / graph use topology neighbors (orthogonal, range 1) —
-  Hex Step Race / Simultaneous Hex/Graph Step Race
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
+  flees) / **Simultaneous Slide Replace Race** (joint slide+replace; clear
+  pre-round path) / **Ordered Simultaneous Slide Replace Race** (ordered
+  slide+replace; sequential path/capture); hex_offset / graph use topology
+  neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph Step
+  Race
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** presets

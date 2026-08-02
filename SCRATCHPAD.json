@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T19:50-05:00",
-  "turn": 38,
+  "updated_at": "2026-08-02T01:10-00:00",
+  "turn": 39,
   "focus": {
-    "milestone": "M14",
+    "milestone": "M15",
     "issue": "next-missing-mechanism",
-    "goal": "Ordered simultaneous replace landed; next seam or P4"
+    "goal": "Simultaneous slide+replace landed; next seam or P4"
   },
   "recent": [
-    "Synced M8–M13 from f8ed onto 855b",
-    "M14: ordered simultaneous replace + Ordered Simultaneous Replace Race",
-    "Green gate: typecheck + 352 tests"
+    "Synced M8–M14 from 855b onto 7034",
+    "M15: simultaneous slide+replace + Slide Replace Race presets",
+    "Schema unlock range>1 replace under simultaneous"
   ],
   "discoveries": [
-    "Ordered replace: capture of fleeing piece makes second a legal noop",
-    "Same-dest ordered replace must not let second capture first lander"
+    "Joint replace slides use real-board (paths clear pre-round)",
+    "Ordered slide+replace reuses sequential path/capture apply"
   ],
   "open_threads": [
-    "P3 next seam (slide+replace / joint UCT / richer phases) or P4"
+    "P3 next seam (phases / joint UCT / vacated hybrid) or P4"
   ],
   "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []

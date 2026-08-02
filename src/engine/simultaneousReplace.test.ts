@@ -27,13 +27,13 @@ describe("schema: simultaneous × replace", () => {
 		expect(validateConfig(cfg).ok).toBe(true);
 	});
 
-	it("rejects simultaneous replace with range > 1", () => {
+	it("accepts simultaneous replace with range > 1", () => {
 		const base = examplePresets["simultaneous-replace-race"].config;
-		const bad = {
+		const ok = {
 			...base,
 			movement: { ...base.movement!, range: 4 as const }
 		};
-		expect(zConfig.safeParse(bad).success).toBe(false);
+		expect(zConfig.safeParse(ok).success).toBe(true);
 	});
 
 	it("accepts ordered simultaneous + replace at range 1", () => {
@@ -42,13 +42,13 @@ describe("schema: simultaneous × replace", () => {
 		expect(validateConfig(cfg).ok).toBe(true);
 	});
 
-	it("still rejects simultaneous-slide + replace", () => {
+	it("accepts simultaneous-slide + replace", () => {
 		const base = examplePresets["simultaneous-slide-race"].config;
-		const bad = {
+		const ok = {
 			...base,
 			movement: { ...base.movement!, capture: "replace" as const }
 		};
-		expect(zConfig.safeParse(bad).success).toBe(false);
+		expect(zConfig.safeParse(ok).success).toBe(true);
 	});
 });
 

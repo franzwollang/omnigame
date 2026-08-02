@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M14 ordered simultaneous replace
+**Marathon rule:** Work **P3 → P4** in order (M15 simultaneous slide+replace
 closed). Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,14 +12,15 @@ closed). Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Ordered simultaneous replace (sequential capture apply, range 1) landed as M14.
+Simultaneous slide+replace (joint real-board + ordered sequential, range > 1)
+landed as M15.
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
-- Simultaneous slide + replace (range > 1 with capture targets)
 - Richer multi-phase machines beyond current `turn.phases`
 - Hex/graph `range > 1` (only if a new seam appears)
 - Joint UCT / MCTS over simultaneous actions (deeper than labeled random)
+- Vacated-origin hybrid for joint replace paths (slide through fleeing blockers)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -37,7 +38,8 @@ exhaust `references/` or recombine covered primitives).
 
 - [ ] Sync compact draft with current kernel events/state/phases (incl.
       `pieceCaptured`, `queryAnswered` / `guessResult`, simultaneous, phases,
-      joint + ordered sliding, joint + ordered simultaneous replace)
+      joint + ordered sliding, joint + ordered simultaneous replace,
+      simultaneous slide+replace)
 
 ---
 

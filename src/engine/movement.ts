@@ -226,10 +226,11 @@ export type JointMoveSpec = { from: Position; to: Position };
  * Joint simultaneous move legality.
  * Default (no replace): both paths validated on a board where both origins are
  * vacated (so a vacating piece does not block the other).
- * Replace capture: each seat validated on the real board (per-seat / no mutual
- * vacate) so enemy capture targets stay visible — vacated-origin would erase
- * the occupant and turn replace into empty-dest. Same-destination pairs still
- * return true here; apply resolves conflict.
+ * Replace capture (any range, incl. slides): each seat validated on the real
+ * board so enemy capture targets stay visible — vacated-origin would erase the
+ * occupant and turn replace into empty-dest. Paths must therefore be clear on
+ * the pre-round board. Same-destination pairs still return true here; apply
+ * resolves conflict.
  */
 export function canJointSimultaneousMoves(
 	grid: Grid,

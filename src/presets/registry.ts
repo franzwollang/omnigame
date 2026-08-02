@@ -1595,7 +1595,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Joint simultaneous step with replace capture: X can take a stationary O on the target row while O moves a second piece. Real-board legality keeps capture targets visible (vacated-origin would erase them). Unlocks simultaneous × replace — ordered replace is Ordered Simultaneous Replace Race; slide+replace still deferred.",
+			"Joint simultaneous step with replace capture: X can take a stationary O on the target row while O moves a second piece. Real-board legality keeps capture targets visible (vacated-origin would erase them). Unlocks simultaneous × replace — ordered replace is Ordered Simultaneous Replace Race; slide+replace is Simultaneous Slide Replace Race.",
 		config: {
 			metadata: { name: "Simultaneous Replace Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -1646,7 +1646,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"X-first ordered simultaneous step with replace: priority order decides capture-before-flee vs flee-before-capture. Sequential capture apply — not joint real-board overwrite. Unlocks ordered simultaneous × replace (range 1); slide+replace still deferred.",
+			"X-first ordered simultaneous step with replace: priority order decides capture-before-flee vs flee-before-capture. Sequential capture apply — not joint real-board overwrite. Unlocks ordered simultaneous × replace (range 1); slide+replace is Ordered Simultaneous Slide Replace Race.",
 		config: {
 			metadata: { name: "Ordered Simultaneous Replace Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -1774,6 +1774,117 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			],
 			placements: [],
 			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"simultaneous-slide-replace-race": definePreset({
+		id: "simultaneous-slide-replace-race",
+		name: "Simultaneous Slide Replace Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Joint simultaneous rook slide (range 4) with replace: X slides onto a stationary O on the target row while O moves a runner. Real-board legality keeps the capture target visible and requires a clear pre-round path. Unlocks simultaneous × slide × replace.",
+		config: {
+			metadata: { name: "Simultaneous Slide Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "joint-slide-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "joint-slide-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X slides four steps onto stationary O prey; O also has a runner.
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"ordered-simultaneous-slide-replace-race": definePreset({
+		id: "ordered-simultaneous-slide-replace-race",
+		name: "Ordered Simultaneous Slide Replace Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"resolve-order",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"X-first ordered simultaneous rook slide (range 4) with replace: priority decides capture-before-flee vs flee-then-land on the vacated cell. Sequential path/capture revalidation — not joint real-board overwrite. Unlocks ordered simultaneous × slide × replace.",
+		config: {
+			metadata: {
+				name: "Ordered Simultaneous Slide Replace Race",
+				version: 1
+			},
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				resolveOrder: "x_first"
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "ordered-slide-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "ordered-slide-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X four steps from O prey; O can flee sideways same round.
 				{ row: 4, col: 2, player: "X", visibility: "public" },
 				{ row: 0, col: 2, player: "O", visibility: "public" }
 			]

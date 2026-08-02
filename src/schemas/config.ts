@@ -114,13 +114,14 @@ export const zConfig = z
 		 * (blocker-aware ray walk; range 1 = adjacent only).
 		 * `capture: "replace"` — move onto enemy clears occupant then lands
 		 * (rectangle + move input; path empty except destination).
-		 * Simultaneous + replace is allowed at range 1: joint uses real-board
-		 * legality so capture targets stay visible; ordered uses sequential
-		 * capture apply (priority can capture before prey flees). Simultaneous
-		 * slide+replace (range > 1) remains deferred.
-		 * Joint simultaneous + range > 1 uses vacated-origin path checks;
-		 * ordered simultaneous + range > 1 uses sequential path revalidation.
-		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
+		 * Simultaneous + replace: joint uses real-board legality so capture
+		 * targets stay visible (paths must be clear on the pre-round board);
+		 * ordered uses sequential capture apply (priority can capture before
+		 * prey flees). Works with sliding `range > 1` on rectangle.
+		 * Joint simultaneous + range > 1 without replace uses vacated-origin
+		 * path checks; ordered simultaneous + range > 1 uses sequential path
+		 * revalidation. hex_offset / graph use topology neighbors (orthogonal,
+		 * range 1 only).
 		 */
 		movement: z
 			.object({
@@ -914,21 +915,10 @@ export const zConfig = z
 							"simultaneous move is incompatible with commitReveal (deferred)"
 					});
 				}
-				// Joint simultaneous sliding uses vacated-origin path checks.
-				// Ordered simultaneous sliding uses sequential path revalidation.
-				// Simultaneous replace (range 1): joint = real-board legality;
-				// ordered = sequential capture apply. Slide+replace deferred.
-				if (cfg.movement?.capture === "replace") {
-					const range = cfg.movement.range ?? 1;
-					if (range > 1) {
-						ctx.addIssue({
-							code: z.ZodIssueCode.custom,
-							path: ["movement", "capture"],
-							message:
-								"simultaneous replace requires movement.range = 1 (slide+replace deferred)"
-						});
-					}
-				}
+				// Joint simultaneous sliding (no replace): vacated-origin paths.
+				// Ordered simultaneous sliding: sequential path revalidation.
+				// Simultaneous replace (any range): joint = real-board legality;
+				// ordered = sequential capture apply (incl. slide+replace).
 			}
 			if (hitMiss) {
 				ctx.addIssue({
