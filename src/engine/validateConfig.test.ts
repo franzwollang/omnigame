@@ -240,11 +240,25 @@ describe("validateConfig", () => {
 		expect(result.ok).toBe(true);
 	});
 
-	it("rejects simultaneous move with movement.capture = replace", () => {
+	it("accepts joint simultaneous move with movement.capture = replace (range 1)", () => {
+		const base = examplePresets["simultaneous-step-race"].config;
+		const ok = {
+			...base,
+			movement: { ...base.movement!, capture: "replace" as const }
+		};
+		const result = validateConfig(ok);
+		expect(result.ok).toBe(true);
+	});
+
+	it("rejects simultaneous replace with movement.range > 1", () => {
 		const base = examplePresets["simultaneous-step-race"].config;
 		const bad = {
 			...base,
-			movement: { ...base.movement!, capture: "replace" as const }
+			movement: {
+				...base.movement!,
+				range: 4 as const,
+				capture: "replace" as const
+			}
 		};
 		const result = validateConfig(bad);
 		expect(result.ok).toBe(false);

@@ -223,9 +223,13 @@ export function canMove(
 export type JointMoveSpec = { from: Position; to: Position };
 
 /**
- * Joint simultaneous move legality: both paths validated on a board where
- * both origins are vacated (so a vacating piece does not block the other).
- * Same-destination pairs still return true here; apply resolves conflict.
+ * Joint simultaneous move legality.
+ * Default (no replace): both paths validated on a board where both origins are
+ * vacated (so a vacating piece does not block the other).
+ * Replace capture: each seat validated on the real board (per-seat / no mutual
+ * vacate) so enemy capture targets stay visible — vacated-origin would erase
+ * the occupant and turn replace into empty-dest. Same-destination pairs still
+ * return true here; apply resolves conflict.
  */
 export function canJointSimultaneousMoves(
 	grid: Grid,
@@ -235,6 +239,14 @@ export function canJointSimultaneousMoves(
 ): boolean {
 	if (getCell(grid, moves.X.from) !== "X") return false;
 	if (getCell(grid, moves.O.from) !== "O") return false;
+
+	if (config.capture === "replace") {
+		// Real-board checks keep stationary (and fleeing) enemies visible.
+		return (
+			canMove(grid, moves.X.from, moves.X.to, "X", config, wrapOrBoard) &&
+			canMove(grid, moves.O.from, moves.O.to, "O", config, wrapOrBoard)
+		);
+	}
 
 	let cells = setCell(grid, moves.X.from, null);
 	cells = setCell({ ...grid, cells }, moves.O.from, null);

@@ -891,6 +891,9 @@ export type SimultaneousMovePair = {
  * Apply one simultaneous move pair onto `grid` (joint or ordered).
  * Same destination under joint → neither moves. Ordered applies first seat
  * then second against the updated board (second may become illegal).
+ * Joint replace: after vacating both chosen origins, landing overwrites any
+ * remaining occupant (stationary enemy capture); a fleeing opponent whose
+ * origin is the landing cell leaves an empty square.
  */
 function applySimultaneousMovePair(
 	grid: Grid,
@@ -903,7 +906,7 @@ function applySimultaneousMovePair(
 		if (sameDest) {
 			return { grid, conflict: true, applied: { X: false, O: false } };
 		}
-		// Atomic: clear both origins, then land both destinations.
+		// Atomic: clear both origins, then land both destinations (overwrite OK).
 		let cells = setCell(grid, moves.X.from, null);
 		cells = setCell({ ...grid, cells }, moves.O.from, null);
 		cells = setCell({ ...grid, cells }, moves.X.to, "X");
@@ -937,10 +940,11 @@ function applySimultaneousMovePair(
 
 /**
  * Simultaneous schedule + move input: both seats submit one {from,to}.
- * Joint resolve validates on a vacated-origin board (sliding path integrity).
- * Ordered resolve validates first seat pre-round, then second after simulating
- * the first (sequential path revalidation). Same destination under joint →
- * neither; ordered → first seat wins the cell when both claim it.
+ * Joint resolve validates on a vacated-origin board (sliding path integrity),
+ * or on the real board when movement.capture = replace (capture targets stay
+ * visible). Ordered resolve validates first seat pre-round, then second after
+ * simulating the first (sequential path revalidation). Same destination under
+ * joint → neither; ordered → first seat wins the cell when both claim it.
  * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(

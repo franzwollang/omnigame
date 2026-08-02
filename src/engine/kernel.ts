@@ -374,6 +374,31 @@ function applyStep(
 		}
 	}
 
+	if (
+		action.type === "simultaneousMove" &&
+		config.movement?.capture === "replace"
+	) {
+		for (const seat of ["X", "O"] as const) {
+			const m = action.moves[seat];
+			const prior = getCell(state.grid, m.to);
+			if (prior !== "X" && prior !== "O") continue;
+			if (prior === seat) continue;
+			// Fleeing piece: opponent left this cell in the same round — not a capture.
+			const opp = prior;
+			const oppMove = action.moves[opp];
+			const oppFled =
+				oppMove.from.row === m.to.row && oppMove.from.col === m.to.col;
+			if (oppFled) continue;
+			if (getCell(nextState.grid, m.to) !== seat) continue;
+			events.push({
+				type: "pieceCaptured",
+				position: m.to,
+				captured: prior,
+				by: seat
+			});
+		}
+	}
+
 	if (action.type === "query") {
 		const lq = nextState.deduction?.lastQuery;
 		if (lq) {
@@ -1037,8 +1062,8 @@ export function explainKernelAction(
 		};
 	}
 
-	// Joint move: joint resolve uses vacated-origin path checks; ordered uses
-	// sequential path revalidation (first pre-round, second after first).
+	// Joint move: joint resolve uses vacated-origin path checks (or real-board
+	// when capture=replace); ordered uses sequential path revalidation.
 	if (action.type === "simultaneousMove") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
 			return {

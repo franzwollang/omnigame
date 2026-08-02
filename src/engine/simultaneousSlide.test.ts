@@ -40,13 +40,20 @@ describe("schema: simultaneous × sliding", () => {
 		expect(validated.ok).toBe(true);
 	});
 
-	it("still rejects simultaneous + capture replace", () => {
+	it("still rejects simultaneous slide + capture replace", () => {
 		const base = examplePresets["simultaneous-slide-race"].config;
 		const bad = {
 			...base,
 			movement: { ...base.movement!, capture: "replace" as const }
 		};
 		expect(zConfig.safeParse(bad).success).toBe(false);
+	});
+
+	it("accepts joint simultaneous step + replace (range 1)", () => {
+		const ok = zConfig.safeParse(
+			examplePresets["simultaneous-replace-race"].config
+		);
+		expect(ok.success).toBe(true);
 	});
 });
 

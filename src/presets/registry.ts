@@ -1582,6 +1582,56 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"simultaneous-replace-race": definePreset({
+		id: "simultaneous-replace-race",
+		name: "Simultaneous Replace Race",
+		tags: [
+			"move",
+			"capture",
+			"replace",
+			"reach-row",
+			"simultaneous",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Joint simultaneous step with replace capture: X can take a stationary O on the target row while O moves a second piece. Real-board legality keeps capture targets visible (vacated-origin would erase them). Unlocks simultaneous × replace — not ordered replace or slide+replace.",
+		config: {
+			metadata: { name: "Simultaneous Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "sim-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "sim-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X one step from stationary O prey on target row; O also has a runner.
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"simultaneous-slide-race": definePreset({
 		id: "simultaneous-slide-race",
 		name: "Simultaneous Slide Race",

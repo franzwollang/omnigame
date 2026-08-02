@@ -117,7 +117,11 @@ export const Contracts = {
 		provides: [],
 		slots: [],
 		hooks: ["applyEffects"],
-		invariants: ["replaceClearsEnemyThenLands", "pathEmptyExceptDestination"]
+		invariants: [
+			"replaceClearsEnemyThenLands",
+			"pathEmptyExceptDestination",
+			"jointSimultaneousReplaceUsesRealBoardLegality"
+		]
 	}),
 	PlacementDirect: (): FeatureContract => ({
 		id: "PlacementDirect",
@@ -359,7 +363,8 @@ export const Contracts = {
 		invariants: [
 			"jointMovePerRound",
 			"sameDestinationConflictNeitherOrFirst",
-			"jointSlidePathsOnVacatedOrigins"
+			"jointSlidePathsOnVacatedOrigins",
+			"jointReplaceCaptureRealBoardLegality"
 		]
 	}),
 	/**

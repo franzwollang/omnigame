@@ -62,6 +62,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	const showMovement = inputMode === "move" || phasesNeedMove;
 	const hexOrGraph = topology === "hex_offset" || topology === "graph";
 	const simultaneousMove = schedule === "simultaneous" && inputMode === "move";
+	const resolveOrder =
+		(form.watch("turn.resolveOrder") as string | undefined) ?? "joint";
+	const jointReplaceOk =
+		simultaneousMove && resolveOrder === "joint" && !hexOrGraph;
 	const rangeMax = hexOrGraph ? 1 : 8;
 
 	const ensureMovement = () => {
@@ -558,7 +562,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										rectangle-only; joint simultaneous sliding uses
 										vacated-origin paths; ordered simultaneous sliding
 										revalidates the second seat after the first. Replace
-										capture is rectangle + alternating move only.
+										capture is rectangle + move; joint simultaneous
+										replace is range 1 only (ordered / slide+replace
+										deferred).
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
@@ -650,10 +656,25 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														onValueChange={(v) => {
 															ensureMovement();
 															field.onChange(v);
+															if (
+																v === "replace" &&
+																simultaneousMove
+															) {
+																form.setValue("movement.range", 1, {
+																	shouldDirty: true
+																});
+																if (resolveOrder !== "joint") {
+																	form.setValue(
+																		"turn.resolveOrder",
+																		"joint",
+																		{ shouldDirty: true }
+																	);
+																}
+															}
 														}}
 														disabled={
 															hexOrGraph ||
-															simultaneousMove ||
+															(simultaneousMove && !jointReplaceOk) ||
 															inputMode !== "move"
 														}
 													>
@@ -671,8 +692,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												<p className="text-xs text-muted-foreground">
 													Replace: land on an enemy cell to remove it
 													(path must be empty except destination).
-													Rectangle + move input only; not simultaneous
-													or placement.capture.
+													Rectangle + move input; joint simultaneous
+													OK at range 1; not ordered, slide+replace, or
+													placement.capture.
 												</p>
 												<FormMessage />
 											</FormItem>
