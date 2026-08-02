@@ -2,7 +2,8 @@
  * Pure movement legality helpers (M5 Move foothold + piece-table adjacency).
  * Rectangle: orthogonal | diagonal | king with sliding range 1..8 (blocker-
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
- * (path empty except destination). Hex_offset / graph: topology neighbors,
+ * (path empty except destination). Hex_offset: orthogonal cube-axis slides
+ * (range 1..8, same blocker/replace rules). Graph: topology neighbors,
  * orthogonal only, range 1 (replace is rectangle-only via schema).
  */
 import type { Grid, Position, Player } from "@/engine/types";
@@ -10,6 +11,8 @@ import { getCell, setCell } from "@/engine/types";
 import { inBounds, step } from "@/engine/adjacency";
 import {
 	neighbors,
+	stepHex,
+	CUBE_NEIGHBOR_DIRS,
 	type GridTopology,
 	type GraphTopologyData
 } from "@/engine/topology";
@@ -112,6 +115,44 @@ function slideDestinations(
 	return out;
 }
 
+/**
+ * Hex cube-axis slides (odd-r): walk each of the six neighbor directions up
+ * to `range` via `stepHex`. Same blocker / replace / wrap-loop rules as
+ * rectangle `slideDestinations`.
+ */
+function slideHexDestinations(
+	grid: Grid,
+	from: Position,
+	config: MovementConfig,
+	wrap: boolean,
+	mover: Player
+): Position[] {
+	const out: Position[] = [];
+	const range = Math.max(1, Math.floor(config.range));
+	const replace = config.capture === "replace";
+	for (const d of CUBE_NEIGHBOR_DIRS) {
+		let cur = from;
+		const seen = new Set<string>([posKey(from)]);
+		for (let dist = 1; dist <= range; dist++) {
+			const next = stepHex(grid, cur, d, wrap);
+			if (!next) break;
+			const key = posKey(next);
+			if (seen.has(key)) break;
+			seen.add(key);
+			const occ = getCell(grid, next);
+			if (occ !== null) {
+				if (replace && occ !== mover && (occ === "X" || occ === "O")) {
+					out.push(next);
+				}
+				break;
+			}
+			out.push(next);
+			cur = next;
+		}
+	}
+	return out;
+}
+
 /** Neighbor cells for a range-1 step under the board topology. */
 export function movementNeighbors(
 	grid: Grid,
@@ -122,11 +163,16 @@ export function movementNeighbors(
 	const { wrap, topology, graph } = boardOpts(wrapOrBoard);
 	if (!inBounds(grid, from)) return [];
 
-	if (topology === "hex_offset" || topology === "graph") {
-		// Hex/graph foothold: orthogonal = topology neighbors only.
-		// Diagonal/king and range>1 piece-tables are rectangle-only for now.
+	if (topology === "graph") {
+		// Graph foothold: orthogonal = explicit edges; sliding deferred.
 		if (config.adjacency !== "orthogonal") return [];
 		if (config.range !== 1) return [];
+		return neighbors(grid, from, topology, graph, wrap);
+	}
+
+	if (topology === "hex_offset") {
+		// Unit cube-axis steps (range is applied in legalDestinations).
+		if (config.adjacency !== "orthogonal") return [];
 		return neighbors(grid, from, topology, graph, wrap);
 	}
 
@@ -178,8 +224,8 @@ export function legalDestinations(
 	const opts = boardOpts(wrapOrBoard);
 	const { wrap, topology, graph } = opts;
 
-	if (topology === "hex_offset" || topology === "graph") {
-		// Replace capture is rectangle-only (schema); hex/graph stay empty-dest.
+	if (topology === "graph") {
+		// Graph: range-1 empty neighbors only (sliding deferred; replace rect-only).
 		if (config.adjacency !== "orthogonal") return [];
 		if (config.range !== 1) return [];
 		const out: Position[] = [];
@@ -188,6 +234,12 @@ export function legalDestinations(
 			out.push(to);
 		}
 		return out;
+	}
+
+	if (topology === "hex_offset") {
+		// Cube-axis slides; replace remains rectangle-only via schema.
+		if (config.adjacency !== "orthogonal") return [];
+		return slideHexDestinations(grid, from, config, wrap, mover);
 	}
 
 	// Rectangle: sliding ray walk (range 1 ≡ adjacent; replace may land on enemy).

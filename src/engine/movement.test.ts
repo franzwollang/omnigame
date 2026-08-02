@@ -380,12 +380,154 @@ describe("Slide Race (movement.range > 1)", () => {
 		expect(replay.finalState.winner).toBe("X");
 	});
 
-	it("rejects sliding range on hex move configs", () => {
+	it("still rejects sliding range on graph move configs", () => {
 		const bad = zConfig.safeParse({
-			...examplePresets["hex-step-race"].config,
+			...examplePresets["simultaneous-graph-step-race"].config,
 			movement: { adjacency: "orthogonal" as const, range: 3 }
 		});
 		expect(bad.success).toBe(false);
+	});
+});
+
+describe("Hex Slide Race (movement.range > 1 on hex_offset)", () => {
+	const HEX_SLIDE: MovementConfig = { adjacency: "orthogonal", range: 4 };
+	const HEX_BOARD = { topology: "hex_offset" as const, wrap: false };
+
+	it("accepts hex move configs with sliding range", () => {
+		const ok = zConfig.safeParse({
+			...examplePresets["hex-step-race"].config,
+			movement: { adjacency: "orthogonal" as const, range: 4 }
+		});
+		expect(ok.success).toBe(true);
+	});
+
+	it("lists multi-cell cube-axis destinations and stops at blockers", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["hex-slide-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 2 };
+		const dests = legalDestinations(state.grid, from, HEX_SLIDE, HEX_BOARD);
+		// Cube-axis rays from (4,2): NE→(0,4), NW→(0,0), E/W along row 4.
+		// O at (0,2) is off-ray (not a cube-axis neighbor chain).
+		expect(dests).toEqual(
+			expect.arrayContaining([
+				{ row: 3, col: 2 },
+				{ row: 2, col: 3 },
+				{ row: 1, col: 3 },
+				{ row: 0, col: 4 },
+				{ row: 3, col: 1 },
+				{ row: 2, col: 1 },
+				{ row: 1, col: 0 },
+				{ row: 0, col: 0 },
+				{ row: 4, col: 3 },
+				{ row: 4, col: 4 },
+				{ row: 4, col: 1 },
+				{ row: 4, col: 0 }
+			])
+		);
+		expect(dests).toHaveLength(12);
+		expect(
+			canMove(state.grid, from, { row: 0, col: 0 }, "X", HEX_SLIDE, HEX_BOARD)
+		).toBe(true);
+		expect(
+			canMove(state.grid, from, { row: 0, col: 4 }, "X", HEX_SLIDE, HEX_BOARD)
+		).toBe(true);
+		// Same offset column is not a cube-axis ray — cannot jump to O.
+		expect(
+			canMove(state.grid, from, { row: 0, col: 2 }, "X", HEX_SLIDE, HEX_BOARD)
+		).toBe(false);
+
+		// Mid-ray blocker on NW path: occupy (2,1) → (1,0)/(0,0) unreachable.
+		const blockedCells = state.grid.cells.slice();
+		const idx = 2 * state.grid.width + 1;
+		blockedCells[idx] = "O";
+		const blockedGrid = { ...state.grid, cells: blockedCells };
+		const blockedDests = legalDestinations(
+			blockedGrid,
+			from,
+			HEX_SLIDE,
+			HEX_BOARD
+		);
+		expect(blockedDests).toEqual(
+			expect.arrayContaining([
+				{ row: 3, col: 1 },
+				{ row: 0, col: 4 }
+			])
+		);
+		expect(
+			blockedDests.some((p) => p.row === 1 && p.col === 0)
+		).toBe(false);
+		expect(
+			blockedDests.some((p) => p.row === 0 && p.col === 0)
+		).toBe(false);
+		expect(
+			blockedDests.some((p) => p.row === 2 && p.col === 1)
+		).toBe(false);
+	});
+
+	it("validates and compiles the hex-slide-race preset", () => {
+		const cfg = examplePresets["hex-slide-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.inputMode).toBe("move");
+		expect(gameConfig.movement?.range).toBe(4);
+		expect(gameConfig.objectiveMode).toBe("reach_row");
+		const state = kernel.initialState(cfg.rng.seed);
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.every((a) => a.type === "move")).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 0
+			)
+		).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 2
+			)
+		).toBe(false);
+	});
+
+	it("X wins by sliding along a cube axis to the target row", () => {
+		const cfg = examplePresets["hex-slide-race"].config;
+		const { kernel } = compileConfig(cfg);
+		// One range-4 cube-axis slide reaches row 0 — impossible under range 1.
+		const script: Extract<KernelAction, { type: "move" }>[] = [
+			{ type: "move", from: { row: 4, col: 2 }, to: { row: 0, col: 0 } }
+		];
+
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const player = playerIdOf(state.currentPlayer);
+			expect(
+				kernel.legalActions(state, player).some(
+					(a) =>
+						a.type === "move" &&
+						a.from.row === action.from.row &&
+						a.from.col === action.from.col &&
+						a.to.row === action.to.row &&
+						a.to.col === action.to.col
+				)
+			).toBe(true);
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+
+		const replay = replayActions(
+			compileConfig(cfg).gameConfig,
+			script,
+			cfg.rng.seed
+		);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
 	});
 });
 

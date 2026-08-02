@@ -37,9 +37,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M18 | Next missing mechanism (joint UCT/MCTS under simultaneous) | `done` |
 | M19 | Next missing mechanism (joint UCT under multi-action simultaneous) | `done` |
 | M20 | Next missing mechanism (joint UCT/MCTS under commitReveal) | `done` |
+| M21 | Next missing mechanism (hex cube-axis sliding) | `done` |
 
-**Optimizing for this marathon:** M20 commitReveal joint UCT closed. Pick **P3
-next-missing-mechanism** (e.g. hex/graph sliding, richer phases, richer Guess
+**Optimizing for this marathon:** M21 hex sliding closed. Pick **P3
+next-missing-mechanism** (e.g. graph sliding, richer phases, richer Guess
 Who) or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
@@ -55,7 +56,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥396** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥400** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -68,8 +69,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M20 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M20) — smallest new seam — or
+   (P0–P2 / M8–M21 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M21) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -82,7 +83,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 - No exhausting `references/` as a checklist (mechanism-first only)  
 - No Effect Schema migration; no arbitrary user code in specs  
 - No weakening / skipping tests to go green  
-- No hex/graph `movement.range > 1` until a new seam forces it  
+- No graph `movement.range > 1` until chain-walk / hop semantics are chosen  
+- No hex/graph `capture: replace` until a new seam forces it  
 - Do not treat `docs/scratchpad.md` as current backlog  
 
 ## Decisions (locked)
@@ -115,14 +117,15 @@ Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement** (incl.
 **joint + ordered simultaneous replace** and **slide+replace**), point/positional/situational ko,
 observation (hit/miss + fog + **deduction**), fleet placement, Move
-(orthogonal/diagonal/king + sliding range on rectangle), tick/Life, simultaneous
+(orthogonal/diagonal/king + sliding range on rectangle **and hex_offset cube
+axes**; graph neighbors range 1), tick/Life, simultaneous
 place/move (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
 sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire**), **query +
 guess / identify_secret**.
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
-Lite, Slide Race, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
+Lite, Slide Race, **Hex Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
 Replace Race, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
@@ -132,9 +135,10 @@ Lite, Go Lite variants, etc.).
 `movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
 observation, etc., plus an in-UI “Form coverage” callout for remaining
 JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
-`placement.capture`, `deduction.*` / `identify_secret`, …).
+`placement.capture`, `deduction.*` / `identify_secret`, …). Hex range 2–8
+unlocked; graph range still locked to 1 in the form.
 
-**Not yet:** full Go; hex/graph sliding; CI workflows; richer Guess Who
+**Not yet:** full Go; graph sliding; CI workflows; richer Guess Who
 commit/hypothesis beyond query+guess MVP.
 
 ## Phase 2 exit criteria
@@ -174,7 +178,7 @@ commit/hypothesis beyond query+guess MVP.
 - Sequential path revalidation (`canOrderedSimultaneousMoves`) — **done**
 - Schema allows ordered + `range > 1`; same-dest first-seat wins preserved — **done**
 - Preset `ordered-simultaneous-slide-race` + transcript/replay tests — **done**
-- Out of scope: hex/graph sliding
+- Out of scope closed by M21: hex sliding; graph sliding still deferred
 - Out of scope closed by M15: simultaneous slide+replace
 
 ### M13 — Joint simultaneous replace
@@ -240,7 +244,7 @@ commit/hypothesis beyond query+guess MVP.
 - Flat MCTS samples large cartesians; UCT searches full untried set — **done**
 - Tests on `double-place-simultaneous-ttt` (5184 enum, coordinated picks,
   mid-round win, playout) — **done**
-- Out of scope closed by M20: `commitReveal` joint search
+- Out of scope closed by M21: hex sliding
 - Out of scope still deferred: Nash/maximin joint policy
 
 ### M20 — Joint UCT / MCTS under commitReveal
@@ -254,6 +258,15 @@ commit/hypothesis beyond query+guess MVP.
   win, playout) — **done**
 - Out of scope: Nash/maximin; observe()-limited imperfect-info search;
   commitReveal + simultaneous move (schema blocked)
+
+### M21 — Hex cube-axis sliding
+
+- Schema accepts `hex_offset` + move + `reach_row` + `movement.range` 2..8 — **done**
+- `slideHexDestinations` walks six cube axes via `stepHex` (blocker/wrap parity
+  with rectangle slides); graph still range 1 — **done**
+- Preset `hex-slide-race` + destination / blocker / win+replay tests — **done**
+- Form range max unlocked for hex (graph stays 1) — **done**
+- Out of scope: graph sliding; hex/graph replace capture
 
 ## Sequencing notes
 

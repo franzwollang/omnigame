@@ -50,6 +50,7 @@ These are built from the same shared schema and operators.
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Diagonal Step Race** (`movement.adjacency = diagonal` ferz step + reach_row)
 - **Slide Race** (`movement.range > 1` blocker-aware orthogonal slide + reach_row)
+- **Hex Slide Race** (`hex_offset` cube-axis `movement.range > 1` + reach_row)
 - **Replace Race** (`movement.capture = replace` — move onto enemy clears then lands)
 - **Guess Who Lite** (deduction query/guess + identify_secret)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
@@ -163,8 +164,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   slide+replace; path-through-fleeing) / **Simultaneous Slide Replace
   Flee Race** (demo of slide through a vacating blocker) / **Ordered
   Simultaneous Slide Replace Race** (ordered slide+replace; sequential
-  path/capture); hex_offset / graph use topology neighbors (orthogonal, range
-  1) — Hex Step Race / Simultaneous Hex/Graph Step Race
+  path/capture); hex_offset uses cube-axis slides (orthogonal, range 1..8) —
+  Hex Step Race / **Hex Slide Race** / Simultaneous Hex Step Race; graph uses
+  topology neighbors (orthogonal, range 1) — Simultaneous Graph Step Race
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite); `none` (open-ended / tick demos)
@@ -426,16 +428,17 @@ Ordered Slide Replace Race (M15), move→fire in-turn phases / Move & Fire Lite
 (M16), vacated-origin hybrid for joint replace paths / Simultaneous Slide
 Replace Flee Race (M17), joint UCT/MCTS under open simultaneous (M18), joint
 UCT/MCTS under multi-action simultaneous (M19), joint UCT/MCTS under
-commitReveal / Hidden Simultaneous TTT (M20).
+commitReveal / Hidden Simultaneous TTT (M20), hex cube-axis sliding / Hex
+Slide Race (M21).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  richer phases, hex/graph sliding, richer Guess Who commit/hypothesis)
-  or P4 CI / semantics refresh
-- Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
-  workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
-  Who commit/hypothesis beyond query+guess
+  graph sliding once semantics chosen, richer phases, richer Guess Who
+  commit/hypothesis) or P4 CI / semantics refresh
+- Deferred: full Go rules; graph `range > 1` until chain-walk/hop semantics;
+  hex/graph replace; CI workflows; `docs/semantics.md` refresh vs current
+  kernel events; richer Guess Who commit/hypothesis beyond query+guess
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

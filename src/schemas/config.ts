@@ -118,9 +118,9 @@ export const zConfig = z
  * no-replace joint slides) so a fleeing blocker clears the ray; stationary
  * enemies stay visible and still require replace. Ordered uses sequential
  * capture apply (priority can capture before prey flees). Works with sliding
- * `range > 1` on rectangle. Ordered simultaneous + range > 1 uses sequential
- * path revalidation. hex_offset / graph use topology neighbors (orthogonal,
- * range 1 only).
+ * `range > 1` on rectangle and hex_offset (cube-axis rays). Ordered
+ * simultaneous + range > 1 uses sequential path revalidation. graph uses
+ * topology neighbors (orthogonal, range 1 only — sliding deferred).
 		 */
 		movement: z
 			.object({
@@ -626,14 +626,7 @@ export const zConfig = z
 							"hex_offset move requires movement.adjacency = 'orthogonal' (diagonal/king deferred)"
 					});
 				}
-				if (cfg.movement && cfg.movement.range !== 1) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement", "range"],
-						message:
-							"hex_offset move requires movement.range = 1 (sliding deferred)"
-					});
-				}
+				// hex_offset sliding range 1..8 on cube axes (M21); graph still range 1
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
