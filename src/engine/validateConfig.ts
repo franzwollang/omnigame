@@ -43,6 +43,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.movement?.capture === "jump") {
 		features.push(Contracts.MovementJumpCapture());
 	}
+	if (cfg.movement?.promotion) {
+		features.push(Contracts.MovementPromotion());
+	}
 
 	// Placement policy (mode or gravity.enabled sugar — macros expand the latter)
 	const gravityImplied =

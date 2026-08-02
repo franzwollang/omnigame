@@ -50,6 +50,7 @@ import {
 	canJointSimultaneousMoves,
 	canOrderedSimultaneousMoves,
 	canMove,
+	effectiveMovement,
 	hasAnyJumpCapture,
 	isJumpCapture,
 	jumpDestinations,
@@ -57,6 +58,7 @@ import {
 	movementBoardFrom,
 	type MovementConfig
 } from "@/engine/movement";
+import { isCrowned, promote } from "@/engine/pieces";
 import {
 	applyLifeStep,
 	type SchedulerConfig
@@ -1897,13 +1899,28 @@ function handleMove(
 		movement,
 		board
 	);
-	const mid = jumping ? jumpMid(from, to, movement, board, state.grid) : null;
+	const fromCell = getCell(state.grid, from);
+	const eff = effectiveMovement(movement, fromCell);
+	const mid = jumping ? jumpMid(from, to, eff, board, state.grid) : null;
+
+	const owner = state.currentPlayer;
+	let landMark: CellValue = isCrowned(fromCell)
+		? (promote(owner) ?? owner)
+		: owner;
+	const promo = movement.promotion;
+	if (
+		promo &&
+		!isCrowned(landMark) &&
+		to.row === promo.targetRows[owner]
+	) {
+		landMark = promote(owner) ?? landMark;
+	}
 
 	let cells = setCell(state.grid, from, null);
 	if (mid) {
 		cells = setCell({ ...state.grid, cells }, mid, null);
 	}
-	cells = setCell({ ...state.grid, cells }, to, state.currentPlayer);
+	cells = setCell({ ...state.grid, cells }, to, landMark);
 	const newGrid = { ...state.grid, cells };
 	const newMoveCount = state.moveCount + 1;
 	const next: GameState = {

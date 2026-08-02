@@ -2,17 +2,20 @@
 // Pure functional: State -> Event -> State
 
 export type Player = "X" | "O";
+/** Crowned / promoted piece marks (Transform lite — M49). */
+export type CrownMark = "X+" | "O+";
 /** Revealed adjacent-mine count for flood-fill / Minesweeper-lite. */
 export type HazardCount = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 /** Face-up / matched pair mark for memory_flip (`mem:0` .. `mem:N-1`). */
 export type MemoryMark = `mem:${number}`;
 /**
- * Public cell marks: player tokens, hit/miss shot results, hazard counts,
- * memory pair marks, or an exploded mine. Hidden layer may also hold
- * `"mine"` markers or memory pair marks.
+ * Public cell marks: player tokens, crowned kings, hit/miss shot results,
+ * hazard counts, memory pair marks, or an exploded mine. Hidden layer may
+ * also hold `"mine"` markers or memory pair marks.
  */
 export type CellValue =
 	| Player
+	| CrownMark
 	| "hit"
 	| "miss"
 	| "mine"

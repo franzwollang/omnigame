@@ -819,6 +819,23 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											)}
 										/>
 									)}
+									{captureValue === "jump" && (
+										<p className="text-xs text-muted-foreground">
+											Promotion / crowned kings: set{" "}
+											<code className="text-[11px]">
+												movement.promotion
+											</code>{" "}
+											in JSON (rectangle jump only) — land on{" "}
+											<code className="text-[11px]">
+												targetRows[seat]
+											</code>{" "}
+											to crown; crowned pieces use{" "}
+											<code className="text-[11px]">
+												crownedAdjacency
+											</code>{" "}
+											(default king). See preset Crowned Kings Jump Lite.
+										</p>
+									)}
 								</div>
 							)}
 

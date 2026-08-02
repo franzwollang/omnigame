@@ -7,15 +7,19 @@
  * quiet moves stay range 1). Optional `mustCapture: true` (jump only) forbids
  * quiet moves at turn start when any jump exists for the acting seat
  * (Checkers-lite mandatory capture; mid-chain still uses `mustContinueFrom`).
- * Hex_offset: orthogonal cube-axis slides (range 1..8, same blocker/replace
- * rules) and cube-axis jump (enemy mid + empty land two hops along one cube
- * dir). Graph: orthogonal chain-walk along explicit edges (range 1..8; no
- * turning at junctions) **or** hop-ball BFS within range (`graphReach: "hop"`;
- * may turn at junctions) — same blocker/replace rules as rectangle/hex — plus
- * jump as a 2-edge leap over an enemy mid node to an empty landing.
+ * Optional `promotion` (rectangle jump): land on `targetRows[seat]` → crown
+ * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king) via
+ * `effectiveMovement`. Hex_offset: orthogonal cube-axis slides (range 1..8,
+ * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
+ * hops along one cube dir). Graph: orthogonal chain-walk along explicit edges
+ * (range 1..8; no turning at junctions) **or** hop-ball BFS within range
+ * (`graphReach: "hop"`; may turn at junctions) — same blocker/replace rules
+ * as rectangle/hex — plus jump as a 2-edge leap over an enemy mid node to an
+ * empty landing.
  */
-import type { Grid, Position, Player } from "@/engine/types";
+import type { CellValue, Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
+import { cellOwner, isCrowned } from "@/engine/pieces";
 import { inBounds, step } from "@/engine/adjacency";
 import {
 	neighbors,
@@ -33,6 +37,12 @@ export type MovementCapture = "none" | "replace" | "jump";
 
 /** Graph path mode: chain-walk (default) or hop-ball BFS. */
 export type GraphReach = "chain" | "hop";
+
+export type MovementPromotion = {
+	targetRows: { X: number; O: number };
+	/** Quiet/jump adjacency for crowned pieces. Default king. */
+	crownedAdjacency?: MovementAdjacency;
+};
 
 export type MovementConfig = {
 	adjacency: MovementAdjacency;
@@ -55,6 +65,11 @@ export type MovementConfig = {
 	 * rectangle / hex_offset.
 	 */
 	graphReach?: GraphReach;
+	/**
+	 * Crowned kings / Transform lite (rectangle jump): promote on
+	 * `targetRows[seat]`; crowned pieces use `crownedAdjacency`.
+	 */
+	promotion?: MovementPromotion;
 };
 
 export type MovementBoard = {
@@ -62,6 +77,32 @@ export type MovementBoard = {
 	graph?: GraphTopologyData;
 	wrap?: boolean;
 };
+
+/**
+ * Per-piece movement: crowned marks use `crownedAdjacency` (default king);
+ * uncrowned use config.adjacency.
+ */
+export function effectiveMovement(
+	config: MovementConfig,
+	cellValue: CellValue
+): MovementConfig {
+	if (!isCrowned(cellValue)) return config;
+	return {
+		...config,
+		adjacency: config.promotion?.crownedAdjacency ?? "king"
+	};
+}
+
+/** True when `occ` is an enemy piece relative to `moverOwner`. */
+function isEnemyPiece(occ: CellValue, moverOwner: Player): boolean {
+	const owner = cellOwner(occ);
+	return owner !== null && owner !== moverOwner;
+}
+
+/** True when `occ` is an own piece for `moverOwner`. */
+function isOwnPiece(occ: CellValue, moverOwner: Player): boolean {
+	return cellOwner(occ) === moverOwner;
+}
 
 const ORTHOGONAL: ReadonlyArray<readonly [number, number]> = [
 	[-1, 0],
@@ -178,18 +219,19 @@ export function jumpDestinations(
 ): Position[] {
 	if (!inBounds(grid, from)) return [];
 	const opts = boardOpts(wrapOrBoard);
-	const piece = mover ?? getCell(grid, from);
-	if (piece !== "X" && piece !== "O") return [];
+	const cell = getCell(grid, from);
+	const owner = mover ?? cellOwner(cell);
+	if (owner === null) return [];
+	if (mover != null && cellOwner(cell) !== mover) return [];
+	const eff = effectiveMovement(config, cell);
 	const out: Position[] = [];
 
 	if (opts.topology === "graph") {
-		if (config.adjacency !== "orthogonal" || !opts.graph) return [];
+		if (eff.adjacency !== "orthogonal" || !opts.graph) return [];
 		const seen = new Set<string>();
 		for (const mid of opts.graph.neighborsOf.get(posKey(from)) ?? []) {
 			const occ = getCell(grid, mid);
-			if (occ === null || occ === piece || (occ !== "X" && occ !== "O")) {
-				continue;
-			}
+			if (!isEnemyPiece(occ, owner)) continue;
 			for (const land of opts.graph.neighborsOf.get(posKey(mid)) ?? []) {
 				if (land.row === from.row && land.col === from.col) continue;
 				const key = posKey(land);
@@ -203,14 +245,12 @@ export function jumpDestinations(
 	}
 
 	if (opts.topology === "hex_offset") {
-		if (config.adjacency !== "orthogonal") return [];
+		if (eff.adjacency !== "orthogonal") return [];
 		for (const d of CUBE_NEIGHBOR_DIRS) {
 			const mid = stepHex(grid, from, d, opts.wrap);
 			if (!mid) continue;
 			const occ = getCell(grid, mid);
-			if (occ === null || occ === piece || (occ !== "X" && occ !== "O")) {
-				continue;
-			}
+			if (!isEnemyPiece(occ, owner)) continue;
 			const land = stepHex(grid, mid, d, opts.wrap);
 			if (!land || getCell(grid, land) !== null) continue;
 			out.push(land);
@@ -218,13 +258,11 @@ export function jumpDestinations(
 		return out;
 	}
 
-	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
+	for (const [dr, dc] of adjacencyDeltas(eff.adjacency)) {
 		const mid = step(grid, from, { row: dr, col: dc }, opts.wrap);
 		if (!mid) continue;
 		const occ = getCell(grid, mid);
-		if (occ === null || occ === piece || (occ !== "X" && occ !== "O")) {
-			continue;
-		}
+		if (!isEnemyPiece(occ, owner)) continue;
 		const land = step(grid, mid, { row: dr, col: dc }, opts.wrap);
 		if (!land || getCell(grid, land) !== null) continue;
 		out.push(land);
@@ -250,12 +288,13 @@ export function isJumpCapture(
 	) {
 		return false;
 	}
-	const mid = jumpMid(from, to, config, wrapOrBoard, grid);
+	const cell = getCell(grid, from);
+	if (cellOwner(cell) !== player) return false;
+	const eff = effectiveMovement(config, cell);
+	const mid = jumpMid(from, to, eff, wrapOrBoard, grid);
 	if (!mid || !inBounds(grid, mid) || !inBounds(grid, to)) return false;
 	const occ = getCell(grid, mid);
-	if (occ === null || occ === player || (occ !== "X" && occ !== "O")) {
-		return false;
-	}
+	if (!isEnemyPiece(occ, player)) return false;
 	if (getCell(grid, to) !== null) return false;
 	return jumpDestinations(grid, from, config, wrapOrBoard, player).some(
 		(p) => p.row === to.row && p.col === to.col
@@ -284,7 +323,7 @@ export function hasAnyJumpCapture(
 	for (let row = 0; row < grid.height; row++) {
 		for (let col = 0; col < grid.width; col++) {
 			const from = { row, col };
-			if (getCell(grid, from) !== player) continue;
+			if (cellOwner(getCell(grid, from)) !== player) continue;
 			if (jumpDestinations(grid, from, config, wrapOrBoard, player).length > 0) {
 				return true;
 			}
@@ -320,7 +359,7 @@ function slideDestinations(
 			seen.add(key);
 			const occ = getCell(grid, next);
 			if (occ !== null) {
-				if (replace && occ !== mover && (occ === "X" || occ === "O")) {
+				if (replace && isEnemyPiece(occ, mover)) {
 					out.push(next);
 				}
 				break;
@@ -358,7 +397,7 @@ function slideHexDestinations(
 			seen.add(key);
 			const occ = getCell(grid, next);
 			if (occ !== null) {
-				if (replace && occ !== mover && (occ === "X" || occ === "O")) {
+				if (replace && isEnemyPiece(occ, mover)) {
 					out.push(next);
 				}
 				break;
@@ -401,7 +440,7 @@ function slideGraphDestinations(
 			pathSeen.add(key);
 			const occ = getCell(grid, cur);
 			if (occ !== null) {
-				if (replace && occ !== mover && (occ === "X" || occ === "O")) {
+				if (replace && isEnemyPiece(occ, mover)) {
 					if (!seen.has(key)) {
 						seen.add(key);
 						out.push(cur);
@@ -456,7 +495,7 @@ function hopGraphDestinations(
 			seen.add(key);
 			const occ = getCell(grid, n);
 			if (occ !== null) {
-				if (replace && occ !== mover && (occ === "X" || occ === "O")) {
+				if (replace && isEnemyPiece(occ, mover)) {
 					out.push(n);
 				}
 				// Occupied cells are never traversable.
@@ -533,8 +572,10 @@ export function legalDestinations(
 	wrapOrBoard: boolean | MovementBoard = false
 ): Position[] {
 	if (!inBounds(grid, from)) return [];
-	const mover = getCell(grid, from);
-	if (mover !== "X" && mover !== "O") return [];
+	const cell = getCell(grid, from);
+	const mover = cellOwner(cell);
+	if (mover === null) return [];
+	const eff = effectiveMovement(config, cell);
 
 	const opts = boardOpts(wrapOrBoard);
 	const { wrap, topology, graph } = opts;
@@ -542,12 +583,12 @@ export function legalDestinations(
 	if (topology === "graph") {
 		// Chain-walk (default) or hop-ball BFS; same blocker/replace as rect/hex.
 		// Jump: quiet range-1 edge neighbors ∪ 2-edge leap landings.
-		if (config.adjacency !== "orthogonal" || !graph) return [];
-		if (config.capture === "jump") {
+		if (eff.adjacency !== "orthogonal" || !graph) return [];
+		if (eff.capture === "jump") {
 			const quiet = slideGraphDestinations(
 				grid,
 				from,
-				{ ...config, capture: "none", range: 1 },
+				{ ...eff, capture: "none", range: 1 },
 				graph,
 				mover
 			);
@@ -563,20 +604,20 @@ export function legalDestinations(
 			}
 			return out;
 		}
-		if (config.graphReach === "hop") {
-			return hopGraphDestinations(grid, from, config, graph, mover);
+		if (eff.graphReach === "hop") {
+			return hopGraphDestinations(grid, from, eff, graph, mover);
 		}
-		return slideGraphDestinations(grid, from, config, graph, mover);
+		return slideGraphDestinations(grid, from, eff, graph, mover);
 	}
 
 	if (topology === "hex_offset") {
 		// Cube-axis slides with the same blocker / replace rules as rectangle.
-		if (config.adjacency !== "orthogonal") return [];
-		if (config.capture === "jump") {
+		if (eff.adjacency !== "orthogonal") return [];
+		if (eff.capture === "jump") {
 			const quiet = slideHexDestinations(
 				grid,
 				from,
-				{ ...config, capture: "none", range: 1 },
+				{ ...eff, capture: "none", range: 1 },
 				wrap,
 				mover
 			);
@@ -592,15 +633,15 @@ export function legalDestinations(
 			}
 			return out;
 		}
-		return slideHexDestinations(grid, from, config, wrap, mover);
+		return slideHexDestinations(grid, from, eff, wrap, mover);
 	}
 
 	// Rectangle: jump capture unions quiet adjacent empties with leap landings.
-	if (config.capture === "jump") {
+	if (eff.capture === "jump") {
 		const quiet = slideDestinations(
 			grid,
 			from,
-			{ ...config, capture: "none", range: 1 },
+			{ ...eff, capture: "none", range: 1 },
 			wrap,
 			mover
 		);
@@ -618,7 +659,7 @@ export function legalDestinations(
 	}
 
 	// Rectangle: sliding ray walk (range 1 ≡ adjacent; replace may land on enemy).
-	return slideDestinations(grid, from, config, wrap, mover);
+	return slideDestinations(grid, from, eff, wrap, mover);
 }
 
 export function canMove(
@@ -630,16 +671,11 @@ export function canMove(
 	wrapOrBoard: boolean | MovementBoard = false
 ): boolean {
 	if (!inBounds(grid, from) || !inBounds(grid, to)) return false;
-	if (getCell(grid, from) !== player) return false;
+	if (cellOwner(getCell(grid, from)) !== player) return false;
 	const dest = getCell(grid, to);
-	if (dest === player) return false;
+	if (isOwnPiece(dest, player)) return false;
 	if (dest !== null && config.capture !== "replace") return false;
-	if (
-		dest !== null &&
-		config.capture === "replace" &&
-		dest !== "X" &&
-		dest !== "O"
-	) {
+	if (dest !== null && config.capture === "replace" && !isEnemyPiece(dest, player)) {
 		return false;
 	}
 	return legalDestinations(grid, from, config, wrapOrBoard).some(
@@ -664,8 +700,8 @@ export function canJointSimultaneousMoves(
 	config: MovementConfig,
 	wrapOrBoard: boolean | MovementBoard = false
 ): boolean {
-	if (getCell(grid, moves.X.from) !== "X") return false;
-	if (getCell(grid, moves.O.from) !== "O") return false;
+	if (cellOwner(getCell(grid, moves.X.from)) !== "X") return false;
+	if (cellOwner(getCell(grid, moves.O.from)) !== "O") return false;
 
 	let cells = setCell(grid, moves.X.from, null);
 	cells = setCell({ ...grid, cells }, moves.O.from, null);
@@ -702,8 +738,8 @@ export function canOrderedSimultaneousMoves(
 	resolveOrder: "x_first" | "o_first",
 	wrapOrBoard: boolean | MovementBoard = false
 ): boolean {
-	if (getCell(grid, moves.X.from) !== "X") return false;
-	if (getCell(grid, moves.O.from) !== "O") return false;
+	if (cellOwner(getCell(grid, moves.X.from)) !== "X") return false;
+	if (cellOwner(getCell(grid, moves.O.from)) !== "O") return false;
 
 	const first: Player = resolveOrder === "x_first" ? "X" : "O";
 	const second: Player = first === "X" ? "O" : "X";
@@ -744,7 +780,7 @@ export function canOrderedSimultaneousMoves(
 		firstMove.to.col === secondMove.from.col
 	) {
 		const prior = getCell(grid, firstMove.to);
-		if (prior === second) return true;
+		if (cellOwner(prior) === second) return true;
 	}
 
 	let cells = setCell(grid, firstMove.from, null);

@@ -142,6 +142,19 @@ export const Contracts = {
 			"alternatingOnlyNoSimultaneous"
 		]
 	}),
+	MovementPromotion: (): FeatureContract => ({
+		id: "MovementPromotion",
+		requires: ["ResolvedCell", "CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects"],
+		invariants: [
+			"transformOnReachPromotionRow",
+			"crownedUsesCrownedAdjacency",
+			"preserveCrownOnMove",
+			"rectangleJumpOnly"
+		]
+	}),
 	PlacementDirect: (): FeatureContract => ({
 		id: "PlacementDirect",
 		requires: ["CellsWritable"],

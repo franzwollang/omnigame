@@ -1855,6 +1855,68 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"crowned-jump-race": definePreset({
+		id: "crowned-jump-race",
+		name: "Crowned Kings Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"reach-row",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Diagonal jump race with Transform-lite promotion: land on the opponent back rank to crown (X+/O+). Crowned pieces use king adjacency (incl. orthogonal/backward) while men stay diagonal-only. mustCapture forces the opening leap that promotes. Unlocks movement.promotion — jump/mustCapture alone cannot change piece type in place.",
+		config: {
+			metadata: { name: "Crowned Kings Jump Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "diagonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					targetRows: { X: 0, O: 4 },
+					crownedAdjacency: "king"
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "crowned-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "crowned-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(2,2) mustCapture-jumps O(1,1)→(0,0): promotes to X+ and wins row 0.
+				// Men are diagonal-only; after crowning, king adjacency unlocks orthogonal.
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-replace-race": definePreset({
 		id: "hex-replace-race",
 		name: "Hex Replace Race",

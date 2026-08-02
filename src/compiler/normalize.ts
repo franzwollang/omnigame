@@ -97,6 +97,22 @@ export function flattenToGameConfig(config: Config): GameConfig {
 						: {}),
 					...(config.movement.graphReach
 						? { graphReach: config.movement.graphReach }
+						: {}),
+					...(config.movement.promotion
+						? {
+								promotion: {
+									targetRows: {
+										X: config.movement.promotion.targetRows.X,
+										O: config.movement.promotion.targetRows.O
+									},
+									...(config.movement.promotion.crownedAdjacency
+										? {
+												crownedAdjacency:
+													config.movement.promotion.crownedAdjacency
+											}
+										: {})
+								}
+							}
 						: {})
 				}
 			: undefined,

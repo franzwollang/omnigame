@@ -39,12 +39,14 @@ import {
 	canJointSimultaneousMoves,
 	canOrderedSimultaneousMoves,
 	canMove,
+	effectiveMovement,
 	hasAnyJumpCapture,
 	jumpDestinations,
 	jumpMid,
 	legalDestinations,
 	movementBoardFrom
 } from "@/engine/movement";
+import { cellOwner, isCrowned } from "@/engine/pieces";
 import {
 	enumerateCompoundQueries,
 	formatQueryFingerprint,
@@ -195,6 +197,11 @@ export type KernelEvent =
 			position: Position;
 			captured: Player;
 			by: Player;
+	  }
+	| {
+			type: "piecePromoted";
+			at: Position;
+			player: Player;
 	  }
 	| {
 			type: "queryAnswered";
@@ -369,6 +376,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 						.join("+")}`;
 		case "pieceCaptured":
 			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
+		case "piecePromoted":
+			return `${event.player} promoted at (${event.at.row},${event.at.col})`;
 		case "queryAnswered":
 			return `${event.player}: query ${formatQueryFingerprint({
 				trait: event.trait,
@@ -582,15 +591,16 @@ function applyStep(
 		actor !== "simultaneous"
 	) {
 		const prior = getCell(state.grid, action.to);
+		const priorOwner = cellOwner(prior);
 		if (
-			(prior === "X" || prior === "O") &&
-			prior !== actor &&
-			getCell(nextState.grid, action.to) === actor
+			priorOwner !== null &&
+			priorOwner !== actor &&
+			cellOwner(getCell(nextState.grid, action.to)) === actor
 		) {
 			events.push({
 				type: "pieceCaptured",
 				position: action.to,
-				captured: prior,
+				captured: priorOwner,
 				by: actor
 			});
 		}
@@ -602,28 +612,51 @@ function applyStep(
 		actor !== "simultaneous" &&
 		(actor === "X" || actor === "O")
 	) {
+		const fromCell = getCell(state.grid, action.from);
 		const mid = jumpMid(
 			action.from,
 			action.to,
-			config.movement,
+			effectiveMovement(config.movement, fromCell),
 			movementBoardFrom(config),
 			state.grid
 		);
 		if (mid) {
 			const prior = getCell(state.grid, mid);
+			const priorOwner = cellOwner(prior);
 			if (
-				(prior === "X" || prior === "O") &&
-				prior !== actor &&
+				priorOwner !== null &&
+				priorOwner !== actor &&
 				getCell(nextState.grid, mid) === null &&
-				getCell(nextState.grid, action.to) === actor
+				cellOwner(getCell(nextState.grid, action.to)) === actor
 			) {
 				events.push({
 					type: "pieceCaptured",
 					position: mid,
-					captured: prior,
+					captured: priorOwner,
 					by: actor
 				});
 			}
+		}
+	}
+
+	if (
+		action.type === "move" &&
+		config.movement?.promotion &&
+		actor !== "simultaneous" &&
+		(actor === "X" || actor === "O")
+	) {
+		const fromCell = getCell(state.grid, action.from);
+		const landed = getCell(nextState.grid, action.to);
+		if (
+			isCrowned(landed) &&
+			!isCrowned(fromCell) &&
+			cellOwner(landed) === actor
+		) {
+			events.push({
+				type: "piecePromoted",
+				at: action.to,
+				player: actor
+			});
 		}
 	}
 
@@ -1016,7 +1049,7 @@ function collectJumpChainActions(
 	if (!chainFrom || config.movement?.capture !== "jump") return null;
 	const movement = config.movement;
 	if (!movement) return [];
-	if (getCell(state.grid, chainFrom) !== actingPlayer) return [];
+	if (cellOwner(getCell(state.grid, chainFrom)) !== actingPlayer) return [];
 	const board = movementBoardFrom(config);
 	const actions: KernelAction[] = [];
 	for (const to of jumpDestinations(
@@ -1110,7 +1143,7 @@ function collectLegalActions(
 					config.topology ?? "rectangle",
 					config.graph
 				)) {
-					if (getCell(probe, from) !== acting) continue;
+					if (cellOwner(getCell(probe, from)) !== acting) continue;
 					for (const to of legalDestinations(
 						probe,
 						from,
@@ -1136,7 +1169,7 @@ function collectLegalActions(
 				config.topology ?? "rectangle",
 				config.graph
 			)) {
-				if (getCell(state.grid, from) !== acting) continue;
+				if (cellOwner(getCell(state.grid, from)) !== acting) continue;
 				for (const to of legalDestinations(state.grid, from, movement, board)) {
 					if (canMove(state.grid, from, to, acting, movement, board)) {
 						actions.push({ type: "move", from, to });
@@ -1377,7 +1410,7 @@ function collectLegalActions(
 					config.topology ?? "rectangle",
 					config.graph
 				)) {
-					if (getCell(state.grid, from) !== state.currentPlayer) continue;
+					if (cellOwner(getCell(state.grid, from)) !== state.currentPlayer) continue;
 					for (const to of legalDestinations(state.grid, from, movement, board)) {
 						if (
 							canMove(state.grid, from, to, state.currentPlayer, movement, board)
@@ -1439,7 +1472,7 @@ function collectLegalActions(
 				config.topology ?? "rectangle",
 				config.graph
 			)) {
-				if (getCell(state.grid, from) !== state.currentPlayer) continue;
+				if (cellOwner(getCell(state.grid, from)) !== state.currentPlayer) continue;
 				for (const to of legalDestinations(state.grid, from, movement, board)) {
 					if (
 						canMove(state.grid, from, to, state.currentPlayer, movement, board)
@@ -1466,7 +1499,7 @@ function collectLegalActions(
 			config.topology ?? "rectangle",
 			config.graph
 		)) {
-			if (getCell(state.grid, from) !== state.currentPlayer) continue;
+			if (cellOwner(getCell(state.grid, from)) !== state.currentPlayer) continue;
 			const dests = forceJumps
 				? jumpDestinations(
 						state.grid,
@@ -2670,7 +2703,7 @@ export function explainKernelAction(
 			const acting = simultaneous
 				? playerOf(player)
 				: state.currentPlayer;
-			if (getCell(state.grid, action.from) !== acting) {
+			if (cellOwner(getCell(state.grid, action.from)) !== acting) {
 				return {
 					legal: false,
 					reason: "no_own_piece",

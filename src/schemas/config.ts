@@ -147,6 +147,9 @@ export const zConfig = z
 		 * start when any jump exists (Checkers-lite mandatory capture).
 		 * Distinct from replace and hop-ball. Incompatible with
 		 * `graphReach: "hop"` (jump has fixed 2-edge semantics).
+		 * Optional `promotion`: Transform lite — uncrowned pieces that land
+		 * on `targetRows[seat]` become crowned (`X+`/`O+`) and thereafter use
+		 * `crownedAdjacency` (default king). Rectangle + jump only for v1.
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -164,7 +167,27 @@ export const zConfig = z
 				 */
 				mustCapture: z.boolean().optional(),
 				/** Graph-only: chain-walk (default) or hop-ball BFS. */
-				graphReach: z.enum(["chain", "hop"]).optional()
+				graphReach: z.enum(["chain", "hop"]).optional(),
+				/**
+				 * Crowned kings / Transform lite (rectangle jump only): land on
+				 * `targetRows[seat]` → promote in place; crowned pieces use
+				 * `crownedAdjacency` for quiet/jump rays.
+				 */
+				promotion: z
+					.object({
+						targetRows: z
+							.object({
+								X: z.number().int().min(0),
+								O: z.number().int().min(0)
+							})
+							.strict(),
+						/** Quiet/jump adjacency for crowned pieces. Default king. */
+						crownedAdjacency: z
+							.enum(["orthogonal", "diagonal", "king"])
+							.default("king")
+					})
+					.strict()
+					.optional()
 			})
 			.strict()
 			.optional(),
@@ -2169,6 +2192,100 @@ export const zConfig = z
 				message:
 					"movement.mustCapture requires movement.capture = 'jump'"
 			});
+		}
+
+		// Piece promotion / crowned kings (Transform lite): rectangle jump only
+		if (cfg.movement?.promotion) {
+			if (cfg.movement.capture !== "jump") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion"],
+					message:
+						"movement.promotion requires movement.capture = 'jump'"
+				});
+			}
+			if (!moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion"],
+					message: "movement.promotion requires input.mode = 'move'"
+				});
+			}
+			if (cfg.grid.topology !== "rectangle") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion"],
+					message:
+						"movement.promotion requires grid.topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
+			if (captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion"],
+					message:
+						"movement.promotion is incompatible with placement.capture"
+				});
+			}
+			if (cfg.turn.schedule === "simultaneous") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion"],
+					message:
+						"movement.promotion is incompatible with simultaneous (alternating only)"
+				});
+			}
+			if (cfg.turn.schedule === "manual_tick") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion"],
+					message:
+						"movement.promotion is incompatible with manual_tick"
+				});
+			}
+			if ((cfg.movement.range ?? 1) !== 1) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "range"],
+					message:
+						"movement.promotion requires movement.range = 1"
+				});
+			}
+			if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message:
+						"movement.promotion is incompatible with actionsPerTurn > 1"
+				});
+			}
+			if ((cfg.turn.phases?.length ?? 0) > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"movement.promotion is incompatible with turn.phases"
+				});
+			}
+			if ((cfg.placement.delayTurns ?? 0) > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message:
+						"movement.promotion is incompatible with delayTurns"
+				});
+			}
+			const promoRows = cfg.movement.promotion.targetRows;
+			for (const player of ["X", "O"] as const) {
+				const row = promoRows[player];
+				if (row < 0 || row >= cfg.grid.height) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "promotion", "targetRows", player],
+						message: `promotion.targetRows.${player} must be in [0, ${cfg.grid.height - 1}]`
+					});
+				}
+			}
 		}
 
 		// Graph hop-ball: movement.graphReach = "hop" is graph-only

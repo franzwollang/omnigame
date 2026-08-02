@@ -9,6 +9,7 @@ import {
 } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import type { GameState, Position } from "@/engine/types";
 import { getCell } from "@/engine/types";
+import { cellOwner, isCrowned } from "@/engine/pieces";
 import {
 	graphBoardExtent,
 	graphNodeCenter,
@@ -749,8 +750,10 @@ export default function SandboxCanvas({
 			}
 
 			// If a token is assigned to this player, render its image/label
-			if (value !== "X" && value !== "O") return;
-			const token = tokenForPlayer(value);
+			const owner = cellOwner(value);
+			if (owner === null) return;
+			const token = tokenForPlayer(owner);
+			const crowned = isCrowned(value);
 			if (token && token.asset?.type === "image") {
 				let tex = textureCacheRef.current.get(token.asset.url);
 				if (!tex) {
@@ -765,6 +768,35 @@ export default function SandboxCanvas({
 				const sprite = new THREE.Mesh(geo, mat);
 				sprite.position.set(x, y, 0.001);
 				marksGroup.add(sprite);
+				if (crowned) {
+					const badge = document.createElement("canvas");
+					badge.width = 64;
+					badge.height = 64;
+					const bctx = badge.getContext("2d");
+					if (bctx) {
+						bctx.fillStyle = "#fbbf24";
+						bctx.font = "bold 48px sans-serif";
+						bctx.textAlign = "center";
+						bctx.textBaseline = "middle";
+						bctx.fillText("+", 32, 34);
+						const btex = new THREE.CanvasTexture(badge);
+						const bmat = new THREE.MeshBasicMaterial({
+							map: btex,
+							transparent: true
+						});
+						const bgeo = new THREE.PlaneGeometry(
+							cellSize * 0.35,
+							cellSize * 0.35
+						);
+						const bmesh = new THREE.Mesh(bgeo, bmat);
+						bmesh.position.set(
+							x + cellSize * 0.22,
+							y + cellSize * 0.22,
+							0.002
+						);
+						marksGroup.add(bmesh);
+					}
+				}
 				return;
 			}
 			if (token && token.label && !token.asset) {
@@ -777,7 +809,7 @@ export default function SandboxCanvas({
 					ctx.font = "64px sans-serif";
 					ctx.textAlign = "center";
 					ctx.textBaseline = "middle";
-					ctx.fillText(token.label, 64, 64);
+					ctx.fillText(crowned ? `${token.label}+` : token.label, 64, 64);
 					const tex = new THREE.CanvasTexture(canvas);
 					const mat = new THREE.MeshBasicMaterial({
 						map: tex,
@@ -791,7 +823,7 @@ export default function SandboxCanvas({
 				return;
 			}
 
-			if (value === "X") {
+			if (owner === "X") {
 				// X: two crossing lines
 				const material = new THREE.LineBasicMaterial({
 					color: 0x3b82f6,
@@ -810,7 +842,7 @@ export default function SandboxCanvas({
 				const line1 = new THREE.Line(geo1, material);
 				const line2 = new THREE.Line(geo2, material);
 				marksGroup.add(line1, line2);
-			} else if (value === "O") {
+			} else if (owner === "O") {
 				// O: circle
 				const curve = new THREE.EllipseCurve(
 					x,
