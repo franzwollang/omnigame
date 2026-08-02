@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-02T02:05-00:00",
+  "turn": 43,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M18",
+    "issue": "next-missing-mechanism",
+    "goal": "Joint UCT/MCTS under open simultaneous landed; next seam or P4"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced M8–M17 from 0916 onto 8bb5",
+    "M18: enumerateJointLegalActions + UCT/MCTS joint root search",
+    "Dual-act cache; UI/README labels; simultaneous-ttt tests"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Open simultaneous budget-1 is searchable; commitReveal/multi still random",
+    "Sandbox dual-act needs joint decision cache for consistency"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "P3 next seam (commitReveal/multi joint) or P4 CI/semantics"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Cloud: pick remaining joint-search seam or P4 tooling-ci / semantics refresh",
   "blockers": []
 }

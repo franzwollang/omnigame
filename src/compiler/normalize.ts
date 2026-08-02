@@ -78,12 +78,24 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		movement: config.movement
 			? {
 					adjacency: config.movement.adjacency,
-					range: config.movement.range
+					range: config.movement.range,
+					capture: config.movement.capture ?? "none"
 				}
 			: undefined,
 		targetRows: config.objective.targetRows,
 		fleet: config.fleet
 			? { ships: [...config.fleet.ships] }
+			: undefined,
+		seed: config.rng.seed,
+		deduction: config.deduction
+			? {
+					roster: config.deduction.roster.map((c) => ({
+						id: c.id,
+						traits: { ...c.traits }
+					})),
+					traits: [...config.deduction.traits],
+					wrongGuess: config.deduction.wrongGuess
+				}
 			: undefined,
 		initial: config.initial
 	};
