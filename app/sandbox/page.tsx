@@ -140,10 +140,9 @@ export default function GamePage() {
 		enableSimultaneous && currentConfig?.input.mode === "move";
 	const enableSimultaneousDeduction =
 		enableSimultaneous && currentConfig?.input.mode === "deduction";
-	const enableJointAgentSearch =
-		enableSimultaneous && !(enableSimultaneousDeduction && commitReveal);
-	const enableOpenDeductionJointSearch =
-		enableSimultaneousDeduction && !commitReveal;
+	const enableJointAgentSearch = enableSimultaneous;
+	const enableCommitRevealDeductionJoint =
+		enableSimultaneousDeduction && commitReveal;
 	const enablePass = currentConfig?.objective.mode === "area_control";
 	const eventLines = useMemo(
 		() => eventLog.map(formatKernelEvent),
@@ -570,19 +569,11 @@ export default function GamePage() {
 							<option value="hunt">hunt</option>
 							<option value="mcts">
 								mcts
-								{enableJointAgentSearch
-									? " (joint search)"
-									: enableSimultaneousDeduction
-										? " (random joint)"
-										: ""}
+								{enableJointAgentSearch ? " (joint search)" : ""}
 							</option>
 							<option value="uct">
 								uct
-								{enableJointAgentSearch
-									? " (joint search)"
-									: enableSimultaneousDeduction
-										? " (random joint)"
-										: ""}
+								{enableJointAgentSearch ? " (joint search)" : ""}
 							</option>
 						</select>
 						<Button
@@ -595,12 +586,12 @@ export default function GamePage() {
 							}
 							onClick={stepAgent}
 							title={
-								enableSimultaneousDeduction && !enableOpenDeductionJointSearch
-									? "Under commitReveal simultaneous deduction, agents pick per-seat commitQuery/commitGuess (joint plan search deferred)"
-									: enableSimultaneous &&
-										  (agentKind === "mcts" || agentKind === "uct")
-										? "Under simultaneous, MCTS/UCT search joint place/move/query/guess (open) or commitReveal fresh-round place plans (incl. multi-action)"
-										: "Play one kernel legal action from the selected agent"
+								enableSimultaneous &&
+								(agentKind === "mcts" || agentKind === "uct")
+									? enableCommitRevealDeductionJoint
+										? "Under commitReveal simultaneous deduction, MCTS/UCT search fresh-round joint query/guess plans (sequential commitQuery/commitGuess)"
+										: "Under simultaneous, MCTS/UCT search joint place/move/query/guess/eliminate (open) or commitReveal fresh-round place/deduction plans"
+									: "Play one kernel legal action from the selected agent"
 							}
 						>
 							Agent step
@@ -611,11 +602,11 @@ export default function GamePage() {
 							agentKind === "uct" ||
 							agentKind === "greedy") && (
 							<p className="mt-1 font-mono text-xs text-muted-foreground">
-								{enableSimultaneousDeduction && !enableOpenDeductionJointSearch
-									? "Hidden simultaneous deduction: Agent step uses sequential commitQuery/commitGuess (joint UCT deferred)."
-									: agentKind === "greedy"
-										? "Greedy skips lookahead under simultaneous (single place/move/query/guess is a no-op until joint)."
-										: "MCTS/UCT: joint place/move/query/guess search under open simultaneous (incl. multi-action place); commitReveal fresh-round joint place plan search (sequential commits)."}
+								{agentKind === "greedy"
+									? "Greedy skips lookahead under simultaneous (single place/move/query/guess is a no-op until joint)."
+									: enableCommitRevealDeductionJoint
+										? "MCTS/UCT: commitReveal deduction fresh-round joint query/guess plan search (sequential commitQuery/commitGuess)."
+										: "MCTS/UCT: joint place/move/query/guess/eliminate search under open simultaneous (incl. multi-action place); commitReveal fresh-round joint place or deduction plan search (sequential commits)."}
 							</p>
 						)}
 					{enableTick && (

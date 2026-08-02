@@ -1835,7 +1835,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Same roster as Simultaneous Guess Who Lite, but each seat commits a query (or guess) privately; answers and auto-prune reveal only when both have committed. Unlocks turn.commitReveal under simultaneous deduction — not joint UCT or manual eliminate.",
+			"Same roster as Simultaneous Guess Who Lite, but each seat commits a query (or guess) privately; answers and auto-prune reveal only when both have committed. Unlocks turn.commitReveal under simultaneous deduction + fresh-round joint UCT/MCTS over reveal plans (M36) — not manual eliminate (needs commitEliminate).",
 		config: {
 			metadata: {
 				name: "Hidden Simultaneous Guess Who Lite",

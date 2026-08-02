@@ -455,7 +455,7 @@ export const zConfig = z
 				}
 				// Manual eliminate under open simultaneous is allowed (joint
 				// simultaneousEliminate). Still forbidden with commitReveal —
-				// hidden commitEliminate / joint UCT deferred.
+				// hidden commitEliminate deferred (query/guess joint UCT: M36).
 				if (
 					cfg.deduction?.autoEliminate === false &&
 					cfg.turn.commitReveal === true

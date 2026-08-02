@@ -38,7 +38,7 @@ type JointDecisionCache = {
 	joint: KernelAction;
 	/** Next place-index per seat for multi-action dual-`act` (mod budget). */
 	nextIndex: { 0: number; 1: number };
-	/** When true, emit `commitPlace` (commitReveal sequential sandbox). */
+	/** When true, emit commitPlace/commitQuery/commitGuess (commitReveal). */
 	asCommit?: boolean;
 };
 
@@ -232,7 +232,9 @@ function makeNode(
 				untried = enumerateCommitRevealJoints(kernel, state);
 			} else if (kernel.config.commitReveal === true) {
 				const budget = kernel.config.actionsPerTurn ?? 1;
-				const active = activeCommitSeat(state, budget);
+				const deduction =
+					(kernel.config.inputMode ?? "cell") === "deduction";
+				const active = activeCommitSeat(state, budget, { deduction });
 				untried =
 					active == null ? [] : [...kernel.legalActions(state, active)];
 			} else {
@@ -356,10 +358,10 @@ export type UctOptions = {
 /**
  * UCT (UCB1) Monte Carlo tree search over `kernel.legalActions` / `stepSync`.
  * Under open simultaneous (any `actionsPerTurn`), searches the joint
- * place/move/query/guess cartesian and caches the chosen joint so sandbox
- * dual-/multi-`act` stays consistent. Under commitReveal, searches fresh-round
- * reveal joints (as `simultaneousPlace`) and caches `commitPlace` emissions for
- * sequential sandbox clicks (deduction commitReveal joint search deferred). On
+ * place/move/query/guess/eliminate cartesian and caches the chosen joint so
+ * sandbox dual-/multi-`act` stays consistent. Under commitReveal, searches
+ * fresh-round reveal joints (place or deduction query/guess) and caches
+ * sequential `commitPlace` / `commitQuery` / `commitGuess` emissions. On
  * hit/miss configs, delegates to the observation hunt agent.
  */
 export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {

@@ -826,7 +826,7 @@ describe("joint UCT/MCTS under simultaneous deduction (M34)", () => {
 		).toHaveLength(16);
 	});
 
-	it("stays off under commitReveal deduction", () => {
+	it("open joint search stays off under commitReveal deduction", () => {
 		const { kernel } = compileConfig(
 			examplePresets["hidden-simultaneous-guess-who-lite"].config
 		);
@@ -1012,5 +1012,182 @@ describe("joint UCT under simultaneous deduction manual eliminate (M35)", () => 
 		const after = kernel.stepSync(state, joint!).nextState;
 		expect(after.status).toBe("won");
 		expect(after.winner).toBe("X");
+	});
+});
+
+describe("joint UCT/MCTS under commitReveal deduction (M36)", () => {
+	it("enumerates 32 reveal joints on hidden-simultaneous-guess-who-lite", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-guess-who-lite"].config
+		);
+		const state = kernel.initialState(42);
+		expect(canSearchJointActions(kernel)).toBe(false);
+		expect(canSearchCommitRevealJoint(kernel, state)).toBe(true);
+		expect(isFreshCommitRound(state)).toBe(true);
+		const joints = enumerateCommitRevealJoints(kernel, state);
+		expect(joints).toHaveLength(32);
+		expect(
+			joints.filter((a) => a.type === "simultaneousQuery")
+		).toHaveLength(16);
+		expect(
+			joints.filter((a) => a.type === "simultaneousGuess")
+		).toHaveLength(16);
+	});
+
+	it("disables commitReveal deduction joint enum after a partial commit", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-guess-who-lite"].config
+		);
+		let state = kernel.initialState(42);
+		state = kernel.stepSync(state, {
+			type: "commitQuery",
+			player: "X",
+			query: { type: "query", trait: "glasses", value: true }
+		}).nextState;
+		expect(isFreshCommitRound(state)).toBe(false);
+		expect(canSearchCommitRevealJoint(kernel, state)).toBe(false);
+		expect(enumerateCommitRevealJoints(kernel, state)).toHaveLength(0);
+	});
+
+	it("uct sequential commits return coordinated plan across seats", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-guess-who-lite"].config
+		);
+		const state = kernel.initialState(3);
+		const agent = createUctAgent(3, { simulations: 48 });
+		const xCommit = agent.act(kernel, state, 0);
+		expect(
+			xCommit?.type === "commitQuery" || xCommit?.type === "commitGuess"
+		).toBe(true);
+		if (
+			xCommit?.type !== "commitQuery" &&
+			xCommit?.type !== "commitGuess"
+		) {
+			throw new Error("expected deduction commit");
+		}
+		expect(xCommit.player).toBe("X");
+
+		const afterX = kernel.stepSync(state, xCommit).nextState;
+		const oCommit = agent.act(kernel, afterX, 1);
+		expect(oCommit?.type).toBe(xCommit.type);
+		if (
+			oCommit?.type !== "commitQuery" &&
+			oCommit?.type !== "commitGuess"
+		) {
+			throw new Error("expected deduction commit");
+		}
+		expect(oCommit.player).toBe("O");
+
+		if (xCommit.type === "commitQuery" && oCommit.type === "commitQuery") {
+			const joint = {
+				type: "simultaneousQuery" as const,
+				queries: {
+					X: xCommit.query,
+					O: oCommit.query
+				}
+			};
+			expect(seatCommitFromJoint(joint, 0)).toEqual(xCommit);
+			expect(seatCommitFromJoint(joint, 1)).toEqual(oCommit);
+		} else if (
+			xCommit.type === "commitGuess" &&
+			oCommit.type === "commitGuess"
+		) {
+			const joint = {
+				type: "simultaneousGuess" as const,
+				guesses: { X: xCommit.id, O: oCommit.id }
+			};
+			expect(seatCommitFromJoint(joint, 0)).toEqual(xCommit);
+			expect(seatCommitFromJoint(joint, 1)).toEqual(oCommit);
+		}
+
+		expect(agent.act(kernel, state, 0)).toEqual(xCommit);
+	});
+
+	it("uct takes an immediate winning commitGuess plan for X", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-guess-who-lite"].config
+		);
+		const state0 = kernel.initialState(42);
+		const secretO = state0.deduction!.secret.O;
+		const rosterIds = kernel.config.deduction!.roster.map((c) => c.id);
+		const state = {
+			...state0,
+			deduction: {
+				...state0.deduction!,
+				eliminated: {
+					X: rosterIds.filter((id) => id !== secretO),
+					O: [] as string[]
+				}
+			}
+		};
+		const agent = createUctAgent(7, { simulations: 40 });
+		const xCommit = agent.act(kernel, state, 0);
+		expect(xCommit).toEqual({
+			type: "commitGuess",
+			player: "X",
+			id: secretO
+		});
+		const afterX = kernel.stepSync(state, xCommit!).nextState;
+		const oCommit = agent.act(kernel, afterX, 1);
+		expect(oCommit?.type).toBe("commitGuess");
+		const revealed = kernel.stepSync(afterX, oCommit!).nextState;
+		expect(revealed.status).toBe("won");
+		expect(revealed.winner).toBe("X");
+	});
+
+	it("mcts takes an immediate winning commitGuess for X", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-guess-who-lite"].config
+		);
+		const state0 = kernel.initialState(42);
+		const secretO = state0.deduction!.secret.O;
+		const rosterIds = kernel.config.deduction!.roster.map((c) => c.id);
+		const state = {
+			...state0,
+			deduction: {
+				...state0.deduction!,
+				eliminated: {
+					X: rosterIds.filter((id) => id !== secretO),
+					O: [] as string[]
+				}
+			}
+		};
+		const agent = createTinyMctsAgent(7, { rolloutsPerAction: 8 });
+		const xCommit = agent.act(kernel, state, 0);
+		expect(xCommit).toEqual({
+			type: "commitGuess",
+			player: "X",
+			id: secretO
+		});
+		const afterX = kernel.stepSync(state, xCommit!).nextState;
+		const oCommit = agent.act(kernel, afterX, 1);
+		expect(oCommit?.type).toBe("commitGuess");
+		const revealed = kernel.stepSync(afterX, oCommit!).nextState;
+		expect(revealed.status).toBe("won");
+		expect(revealed.winner).toBe("X");
+	});
+
+	it("uct completes a short hidden-simultaneous-guess-who-lite playout", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-guess-who-lite"].config
+		);
+		let state = kernel.initialState(13);
+		const uct = createUctAgent(13, { simulations: 36, reuseTree: true });
+		let guard = 0;
+		while (state.status === "playing" && guard < 16) {
+			expect(kernel.currentPlayer(state)).toBe("simultaneous");
+			const xCommit = uct.act(kernel, state, 0);
+			expect(
+				xCommit?.type === "commitQuery" ||
+					xCommit?.type === "commitGuess"
+			).toBe(true);
+			state = kernel.stepSync(state, xCommit!).nextState;
+			if (state.status !== "playing") break;
+			const oCommit = uct.act(kernel, state, 1);
+			expect(oCommit?.type).toBe(xCommit!.type);
+			state = kernel.stepSync(state, oCommit!).nextState;
+			guard += 1;
+		}
+		expect(state.status === "won" || state.status === "draw").toBe(true);
 	});
 });

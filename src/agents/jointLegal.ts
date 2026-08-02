@@ -1,9 +1,10 @@
 /**
  * Joint legal enumeration for open simultaneous place/move/deduction and
- * commitReveal fresh-round plans (evaluated as simultaneousPlace).
+ * commitReveal fresh-round plans (evaluated as simultaneousPlace /
+ * simultaneousQuery / simultaneousGuess).
  * Budget 1: scalar cartesian. Budget > 1: ordered distinct place tuples.
  * Deduction: kind-matched query×query + guess×guess + eliminate×eliminate
- * (budget 1).
+ * (budget 1; commitReveal: query/guess only — no commitEliminate yet).
  */
 import type { GameState } from "@/engine/types";
 import { asPlacementList, pendingFingerprint } from "@/engine/types";
@@ -26,7 +27,7 @@ import { formatQueryFingerprint } from "@/engine/deduction";
 /**
  * Open simultaneous place/move/deduction — joint cartesian is searchable
  * (any budget for place; deduction is always budget 1). CommitReveal uses
- * a separate fresh-round plan search (place only; deduction deferred).
+ * a separate fresh-round plan search (place + deduction query/guess).
  */
 export function canSearchJointActions(kernel: GameKernel): boolean {
 	if ((kernel.config.turnSchedule ?? "alternating") !== "simultaneous") {
@@ -39,14 +40,19 @@ export function canSearchJointActions(kernel: GameKernel): boolean {
 
 /** True when neither seat has committed yet this hidden round. */
 export function isFreshCommitRound(state: GameState): boolean {
-	const x = state.committedPlacements?.X?.length ?? 0;
-	const o = state.committedPlacements?.O?.length ?? 0;
-	return x === 0 && o === 0;
+	const placeFresh =
+		(state.committedPlacements?.X?.length ?? 0) === 0 &&
+		(state.committedPlacements?.O?.length ?? 0) === 0;
+	const deductionFresh =
+		state.committedDeduction?.X == null &&
+		state.committedDeduction?.O == null;
+	return placeFresh && deductionFresh;
 }
 
 /**
  * Fresh commitReveal round: enumerate joint reveal outcomes as
- * `simultaneousPlace` (same combinatorics as open simultaneous).
+ * `simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess`
+ * (same combinatorics as open simultaneous for that input mode).
  */
 export function canSearchCommitRevealJoint(
 	kernel: GameKernel,
@@ -103,6 +109,26 @@ function commitPlacesAsPlaceActions(
 	for (const a of commits) {
 		if (a.type === "commitPlace") {
 			out.push({ type: "place", position: a.position });
+		}
+	}
+	return out;
+}
+
+/** Map private commitQuery/commitGuess legals to open query/guess for joint enum. */
+function commitDeductionAsOpenActions(
+	commits: readonly KernelAction[]
+): KernelAction[] {
+	const out: KernelAction[] = [];
+	for (const a of commits) {
+		if (a.type === "commitQuery") {
+			out.push({
+				type: "query",
+				trait: a.query.trait,
+				value: a.query.value,
+				clauses: a.query.clauses
+			});
+		} else if (a.type === "commitGuess") {
+			out.push({ type: "guess", id: a.id });
 		}
 	}
 	return out;
@@ -194,14 +220,20 @@ export function enumerateJointLegalActions(
 }
 
 /**
- * Fresh commitReveal: cartesian of commitPlace legals as `simultaneousPlace`
- * for perfect-info plan search / reveal simulation.
+ * Fresh commitReveal: cartesian of commit legals evaluated as open joints
+ * (`simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess`) for
+ * perfect-info plan search / reveal simulation.
  */
 export function enumerateCommitRevealJoints(
 	kernel: GameKernel,
 	state: GameState
 ): KernelAction[] {
 	if (!canSearchCommitRevealJoint(kernel, state)) return [];
+	if ((kernel.config.inputMode ?? "cell") === "deduction") {
+		const a0 = commitDeductionAsOpenActions(kernel.legalActions(state, 0));
+		const a1 = commitDeductionAsOpenActions(kernel.legalActions(state, 1));
+		return enumerateDeductionJointsFromSeatActions(a0, a1);
+	}
 	const budget = kernel.config.actionsPerTurn ?? 1;
 	const a0 = commitPlacesAsPlaceActions(kernel.legalActions(state, 0));
 	const a1 = commitPlacesAsPlaceActions(kernel.legalActions(state, 1));
@@ -254,24 +286,50 @@ export function seatComponentFromJoint(
 }
 
 /**
- * Extract a `commitPlace` from a searched reveal joint for sequential sandbox
- * commitReveal clicks (X fills budget, then O).
+ * Extract a private commit from a searched reveal joint for sequential sandbox
+ * commitReveal clicks (X fills budget, then O). Place → `commitPlace`;
+ * query/guess → `commitQuery` / `commitGuess`.
  */
 export function seatCommitFromJoint(
 	joint: KernelAction,
 	player: PlayerId,
 	index = 0
 ): KernelAction | null {
-	if (joint.type !== "simultaneousPlace") return null;
-	const list = asPlacementList(
-		player === 0 ? joint.placements.X : joint.placements.O
-	);
-	if (index < 0 || index >= list.length) return null;
-	return {
-		type: "commitPlace",
-		player: playerOf(player),
-		position: list[index]!
-	};
+	if (joint.type === "simultaneousPlace") {
+		const list = asPlacementList(
+			player === 0 ? joint.placements.X : joint.placements.O
+		);
+		if (index < 0 || index >= list.length) return null;
+		return {
+			type: "commitPlace",
+			player: playerOf(player),
+			position: list[index]!
+		};
+	}
+	if (joint.type === "simultaneousQuery") {
+		if (index !== 0) return null;
+		const q = player === 0 ? joint.queries.X : joint.queries.O;
+		return {
+			type: "commitQuery",
+			player: playerOf(player),
+			query: {
+				type: "query",
+				trait: q.trait,
+				value: q.value,
+				clauses: q.clauses
+			}
+		};
+	}
+	if (joint.type === "simultaneousGuess") {
+		if (index !== 0) return null;
+		const id = player === 0 ? joint.guesses.X : joint.guesses.O;
+		return {
+			type: "commitGuess",
+			player: playerOf(player),
+			id
+		};
+	}
+	return null;
 }
 
 /**
@@ -296,11 +354,20 @@ export function jointSeatBudget(joint: KernelAction): number {
 	return 0;
 }
 
-/** Active seat under commitReveal (X fills entirely, then O — matches stepPly). */
+/**
+ * Active seat under commitReveal (X fills entirely, then O — matches stepPly).
+ * Pass `deduction: true` for commitQuery/commitGuess rounds (one commit/seat).
+ */
 export function activeCommitSeat(
 	state: GameState,
-	budget: number
+	budget: number,
+	opts?: { deduction?: boolean }
 ): PlayerId | null {
+	if (opts?.deduction) {
+		if (state.committedDeduction?.X == null) return 0;
+		if (state.committedDeduction?.O == null) return 1;
+		return null;
+	}
 	const xLen = state.committedPlacements?.X?.length ?? 0;
 	const oLen = state.committedPlacements?.O?.length ?? 0;
 	if (xLen < budget) return 0;
