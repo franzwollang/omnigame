@@ -409,8 +409,8 @@ describe("Mandatory Jump Race (movement.mustCapture)", () => {
 		expect(getCell(cur.grid, { row: 1, col: 1 })).toBe(null);
 
 		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
-		expect(replayed.status).toBe("won");
-		expect(replayed.winner).toBe("X");
+		expect(replayed.finalState.status).toBe("won");
+		expect(replayed.finalState.winner).toBe("X");
 	});
 
 	it("when no jump exists, quiet moves remain legal under mustCapture", () => {

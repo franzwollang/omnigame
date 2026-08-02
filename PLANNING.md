@@ -60,8 +60,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M42 | Semantics doc refresh (`docs/semantics.md` ↔ kernel) | `done` |
 | M43 | Next missing mechanism (jump capture / multi-jump chains) | `done` |
 | M44 | Next missing mechanism (flood-fill region reveal) | `done` |
+| M45 | Next missing mechanism (mandatory jump-at-turn-start) | `done` |
 
-**Optimizing for this marathon:** M44 flood-fill reveal landed. Pick **P3
+**Optimizing for this marathon:** M45 `mustCapture` landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -78,7 +79,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥596** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥602** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -91,7 +92,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M44 closed).  
+   (P0–P2 / M8–M45 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -128,11 +129,12 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ## What exists today (summary)
 
 Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
-**Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race /
-**Hex Replace Race** / **Graph Replace Race** demonstrate `capture = replace`
-on rectangle | hex_offset | graph; **Jump Race** demonstrates
-`capture = jump` (leap over adjacent enemy + `mustContinueFrom` chains;
-rectangle + alternating).
+**Movement:** form exposes `adjacency` / `range` / `capture` / `mustCapture`;
+Replace Race / **Hex Replace Race** / **Graph Replace Race** demonstrate
+`capture = replace` on rectangle | hex_offset | graph; **Jump Race** /
+**Mandatory Jump Race** demonstrate `capture = jump` (leap over adjacent
+enemy + `mustContinueFrom` chains; optional vs `mustCapture` turn-start
+mandatory; rectangle + alternating).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
@@ -180,9 +182,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler. Flood-fill reveal landed (M44 Minesweeper Lite). CI:
+scheduler; crowned kings / checkers promotion; hex/graph jump. Mandatory
+jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
 `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics:
-`docs/semantics.md` (M42; jump in M43; flood_reveal in M44).
+`docs/semantics.md` (M42; jump in M43; flood_reveal in M44; mustCapture in M45).
 
 ## Phase 2 exit criteria
 
@@ -612,8 +615,9 @@ scheduler. Flood-fill reveal landed (M44 Minesweeper Lite). CI:
 - Contract `MovementJumpCapture` + form select + agent fingerprints — **done**
 - Preset `jump-race` (diagonal two-jump chain to reach_row) +
   transcript/replay/schema tests — **done**
-- Out of scope: mandatory jump-at-turn-start; hex/graph jump; simultaneous
-  jump; crowned kings / checkers promotion
+- Out of scope closed by M45: mandatory jump-at-turn-start
+- Out of scope: hex/graph jump; simultaneous jump; crowned kings /
+  checkers promotion
 - Green gate: 583 tests — **done**
 
 ### M44 — Flood-fill region reveal (Minesweeper-lite)
@@ -631,6 +635,22 @@ scheduler. Flood-fill reveal landed (M44 Minesweeper Lite). CI:
 - Out of scope: flags, chord-click, hex/graph adjacency, timers, difficulty
   tiers
 - Green gate: 596 tests — **done**
+
+### M45 — Mandatory jump-at-turn-start (`mustCapture`)
+
+- Schema: `movement.mustCapture` (requires `capture = jump`) — **done**
+- Kernel/reducer: when any jump exists for the acting seat at turn start,
+  legal moves = jumps only; quiet moves ignored; mid-chain
+  `mustContinueFrom` unchanged; when no jumps exist, quiet moves remain
+  legal — **done**
+- Contract invariant `mustCaptureForbidsQuietWhenJumpExists`; form Switch —
+  **done**
+- Preset `mandatory-jump-race` (quiet escape + jump both exist; only jump
+  legal) + contrast vs optional jump + transcript/replay/schema tests —
+  **done**
+- Out of scope: longest-chain rule; crowned kings / promotion; hex/graph /
+  simultaneous jump
+- Green gate: 602 tests — **done**
 
 ## Sequencing notes
 
