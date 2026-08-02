@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M22 graph sliding closed).
+**Marathon rule:** Work **P3 → P4** in order (M23 Guess Who commit closed).
 Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,15 +12,16 @@ Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Graph chain-walk sliding (`movement.range` 1..8 on `graph`) landed as M22
-with `graph-slide-race` (strict edge chains; no junction turns).
+Guess Who manual commit (`deduction.autoEliminate: false` + `{ type:
+"eliminate" }`) landed as M23 with `guess-who-commit-lite` (query answers
+without auto-prune; wrongGuess `end_turn`).
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
 - Further phase sequences beyond place→* and move→fire (only if a new seam appears)
-- Richer Guess Who commit/hypothesis beyond query+guess MVP
 - Hex/graph `capture: replace` (only if a new seam forces it)
 - Hop-ball graph range (distinct from chain-walk — only if a game needs it)
+- Deduction + simultaneous / phases / richer trait queries (only if forced)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -37,11 +38,12 @@ exhaust `references/` or recombine covered primitives).
 **Acceptance:**
 
 - [ ] Sync compact draft with current kernel events/state/phases (incl.
-      `pieceCaptured`, `queryAnswered` / `guessResult`, simultaneous, phases
-      incl. move→fire, joint + ordered sliding, joint + ordered simultaneous
-      replace, simultaneous slide+replace, joint replace vacated-origin hybrid,
-      joint UCT under open + multi-action + commitReveal simultaneous,
-      hex cube-axis sliding, graph chain-walk sliding)
+      `pieceCaptured`, `queryAnswered` / `guessResult` / `candidateEliminated`,
+      simultaneous, phases incl. move→fire, joint + ordered sliding, joint +
+      ordered simultaneous replace, simultaneous slide+replace, joint replace
+      vacated-origin hybrid, joint UCT under open + multi-action + commitReveal
+      simultaneous, hex cube-axis sliding, graph chain-walk sliding, Guess Who
+      manual eliminate / `autoEliminate`)
 
 ---
 
@@ -53,5 +55,6 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 
 ### deferred-mvp-anchors
 
-Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite
-covers the README query/guess MVP seam (richer commit/hypothesis still open).
+Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite +
+Commit Lite cover query/guess + hypothesis eliminate (simultaneous deduction /
+richer trait queries still open).

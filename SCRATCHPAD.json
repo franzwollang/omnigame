@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T03:25-00:00",
-  "turn": 48,
+  "updated_at": "2026-08-02T03:50-00:00",
+  "turn": 49,
   "focus": {
-    "milestone": "M22",
+    "milestone": "M23",
     "issue": "next-missing-mechanism",
-    "goal": "Graph chain-walk sliding landed; hand off next seam"
+    "goal": "Guess Who manual commit landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M21 from f1af onto 6b5f",
-    "Landed M22 graph sliding + graph-slide-race",
-    "typecheck + 405 tests green"
+    "Synced M8–M22 from 6b5f onto e30c",
+    "Landed M23 eliminate + autoEliminate + guess-who-commit-lite",
+    "typecheck + 415 tests green"
   ],
   "discoveries": [
-    "Graph slide = unique forward chain; junctions stop (≠ fog hop-ball BFS)",
-    "Hub graph from spoke reaches hub only — cannot fork mid-slide"
+    "autoEliminate false: query answers only; eliminate is Commit(hypothesis)",
+    "wrongGuess end_turn already in reducer; now preset-exercised"
   ],
   "open_threads": [
-    "Next: richer phases/Guess Who, hex/graph replace, or P4 CI/semantics"
+    "Next: richer phases, hex/graph replace, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (phases/Guess Who/replace) or P4 CI/semantics",
+  "next_step": "Pick next seam (phases/replace) or P4 CI/semantics refresh",
   "blockers": []
 }

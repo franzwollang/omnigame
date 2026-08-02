@@ -39,10 +39,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M20 | Next missing mechanism (joint UCT/MCTS under commitReveal) | `done` |
 | M21 | Next missing mechanism (hex cube-axis sliding) | `done` |
 | M22 | Next missing mechanism (graph chain-walk sliding) | `done` |
+| M23 | Next missing mechanism (Guess Who manual commit / eliminate) | `done` |
 
-**Optimizing for this marathon:** M22 graph sliding closed. Pick **P3
-next-missing-mechanism** (e.g. richer phases, richer Guess Who, hex/graph
-replace) or **P4** CI / semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M23 Guess Who commit closed. Pick **P3
+next-missing-mechanism** (e.g. richer phases, hex/graph replace) or **P4** CI /
+semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -57,7 +58,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥400** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥415** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -70,8 +71,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M22 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M22) — smallest new seam — or
+   (P0–P2 / M8–M23 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M23) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -112,7 +113,8 @@ Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/
 **Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race
 preset demonstrates `capture = replace`.
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
-`identify_secret`, query + guess operators).
+`identify_secret`, query + guess) and **Guess Who Commit Lite**
+(`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`).
 
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement** (incl.
@@ -123,13 +125,13 @@ axes** + **graph edge chain-walk**; replace rectangle-only), tick/Life, simultan
 place/move (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
 sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire**), **query +
-guess / identify_secret**.
+guess / identify_secret** + **manual eliminate** (`autoEliminate: false`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
 Replace Race, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
-Guess Who Lite, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
+Guess Who Lite, Guess Who Commit Lite, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
@@ -140,7 +142,7 @@ JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 for rectangle, hex, and graph (chain-walk).
 
 **Not yet:** full Go; hop-ball graph range; hex/graph replace; CI workflows;
-richer Guess Who commit/hypothesis beyond query+guess MVP; semantics doc refresh.
+semantics doc refresh; simultaneous deduction / richer trait queries.
 
 ## Phase 2 exit criteria
 
@@ -164,7 +166,9 @@ richer Guess Who commit/hypothesis beyond query+guess MVP; semantics doc refresh
 - Schema deduction lockstep (`input`/`observation`/`objective`/`deduction`) — **done**
 - Kernel query/guess + `queryAnswered` / `guessResult`; observation projection — **done**
 - Preset `guess-who-lite` + transcript/replay tests — **done**
-- Out of scope: full canvas UI; richer commit/hypothesis; simultaneous deduction
+- Out of scope: full canvas UI; simultaneous deduction
+- Out of scope closed by M23: richer commit/hypothesis (`eliminate` +
+  `autoEliminate: false`)
 
 ### M11 — Joint simultaneous sliding
 
@@ -279,6 +283,17 @@ richer Guess Who commit/hypothesis beyond query+guess MVP; semantics doc refresh
   tests — **done**
 - Form range max unlocked for graph — **done**
 - Out of scope: hop-ball graph range; hex/graph replace capture
+
+### M23 — Guess Who manual commit (eliminate)
+
+- Schema `deduction.autoEliminate` (default true); false disables query
+  auto-prune — **done**
+- Kernel `{ type: "eliminate"; id }` + `candidateEliminated` event; legal only
+  when autoEliminate is false — **done**
+- Preset `guess-who-commit-lite` (`wrongGuess: end_turn`) + transcript/replay
+  tests — **done**
+- Out of scope: simultaneous deduction; deduction + phases; batch eliminate;
+  trait conjunction queries; full canvas UI
 
 ## Sequencing notes
 
