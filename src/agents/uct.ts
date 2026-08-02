@@ -15,10 +15,62 @@ import { playerOf, stepPly } from "@/engine/kernel";
 import { mulberry32 } from "@/engine/rng";
 import type { Agent } from "@/agents/types";
 import { createHuntAgent } from "@/agents/hunt";
+import {
+	activeCommitSeat,
+	canSearchCommitRevealJoint,
+	canSearchJointActions,
+	commitRevealRoundFingerprint,
+	enumerateCommitRevealJoints,
+	enumerateJointLegalActions,
+	jointSeatBudget,
+	jointStateFingerprint,
+	seatCommitFromJoint,
+	seatComponentFromJoint
+} from "@/agents/jointLegal";
 
 const DEFAULT_SIMULATIONS = 80;
 const DEFAULT_DEPTH_LIMIT = 32;
 const DEFAULT_EXPLORATION = Math.SQRT1_2; // ≈ 0.707 — common UCT constant
+
+type JointDecisionCache = {
+	fingerprint: string;
+	joint: KernelAction;
+	/** Next place-index per seat for multi-action dual-`act` (mod budget). */
+	nextIndex: { 0: number; 1: number };
+	/** When true, emit `commitPlace` (commitReveal sequential sandbox). */
+	asCommit?: boolean;
+};
+
+function seatPickFromCache(
+	cache: JointDecisionCache,
+	player: PlayerId
+): KernelAction | null {
+	const budget = jointSeatBudget(cache.joint);
+	if (budget <= 0) return null;
+	const idx = cache.nextIndex[player] % budget;
+	cache.nextIndex[player] = idx + 1;
+	if (cache.asCommit) {
+		return seatCommitFromJoint(cache.joint, player, idx);
+	}
+	return seatComponentFromJoint(cache.joint, player, idx);
+}
+
+/** Skip exhaustive joint win scan when this seat cannot reach n-in-a-row this round. */
+function mayWinThisJointRound(
+	kernel: GameKernel,
+	state: GameState,
+	player: PlayerId
+): boolean {
+	const winLen = kernel.config.winLength;
+	if (winLen == null || winLen <= 0) return true;
+	const token = playerOf(player);
+	let count = 0;
+	for (const c of state.grid.cells) {
+		if (c === token) count += 1;
+	}
+	const budget = kernel.config.actionsPerTurn ?? 1;
+	return count + budget >= winLen;
+}
 
 export function actionKey(action: KernelAction): string {
 	switch (action.type) {
@@ -52,6 +104,12 @@ export function actionKey(action: KernelAction): string {
 		}
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
+		case "query":
+			return `query:${action.trait}=${action.value}`;
+		case "guess":
+			return `guess:${action.id}`;
+		case "eliminate":
+			return `eliminate:${action.id}`;
 	}
 }
 
@@ -79,7 +137,10 @@ function stateFingerprint(state: GameState): string {
 			? `X:${state.fleetProgress.X.shipIndex}:${state.fleetProgress.X.done}:${state.fleetProgress.X.cells.map((c) => `${c.row},${c.col}`).join(";")}|O:${state.fleetProgress.O.shipIndex}:${state.fleetProgress.O.done}:${state.fleetProgress.O.cells.map((c) => `${c.row},${c.col}`).join(";")}`
 			: "",
 		state.grid.cells.join(","),
-		state.hidden?.cells.join(",") ?? ""
+		state.hidden?.cells.join(",") ?? "",
+		state.deduction
+			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${state.deduction.lastQuery.trait}=${state.deduction.lastQuery.value}:${state.deduction.lastQuery.answer}` : ""}`
+			: ""
 	].join("|");
 }
 
@@ -136,10 +197,25 @@ function makeNode(
 	parent: UctNode | null
 ): UctNode {
 	const side = kernel.currentPlayer(state);
-	const untried =
-		state.status === "playing" && side !== "simultaneous"
-			? [...kernel.legalActions(state, side)]
-			: [];
+	let untried: KernelAction[] = [];
+	if (state.status === "playing") {
+		if (side === "simultaneous") {
+			if (canSearchJointActions(kernel)) {
+				untried = enumerateJointLegalActions(kernel, state);
+			} else if (canSearchCommitRevealJoint(kernel, state)) {
+				untried = enumerateCommitRevealJoints(kernel, state);
+			} else if (kernel.config.commitReveal === true) {
+				const budget = kernel.config.actionsPerTurn ?? 1;
+				const active = activeCommitSeat(state, budget);
+				untried =
+					active == null ? [] : [...kernel.legalActions(state, active)];
+			} else {
+				untried = [];
+			}
+		} else {
+			untried = [...kernel.legalActions(state, side)];
+		}
+	}
 	return {
 		state,
 		actionFromParent,
@@ -253,8 +329,11 @@ export type UctOptions = {
 
 /**
  * UCT (UCB1) Monte Carlo tree search over `kernel.legalActions` / `stepSync`.
- * On hit/miss configs, delegates to the observation hunt agent (no hidden
- * fleet rollouts under partial information).
+ * Under open simultaneous (any `actionsPerTurn`), searches the joint
+ * place/move cartesian and caches the chosen joint so sandbox dual-/multi-`act`
+ * stays consistent. Under commitReveal, searches fresh-round reveal joints
+ * (as `simultaneousPlace`) and caches `commitPlace` emissions for sequential
+ * sandbox clicks. On hit/miss configs, delegates to the observation hunt agent.
  */
 export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 	const simulations = opts?.simulations ?? DEFAULT_SIMULATIONS;
@@ -263,13 +342,71 @@ export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 	const reuseTree = opts?.reuseTree ?? true;
 	let next = mulberry32(seed >>> 0);
 	let priorRoot: UctNode | null = null;
+	let jointCache: JointDecisionCache | null = null;
 	const hunt = createHuntAgent(seed);
+
+	const searchJointRoot = (
+		kernel: GameKernel,
+		state: GameState,
+		player: PlayerId,
+		joints: KernelAction[],
+		fp: string,
+		asCommit: boolean
+	): KernelAction | null => {
+		const freshCache = (joint: KernelAction): JointDecisionCache => ({
+			fingerprint: fp,
+			joint,
+			nextIndex: { 0: 0, 1: 0 },
+			asCommit
+		});
+
+		if (mayWinThisJointRound(kernel, state, player)) {
+			for (const joint of joints) {
+				const after = kernel.stepSync(state, joint).nextState;
+				if (
+					after.status === "won" &&
+					after.winner === playerOf(player)
+				) {
+					jointCache = freshCache(joint);
+					priorRoot = null;
+					const seat = seatPickFromCache(jointCache, player);
+					return seat ? cloneAction(seat) : null;
+				}
+			}
+		}
+
+		const root =
+			(reuseTree ? findReuseRoot(priorRoot, stateFingerprint(state)) : null) ??
+			makeNode(state, kernel, null, null);
+
+		for (let i = 0; i < simulations; i++) {
+			const leaf = selectAndExpand(
+				kernel,
+				root,
+				player,
+				exploration,
+				next
+			);
+			const value =
+				leaf.state.status === "playing"
+					? rolloutValue(kernel, leaf.state, player, next, depthLimit)
+					: terminalValue(leaf.state, player);
+			backpropagate(leaf, value);
+		}
+
+		const bestJoint = bestRootAction(root) ?? joints[0]!;
+		jointCache = freshCache(bestJoint);
+		priorRoot = reuseTree ? root : null;
+		const seat = seatPickFromCache(jointCache, player);
+		return seat ? cloneAction(seat) : null;
+	};
 
 	return {
 		kind: "uct",
 		reset(s: Seed) {
 			next = mulberry32(s >>> 0);
 			priorRoot = null;
+			jointCache = null;
 			hunt.reset(s);
 		},
 		act(kernel: GameKernel, state: GameState, player: PlayerId): KernelAction | null {
@@ -281,8 +418,50 @@ export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 				return pick ? cloneAction(pick) : null;
 			}
 
-			// Joint action space is not in the UCT tree yet — random legal for this seat.
-			if ((kernel.config.turnSchedule ?? "alternating") === "simultaneous") {
+			const simultaneous =
+				(kernel.config.turnSchedule ?? "alternating") === "simultaneous";
+			const commitReveal = kernel.config.commitReveal === true;
+
+			if (simultaneous && commitReveal) {
+				const roundFp = commitRevealRoundFingerprint(state);
+				if (
+					jointCache &&
+					jointCache.asCommit &&
+					jointCache.fingerprint === roundFp
+				) {
+					const seat = seatPickFromCache(jointCache, player);
+					return seat ? cloneAction(seat) : null;
+				}
+
+				if (canSearchCommitRevealJoint(kernel, state)) {
+					const joints = enumerateCommitRevealJoints(kernel, state);
+					if (joints.length === 0) return null;
+					return searchJointRoot(
+						kernel,
+						state,
+						player,
+						joints,
+						roundFp,
+						true
+					);
+				}
+
+				// Mid-round without a cached plan: per-seat UCT over commitPlace.
+			} else if (simultaneous && canSearchJointActions(kernel)) {
+				const fp = jointStateFingerprint(state);
+				if (
+					jointCache &&
+					!jointCache.asCommit &&
+					jointCache.fingerprint === fp
+				) {
+					const seat = seatPickFromCache(jointCache, player);
+					return seat ? cloneAction(seat) : null;
+				}
+
+				const joints = enumerateJointLegalActions(kernel, state);
+				if (joints.length === 0) return null;
+				return searchJointRoot(kernel, state, player, joints, fp, false);
+			} else if (simultaneous) {
 				return cloneAction(legal[Math.floor(next() * legal.length)]!);
 			}
 

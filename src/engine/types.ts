@@ -121,6 +121,19 @@ export type GameState = {
 	 * Distinct from fleet `phase` (game-long placement/combat).
 	 */
 	turnPhaseIndex?: number;
+	/** Deduction / Guess Who-lite secrets + per-player eliminations. */
+	deduction?: DeductionState;
+};
+
+export type DeductionCharacter = {
+	id: string;
+	traits: Record<string, boolean>;
+};
+
+export type DeductionState = {
+	secret: { X: string; O: string };
+	eliminated: { X: string[]; O: string[] };
+	lastQuery?: { by: Player; trait: string; value: boolean; answer: boolean };
 };
 
 /** Normalize a simultaneous placement payload to a position list. */
@@ -216,6 +229,23 @@ export type ResetEvent = {
 	type: "reset";
 };
 
+export type QueryEvent = {
+	type: "query";
+	trait: string;
+	value: boolean;
+};
+
+export type GuessEvent = {
+	type: "guess";
+	id: string;
+};
+
+/** Manual hypothesis commit: prune one candidate from the actor's board. */
+export type EliminateEvent = {
+	type: "eliminate";
+	id: string;
+};
+
 export type GameEvent =
 	| PlaceMoveEvent
 	| MoveEvent
@@ -229,6 +259,9 @@ export type GameEvent =
 	| SimultaneousPlaceEvent
 	| SimultaneousMoveEvent
 	| CommitPlaceEvent
+	| QueryEvent
+	| GuessEvent
+	| EliminateEvent
 	| ResetEvent;
 
 // Helper to convert row/col to flat index
