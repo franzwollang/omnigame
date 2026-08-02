@@ -149,7 +149,9 @@ export const zConfig = z
 		 * `graphReach: "hop"` (jump has fixed 2-edge semantics).
 		 * Optional `promotion`: Transform lite — uncrowned pieces that land
 		 * on `targetRows[seat]` become crowned (`X+`/`O+`) and thereafter use
-		 * `crownedAdjacency` (default king). Rectangle + jump only for v1.
+		 * `crownedAdjacency` (default king). Optional `menForwardOnly` restricts
+		 * uncrowned quiet/jump moves to the forward row-delta toward the seat's
+		 * promotion side (crowned unrestricted). Rectangle + jump only for v1.
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -171,7 +173,9 @@ export const zConfig = z
 				/**
 				 * Crowned kings / Transform lite (rectangle jump only): land on
 				 * `targetRows[seat]` → promote in place; crowned pieces use
-				 * `crownedAdjacency` for quiet/jump rays.
+				 * `crownedAdjacency` for quiet/jump rays. Optional
+				 * `menForwardOnly` restricts uncrowned row deltas to the
+				 * promotion-side advance.
 				 */
 				promotion: z
 					.object({
@@ -184,7 +188,13 @@ export const zConfig = z
 						/** Quiet/jump adjacency for crowned pieces. Default king. */
 						crownedAdjacency: z
 							.enum(["orthogonal", "diagonal", "king"])
-							.default("king")
+							.default("king"),
+						/**
+						 * Uncrowned men may only quiet-move / jump with row delta
+						 * toward their promotion side (from the two targetRows).
+						 * Crowned pieces ignore this filter.
+						 */
+						menForwardOnly: z.boolean().optional()
 					})
 					.strict()
 					.optional()

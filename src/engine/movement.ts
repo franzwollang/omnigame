@@ -9,7 +9,10 @@
  * (Checkers-lite mandatory capture; mid-chain still uses `mustContinueFrom`).
  * Optional `promotion` (rectangle jump): land on `targetRows[seat]` → crown
  * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king) via
- * `effectiveMovement`. Hex_offset: orthogonal cube-axis slides (range 1..8,
+ * `effectiveMovement`. Optional `menForwardOnly`: uncrowned pieces may only
+ * quiet-move / jump with row delta toward their promotion side (derived from
+ * the two `targetRows`); crowned pieces ignore the filter. Hex_offset:
+ * orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
  * hops along one cube dir). Graph: orthogonal chain-walk along explicit edges
  * (range 1..8; no turning at junctions) **or** hop-ball BFS within range
@@ -42,6 +45,11 @@ export type MovementPromotion = {
 	targetRows: { X: number; O: number };
 	/** Quiet/jump adjacency for crowned pieces. Default king. */
 	crownedAdjacency?: MovementAdjacency;
+	/**
+	 * When true, uncrowned men may only advance toward their promotion side
+	 * (row-delta sign from the two targetRows). Crowned pieces unrestricted.
+	 */
+	menForwardOnly?: boolean;
 };
 
 export type MovementConfig = {
@@ -68,6 +76,7 @@ export type MovementConfig = {
 	/**
 	 * Crowned kings / Transform lite (rectangle jump): promote on
 	 * `targetRows[seat]`; crowned pieces use `crownedAdjacency`.
+	 * Optional `menForwardOnly` restricts uncrowned quiet/jump row deltas.
 	 */
 	promotion?: MovementPromotion;
 };
@@ -91,6 +100,72 @@ export function effectiveMovement(
 		...config,
 		adjacency: config.promotion?.crownedAdjacency ?? "king"
 	};
+}
+
+/**
+ * Row-delta sign uncrowned men must advance with under `menForwardOnly`.
+ * Derived from the two promotion rows: each seat advances toward its own
+ * `targetRows` along the axis they define. Equal targetRows → Checkers-like
+ * default (X −1 / O +1).
+ */
+export function manForwardRowSign(
+	seat: Player,
+	targetRows: { X: number; O: number }
+): -1 | 1 {
+	const tx = targetRows.X;
+	const to = targetRows.O;
+	if (tx === to) return seat === "X" ? -1 : 1;
+	if (seat === "X") return tx < to ? -1 : 1;
+	return to < tx ? -1 : 1;
+}
+
+/** True when `dr` is a forward row step for an uncrowned man of `seat`. */
+export function isForwardRowDelta(
+	dr: number,
+	seat: Player,
+	targetRows: { X: number; O: number }
+): boolean {
+	if (dr === 0) return false;
+	return Math.sign(dr) === manForwardRowSign(seat, targetRows);
+}
+
+/**
+ * Adjacency ray deltas for a specific piece: crowned uses crownedAdjacency;
+ * uncrowned with `menForwardOnly` keep only forward row-delta rays.
+ */
+export function pieceAdjacencyDeltas(
+	config: MovementConfig,
+	cellValue: CellValue
+): ReadonlyArray<readonly [number, number]> {
+	const eff = effectiveMovement(config, cellValue);
+	const deltas = adjacencyDeltas(eff.adjacency);
+	const owner = cellOwner(cellValue);
+	if (
+		owner === null ||
+		isCrowned(cellValue) ||
+		config.promotion?.menForwardOnly !== true ||
+		!config.promotion.targetRows
+	) {
+		return deltas;
+	}
+	const sign = manForwardRowSign(owner, config.promotion.targetRows);
+	return deltas.filter(([dr]) => Math.sign(dr) === sign);
+}
+
+/** Filter destinations to forward row steps for uncrowned menForwardOnly. */
+function filterMenForwardDestinations(
+	from: Position,
+	dests: Position[],
+	config: MovementConfig,
+	cellValue: CellValue
+): Position[] {
+	if (config.promotion?.menForwardOnly !== true) return dests;
+	if (isCrowned(cellValue)) return dests;
+	const owner = cellOwner(cellValue);
+	if (owner === null || !config.promotion.targetRows) return dests;
+	return dests.filter((to) =>
+		isForwardRowDelta(to.row - from.row, owner, config.promotion!.targetRows)
+	);
 }
 
 /** True when `occ` is an enemy piece relative to `moverOwner`. */
@@ -258,7 +333,7 @@ export function jumpDestinations(
 		return out;
 	}
 
-	for (const [dr, dc] of adjacencyDeltas(eff.adjacency)) {
+	for (const [dr, dc] of pieceAdjacencyDeltas(config, cell)) {
 		const mid = step(grid, from, { row: dr, col: dc }, opts.wrap);
 		if (!mid) continue;
 		const occ = getCell(grid, mid);
@@ -337,18 +412,24 @@ export function hasAnyJumpCapture(
  * Empty cells along the ray are always destinations. With
  * `capture: "replace"`, the first enemy cell within range is also legal
  * (path empty except that destination); own pieces block without landing.
+ * When `fromCell` is provided, uses `pieceAdjacencyDeltas` (menForwardOnly).
  */
 function slideDestinations(
 	grid: Grid,
 	from: Position,
 	config: MovementConfig,
 	wrap: boolean,
-	mover: Player
+	mover: Player,
+	fromCell?: CellValue
 ): Position[] {
 	const out: Position[] = [];
 	const range = Math.max(1, Math.floor(config.range));
 	const replace = config.capture === "replace";
-	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
+	const deltas =
+		fromCell !== undefined
+			? pieceAdjacencyDeltas(config, fromCell)
+			: adjacencyDeltas(config.adjacency);
+	for (const [dr, dc] of deltas) {
 		let cur = from;
 		const seen = new Set<string>([posKey(from)]);
 		for (let dist = 1; dist <= range; dist++) {
@@ -643,7 +724,8 @@ export function legalDestinations(
 			from,
 			{ ...eff, capture: "none", range: 1 },
 			wrap,
-			mover
+			mover,
+			cell
 		);
 		const jumps = jumpDestinations(grid, from, config, opts, mover);
 		const seen = new Set(quiet.map(posKey));
@@ -655,11 +737,16 @@ export function legalDestinations(
 				out.push(j);
 			}
 		}
-		return out;
+		return filterMenForwardDestinations(from, out, config, cell);
 	}
 
 	// Rectangle: sliding ray walk (range 1 ≡ adjacent; replace may land on enemy).
-	return slideDestinations(grid, from, eff, wrap, mover);
+	return filterMenForwardDestinations(
+		from,
+		slideDestinations(grid, from, eff, wrap, mover, cell),
+		config,
+		cell
+	);
 }
 
 export function canMove(

@@ -1919,6 +1919,73 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"forward-men-jump-lite": definePreset({
+		id: "forward-men-jump-lite",
+		name: "Forward Men Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"forward-only",
+			"men",
+			"reach-row",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Checkers-lite forward-only men: uncrowned pieces may only quiet-move or jump toward their promotion side (row-delta from the two targetRows). After crowning, pieces ignore the filter and use crownedAdjacency (king) — including retreat. mustCapture forces the opening forward leap that promotes (promo row ≠ win row). Unlocks promotion.menForwardOnly — promotion alone changes adjacency, not direction.",
+		config: {
+			metadata: { name: "Forward Men Jump Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "diagonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					targetRows: { X: 1, O: 3 },
+					crownedAdjacency: "king",
+					menForwardOnly: true
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "forward-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "forward-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(3,2) mustCapture-jumps O(2,1)→(1,0): forward + promotes.
+				// Backward quiet diagonals from (3,2) are illegal under menForwardOnly.
+				// Spare O sits above its promo row so a forward reply exists (2,4)→(3,3).
+				// After O replies, X+ at (1,0) walks orthogonal (0,0) to win — and could
+				// also retreat (crowned ignores the forward filter).
+				{ row: 3, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 1, player: "O", visibility: "public" },
+				{ row: 2, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-replace-race": definePreset({
 		id: "hex-replace-race",
 		name: "Hex Replace Race",

@@ -110,6 +110,9 @@ export function flattenToGameConfig(config: Config): GameConfig {
 												crownedAdjacency:
 													config.movement.promotion.crownedAdjacency
 											}
+										: {}),
+									...(config.movement.promotion.menForwardOnly === true
+										? { menForwardOnly: true }
 										: {})
 								}
 							}

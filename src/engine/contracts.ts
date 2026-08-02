@@ -152,7 +152,8 @@ export const Contracts = {
 			"transformOnReachPromotionRow",
 			"crownedUsesCrownedAdjacency",
 			"preserveCrownOnMove",
-			"rectangleJumpOnly"
+			"rectangleJumpOnly",
+			"menForwardOnlyRestrictsUncrowned"
 		]
 	}),
 	PlacementDirect: (): FeatureContract => ({
