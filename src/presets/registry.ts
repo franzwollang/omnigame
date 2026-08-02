@@ -1732,7 +1732,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not commitReveal or joint UCT (compound covered by Simultaneous Guess Who And Lite; hidden commits by Hidden Simultaneous Guess Who Lite).",
+			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not commitReveal (compound covered by Simultaneous Guess Who And Lite; hidden commits by Hidden Simultaneous Guess Who Lite; open joint UCT by M34).",
 		config: {
 			metadata: { name: "Simultaneous Guess Who Lite", version: 1 },
 			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
@@ -1839,7 +1839,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Both seats ask one 2-clause AND query (or both guess) per round; joint resolve with independent compound prune. Unlocks simultaneous deduction + queryShape = and — not or-arity demos, commitReveal (see Hidden Simultaneous Guess Who Lite), or joint UCT.",
+			"Both seats ask one 2-clause AND query (or both guess) per round; joint resolve with independent compound prune. Unlocks simultaneous deduction + queryShape = and — not or-arity demos or commitReveal (see Hidden Simultaneous Guess Who Lite); open joint UCT covered by M34.",
 		config: {
 			metadata: { name: "Simultaneous Guess Who And Lite", version: 1 },
 			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },

@@ -63,7 +63,7 @@ describe("kernel: simultaneous joint compound query", () => {
 			true
 		);
 		expect(enumerateCompoundQueries(["glasses", "hat"], 2)).toHaveLength(4);
-		expect(canSearchJointActions(kernel)).toBe(false);
+		expect(canSearchJointActions(kernel)).toBe(true);
 	});
 
 	it("joint AND query prunes independently and records lastQueries with op", () => {

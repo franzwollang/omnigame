@@ -1,7 +1,8 @@
 /**
- * Joint legal enumeration for open simultaneous place/move and
+ * Joint legal enumeration for open simultaneous place/move/deduction and
  * commitReveal fresh-round plans (evaluated as simultaneousPlace).
  * Budget 1: scalar cartesian. Budget > 1: ordered distinct place tuples.
+ * Deduction: kind-matched query×query + guess×guess (budget 1).
  */
 import type { GameState } from "@/engine/types";
 import { asPlacementList, pendingFingerprint } from "@/engine/types";
@@ -11,22 +12,26 @@ import type {
 	PlayerId
 } from "@/engine/kernel";
 import {
+	jointGuessFromActions,
 	jointMoveFromActions,
 	jointPlaceFromActions,
 	jointPlacesFromActions,
+	jointQueryFromActions,
 	playerOf
 } from "@/engine/kernel";
 import { formatQueryFingerprint } from "@/engine/deduction";
 
-/** Open simultaneous place/move — joint cartesian is searchable (any budget). */
+/**
+ * Open simultaneous place/move/deduction — joint cartesian is searchable
+ * (any budget for place; deduction is always budget 1). CommitReveal uses
+ * a separate fresh-round plan search (place only; deduction deferred).
+ */
 export function canSearchJointActions(kernel: GameKernel): boolean {
 	if ((kernel.config.turnSchedule ?? "alternating") !== "simultaneous") {
 		return false;
 	}
 	// Hidden commit-reveal uses a separate fresh-round plan search.
 	if (kernel.config.commitReveal === true) return false;
-	// Simultaneous deduction joint UCT deferred (query/guess cartesian).
-	if ((kernel.config.inputMode ?? "cell") === "deduction") return false;
 	return true;
 }
 
@@ -129,8 +134,37 @@ function enumeratePlaceJointsFromSeatPlaces(
 }
 
 /**
+ * Kind-matched cartesian for simultaneous deduction:
+ * query×query → `simultaneousQuery`, guess×guess → `simultaneousGuess`.
+ */
+function enumerateDeductionJointsFromSeatActions(
+	a0: readonly KernelAction[],
+	a1: readonly KernelAction[]
+): KernelAction[] {
+	const out: KernelAction[] = [];
+	const q0 = a0.filter((a) => a.type === "query");
+	const q1 = a1.filter((a) => a.type === "query");
+	const g0 = a0.filter((a) => a.type === "guess");
+	const g1 = a1.filter((a) => a.type === "guess");
+	for (const x of q0) {
+		for (const o of q1) {
+			const joint = jointQueryFromActions(x, o);
+			if (joint) out.push(joint);
+		}
+	}
+	for (const x of g0) {
+		for (const o of g1) {
+			const joint = jointGuessFromActions(x, o);
+			if (joint) out.push(joint);
+		}
+	}
+	return out;
+}
+
+/**
  * Cartesian product of per-seat legals, composed into
- * `simultaneousPlace` / `simultaneousMove`. Empty when joint search is N/A.
+ * `simultaneousPlace` / `simultaneousMove` / `simultaneousQuery` /
+ * `simultaneousGuess`. Empty when joint search is N/A.
  */
 export function enumerateJointLegalActions(
 	kernel: GameKernel,
@@ -139,9 +173,12 @@ export function enumerateJointLegalActions(
 	if (!canSearchJointActions(kernel)) return [];
 	if (state.status !== "playing") return [];
 
-	const budget = kernel.config.actionsPerTurn ?? 1;
 	const a0 = kernel.legalActions(state, 0);
 	const a1 = kernel.legalActions(state, 1);
+	if ((kernel.config.inputMode ?? "cell") === "deduction") {
+		return enumerateDeductionJointsFromSeatActions(a0, a1);
+	}
+	const budget = kernel.config.actionsPerTurn ?? 1;
 	return enumeratePlaceJointsFromSeatPlaces(a0, a1, budget);
 }
 
@@ -161,8 +198,9 @@ export function enumerateCommitRevealJoints(
 }
 
 /**
- * Extract the per-seat atomic action from a joint place/move for sandbox dual-`act`.
- * `index` selects which place in a multi-action array (default 0).
+ * Extract the per-seat atomic action from a joint place/move/query/guess for
+ * sandbox dual-`act`. `index` selects which place in a multi-action array
+ * (default 0; ignored for move/query/guess).
  */
 export function seatComponentFromJoint(
 	joint: KernelAction,
@@ -180,6 +218,21 @@ export function seatComponentFromJoint(
 		if (index !== 0) return null;
 		const m = player === 0 ? joint.moves.X : joint.moves.O;
 		return { type: "move", from: m.from, to: m.to };
+	}
+	if (joint.type === "simultaneousQuery") {
+		if (index !== 0) return null;
+		const q = player === 0 ? joint.queries.X : joint.queries.O;
+		return {
+			type: "query",
+			trait: q.trait,
+			value: q.value,
+			clauses: q.clauses
+		};
+	}
+	if (joint.type === "simultaneousGuess") {
+		if (index !== 0) return null;
+		const id = player === 0 ? joint.guesses.X : joint.guesses.O;
+		return { type: "guess", id };
 	}
 	return null;
 }
@@ -205,7 +258,10 @@ export function seatCommitFromJoint(
 	};
 }
 
-/** How many atomic picks a joint encodes per seat (1 for moves / scalar place). */
+/**
+ * How many atomic picks a joint encodes per seat (1 for moves / scalar place /
+ * query / guess).
+ */
 export function jointSeatBudget(joint: KernelAction): number {
 	if (joint.type === "simultaneousPlace") {
 		return Math.max(
@@ -213,7 +269,13 @@ export function jointSeatBudget(joint: KernelAction): number {
 			asPlacementList(joint.placements.O).length
 		);
 	}
-	if (joint.type === "simultaneousMove") return 1;
+	if (
+		joint.type === "simultaneousMove" ||
+		joint.type === "simultaneousQuery" ||
+		joint.type === "simultaneousGuess"
+	) {
+		return 1;
+	}
 	return 0;
 }
 

@@ -138,9 +138,10 @@ function seatPickFromCache(
 /**
  * Tiny flat MCTS-ish: for each legal root action, run N random rollouts via
  * `kernel.stepSync` and pick the best mean score. Under open simultaneous
- * (any budget), evaluates joint place/move actions and caches the decision for
- * dual-/multi-`act` consistency. Under commitReveal, evaluates fresh-round
- * reveal joints and caches sequential `commitPlace` picks. Large multi-action
+ * (any budget), evaluates joint place/move/query/guess actions and caches the
+ * decision for dual-/multi-`act` consistency. Under commitReveal, evaluates
+ * fresh-round reveal joints and caches sequential `commitPlace` picks
+ * (deduction commitReveal joint search deferred). Large multi-action
  * cartesians are sampled to keep flat eval bounded. On hit/miss configs,
  * delegates to the observation hunt agent (no hidden-fleet rollouts).
  */

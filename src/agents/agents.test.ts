@@ -20,8 +20,10 @@ import {
 } from "@/agents";
 import { examplePresets } from "@/presets/registry";
 import {
+	jointGuessFromActions,
 	jointPlaceFromActions,
-	jointPlacesFromActions
+	jointPlacesFromActions,
+	jointQueryFromActions
 } from "@/engine/kernel";
 import type { KernelAction } from "@/engine/kernel";
 import type { CellValue } from "@/engine/types";
@@ -772,6 +774,149 @@ describe("joint UCT/MCTS under commitReveal (M20)", () => {
 			const oCommit = uct.act(kernel, state, 1);
 			expect(oCommit?.type).toBe("commitPlace");
 			state = kernel.stepSync(state, oCommit!).nextState;
+			guard += 1;
+		}
+		expect(state.status === "won" || state.status === "draw").toBe(true);
+	});
+});
+
+describe("joint UCT/MCTS under simultaneous deduction (M34)", () => {
+	it("enumerates 32 kind-matched joints on simultaneous-guess-who-lite", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-lite"].config
+		);
+		const state = kernel.initialState(42);
+		expect(canSearchJointActions(kernel)).toBe(true);
+		const joints = enumerateJointLegalActions(kernel, state);
+		expect(joints).toHaveLength(32);
+		expect(
+			joints.filter((a) => a.type === "simultaneousQuery")
+		).toHaveLength(16);
+		expect(
+			joints.filter((a) => a.type === "simultaneousGuess")
+		).toHaveLength(16);
+	});
+
+	it("enumerates 32 joints on simultaneous-guess-who-and-lite", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-and-lite"].config
+		);
+		const state = kernel.initialState(42);
+		expect(canSearchJointActions(kernel)).toBe(true);
+		const joints = enumerateJointLegalActions(kernel, state);
+		expect(joints).toHaveLength(32);
+		expect(
+			joints.filter((a) => a.type === "simultaneousQuery")
+		).toHaveLength(16);
+		expect(
+			joints.filter((a) => a.type === "simultaneousGuess")
+		).toHaveLength(16);
+	});
+
+	it("stays off under commitReveal deduction", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-guess-who-lite"].config
+		);
+		const state = kernel.initialState(42);
+		expect(canSearchJointActions(kernel)).toBe(false);
+		expect(enumerateJointLegalActions(kernel, state)).toHaveLength(0);
+	});
+
+	it("uct dual-act returns consistent query/guess seat components", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-lite"].config
+		);
+		const state = kernel.initialState(7);
+		const agent = createUctAgent(7, { simulations: 40 });
+		const a0 = agent.act(kernel, state, 0);
+		const a1 = agent.act(kernel, state, 1);
+		expect(a0).not.toBeNull();
+		expect(a1).not.toBeNull();
+		expect(a0!.type === "query" || a0!.type === "guess").toBe(true);
+		expect(a1!.type).toBe(a0!.type);
+		const joint =
+			a0!.type === "query"
+				? jointQueryFromActions(a0!, a1!)
+				: jointGuessFromActions(a0!, a1!);
+		expect(joint).not.toBeNull();
+		expect(seatComponentFromJoint(joint!, 0)).toEqual(a0);
+		expect(seatComponentFromJoint(joint!, 1)).toEqual(a1);
+		expect(jointSeatBudget(joint!)).toBe(1);
+		const again0 = agent.act(kernel, state, 0);
+		const again1 = agent.act(kernel, state, 1);
+		expect(again0).toEqual(a0);
+		expect(again1).toEqual(a1);
+	});
+
+	it("uct takes an immediate winning joint guess for X", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-lite"].config
+		);
+		const state0 = kernel.initialState(42);
+		const secretO = state0.deduction!.secret.O;
+		const rosterIds = kernel.config.deduction!.roster.map((c) => c.id);
+		const state = {
+			...state0,
+			deduction: {
+				...state0.deduction!,
+				eliminated: {
+					X: rosterIds.filter((id) => id !== secretO),
+					O: [] as string[]
+				}
+			}
+		};
+		const agent = createUctAgent(3, { simulations: 24 });
+		const a0 = agent.act(kernel, state, 0);
+		const a1 = agent.act(kernel, state, 1);
+		expect(a0).toEqual({ type: "guess", id: secretO });
+		expect(a1?.type).toBe("guess");
+		const joint = jointGuessFromActions(a0!, a1!);
+		expect(joint?.type).toBe("simultaneousGuess");
+		const after = kernel.stepSync(state, joint!).nextState;
+		expect(after.status).toBe("won");
+		expect(after.winner).toBe("X");
+	});
+
+	it("mcts dual-act stays kind-matched on simultaneous-guess-who-lite", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-lite"].config
+		);
+		const state = kernel.initialState(5);
+		const agent = createTinyMctsAgent(5, { rolloutsPerAction: 4 });
+		const a0 = agent.act(kernel, state, 0);
+		const a1 = agent.act(kernel, state, 1);
+		expect(a0).not.toBeNull();
+		expect(a1).not.toBeNull();
+		expect(a0!.type === a1!.type).toBe(true);
+		const joint =
+			a0!.type === "query"
+				? jointQueryFromActions(a0!, a1!)
+				: jointGuessFromActions(a0!, a1!);
+		expect(joint).not.toBeNull();
+		const again0 = agent.act(kernel, state, 0);
+		expect(again0).toEqual(a0);
+	});
+
+	it("uct completes a short simultaneous-guess-who-lite playout", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-lite"].config
+		);
+		let state = kernel.initialState(13);
+		const uct = createUctAgent(13, { simulations: 36, reuseTree: true });
+		let guard = 0;
+		while (state.status === "playing" && guard < 16) {
+			expect(kernel.currentPlayer(state)).toBe("simultaneous");
+			const a0 = uct.act(kernel, state, 0);
+			const a1 = uct.act(kernel, state, 1);
+			expect(a0).not.toBeNull();
+			expect(a1).not.toBeNull();
+			expect(a0!.type).toBe(a1!.type);
+			const joint =
+				a0!.type === "query"
+					? jointQueryFromActions(a0!, a1!)
+					: jointGuessFromActions(a0!, a1!);
+			expect(joint).not.toBeNull();
+			state = kernel.stepSync(state, joint!).nextState;
 			guard += 1;
 		}
 		expect(state.status === "won" || state.status === "draw").toBe(true);

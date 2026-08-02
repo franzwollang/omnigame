@@ -107,7 +107,7 @@ describe("kernel: simultaneous joint query / guess", () => {
 			true
 		);
 		expect(a0.filter((a) => a.type === "query")).toHaveLength(4);
-		expect(canSearchJointActions(kernel)).toBe(false);
+		expect(canSearchJointActions(kernel)).toBe(true);
 	});
 
 	it("joint query prunes each seat independently and records lastQueries", () => {

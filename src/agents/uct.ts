@@ -354,10 +354,11 @@ export type UctOptions = {
 /**
  * UCT (UCB1) Monte Carlo tree search over `kernel.legalActions` / `stepSync`.
  * Under open simultaneous (any `actionsPerTurn`), searches the joint
- * place/move cartesian and caches the chosen joint so sandbox dual-/multi-`act`
- * stays consistent. Under commitReveal, searches fresh-round reveal joints
- * (as `simultaneousPlace`) and caches `commitPlace` emissions for sequential
- * sandbox clicks. On hit/miss configs, delegates to the observation hunt agent.
+ * place/move/query/guess cartesian and caches the chosen joint so sandbox
+ * dual-/multi-`act` stays consistent. Under commitReveal, searches fresh-round
+ * reveal joints (as `simultaneousPlace`) and caches `commitPlace` emissions for
+ * sequential sandbox clicks (deduction commitReveal joint search deferred). On
+ * hit/miss configs, delegates to the observation hunt agent.
  */
 export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 	const simulations = opts?.simulations ?? DEFAULT_SIMULATIONS;
