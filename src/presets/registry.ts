@@ -1196,6 +1196,37 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"minesweeper-lite": definePreset({
+		id: "minesweeper-lite",
+		name: "Minesweeper Lite",
+		tags: [
+			"observation",
+			"flood-reveal",
+			"hazards",
+			"partial-info",
+			"8x8",
+			"mechanism"
+		],
+		description:
+			"Shared-board flood-fill reveal: click opens zero-count regions and numbered frontiers. Mine loses; clear all safe cells draws. Unlocks flood_reveal — not full Minesweeper (no flags/chords).",
+		config: {
+			metadata: { name: "Minesweeper Lite", version: 1 },
+			grid: { width: 8, height: 8, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 10, firstRevealSafe: true },
+			objective: { mode: "clear_hazards" },
+			tokens: [
+				{ id: "probe-x", label: "X", players: ["X"] },
+				{ id: "probe-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"battleship-place": definePreset({
 		id: "battleship-place",
 		name: "Battleship Place",

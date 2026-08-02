@@ -81,6 +81,8 @@ export function actionKey(action: KernelAction): string {
 			return `move:${action.from.row},${action.from.col}->${action.to.row},${action.to.col}`;
 		case "fire":
 			return `fire:${action.position.row},${action.position.col}`;
+		case "reveal":
+			return `reveal:${action.position.row},${action.position.col}`;
 		case "activateColumn":
 			return `col:${action.col}`;
 		case "activateRow":

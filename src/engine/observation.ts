@@ -8,6 +8,7 @@
  * fog: cells within `fogRadius` of any own piece are visible; others fogged.
  * Bootstrap: with no own pieces yet, the whole board is visible.
  * deduction: dummy empty board + public roster / own eliminations / own lastQuery.
+ * flood_reveal: shared public counts / exploded mine; hidden mines stay secret.
  */
 import type { GameConfig } from "@/engine/reducer";
 import type {

@@ -94,6 +94,10 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.observation.mode === "deduction") {
 		features.push(Contracts.ObservationDeduction());
 	}
+	if (cfg.observation.mode === "flood_reveal") {
+		features.push(Contracts.ObservationFloodReveal());
+		if (cfg.hazards) features.push(Contracts.HazardLayout());
+	}
 	if (cfg.objective.mode === "destroy_hidden") {
 		features.push(Contracts.DestroyHidden());
 	} else if (cfg.objective.mode === "connect_or_destroy") {
@@ -104,6 +108,8 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.AreaControl());
 	} else if (cfg.objective.mode === "identify_secret") {
 		features.push(Contracts.IdentifySecret());
+	} else if (cfg.objective.mode === "clear_hazards") {
+		features.push(Contracts.ClearHazards());
 	} else if (cfg.objective.mode === "none") {
 		features.push(Contracts.OpenEnded());
 	} else {

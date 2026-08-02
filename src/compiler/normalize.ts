@@ -59,6 +59,12 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		observationMode: config.observation.mode,
 		fogRadius: config.observation.radius,
 		fogMetric: config.observation.metric,
+		hazards: config.hazards
+			? {
+					count: config.hazards.count,
+					firstRevealSafe: config.hazards.firstRevealSafe === true
+				}
+			: undefined,
 		objectiveMode: config.objective.mode,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,

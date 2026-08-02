@@ -78,6 +78,12 @@ import {
 	isGuessCorrect,
 	validCompoundClauses
 } from "@/engine/deduction";
+import {
+	allSafeRevealed,
+	applyReveals,
+	floodRevealRegion,
+	placeHazards
+} from "@/engine/hazards";
 
 export type InitialSeed = {
 	row: number;
@@ -118,10 +124,15 @@ export type GameConfig = {
 	koRule?: KoRule;
 	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
-	observationMode?: "full" | "hit_miss" | "fog" | "deduction";
+	observationMode?: "full" | "hit_miss" | "fog" | "deduction" | "flood_reveal";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
 	fogRadius?: number;
 	fogMetric?: "chebyshev" | "manhattan";
+	/** Hazard layout for flood_reveal / clear_hazards. */
+	hazards?: {
+		count: number;
+		firstRevealSafe?: boolean;
+	};
 	objectiveMode?:
 		| "n_in_a_row"
 		| "destroy_hidden"
@@ -129,6 +140,7 @@ export type GameConfig = {
 		| "reach_row"
 		| "area_control"
 		| "identify_secret"
+		| "clear_hazards"
 		| "none";
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
@@ -444,8 +456,31 @@ export function createInitialState(config: GameConfig): GameState {
 
 	const seeds = config.initial ?? [];
 	const hasOwner = seeds.some((p) => (p.visibility ?? "public") === "owner");
-	if (hasOwner || config.observationMode === "hit_miss" || placement) {
+	const floodReveal = config.observationMode === "flood_reveal";
+	if (
+		hasOwner ||
+		config.observationMode === "hit_miss" ||
+		placement ||
+		floodReveal
+	) {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
+	}
+
+	if (floodReveal && config.hazards) {
+		const firstSafe = config.hazards.firstRevealSafe === true;
+		if (!firstSafe) {
+			base.hidden = {
+				width: config.gridWidth,
+				height: config.gridHeight,
+				cells: placeHazards(
+					config.gridWidth,
+					config.gridHeight,
+					config.hazards.count,
+					config.seed ?? 0
+				)
+			};
+		}
+		// firstRevealSafe: defer mine placement until first reveal action
 	}
 
 	const deductionMode =
@@ -533,6 +568,8 @@ export function reduce(
 			return handleMove(state, event.from, event.to, config);
 		case "fire":
 			return handleFire(state, event.position, config);
+		case "reveal":
+			return handleReveal(state, event.position, config);
 		case "activateColumn":
 			return handleActivateColumn(state, event.col, config);
 		case "activateRow":
@@ -1927,6 +1964,82 @@ function handleFire(
 		}
 	}
 
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...next,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleReveal(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): GameState {
+	if ((config.observationMode ?? "full") !== "flood_reveal") return state;
+	if (state.status !== "playing") return state;
+	if (!config.hazards) return state;
+	if (
+		pos.row < 0 ||
+		pos.row >= state.grid.height ||
+		pos.col < 0 ||
+		pos.col >= state.grid.width
+	) {
+		return state;
+	}
+	if (getCell(state.grid, pos) !== null) return state;
+
+	let hidden = state.hidden;
+	if (!hidden) {
+		hidden = emptyGrid(config.gridWidth, config.gridHeight);
+	}
+
+	const firstSafe =
+		config.hazards.firstRevealSafe === true && state.moveCount === 0;
+	const minesPlaced = hidden.cells.some((c) => c === "mine");
+	if (firstSafe || !minesPlaced) {
+		hidden = {
+			width: config.gridWidth,
+			height: config.gridHeight,
+			cells: placeHazards(
+				config.gridWidth,
+				config.gridHeight,
+				config.hazards.count,
+				config.seed ?? 0,
+				firstSafe ? [pos] : []
+			)
+		};
+	}
+
+	const opponent: Player = state.currentPlayer === "X" ? "O" : "X";
+	const newMoveCount = state.moveCount + 1;
+
+	if (getCell(hidden, pos) === "mine") {
+		const exploded = setCell(state.grid, pos, "mine");
+		return {
+			...state,
+			hidden,
+			grid: { ...state.grid, cells: exploded },
+			moveCount: newMoveCount,
+			status: "won",
+			winner: opponent
+		};
+	}
+
+	const flood = floodRevealRegion(hidden, state.grid, pos);
+	const cells = applyReveals(state.grid, flood);
+	const nextGrid = { ...state.grid, cells };
+	const next: GameState = {
+		...state,
+		hidden,
+		grid: nextGrid,
+		moveCount: newMoveCount
+	};
+	if (allSafeRevealed(hidden, nextGrid)) {
+		return { ...next, status: "draw", winner: null };
+	}
 	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
 		...next,

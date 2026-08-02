@@ -18,6 +18,7 @@ export type Slot =
 				| "reachRow"
 				| "areaControl"
 				| "identifySecret"
+				| "clearHazards"
 				| "none";
 	  }
 	| { type: "Schedule"; value: "alternating" | "manualTick" | "simultaneous" };
@@ -290,6 +291,22 @@ export const Contracts = {
 		hooks: [],
 		invariants: ["hidesOpponentSecret"]
 	}),
+	ObservationFloodReveal: (): FeatureContract => ({
+		id: "ObservationFloodReveal",
+		requires: [],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput"],
+		invariants: ["hidesUnrevealedHazards", "showsCountsOnly"]
+	}),
+	HazardLayout: (): FeatureContract => ({
+		id: "HazardLayout",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyPlacement"],
+		invariants: ["seededMineLayout"]
+	}),
 	DestroyHidden: (): FeatureContract => ({
 		id: "DestroyHidden",
 		requires: ["CellsWritable"],
@@ -297,6 +314,14 @@ export const Contracts = {
 		slots: [{ type: "EndCondition", value: "destroyHidden" }],
 		hooks: ["checkEnd"],
 		invariants: []
+	}),
+	ClearHazards: (): FeatureContract => ({
+		id: "ClearHazards",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [{ type: "EndCondition", value: "clearHazards" }],
+		hooks: ["checkEnd"],
+		invariants: ["mineHitLoses", "allSafeDraw"]
 	}),
 	/**
 	 * Dual end for place→move→fire: n-in-a-row after place/move, or sink

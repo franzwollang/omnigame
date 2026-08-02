@@ -210,7 +210,7 @@ export const zConfig = z
 		observation: z
 			.object({
 				mode: z
-					.enum(["full", "hit_miss", "fog", "deduction"])
+					.enum(["full", "hit_miss", "fog", "deduction", "flood_reveal"])
 					.default("full"),
 				/** Vision radius when mode = fog (ignored otherwise). */
 				radius: z.number().int().min(0).max(32).default(1),
@@ -223,6 +223,18 @@ export const zConfig = z
 				radius: 1,
 				metric: "chebyshev" as const
 			}),
+		/**
+		 * Hazard layout for flood_reveal / Minesweeper-lite.
+		 * Mines are seeded onto the hidden layer; reveal floods zero-count regions.
+		 */
+		hazards: z
+			.object({
+				count: z.number().int().min(1).max(999),
+				/** Defer mine placement until first reveal; avoid that cell. */
+				firstRevealSafe: z.boolean().default(false)
+			})
+			.strict()
+			.optional(),
 		/**
 		 * Multi-ship placement phase for hit_miss games.
 		 * Each player places contiguous orthogonal ships of these lengths onto
@@ -282,6 +294,7 @@ export const zConfig = z
 						"reach_row",
 						"area_control",
 						"identify_secret",
+						"clear_hazards",
 						"none"
 					])
 					.default("n_in_a_row"),
@@ -296,7 +309,7 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / identify_secret / none
+		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / identify_secret / clear_hazards / none
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -362,9 +375,14 @@ export const zConfig = z
 			cfg.placement.gravity?.enabled === true;
 		const hitMiss = cfg.observation.mode === "hit_miss";
 		const fog = cfg.observation.mode === "fog";
+		const floodReveal = cfg.observation.mode === "flood_reveal";
 		const deductionInput = cfg.input.mode === "deduction";
 		const deductionObs = cfg.observation.mode === "deduction";
 		const identifySecret = cfg.objective.mode === "identify_secret";
+		const clearHazards = cfg.objective.mode === "clear_hazards";
+		const hasHazardsBlock = cfg.hazards !== undefined;
+		const floodActive =
+			floodReveal || clearHazards || hasHazardsBlock;
 		const hasDeductionBlock = cfg.deduction !== undefined;
 		const deductionActive =
 			deductionInput || deductionObs || identifySecret || hasDeductionBlock;
@@ -383,6 +401,145 @@ export const zConfig = z
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
 		const needsHitMiss = destroyHidden || connectOrDestroy;
+
+		// Flood-fill / Minesweeper-lite: observation + objective + hazards lockstep
+		if (floodActive) {
+			if (!floodReveal) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"hazards / clear_hazards requires observation.mode = 'flood_reveal'"
+				});
+			}
+			if (!clearHazards) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message:
+						"flood_reveal requires objective.mode = 'clear_hazards'"
+				});
+			}
+			if (!hasHazardsBlock) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["hazards"],
+					message: "flood_reveal requires a hazards block"
+				});
+			}
+			if (cfg.input.mode !== "cell") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message: "flood_reveal requires input.mode = 'cell'"
+				});
+			}
+			if (cfg.win !== undefined) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["win"],
+					message: "flood_reveal / clear_hazards does not use win"
+				});
+			}
+			if (cfg.movement) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement"],
+					message: "flood_reveal is incompatible with movement"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "flood_reveal is incompatible with fleet"
+				});
+			}
+			if (hitMiss || fog || deductionObs) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"flood_reveal is incompatible with hit_miss / fog / deduction"
+				});
+			}
+			if (deductionActive) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["deduction"],
+					message: "flood_reveal is incompatible with deduction"
+				});
+			}
+			if (simultaneous) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "flood_reveal is incompatible with simultaneous"
+				});
+			}
+			if (manualTick) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "flood_reveal is incompatible with manual_tick"
+				});
+			}
+			if (inTurnPhases) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message: "flood_reveal is incompatible with turn.phases"
+				});
+			}
+			if (multiStep) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message: "flood_reveal requires actionsPerTurn = 1"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message: "flood_reveal is incompatible with delayTurns"
+				});
+			}
+			if (gravityImplied || Boolean(cfg.placement.capture?.enabled)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"flood_reveal requires direct placement without capture"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message:
+						"flood_reveal requires rectangle topology (hex/graph deferred)"
+				});
+			}
+			if (cfg.grid.wrap === true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "wrap"],
+					message: "flood_reveal does not support wrap"
+				});
+			}
+			if (hasHazardsBlock) {
+				const cells = cfg.grid.width * cfg.grid.height;
+				if (cfg.hazards!.count >= cells) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["hazards", "count"],
+						message:
+							"hazards.count must leave at least one safe cell"
+					});
+				}
+			}
+		}
 
 		// Deduction / Guess Who-lite: input + observation + objective + block lockstep
 		if (deductionActive) {
@@ -438,12 +595,12 @@ export const zConfig = z
 					message: "deduction is incompatible with fleet"
 				});
 			}
-			if (hitMiss || fog) {
+			if (hitMiss || fog || floodReveal) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["observation", "mode"],
 					message:
-						"deduction is incompatible with hit_miss / fog observation"
+						"deduction is incompatible with hit_miss / fog / flood_reveal observation"
 				});
 			}
 			if (simultaneous) {
@@ -1878,7 +2035,13 @@ export const zConfig = z
 		}
 
 		// Deduction observation/objective must not force destroy_hidden pairing
-		if (!deductionObs && !identifySecret && hitMiss !== needsHitMiss) {
+		if (
+			!deductionObs &&
+			!identifySecret &&
+			!floodReveal &&
+			!clearHazards &&
+			hitMiss !== needsHitMiss
+		) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: hitMiss ? ["objective", "mode"] : ["observation", "mode"],

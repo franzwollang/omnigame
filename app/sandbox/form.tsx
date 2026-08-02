@@ -129,7 +129,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<span className="font-medium text-foreground">
 										scheduler, grid.nodes/edges, initial seeds, placements,
 										placement.capture, fleet ship geometry beyond lengths,
-										deduction.*, identify_secret
+										deduction.*, identify_secret, hazards (count /
+										firstRevealSafe — use JSON or Minesweeper Lite)
 									</span>
 									.
 								</p>
@@ -799,12 +800,16 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="full">full</SelectItem>
 														<SelectItem value="hit_miss">hit_miss</SelectItem>
 														<SelectItem value="fog">fog</SelectItem>
+														<SelectItem value="flood_reveal">
+															flood_reveal
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
 												hit_miss = Battleship-lite; fog = radius vision around
-												own pieces.
+												own pieces; flood_reveal = Minesweeper-lite region
+												reveal (needs hazards + clear_hazards).
 											</p>
 											<FormMessage />
 										</FormItem>
@@ -943,6 +948,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="area_control">
 															area_control
 														</SelectItem>
+														<SelectItem value="clear_hazards">
+															clear_hazards
+														</SelectItem>
 														<SelectItem value="none">none</SelectItem>
 													</SelectContent>
 												</Select>
@@ -950,7 +958,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<p className="text-xs text-muted-foreground">
 												destroy_hidden↔hit_miss; connect_or_destroy↔
 												place→move→fire + hit_miss; reach_row↔move;
-												area_control↔liberties; none↔tick.
+												area_control↔liberties; clear_hazards↔flood_reveal;
+												none↔tick.
 											</p>
 											<FormMessage />
 										</FormItem>

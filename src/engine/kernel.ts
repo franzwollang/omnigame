@@ -63,6 +63,7 @@ export type KernelAction =
 	| { type: "place"; position: Position }
 	| { type: "move"; from: Position; to: Position }
 	| { type: "fire"; position: Position }
+	| { type: "reveal"; position: Position }
 	| { type: "activateColumn"; col: number }
 	| { type: "activateRow"; row: number }
 	| { type: "popOutColumn"; col: number }
@@ -163,6 +164,17 @@ export type KernelEvent =
 			player: Player;
 	  }
 	| {
+			type: "cellsRevealed";
+			positions: Position[];
+			counts: number[];
+			player: Player;
+	  }
+	| {
+			type: "mineHit";
+			position: Position;
+			player: Player;
+	  }
+	| {
 			type: "pieceCaptured";
 			position: Position;
 			captured: Player;
@@ -259,6 +271,8 @@ function formatAction(action: KernelAction): string {
 			return `move (${action.from.row},${action.from.col})→(${action.to.row},${action.to.col})`;
 		case "fire":
 			return `fire (${action.position.row},${action.position.col})`;
+		case "reveal":
+			return `reveal (${action.position.row},${action.position.col})`;
 		case "activateColumn":
 			return `column ${action.col}`;
 		case "activateRow":
@@ -319,6 +333,10 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: ${formatAction(event.action)}`;
 		case "shotResult":
 			return `${event.player}: ${event.result} at (${event.position.row},${event.position.col})`;
+		case "cellsRevealed":
+			return `${event.player}: revealed ${event.positions.length} cell(s)`;
+		case "mineHit":
+			return `${event.player}: mine at (${event.position.row},${event.position.col})`;
 		case "pieceCaptured":
 			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
 		case "queryAnswered":
@@ -449,6 +467,43 @@ function applyStep(
 				result: marked,
 				player: state.currentPlayer
 			});
+		}
+	}
+
+	if (action.type === "reveal") {
+		const marked = getCell(nextState.grid, action.position);
+		if (marked === "mine") {
+			events.push({
+				type: "mineHit",
+				position: action.position,
+				player: state.currentPlayer
+			});
+		} else {
+			const positions: Position[] = [];
+			const counts: number[] = [];
+			for (let r = 0; r < nextState.grid.height; r++) {
+				for (let c = 0; c < nextState.grid.width; c++) {
+					const before = getCell(state.grid, { row: r, col: c });
+					const after = getCell(nextState.grid, { row: r, col: c });
+					if (
+						before === null &&
+						typeof after === "number" &&
+						after >= 0 &&
+						after <= 8
+					) {
+						positions.push({ row: r, col: c });
+						counts.push(after);
+					}
+				}
+			}
+			if (positions.length > 0) {
+				events.push({
+					type: "cellsRevealed",
+					positions,
+					counts,
+					player: state.currentPlayer
+				});
+			}
 		}
 	}
 
@@ -916,11 +971,25 @@ function collectLegalActions(
 	const inputMode = config.inputMode ?? "cell";
 	const overflow = config.overflow ?? "reject";
 	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
+	const floodReveal = (config.observationMode ?? "full") === "flood_reveal";
 	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
 	const actingPlayer = simultaneous ? playerOf(player) : state.currentPlayer;
 
 	const jumpChain = collectJumpChainActions(config, state, actingPlayer);
 	if (jumpChain) return jumpChain;
+
+	if (floodReveal) {
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (getCell(state.grid, position) === null) {
+				actions.push({ type: "reveal", position });
+			}
+		}
+		return actions;
+	}
 
 	if (simultaneous) {
 		const commitReveal = config.commitReveal === true;
@@ -2113,6 +2182,23 @@ export function explainKernelAction(
 			}
 			break;
 		}
+		case "reveal": {
+			if ((config.observationMode ?? "full") !== "flood_reveal") {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (getCell(state.grid, action.position) !== null) {
+				return {
+					legal: false,
+					reason: "cell_occupied",
+					detail: detailFor("cell_occupied", action)
+				};
+			}
+			break;
+		}
 		case "query": {
 			if (inputMode !== "deduction" || !config.deduction) {
 				return {
@@ -2450,6 +2536,7 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 	switch (a.type) {
 		case "place":
 		case "fire":
+		case "reveal":
 			return (
 				b.type === a.type &&
 				a.position.row === b.position.row &&
@@ -2720,6 +2807,7 @@ export function highlightCellsForActions(
 		switch (action.type) {
 			case "place":
 			case "fire":
+			case "reveal":
 			case "commitPlace":
 				push(action.position);
 				break;

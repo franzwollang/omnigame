@@ -727,6 +727,12 @@ export default function GamePage() {
 								Combat: click a cell to fire (hit/miss)
 							</p>
 						)}
+					{currentConfig?.observation.mode === "flood_reveal" && (
+						<p className="mt-1 font-mono text-xs text-muted-foreground">
+							Flood reveal: click a cell to open a region (mine loses; clear
+							board = draw)
+						</p>
+					)}
 					{currentConfig?.input.mode === "move" && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							{selectedFrom

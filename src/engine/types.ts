@@ -2,8 +2,13 @@
 // Pure functional: State -> Event -> State
 
 export type Player = "X" | "O";
-/** Public cell marks: player tokens, or hit/miss shot results (partial-info). */
-export type CellValue = Player | "hit" | "miss" | null;
+/** Revealed adjacent-mine count for flood-fill / Minesweeper-lite. */
+export type HazardCount = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+/**
+ * Public cell marks: player tokens, hit/miss shot results, hazard counts,
+ * or an exploded mine. Hidden layer may also hold `"mine"` markers.
+ */
+export type CellValue = Player | "hit" | "miss" | "mine" | HazardCount | null;
 export type Position = { row: number; col: number };
 
 export type Grid = {
@@ -250,6 +255,12 @@ export type FireEvent = {
 	position: Position;
 };
 
+/** Flood-fill / Minesweeper-lite: probe a cell (may open a region). */
+export type RevealEvent = {
+	type: "reveal";
+	position: Position;
+};
+
 export type ActivateColumnEvent = {
 	type: "activateColumn";
 	col: number;
@@ -396,6 +407,7 @@ export type GameEvent =
 	| PlaceMoveEvent
 	| MoveEvent
 	| FireEvent
+	| RevealEvent
 	| ActivateColumnEvent
 	| ActivateRowEvent
 	| PopOutColumnEvent
