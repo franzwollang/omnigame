@@ -67,7 +67,8 @@ import {
 	eliminateAfterQuery,
 	eliminateAfterQueryConjunction,
 	eliminateAfterQueryDisjunction,
-	isGuessCorrect
+	isGuessCorrect,
+	validCompoundClauses
 } from "@/engine/deduction";
 
 export type InitialSeed = {
