@@ -444,8 +444,9 @@ export const Contracts = {
 		]
 	}),
 	/**
-	 * Ordered in-turn phase sequence (place→move, place→fire,
-	 * place→move→fire, or move→fire before handoff). Distinct from
+	 * Ordered in-turn phase sequence (place→move / place→fire /
+	 * place→move→fire / move→fire, or deduction query→eliminate /
+	 * query→guess / query→eliminate→guess before handoff). Distinct from
 	 * ScheduleMultiStep (N copies of one action type).
 	 */
 	ScheduleInTurnPhases: (): FeatureContract => ({

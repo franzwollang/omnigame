@@ -723,19 +723,32 @@ function collectLegalActions(
 	}
 
 	if (inputMode === "deduction" && config.deduction) {
-		const shape = config.deduction.queryShape ?? "single";
-		if (shape === "and" || shape === "or") {
-			const arity = config.deduction.compoundArity ?? 2;
-			for (const q of enumerateCompoundQueries(
-				config.deduction.traits,
-				arity
-			)) {
-				actions.push(q);
-			}
-		} else {
-			for (const trait of config.deduction.traits) {
-				actions.push({ type: "query", trait, value: true });
-				actions.push({ type: "query", trait, value: false });
+		const turnPhases = config.turnPhases;
+		const phase =
+			turnPhases && turnPhases.length > 0
+				? (turnPhases[state.turnPhaseIndex ?? 0] ?? "query")
+				: null;
+		const allowQuery = phase === null || phase === "query";
+		// Eliminate phase also allows guess (commit after hearing the answer).
+		const allowEliminate = phase === null || phase === "eliminate";
+		const allowGuess =
+			phase === null || phase === "eliminate" || phase === "guess";
+
+		if (allowQuery) {
+			const shape = config.deduction.queryShape ?? "single";
+			if (shape === "and" || shape === "or") {
+				const arity = config.deduction.compoundArity ?? 2;
+				for (const q of enumerateCompoundQueries(
+					config.deduction.traits,
+					arity
+				)) {
+					actions.push(q);
+				}
+			} else {
+				for (const trait of config.deduction.traits) {
+					actions.push({ type: "query", trait, value: true });
+					actions.push({ type: "query", trait, value: false });
+				}
 			}
 		}
 		const eliminated = new Set(
@@ -743,8 +756,13 @@ function collectLegalActions(
 		);
 		for (const character of config.deduction.roster) {
 			if (!eliminated.has(character.id)) {
-				actions.push({ type: "guess", id: character.id });
-				if (config.deduction.autoEliminate === false) {
+				if (allowGuess) {
+					actions.push({ type: "guess", id: character.id });
+				}
+				if (
+					allowEliminate &&
+					config.deduction.autoEliminate === false
+				) {
 					actions.push({ type: "eliminate", id: character.id });
 				}
 			}
@@ -1229,7 +1247,7 @@ export function explainKernelAction(
 		return { legal: true };
 	}
 
-	// In-turn phases: place/move/fire must match the active phase
+	// In-turn phases: place/move/fire/query/eliminate/guess must match active phase
 	const turnPhases = config.turnPhases;
 	if (turnPhases && turnPhases.length > 0) {
 		const phase = turnPhases[state.turnPhaseIndex ?? 0] ?? "place";
@@ -1248,6 +1266,32 @@ export function explainKernelAction(
 			};
 		}
 		if (action.type === "fire" && phase !== "fire") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "query" && phase !== "query") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		if (action.type === "eliminate" && phase !== "eliminate") {
+			return {
+				legal: false,
+				reason: "wrong_phase",
+				detail: detailFor("wrong_phase", action)
+			};
+		}
+		// Guess allowed during eliminate (after answer) or dedicated guess phase
+		if (
+			action.type === "guess" &&
+			phase !== "guess" &&
+			phase !== "eliminate"
+		) {
 			return {
 				legal: false,
 				reason: "wrong_phase",

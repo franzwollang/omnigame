@@ -30,14 +30,20 @@ type PhaseKey =
 	| "place,move"
 	| "place,fire"
 	| "place,move,fire"
-	| "move,fire";
+	| "move,fire"
+	| "query,eliminate"
+	| "query,guess"
+	| "query,eliminate,guess";
 
 const PHASE_OPTIONS: { value: PhaseKey; label: string }[] = [
 	{ value: "none", label: "none (single action type)" },
 	{ value: "place,move", label: "place → move" },
 	{ value: "place,fire", label: "place → fire" },
 	{ value: "place,move,fire", label: "place → move → fire" },
-	{ value: "move,fire", label: "move → fire" }
+	{ value: "move,fire", label: "move → fire" },
+	{ value: "query,eliminate", label: "query → eliminate" },
+	{ value: "query,guess", label: "query → guess" },
+	{ value: "query,eliminate,guess", label: "query → eliminate → guess" }
 ];
 
 function phasesToKey(phases: unknown): PhaseKey {
@@ -47,16 +53,30 @@ function phasesToKey(phases: unknown): PhaseKey {
 		key === "place,move" ||
 		key === "place,fire" ||
 		key === "place,move,fire" ||
-		key === "move,fire"
+		key === "move,fire" ||
+		key === "query,eliminate" ||
+		key === "query,guess" ||
+		key === "query,eliminate,guess"
 	) {
 		return key;
 	}
 	return "none";
 }
 
-function keyToPhases(key: PhaseKey): ("place" | "move" | "fire")[] | undefined {
+function keyToPhases(
+	key: PhaseKey
+):
+	| ("place" | "move" | "fire" | "query" | "eliminate" | "guess")[]
+	| undefined {
 	if (key === "none") return undefined;
-	return key.split(",") as ("place" | "move" | "fire")[];
+	return key.split(",") as (
+		| "place"
+		| "move"
+		| "fire"
+		| "query"
+		| "eliminate"
+		| "guess"
+	)[];
 }
 
 export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
@@ -281,8 +301,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								resolveOrder for ordered same-cell priority,
 								actionsPerTurn for multi-step, delayTurns for queued
 								places. In-turn phases (place→move / place→fire /
-								place→move→fire / move→fire) use the Phases control
-								below.
+								place→move→fire / move→fire / query→eliminate) use
+								the Phases control below.
 							</p>
 							<FormField
 								control={form.control}
@@ -468,10 +488,13 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											</Select>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
-											Alternating only; sequences place then move
-											and/or fire, or move→fire (no place) within one
-											turn. Needs matching objective / observation
-											(see schema errors). Distinct from actionsPerTurn.
+											Alternating only; board sequences place then
+											move and/or fire, or move→fire; deduction
+											sequences query→eliminate / query→guess /
+											query→eliminate→guess (autoEliminate false when
+											eliminate is present). Needs matching
+											objective / observation (see schema errors).
+											Distinct from actionsPerTurn.
 										</p>
 										<FormMessage />
 									</FormItem>

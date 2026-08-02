@@ -146,11 +146,14 @@ export type GameConfig = {
 	 */
 	resolveOrder?: "joint" | "x_first" | "o_first";
 	/**
-	 * Ordered in-turn action types (place→move, place→fire,
-	 * place→move→fire, or move→fire) before handoff. When set,
+	 * Ordered in-turn action types (place→move / place→fire /
+	 * place→move→fire / move→fire, or deduction query→eliminate /
+	 * query→guess / query→eliminate→guess) before handoff. When set,
 	 * GameState.turnPhaseIndex tracks the active phase.
 	 */
-	turnPhases?: Array<"place" | "move" | "fire">;
+	turnPhases?: Array<
+		"place" | "move" | "fire" | "query" | "eliminate" | "guess"
+	>;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
