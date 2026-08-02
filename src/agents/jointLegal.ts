@@ -16,6 +16,7 @@ import {
 	jointPlacesFromActions,
 	playerOf
 } from "@/engine/kernel";
+import { formatQueryFingerprint } from "@/engine/deduction";
 
 /** Open simultaneous place/move — joint cartesian is searchable (any budget). */
 export function canSearchJointActions(kernel: GameKernel): boolean {
@@ -251,7 +252,7 @@ export function jointStateFingerprint(state: GameState): string {
 		state.grid.cells.join(","),
 		state.hidden?.cells.join(",") ?? "",
 		state.deduction
-			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${state.deduction.lastQuery.trait}=${state.deduction.lastQuery.value}:${state.deduction.lastQuery.answer}` : ""}`
+			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${formatQueryFingerprint(state.deduction.lastQuery)}` : ""}`
 			: ""
 	].join("|");
 }
@@ -281,7 +282,7 @@ export function commitRevealRoundFingerprint(state: GameState): string {
 		state.grid.cells.join(","),
 		state.hidden?.cells.join(",") ?? "",
 		state.deduction
-			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${state.deduction.lastQuery.trait}=${state.deduction.lastQuery.value}:${state.deduction.lastQuery.answer}` : ""}`
+			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${formatQueryFingerprint(state.deduction.lastQuery)}` : ""}`
 			: ""
 	].join("|");
 }

@@ -130,10 +130,22 @@ export type DeductionCharacter = {
 	traits: Record<string, boolean>;
 };
 
+export type QueryClause = { trait: string; value: boolean };
+
+export type DeductionLastQuery = {
+	by: Player;
+	answer: boolean;
+	/** Single-trait query (queryShape single). */
+	trait?: string;
+	value?: boolean;
+	/** Conjunction clauses (queryShape and). */
+	clauses?: QueryClause[];
+};
+
 export type DeductionState = {
 	secret: { X: string; O: string };
 	eliminated: { X: string[]; O: string[] };
-	lastQuery?: { by: Player; trait: string; value: boolean; answer: boolean };
+	lastQuery?: DeductionLastQuery;
 };
 
 /** Normalize a simultaneous placement payload to a position list. */
@@ -231,8 +243,11 @@ export type ResetEvent = {
 
 export type QueryEvent = {
 	type: "query";
-	trait: string;
-	value: boolean;
+	/** Single-trait atom (queryShape single). */
+	trait?: string;
+	value?: boolean;
+	/** Two-clause AND (queryShape and). */
+	clauses?: QueryClause[];
 };
 
 export type GuessEvent = {

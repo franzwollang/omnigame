@@ -44,8 +44,9 @@ export type PlayerObservation = {
 		eliminated: string[];
 		lastQuery?: {
 			by: Player;
-			trait: string;
-			value: boolean;
+			trait?: string;
+			value?: boolean;
+			clauses?: Array<{ trait: string; value: boolean }>;
 			answer: boolean;
 		};
 	};

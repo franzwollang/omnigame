@@ -5,7 +5,7 @@
  * legality probes the reducer / observation rules.
  */
 import { Effect } from "effect";
-import type { GameState, Player, Position } from "@/engine/types";
+import type { GameState, Player, Position, QueryClause } from "@/engine/types";
 import {
 	asPlacementList,
 	getCell,
@@ -37,6 +37,10 @@ import {
 	legalDestinations,
 	movementBoardFrom
 } from "@/engine/movement";
+import {
+	enumerateConjunctionQueries,
+	formatQueryFingerprint
+} from "@/engine/deduction";
 import {
 	allActivePositions,
 	isActivePosition
@@ -76,7 +80,7 @@ export type KernelAction =
 			player: Player;
 			position: Position;
 	  }
-	| { type: "query"; trait: string; value: boolean }
+	| { type: "query"; trait?: string; value?: boolean; clauses?: QueryClause[] }
 	| { type: "guess"; id: string }
 	| { type: "eliminate"; id: string };
 
@@ -126,8 +130,9 @@ export type KernelEvent =
 	| {
 			type: "queryAnswered";
 			player: Player;
-			trait: string;
-			value: boolean;
+			trait?: string;
+			value?: boolean;
+			clauses?: QueryClause[];
 			answer: boolean;
 	  }
 	| {
@@ -239,7 +244,7 @@ function formatAction(action: KernelAction): string {
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
 		case "query":
-			return `query ${action.trait}=${action.value}`;
+			return `query ${formatQueryFingerprint(action)}`;
 		case "guess":
 			return `guess ${action.id}`;
 		case "eliminate":
@@ -257,7 +262,11 @@ export function formatKernelEvent(event: KernelEvent): string {
 		case "pieceCaptured":
 			return `${event.by} captured ${event.captured} at (${event.position.row},${event.position.col})`;
 		case "queryAnswered":
-			return `${event.player}: query ${event.trait}=${event.value} → ${event.answer}`;
+			return `${event.player}: query ${formatQueryFingerprint({
+				trait: event.trait,
+				value: event.value,
+				clauses: event.clauses
+			})} → ${event.answer}`;
 		case "guessResult":
 			return `${event.player}: guess ${event.targetId} → ${event.correct ? "correct" : "wrong"}`;
 		case "candidateEliminated":
@@ -449,6 +458,7 @@ function applyStep(
 				player: lq.by,
 				trait: lq.trait,
 				value: lq.value,
+				clauses: lq.clauses,
 				answer: lq.answer
 			});
 		}
@@ -709,9 +719,16 @@ function collectLegalActions(
 	}
 
 	if (inputMode === "deduction" && config.deduction) {
-		for (const trait of config.deduction.traits) {
-			actions.push({ type: "query", trait, value: true });
-			actions.push({ type: "query", trait, value: false });
+		const shape = config.deduction.queryShape ?? "single";
+		if (shape === "and") {
+			for (const q of enumerateConjunctionQueries(config.deduction.traits)) {
+				actions.push(q);
+			}
+		} else {
+			for (const trait of config.deduction.traits) {
+				actions.push({ type: "query", trait, value: true });
+				actions.push({ type: "query", trait, value: false });
+			}
 		}
 		const eliminated = new Set(
 			state.deduction?.eliminated[state.currentPlayer] ?? []
@@ -1302,12 +1319,58 @@ export function explainKernelAction(
 					detail: detailFor("mode_mismatch", action)
 				};
 			}
-			if (!config.deduction.traits.includes(action.trait)) {
-				return {
-					legal: false,
-					reason: "illegal_or_noop",
-					detail: detailFor("illegal_or_noop", action)
-				};
+			const shape = config.deduction.queryShape ?? "single";
+			if (shape === "and") {
+				const clauses = action.clauses;
+				if (!clauses || clauses.length !== 2) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+				if (action.trait !== undefined || action.value !== undefined) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+				const [c0, c1] = clauses;
+				if (!c0 || !c1 || c0.trait === c1.trait) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+				const allowed = new Set(config.deduction.traits);
+				if (!allowed.has(c0.trait) || !allowed.has(c1.trait)) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+			} else {
+				if (action.clauses && action.clauses.length > 0) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
+				if (
+					action.trait === undefined ||
+					action.value === undefined ||
+					!config.deduction.traits.includes(action.trait)
+				) {
+					return {
+						legal: false,
+						reason: "illegal_or_noop",
+						detail: detailFor("illegal_or_noop", action)
+					};
+				}
 			}
 			break;
 		}
@@ -1649,8 +1712,7 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "query":
 			return (
 				b.type === "query" &&
-				a.trait === b.trait &&
-				a.value === b.value
+				formatQueryFingerprint(a) === formatQueryFingerprint(b)
 			);
 		case "guess":
 			return b.type === "guess" && a.id === b.id;

@@ -8,7 +8,9 @@ import type {
 	CellValue,
 	Grid,
 	PendingPlace,
-	DeductionCharacter
+	DeductionCharacter,
+	QueryClause,
+	QueryEvent
 } from "./types";
 import {
 	asPlacementList,
@@ -59,9 +61,11 @@ import {
 import { getCell as readCell } from "@/engine/types";
 import {
 	answerQuery,
+	answerQueryConjunction,
 	assignSecrets,
 	canEliminate,
 	eliminateAfterQuery,
+	eliminateAfterQueryConjunction,
 	isGuessCorrect
 } from "@/engine/deduction";
 
@@ -163,6 +167,8 @@ export type GameConfig = {
 		wrongGuess: "lose" | "end_turn";
 		/** When false, query answers without pruning; use eliminate actions. */
 		autoEliminate: boolean;
+		/** single (default) or 2-clause AND queries. */
+		queryShape: "single" | "and";
 	};
 	initial?: InitialSeed[];
 };
@@ -531,7 +537,7 @@ export function reduce(
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
 		case "query":
-			return handleQuery(state, event.trait, event.value, config);
+			return handleQuery(state, event, config);
 		case "guess":
 			return handleGuess(state, event.id, config);
 		case "eliminate":
@@ -553,35 +559,81 @@ function isDeductionMode(config: GameConfig): boolean {
 
 function handleQuery(
 	state: GameState,
-	trait: string,
-	value: boolean,
+	event: QueryEvent,
 	config: GameConfig
 ): GameState {
 	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
 		return state;
 	}
 	if (state.status !== "playing") return state;
-	if (!config.deduction.traits.includes(trait)) return state;
 
+	const shape = config.deduction.queryShape ?? "single";
 	const player = state.currentPlayer;
 	const opponent: Player = player === "X" ? "O" : "X";
 	const secretId = state.deduction.secret[opponent];
-	const answer = answerQuery(
-		secretId,
-		config.deduction.roster,
-		trait,
-		value
-	);
 	const autoEliminate = config.deduction.autoEliminate !== false;
-	const eliminated = autoEliminate
-		? eliminateAfterQuery(
-				config.deduction.roster,
-				state.deduction.eliminated[player],
-				trait,
-				value,
-				answer
-			)
-		: state.deduction.eliminated[player];
+
+	let answer: boolean;
+	let lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
+	let eliminated: string[];
+
+	if (shape === "and") {
+		const clauses = event.clauses;
+		if (!clauses || clauses.length !== 2) return state;
+		const [c0, c1] = clauses as [QueryClause, QueryClause];
+		if (c0.trait === c1.trait) return state;
+		const allowed = new Set(config.deduction.traits);
+		if (!allowed.has(c0.trait) || !allowed.has(c1.trait)) return state;
+		// Reject single-atom fields on conjunction configs
+		if (event.trait !== undefined || event.value !== undefined) return state;
+
+		answer = answerQueryConjunction(
+			secretId,
+			config.deduction.roster,
+			clauses
+		);
+		eliminated = autoEliminate
+			? eliminateAfterQueryConjunction(
+					config.deduction.roster,
+					state.deduction.eliminated[player],
+					clauses,
+					answer
+				)
+			: state.deduction.eliminated[player];
+		lastQuery = {
+			by: player,
+			clauses: [
+				{ trait: c0.trait, value: c0.value },
+				{ trait: c1.trait, value: c1.value }
+			],
+			answer
+		};
+	} else {
+		// single
+		if (event.clauses && event.clauses.length > 0) return state;
+		const trait = event.trait;
+		const value = event.value;
+		if (trait === undefined || value === undefined) return state;
+		if (!config.deduction.traits.includes(trait)) return state;
+
+		answer = answerQuery(
+			secretId,
+			config.deduction.roster,
+			trait,
+			value
+		);
+		eliminated = autoEliminate
+			? eliminateAfterQuery(
+					config.deduction.roster,
+					state.deduction.eliminated[player],
+					trait,
+					value,
+					answer
+				)
+			: state.deduction.eliminated[player];
+		lastQuery = { by: player, trait, value, answer };
+	}
+
 	const newMoveCount = state.moveCount + 1;
 	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
@@ -593,7 +645,7 @@ function handleQuery(
 				...state.deduction.eliminated,
 				[player]: eliminated
 			},
-			lastQuery: { by: player, trait, value, answer }
+			lastQuery
 		},
 		currentPlayer: turn.currentPlayer,
 		actionsRemaining: turn.actionsRemaining,

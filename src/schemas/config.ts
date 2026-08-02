@@ -238,7 +238,12 @@ export const zConfig = z
 				traits: z.array(z.string().min(1)).min(1).max(6),
 				wrongGuess: z.enum(["lose", "end_turn"]).default("lose"),
 				/** When true (default), query auto-prunes inconsistent candidates. */
-				autoEliminate: z.boolean().default(true)
+				autoEliminate: z.boolean().default(true),
+				/**
+				 * Query atom shape: single trait=value, or 2-clause AND
+				 * ("glasses and hat?"). Default single keeps Guess Who Lite.
+				 */
+				queryShape: z.enum(["single", "and"]).default("single")
 			})
 			.strict()
 			.optional(),
@@ -495,6 +500,17 @@ export const zConfig = z
 						code: z.ZodIssueCode.custom,
 						path: ["deduction", "traits"],
 						message: "deduction.traits entries must be unique"
+					});
+				}
+				if (
+					(cfg.deduction.queryShape ?? "single") === "and" &&
+					traitKeys.length < 2
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "queryShape"],
+						message:
+							"deduction.queryShape 'and' requires at least 2 traits"
 					});
 				}
 				const ids = new Set<string>();

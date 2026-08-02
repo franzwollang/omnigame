@@ -12,6 +12,7 @@ import type {
 	Seed
 } from "@/engine/kernel";
 import { playerOf, stepPly } from "@/engine/kernel";
+import { formatQueryFingerprint } from "@/engine/deduction";
 import { mulberry32 } from "@/engine/rng";
 import type { Agent } from "@/agents/types";
 import { createHuntAgent } from "@/agents/hunt";
@@ -105,7 +106,7 @@ export function actionKey(action: KernelAction): string {
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
 		case "query":
-			return `query:${action.trait}=${action.value}`;
+			return `query:${formatQueryFingerprint(action)}`;
 		case "guess":
 			return `guess:${action.id}`;
 		case "eliminate":
@@ -139,7 +140,7 @@ function stateFingerprint(state: GameState): string {
 		state.grid.cells.join(","),
 		state.hidden?.cells.join(",") ?? "",
 		state.deduction
-			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${state.deduction.lastQuery.trait}=${state.deduction.lastQuery.value}:${state.deduction.lastQuery.answer}` : ""}`
+			? `d:${state.deduction.secret.X}/${state.deduction.secret.O}|eX:${state.deduction.eliminated.X.join(",")}|eO:${state.deduction.eliminated.O.join(",")}|lq:${state.deduction.lastQuery ? `${state.deduction.lastQuery.by}:${formatQueryFingerprint(state.deduction.lastQuery)}` : ""}`
 			: ""
 	].join("|");
 }

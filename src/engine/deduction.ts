@@ -3,7 +3,9 @@
  * Secrets from seeded RNG; queries prune candidate boards.
  */
 import { runSeeded } from "@/engine/rng";
-import type { DeductionCharacter } from "@/engine/types";
+import type { DeductionCharacter, QueryClause } from "@/engine/types";
+
+export type { QueryClause };
 
 /** Assign distinct secrets for X and O from roster ids (when length ≥ 2). */
 export function assignSecrets(
@@ -35,6 +37,20 @@ export function answerQuery(
 	return character.traits[trait] === value;
 }
 
+/** True iff the secret satisfies every clause (AND). */
+export function answerQueryConjunction(
+	secretId: string,
+	roster: readonly DeductionCharacter[],
+	clauses: readonly QueryClause[]
+): boolean {
+	const character = roster.find((c) => c.id === secretId);
+	if (!character) return false;
+	for (const clause of clauses) {
+		if (character.traits[clause.trait] !== clause.value) return false;
+	}
+	return true;
+}
+
 /**
  * Append newly eliminated roster ids for the querier after a query answer.
  * Candidates inconsistent with the answer are pruned.
@@ -51,6 +67,30 @@ export function eliminateAfterQuery(
 	for (const character of roster) {
 		if (already.has(character.id)) continue;
 		const matches = character.traits[trait] === value;
+		if (matches !== answer) {
+			next.push(character.id);
+		}
+	}
+	return next;
+}
+
+/**
+ * Prune candidates inconsistent with a conjunction answer.
+ * YES ⇒ keep only ids that match all clauses; NO ⇒ prune ids that match all.
+ */
+export function eliminateAfterQueryConjunction(
+	roster: readonly DeductionCharacter[],
+	eliminated: readonly string[],
+	clauses: readonly QueryClause[],
+	answer: boolean
+): string[] {
+	const already = new Set(eliminated);
+	const next = [...eliminated];
+	for (const character of roster) {
+		if (already.has(character.id)) continue;
+		const matches = clauses.every(
+			(c) => character.traits[c.trait] === c.value
+		);
 		if (matches !== answer) {
 			next.push(character.id);
 		}
@@ -77,6 +117,71 @@ export function candidatesInconsistentWithQuery(
 		if (matches !== answer) out.push(character.id);
 	}
 	return out;
+}
+
+/** Active candidates inconsistent with a conjunction answer. */
+export function candidatesInconsistentWithQueryConjunction(
+	roster: readonly DeductionCharacter[],
+	eliminated: readonly string[],
+	clauses: readonly QueryClause[],
+	answer: boolean
+): string[] {
+	const already = new Set(eliminated);
+	const out: string[] = [];
+	for (const character of roster) {
+		if (already.has(character.id)) continue;
+		const matches = clauses.every(
+			(c) => character.traits[c.trait] === c.value
+		);
+		if (matches !== answer) out.push(character.id);
+	}
+	return out;
+}
+
+/**
+ * Enumerate 2-clause AND queries over distinct traits (ordered by trait index).
+ * For n traits: C(n,2) × 4 boolean combinations.
+ */
+export function enumerateConjunctionQueries(
+	traits: readonly string[]
+): Array<{ type: "query"; clauses: [QueryClause, QueryClause] }> {
+	const out: Array<{ type: "query"; clauses: [QueryClause, QueryClause] }> =
+		[];
+	for (let i = 0; i < traits.length; i++) {
+		for (let j = i + 1; j < traits.length; j++) {
+			const a = traits[i]!;
+			const b = traits[j]!;
+			for (const va of [true, false] as const) {
+				for (const vb of [true, false] as const) {
+					out.push({
+						type: "query",
+						clauses: [
+							{ trait: a, value: va },
+							{ trait: b, value: vb }
+						]
+					});
+				}
+			}
+		}
+	}
+	return out;
+}
+
+/** Compact fingerprint for a query action or lastQuery payload. */
+export function formatQueryFingerprint(q: {
+	trait?: string;
+	value?: boolean;
+	clauses?: readonly QueryClause[];
+	answer?: boolean;
+}): string {
+	if (q.clauses && q.clauses.length > 0) {
+		const body = q.clauses
+			.map((c) => `${c.trait}=${c.value}`)
+			.join("&");
+		return q.answer === undefined ? body : `${body}:${q.answer}`;
+	}
+	const body = `${q.trait}=${q.value}`;
+	return q.answer === undefined ? body : `${body}:${q.answer}`;
 }
 
 /** True when `id` is on the roster and not already eliminated. */

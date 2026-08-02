@@ -1637,6 +1637,48 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"guess-who-and-lite": definePreset({
+		id: "guess-who-and-lite",
+		name: "Guess Who And Lite",
+		tags: ["deduction", "query", "conjunction", "observation", "mechanism"],
+		description:
+			"Same 4-character roster as Guess Who Lite, but each query is a 2-clause AND (e.g. glasses and hat?). Unlocks deduction.queryShape = and — compound pruning atomic queries cannot express in one turn.",
+		config: {
+			metadata: { name: "Guess Who And Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				queryShape: "and",
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"simultaneous-step-race": definePreset({
 		id: "simultaneous-step-race",
 		name: "Simultaneous Step Race",
