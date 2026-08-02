@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M21 hex sliding closed).
+**Marathon rule:** Work **P3 → P4** in order (M22 graph sliding closed).
 Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,14 +12,15 @@ Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Hex cube-axis sliding (`movement.range` 1..8 on `hex_offset`) landed as M21
-with `hex-slide-race`. Graph sliding remains deferred (no ray semantics yet).
+Graph chain-walk sliding (`movement.range` 1..8 on `graph`) landed as M22
+with `graph-slide-race` (strict edge chains; no junction turns).
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
-- Graph `range > 1` once chain-walk / hop semantics are chosen
 - Further phase sequences beyond place→* and move→fire (only if a new seam appears)
 - Richer Guess Who commit/hypothesis beyond query+guess MVP
+- Hex/graph `capture: replace` (only if a new seam forces it)
+- Hop-ball graph range (distinct from chain-walk — only if a game needs it)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -40,7 +41,7 @@ exhaust `references/` or recombine covered primitives).
       incl. move→fire, joint + ordered sliding, joint + ordered simultaneous
       replace, simultaneous slide+replace, joint replace vacated-origin hybrid,
       joint UCT under open + multi-action + commitReveal simultaneous,
-      hex cube-axis sliding)
+      hex cube-axis sliding, graph chain-walk sliding)
 
 ---
 

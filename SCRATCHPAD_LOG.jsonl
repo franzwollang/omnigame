@@ -71,3 +71,4 @@
 {"ts":"2026-08-02T02:55-00:00","focus":"M20 commitReveal joint UCT","summary":"Landed commitReveal joint UCT/MCTS; typecheck + 396 tests green","next":"Pick hex/graph sliding, richer phases/Guess Who, or P4 CI/semantics"}
 {"ts":"2026-08-02T03:05-00:00","focus":"M21 hex sliding","summary":"Synced a211; landed hex cube-axis sliding + hex-slide-race; green pending","next":"Green gate then hand off graph sliding or P4"}
 {"ts":"2026-08-02T03:10-00:00","focus":"M21 hex sliding","summary":"Landed hex cube-axis sliding; typecheck + 400 tests green","next":"Pick graph sliding, richer phases/Guess Who, or P4 CI/semantics"}
+{"ts":"2026-08-02T03:25-00:00","focus":"M22 graph sliding","summary":"Synced f1af; landed graph chain-walk sliding + graph-slide-race; typecheck + 405 green","next":"Pick richer phases/Guess Who/replace or P4 CI/semantics"}

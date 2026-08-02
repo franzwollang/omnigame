@@ -474,9 +474,17 @@ describe("Graph Slide Race (movement.range > 1 on graph)", () => {
 					["0,1", "1,1"],
 					["1,1", "2,0"],
 					["1,1", "2,2"]
-				]
+				] as [string, string][]
 			},
-			movement: { adjacency: "orthogonal" as const, range: 4 },
+			movement: {
+				adjacency: "orthogonal" as const,
+				range: 4,
+				capture: "none" as const
+			},
+			objective: {
+				mode: "reach_row" as const,
+				targetRows: { X: 2, O: 0 }
+			},
 			initial: [
 				{ row: 0, col: 1, player: "X" as const, visibility: "public" as const },
 				{ row: 2, col: 0, player: "O" as const, visibility: "public" as const }

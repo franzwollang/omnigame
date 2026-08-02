@@ -38,10 +38,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M19 | Next missing mechanism (joint UCT under multi-action simultaneous) | `done` |
 | M20 | Next missing mechanism (joint UCT/MCTS under commitReveal) | `done` |
 | M21 | Next missing mechanism (hex cube-axis sliding) | `done` |
+| M22 | Next missing mechanism (graph chain-walk sliding) | `done` |
 
-**Optimizing for this marathon:** M21 hex sliding closed. Pick **P3
-next-missing-mechanism** (e.g. graph sliding, richer phases, richer Guess
-Who) or **P4** CI / semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M22 graph sliding closed. Pick **P3
+next-missing-mechanism** (e.g. richer phases, richer Guess Who, hex/graph
+replace) or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -69,8 +70,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M21 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M21) — smallest new seam — or
+   (P0–P2 / M8–M22 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M22) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -83,8 +84,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 - No exhausting `references/` as a checklist (mechanism-first only)  
 - No Effect Schema migration; no arbitrary user code in specs  
 - No weakening / skipping tests to go green  
-- No graph `movement.range > 1` until chain-walk / hop semantics are chosen  
 - No hex/graph `capture: replace` until a new seam forces it  
+- No hop-ball graph range until a game needs turning mid-slide  
 - Do not treat `docs/scratchpad.md` as current backlog  
 
 ## Decisions (locked)
@@ -118,14 +119,14 @@ variants, flip + liberties capture, **move capture-by-replacement** (incl.
 **joint + ordered simultaneous replace** and **slide+replace**), point/positional/situational ko,
 observation (hit/miss + fog + **deduction**), fleet placement, Move
 (orthogonal/diagonal/king + sliding range on rectangle **and hex_offset cube
-axes**; graph neighbors range 1), tick/Life, simultaneous
+axes** + **graph edge chain-walk**; replace rectangle-only), tick/Life, simultaneous
 place/move (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
 sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire**), **query +
 guess / identify_secret**.
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
-Lite, Slide Race, **Hex Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
+Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
 Replace Race, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
@@ -135,11 +136,11 @@ Lite, Go Lite variants, etc.).
 `movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
 observation, etc., plus an in-UI “Form coverage” callout for remaining
 JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
-`placement.capture`, `deduction.*` / `identify_secret`, …). Hex range 2–8
-unlocked; graph range still locked to 1 in the form.
+`placement.capture`, `deduction.*` / `identify_secret`, …). Range 2–8 unlocked
+for rectangle, hex, and graph (chain-walk).
 
-**Not yet:** full Go; graph sliding; CI workflows; richer Guess Who
-commit/hypothesis beyond query+guess MVP.
+**Not yet:** full Go; hop-ball graph range; hex/graph replace; CI workflows;
+richer Guess Who commit/hypothesis beyond query+guess MVP; semantics doc refresh.
 
 ## Phase 2 exit criteria
 
@@ -263,10 +264,21 @@ commit/hypothesis beyond query+guess MVP.
 
 - Schema accepts `hex_offset` + move + `reach_row` + `movement.range` 2..8 — **done**
 - `slideHexDestinations` walks six cube axes via `stepHex` (blocker/wrap parity
-  with rectangle slides); graph still range 1 — **done**
+  with rectangle slides); graph still range 1 at the time — **done**
 - Preset `hex-slide-race` + destination / blocker / win+replay tests — **done**
-- Form range max unlocked for hex (graph stays 1) — **done**
-- Out of scope: graph sliding; hex/graph replace capture
+- Form range max unlocked for hex (graph stays 1 until M22) — **done**
+- Out of scope closed by M22: graph sliding
+- Out of scope: hex/graph replace capture
+
+### M22 — Graph chain-walk sliding
+
+- Schema accepts `graph` + move + `reach_row` + `movement.range` 2..8 — **done**
+- `slideGraphDestinations` walks unique forward edge chains (blocker parity;
+  junctions stop — no turning mid-slide); replace still rectangle-only — **done**
+- Preset `graph-slide-race` + destination / blocker / junction / win+replay
+  tests — **done**
+- Form range max unlocked for graph — **done**
+- Out of scope: hop-ball graph range; hex/graph replace capture
 
 ## Sequencing notes
 

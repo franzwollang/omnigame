@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T03:10-00:00",
-  "turn": 47,
+  "updated_at": "2026-08-02T03:25-00:00",
+  "turn": 48,
   "focus": {
-    "milestone": "M21",
+    "milestone": "M22",
     "issue": "next-missing-mechanism",
-    "goal": "Hex cube-axis sliding landed; hand off next seam"
+    "goal": "Graph chain-walk sliding landed; hand off next seam"
   },
   "recent": [
-    "Synced M8–M20 from a211 onto f1af",
-    "Landed M21 hex sliding + hex-slide-race",
-    "typecheck + 400 tests green"
+    "Synced M8–M21 from f1af onto 6b5f",
+    "Landed M22 graph sliding + graph-slide-race",
+    "typecheck + 405 tests green"
   ],
   "discoveries": [
-    "Odd-r same column ≠ cube-axis ray; O at (0,2) off X's NW/NE slides",
-    "Graph sliding still needs explicit chain/hop semantics"
+    "Graph slide = unique forward chain; junctions stop (≠ fog hop-ball BFS)",
+    "Hub graph from spoke reaches hub only — cannot fork mid-slide"
   ],
   "open_threads": [
-    "Next: graph sliding, richer phases/Guess Who, or P4 CI/semantics"
+    "Next: richer phases/Guess Who, hex/graph replace, or P4 CI/semantics"
   ],
-  "next_step": "Pick graph sliding (chain-walk) or P4 CI/semantics refresh",
+  "next_step": "Pick next seam (phases/Guess Who/replace) or P4 CI/semantics",
   "blockers": []
 }
