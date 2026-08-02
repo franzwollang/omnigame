@@ -34,8 +34,8 @@ describe("schema: multi-action simultaneous move", () => {
 		expect(gameConfig.objectiveMode).toBe("reach_row");
 	});
 
-	it("rejects commitReveal + multi-action simultaneous move", () => {
-		const bad = zConfig.safeParse({
+	it("accepts commitReveal + multi-action simultaneous move", () => {
+		const ok = zConfig.safeParse({
 			...examplePresets["double-simultaneous-step-race"].config,
 			turn: {
 				mode: "turn",
@@ -44,7 +44,7 @@ describe("schema: multi-action simultaneous move", () => {
 				commitReveal: true
 			}
 		});
-		expect(bad.success).toBe(false);
+		expect(ok.success).toBe(true);
 	});
 
 	it("rejects range > 1 and replace under multi-action simultaneous move", () => {

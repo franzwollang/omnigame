@@ -180,11 +180,10 @@ export default function GamePage() {
 					return;
 				}
 				if ((engineConfig.inputMode ?? "cell") === "move") {
-					const seat: PlayerId | null = !gameState.committedMoves?.X
-						? 0
-						: !gameState.committedMoves?.O
-							? 1
-							: null;
+					const xLen = gameState.committedMoves?.X?.length ?? 0;
+					const oLen = gameState.committedMoves?.O?.length ?? 0;
+					const seat: PlayerId | null =
+						xLen < budget ? 0 : oLen < budget ? 1 : null;
 					if (seat === null) return;
 					const action = agentRef.current.act(kernel, gameState, seat);
 					if (action) dispatchAction(action);
@@ -631,11 +630,16 @@ export default function GamePage() {
 								<>
 									{commitReveal ? (
 										<>
-											Hidden simultaneous move: select{" "}
-											{simultaneousSeat ?? "X"}&apos;s piece then
-											destination (own commit destination overlaid;
-											opponent hidden); board reveals when both commit;
-											same destination →{" "}
+											Hidden simultaneous move
+											{actionsPerRound > 1
+												? ` (${actionsPerRound}/round)`
+												: ""}
+											: select {simultaneousSeat ?? "X"}
+											&apos;s piece then destination (own commit
+											destination
+											{actionsPerRound > 1 ? "s" : ""} overlaid;
+											opponent hidden); board reveals when both fill
+											budget; same destination →{" "}
 											{resolveOrder === "joint"
 												? "neither moves"
 												: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}

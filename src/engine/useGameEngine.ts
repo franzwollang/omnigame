@@ -18,7 +18,7 @@ import {
 	type PlayerId,
 	type Seed
 } from "@/engine/kernel";
-import { listHasPosition, positionsEqual, setCell, type MovePair } from "@/engine/types";
+import { listHasPosition, positionsEqual, setCell, applySoloMoves, type MovePair } from "@/engine/types";
 import {
 	canMove,
 	movementBoardFrom
@@ -51,6 +51,13 @@ export type PendingMoves = Partial<Record<Player, MovePair[]>>;
 
 function commitLen(
 	commits: GameState["committedPlacements"],
+	player: Player
+): number {
+	return commits?.[player]?.length ?? 0;
+}
+
+function commitMoveLen(
+	commits: GameState["committedMoves"],
 	player: Player
 ): number {
 	return commits?.[player]?.length ?? 0;
@@ -191,8 +198,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		if (!simultaneous || state.status !== "playing") return null;
 		if (simultaneousMove) {
 			if (commitReveal) {
-				if (!state.committedMoves?.X) return "X";
-				if (!state.committedMoves?.O) return "O";
+				if (commitMoveLen(state.committedMoves, "X") < actionsPerRound)
+					return "X";
+				if (commitMoveLen(state.committedMoves, "O") < actionsPerRound)
+					return "O";
 				return null;
 			}
 			if (pendingMoveLen(pendingMoves, "X") < actionsPerRound) return "X";
@@ -234,15 +243,39 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		(pos: Position) => {
 			if (simultaneous && simultaneousMove) {
 				if (commitReveal) {
-					const seat: Player | null = !stateRef.current.committedMoves?.X
-						? "X"
-						: !stateRef.current.committedMoves?.O
-							? "O"
-							: null;
+					const seat: Player | null =
+						commitMoveLen(stateRef.current.committedMoves, "X") <
+						actionsPerRound
+							? "X"
+							: commitMoveLen(stateRef.current.committedMoves, "O") <
+								  actionsPerRound
+								? "O"
+								: null;
 					if (!seat) return;
 					const selected = selectedFromRef.current;
 					const occupant = getCell(stateRef.current.grid, pos);
+					const ownCommits =
+						stateRef.current.committedMoves?.[seat] ?? [];
 					if (!selected) {
+						if (ownCommits.length > 0) {
+							const lastTo = ownCommits[ownCommits.length - 1]!.to;
+							const probe = applySoloMoves(
+								stateRef.current.grid,
+								seat,
+								ownCommits
+							);
+							const probeOcc = getCell(probe, pos);
+							if (
+								positionsEqual(lastTo, pos) ||
+								probeOcc === seat
+							) {
+								selectedFromRef.current = positionsEqual(lastTo, pos)
+									? lastTo
+									: pos;
+								setSelectedFrom(selectedFromRef.current);
+							}
+							return;
+						}
 						if (occupant === seat) {
 							selectedFromRef.current = pos;
 							setSelectedFrom(pos);
@@ -254,19 +287,49 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 						setSelectedFrom(null);
 						return;
 					}
-					if (occupant === seat) {
+					if (occupant === seat && ownCommits.length === 0) {
 						selectedFromRef.current = pos;
 						setSelectedFrom(pos);
 						return;
 					}
+					const probe = applySoloMoves(
+						stateRef.current.grid,
+						seat,
+						ownCommits
+					);
+					const movement = config.movement;
+					const moveOk =
+						!!movement &&
+						canMove(
+							probe,
+							selected,
+							pos,
+							seat,
+							movement,
+							movementBoardFrom(config)
+						);
+					if (!moveOk) {
+						setLastIllegal({
+							reason: "invalid_destination",
+							detail: "Illegal move for this simultaneous round"
+						});
+						return;
+					}
+					setLastIllegal(null);
 					applyAction({
 						type: "commitMove",
 						player: seat,
 						from: selected,
 						to: pos
 					});
-					selectedFromRef.current = null;
-					setSelectedFrom(null);
+					// applyAction clears selection; re-select landing for chain
+					// continuation when this seat still has budget remaining.
+					const afterOwn =
+						stateRef.current.committedMoves?.[seat]?.length ?? 0;
+					if (afterOwn > 0 && afterOwn < actionsPerRound) {
+						selectedFromRef.current = pos;
+						setSelectedFrom(pos);
+					}
 					return;
 				}
 				const seat: Player | null =

@@ -16,7 +16,7 @@ import {
 } from "@/agents/jointLegal";
 
 describe("schema: commitReveal × simultaneous move", () => {
-	it("accepts simultaneous-step-race + commitReveal; rejects multi-action", () => {
+	it("accepts simultaneous-step-race + commitReveal; accepts multi-action", () => {
 		const ok = zConfig.safeParse(
 			examplePresets["hidden-simultaneous-step-race"].config
 		);
@@ -41,7 +41,7 @@ describe("schema: commitReveal × simultaneous move", () => {
 				actionsPerTurn: 2
 			}
 		});
-		expect(multi.success).toBe(false);
+		expect(multi.success).toBe(true);
 	});
 
 	it("rejects alternating + commitReveal + move", () => {
@@ -80,10 +80,12 @@ describe("kernel: hidden simultaneous commitMove", () => {
 		});
 		state = result.nextState;
 		expect(state.moveCount).toBe(0);
-		expect(state.committedMoves?.X).toEqual({
-			from: { row: 4, col: 2 },
-			to: { row: 3, col: 2 }
-		});
+		expect(state.committedMoves?.X).toEqual([
+			{
+				from: { row: 4, col: 2 },
+				to: { row: 3, col: 2 }
+			}
+		]);
 		expect(getCell(state.grid, { row: 4, col: 2 })).toBe("X");
 		expect(getCell(state.grid, { row: 3, col: 2 })).toBe(null);
 

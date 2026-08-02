@@ -990,8 +990,9 @@ export const zConfig = z
 				// reach_row pairing enforced below with moveInput !== reachRow
 				// Topology-aware movement: rectangle | hex_offset | graph
 				// commitReveal allowed (Hidden Simultaneous Step Race / commitMove)
-				// at budget 1; multi-action open simultaneous move is gated in the
-				// multiStep block below (range 1, no replace, no commitReveal).
+				// at any actionsPerTurn budget under the multiStep foothold
+				// (range 1, no replace). Multi-action open simultaneous move shares
+				// the same gates.
 				// Joint simultaneous sliding / replace: vacated-origin paths
 				// (stationary enemies stay; fleers clear the ray).
 				// Ordered simultaneous: sequential path / capture revalidation.
@@ -1028,8 +1029,8 @@ export const zConfig = z
 			// Multi-action simultaneous place/move (actionsPerTurn > 1) is allowed
 			// on rectangle | hex_offset | graph — same topologies as single-action
 			// simultaneous. Alternating multi-step uses the same topologies.
-			// Multi-action simultaneous move: open joint only, range 1, no replace
-			// (see multiStep block).
+			// Multi-action simultaneous move: range 1, no replace; open joint or
+			// commitReveal (see multiStep block).
 		} else if (cfg.turn.commitReveal === true) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
@@ -1067,15 +1068,8 @@ export const zConfig = z
 				cfg.turn.schedule === "simultaneous" && moveInput;
 
 			if (multiActionSimMove) {
-				// Open simultaneous multi-move: reach_row + range-1 + no replace.
-				if (cfg.turn.commitReveal === true) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["turn", "commitReveal"],
-						message:
-							"actionsPerTurn > 1 under simultaneous move is incompatible with commitReveal (open joint only)"
-					});
-				}
+				// Simultaneous multi-move: reach_row + range-1 + no replace.
+				// commitReveal allowed (Hidden Double Simultaneous Step Race).
 				if (cfg.objective.mode !== "reach_row") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,

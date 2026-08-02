@@ -59,7 +59,8 @@ export function isFreshCommitRound(state: GameState): boolean {
 		(state.committedPlacements?.X?.length ?? 0) === 0 &&
 		(state.committedPlacements?.O?.length ?? 0) === 0;
 	const moveFresh =
-		state.committedMoves?.X == null && state.committedMoves?.O == null;
+		(state.committedMoves?.X?.length ?? 0) === 0 &&
+		(state.committedMoves?.O?.length ?? 0) === 0;
 	const deductionFresh =
 		state.committedDeduction?.X == null &&
 		state.committedDeduction?.O == null;
@@ -345,9 +346,16 @@ export function enumerateCommitRevealJoints(
 		return enumerateDeductionJointsFromSeatActions(a0, a1);
 	}
 	if ((kernel.config.inputMode ?? "cell") === "move") {
-		const a0 = commitMovesAsMoveActions(kernel.legalActions(state, 0));
-		const a1 = commitMovesAsMoveActions(kernel.legalActions(state, 1));
-		return enumeratePlaceJointsFromSeatPlaces(a0, a1, 1);
+		const budget = kernel.config.actionsPerTurn ?? 1;
+		if (budget <= 1) {
+			const a0 = commitMovesAsMoveActions(kernel.legalActions(state, 0));
+			const a1 = commitMovesAsMoveActions(kernel.legalActions(state, 1));
+			return enumeratePlaceJointsFromSeatPlaces(a0, a1, 1);
+		}
+		return enumerateMoveJointsFromChains(
+			orderedMoveChains(kernel, state, 0, budget),
+			orderedMoveChains(kernel, state, 1, budget)
+		);
 	}
 	const budget = kernel.config.actionsPerTurn ?? 1;
 	const a0 = commitPlacesAsPlaceActions(kernel.legalActions(state, 0));
@@ -512,8 +520,10 @@ export function activeCommitSeat(
 		return null;
 	}
 	if (opts?.move) {
-		if (state.committedMoves?.X == null) return 0;
-		if (state.committedMoves?.O == null) return 1;
+		const xLen = state.committedMoves?.X?.length ?? 0;
+		const oLen = state.committedMoves?.O?.length ?? 0;
+		if (xLen < budget) return 0;
+		if (oLen < budget) return 1;
 		return null;
 	}
 	const xLen = state.committedPlacements?.X?.length ?? 0;
@@ -525,10 +535,15 @@ export function activeCommitSeat(
 
 function committedMovesFingerprint(state: GameState): string {
 	if (!state.committedMoves) return "";
-	const fmt = (m: { from: { row: number; col: number }; to: { row: number; col: number } } | undefined) =>
-		m
-			? `${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`
-			: "";
+	const fmt = (
+		list: { from: { row: number; col: number }; to: { row: number; col: number } }[] | undefined
+	) =>
+		(list ?? [])
+			.map(
+				(m) =>
+					`${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`
+			)
+			.join("+");
 	return `cmX:${fmt(state.committedMoves.X)}|cmO:${fmt(state.committedMoves.O)}`;
 }
 

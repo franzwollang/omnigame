@@ -16,11 +16,13 @@ import {
 	asPlacementList,
 	getCell,
 	isCellPending,
+	listHasMove,
 	listHasPosition,
 	movesEqual,
 	positionsEqual,
 	setCell,
 	toIndex,
+	applySoloMoves,
 	type MovePair
 } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
@@ -1529,7 +1531,9 @@ function handleCommitPlace(
 
 /**
  * Hidden simultaneous move: record a private {from,to} commit. When both seats
- * have committed, reveal via handleSimultaneousMove (budget always 1).
+ * have committed their full per-round budget (`actionsPerTurn`), reveal via
+ * handleSimultaneousMove (arrays for budget > 1; same-piece chains validated
+ * on a solo probe of prior commits).
  */
 function handleCommitMove(
 	state: GameState,
@@ -1546,24 +1550,28 @@ function handleCommitMove(
 	if (!movement) return state;
 
 	const board = movementBoardFrom(config);
-	if (!canMove(state.grid, from, to, player, movement, board)) return state;
-
+	const budget = resolveActionsPerTurn(config);
 	const prior = state.committedMoves ?? {};
-	if (prior[player]) return state; // already committed this round
+	const own = prior[player] ?? [];
+	if (own.length >= budget) return state;
+	const nextPair: MovePair = { from, to };
+	if (listHasMove(own, nextPair)) return state;
 
-	const nextCommits: Partial<
-		Record<Player, { from: Position; to: Position }>
-	> = {
+	const probe = applySoloMoves(state.grid, player, own);
+	if (!canMove(probe, from, to, player, movement, board)) return state;
+
+	const nextOwn = [...own, nextPair];
+	const nextCommits: Partial<Record<Player, MovePair[]>> = {
 		...prior,
-		[player]: { from, to }
+		[player]: nextOwn
 	};
 
-	const x = nextCommits.X;
-	const o = nextCommits.O;
-	if (x && o) {
+	const xList = nextCommits.X ?? [];
+	const oList = nextCommits.O ?? [];
+	if (xList.length === budget && oList.length === budget) {
 		return handleSimultaneousMove(
 			{ ...state, committedMoves: nextCommits },
-			{ X: x, O: o },
+			{ X: xList, O: oList },
 			config
 		);
 	}

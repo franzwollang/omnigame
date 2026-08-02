@@ -145,15 +145,17 @@ function stateFingerprint(state: GameState): string {
 			? `cX:${(state.committedPlacements.X ?? []).map((p) => `${p.row},${p.col}`).join("+")}|cO:${(state.committedPlacements.O ?? []).map((p) => `${p.row},${p.col}`).join("+")}`
 			: "",
 		state.committedMoves
-			? `cmX:${
-					state.committedMoves.X
-						? `${state.committedMoves.X.from.row},${state.committedMoves.X.from.col}->${state.committedMoves.X.to.row},${state.committedMoves.X.to.col}`
-						: ""
-				}|cmO:${
-					state.committedMoves.O
-						? `${state.committedMoves.O.from.row},${state.committedMoves.O.from.col}->${state.committedMoves.O.to.row},${state.committedMoves.O.to.col}`
-						: ""
-				}`
+			? `cmX:${(state.committedMoves.X ?? [])
+					.map(
+						(m) =>
+							`${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`
+					)
+					.join("+")}|cmO:${(state.committedMoves.O ?? [])
+					.map(
+						(m) =>
+							`${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`
+					)
+					.join("+")}`
 			: "",
 		state.committedDeduction
 			? `cdX:${

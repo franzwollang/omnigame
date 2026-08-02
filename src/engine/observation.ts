@@ -271,21 +271,24 @@ export function observe(
 		// Hidden simultaneous move: overlay own destination (intent to land);
 		// do not vacate from — piece stays publicly at origin until reveal.
 		if (config.commitReveal && state.committedMoves?.[player]) {
-			const dest = state.committedMoves[player]!.to;
-			cells[toIndex(dest, state.grid.width)] = player;
+			const ownMoves = state.committedMoves[player] ?? [];
+			for (const m of ownMoves) {
+				cells[toIndex(m.to, state.grid.width)] = player;
+			}
 		}
-		const ownMove = state.committedMoves?.[player];
+		const ownMoves = state.committedMoves?.[player] ?? [];
+		const lastMove = ownMoves[ownMoves.length - 1];
 		return {
 			player,
 			cells,
 			visible: allVisible(size),
 			lastShot,
-			...(ownMove
+			...(lastMove
 				? {
 						pendingCommit: {
 							kind: "move" as const,
-							from: ownMove.from,
-							to: ownMove.to
+							from: lastMove.from,
+							to: lastMove.to
 						}
 					}
 				: {})

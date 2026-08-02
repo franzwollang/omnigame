@@ -2298,7 +2298,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Each seat submits two orthogonal steps per simultaneous round; indexed pairs resolve jointly with mid-round reach_row checks. Same-piece chains allowed (to of step 1 = from of step 2). Unlocks actionsPerTurn > 1 under simultaneous move — not commitReveal, not sliding/replace.",
+			"Each seat submits two orthogonal steps per simultaneous round; indexed pairs resolve jointly with mid-round reach_row checks. Same-piece chains allowed (to of step 1 = from of step 2). Unlocks actionsPerTurn > 1 under open simultaneous move — commitReveal multi-move is Hidden Double Simultaneous Step Race; not sliding/replace.",
 		config: {
 			metadata: { name: "Double Simultaneous Step Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -2349,7 +2349,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Each seat privately commits a step; pieces move when both have committed. Same destination → neither moves. Unlocks turn.commitReveal under simultaneous move / commitMove — not multi-action, not replace.",
+			"Each seat privately commits a step; pieces move when both have committed. Same destination → neither moves. Unlocks turn.commitReveal under simultaneous move / commitMove — multi-action commitReveal is Hidden Double Simultaneous Step Race; not replace.",
 		config: {
 			metadata: { name: "Hidden Simultaneous Step Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -2372,6 +2372,63 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				},
 				{
 					id: "hidden-runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"hidden-double-simultaneous-step-race": definePreset({
+		id: "hidden-double-simultaneous-step-race",
+		name: "Hidden Double Simultaneous Step Race",
+		tags: [
+			"move",
+			"reach-row",
+			"simultaneous",
+			"commitReveal",
+			"actionsPerTurn",
+			"multi-action",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Each seat privately commits two orthogonal steps; pieces move when both fill budget. Same-piece chains allowed. Same destination at an index → neither. Unlocks commitReveal + actionsPerTurn > 1 under simultaneous move (range 1, no replace).",
+		config: {
+			metadata: {
+				name: "Hidden Double Simultaneous Step Race",
+				version: 1
+			},
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				actionsPerTurn: 2,
+				commitReveal: true
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hidden-double-runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hidden-double-runner-o",
 					label: "O",
 					players: ["O"],
 					asset: { type: "image", url: "/assets/tokens/o.png" }

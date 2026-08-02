@@ -9,8 +9,10 @@ import type { GameState, Player, Position, QueryClause } from "@/engine/types";
 import {
 	asMoveList,
 	asPlacementList,
+	applySoloMoves,
 	getCell,
 	isCellPending,
+	listHasMove,
 	listHasPosition,
 	movesEqual,
 	positionsEqual,
@@ -873,27 +875,31 @@ function collectLegalActions(
 			if (!movement) return [];
 			const board = movementBoardFrom(config);
 			if (commitReveal) {
-				if (state.committedMoves?.[acting]) return [];
+				const own = state.committedMoves?.[acting] ?? [];
+				if (own.length >= budget) return [];
+				const probe = applySoloMoves(state.grid, acting, own);
 				for (const from of allActivePositions(
-					state.grid,
+					probe,
 					config.topology ?? "rectangle",
 					config.graph
 				)) {
-					if (getCell(state.grid, from) !== acting) continue;
+					if (getCell(probe, from) !== acting) continue;
 					for (const to of legalDestinations(
-						state.grid,
+						probe,
 						from,
 						movement,
 						board
 					)) {
-						if (canMove(state.grid, from, to, acting, movement, board)) {
-							actions.push({
-								type: "commitMove",
-								player: acting,
-								from,
-								to
-							});
+						if (!canMove(probe, from, to, acting, movement, board)) {
+							continue;
 						}
+						if (listHasMove(own, { from, to })) continue;
+						actions.push({
+							type: "commitMove",
+							player: acting,
+							from,
+							to
+						});
 					}
 				}
 				return actions;
@@ -1765,7 +1771,16 @@ export function explainKernelAction(
 				detail: detailFor("wrong_player", action)
 			};
 		}
-		if (state.committedMoves?.[action.player]) {
+		const budget = config.actionsPerTurn ?? 1;
+		const own = state.committedMoves?.[action.player] ?? [];
+		if (own.length >= budget) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		if (listHasMove(own, { from: action.from, to: action.to })) {
 			return {
 				legal: false,
 				reason: "already_committed",
@@ -1781,9 +1796,10 @@ export function explainKernelAction(
 			};
 		}
 		const board = movementBoardFrom(config);
+		const probe = applySoloMoves(state.grid, action.player, own);
 		if (
 			!canMove(
-				state.grid,
+				probe,
 				action.from,
 				action.to,
 				action.player,
@@ -2834,10 +2850,10 @@ export function stepPly(
 						return last;
 					}
 				} else if (moveMode) {
-					const xReady = s.committedMoves?.X != null;
-					const oReady = s.committedMoves?.O != null;
-					if (xReady && oReady) break;
-					const pid: PlayerId = !xReady ? 0 : 1;
+					const xLen = s.committedMoves?.X?.length ?? 0;
+					const oLen = s.committedMoves?.O?.length ?? 0;
+					if (xLen >= budget && oLen >= budget) break;
+					const pid: PlayerId = xLen < budget ? 0 : 1;
 					const legal = kernel.legalActions(s, pid);
 					const action = pickFor(pid, legal);
 					if (!action) return last;
@@ -2846,8 +2862,8 @@ export function stepPly(
 					if (s.status !== "playing") return last;
 					// After reveal, committedMoves clears — stop.
 					if (
-						s.committedMoves?.X == null &&
-						s.committedMoves?.O == null &&
+						(s.committedMoves?.X?.length ?? 0) === 0 &&
+						(s.committedMoves?.O?.length ?? 0) === 0 &&
 						s.moveCount > state.moveCount
 					) {
 						return last;

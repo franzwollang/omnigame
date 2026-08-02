@@ -116,11 +116,11 @@ export type GameState = {
 	 */
 	committedPlacements?: Partial<Record<Player, Position[]>>;
 	/**
-	 * Hidden simultaneous move: per-seat private {from,to} commit. Cleared after
-	 * joint reveal (`simultaneousMove`). Budget is always 1 under commitReveal
-	 * move (multi-action open simultaneous move is separate).
+	 * Hidden simultaneous move: per-seat private {from,to} commits
+	 * (0..actionsPerTurn each). Cleared after joint reveal (`simultaneousMove`).
+	 * Supports budget 1 (Hidden Step Race) and budget > 1 (Hidden Double Step Race).
 	 */
-	committedMoves?: Partial<Record<Player, { from: Position; to: Position }>>;
+	committedMoves?: Partial<Record<Player, MovePair[]>>;
 	/**
 	 * Hidden simultaneous deduction: per-seat private query/guess/eliminate
 	 * commit. Cleared after joint reveal (`simultaneousQuery` /
@@ -198,6 +198,33 @@ export function listHasPosition(
 	pos: Position
 ): boolean {
 	return (list ?? []).some((p) => positionsEqual(p, pos));
+}
+
+/** True when `list` already contains the same {from,to} pair. */
+export function listHasMove(
+	list: readonly MovePair[] | undefined,
+	move: MovePair
+): boolean {
+	return (list ?? []).some((m) => movesEqual(m, move));
+}
+
+/**
+ * Solo-apply a seat's committed / pending moves onto a probe grid (origins
+ * vacated, pieces land on destinations). Used for chain legality under
+ * multi-action simultaneous move (open or commitReveal).
+ */
+export function applySoloMoves(
+	grid: Grid,
+	player: Player,
+	moves: readonly MovePair[]
+): Grid {
+	let g = grid;
+	for (const m of moves) {
+		let cells = setCell(g, m.from, null);
+		cells = setCell({ ...g, cells }, m.to, player);
+		g = { ...g, cells };
+	}
+	return g;
 }
 
 export type PlaceMoveEvent = {
