@@ -129,10 +129,11 @@ export const zConfig = z
 		 * the ray; stationary enemies stay visible and still require replace.
 		 * Ordered uses sequential capture apply (priority can capture before
 		 * prey flees). Works with sliding `range > 1` on rectangle, hex_offset
-		 * (cube-axis rays), and graph (edge chain-walk). Ordered simultaneous
-		 * + range > 1 uses sequential path revalidation. graph uses
-		 * topology-neighbor chain-walk (orthogonal, range 1..8; no turning at
-		 * junctions; same replace rules).
+		 * (cube-axis rays), and graph (edge chain-walk or hop-ball BFS).
+		 * Ordered simultaneous + range > 1 uses sequential path revalidation.
+		 * graph path mode: `graphReach` = `chain` (default; unique-forward
+		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
+		 * at junctions — distinct from fog hop distance).
 		 */
 		movement: z
 			.object({
@@ -140,7 +141,9 @@ export const zConfig = z
 					.enum(["orthogonal", "diagonal", "king"])
 					.default("orthogonal"),
 				range: z.number().int().min(1).max(8).default(1),
-				capture: z.enum(["none", "replace"]).default("none")
+				capture: z.enum(["none", "replace"]).default("none"),
+				/** Graph-only: chain-walk (default) or hop-ball BFS. */
+				graphReach: z.enum(["chain", "hop"]).default("chain")
 			})
 			.strict()
 			.optional(),
@@ -794,7 +797,8 @@ export const zConfig = z
 							"graph move requires movement.adjacency = 'orthogonal' (uses explicit edges)"
 					});
 				}
-				// graph chain-walk sliding range 1..8 (M22); replace unlocked (M27)
+				// graph chain-walk sliding range 1..8 (M22); replace unlocked (M27);
+				// hop-ball BFS via movement.graphReach = "hop" (M31)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
@@ -1647,6 +1651,26 @@ export const zConfig = z
 					path: ["movement", "capture"],
 					message:
 						"movement.capture = 'replace' is incompatible with placement.capture"
+				});
+			}
+		}
+
+		// Graph hop-ball: movement.graphReach = "hop" is graph-only
+		if (cfg.movement?.graphReach === "hop") {
+			if (cfg.grid.topology !== "graph") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "graphReach"],
+					message:
+						"movement.graphReach = 'hop' requires grid.topology = 'graph'"
+				});
+			}
+			if (!moveInput && !(cfg.turn.phases ?? []).includes("move")) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "graphReach"],
+					message:
+						"movement.graphReach = 'hop' requires input.mode = 'move' or a turn phase that includes move"
 				});
 			}
 		}

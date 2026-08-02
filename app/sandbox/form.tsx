@@ -592,13 +592,14 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										Required for input.mode = move and for phases that
 										include move. Diagonal/king are rectangle-only;
 										range &gt; 1 slides on rectangle, hex cube axes, or
-										graph edge chains. Joint simultaneous sliding uses
-										vacated-origin paths (incl. replace — fleeing
-										blockers clear; stationary targets stay); ordered
-										simultaneous sliding revalidates the second seat
-										after the first. Replace capture is rectangle |
-										hex_offset | graph + move; ordered simultaneous
-										replace uses sequential apply.
+										graph edge chains (or hop-ball BFS when graphReach =
+										hop). Joint simultaneous sliding uses vacated-origin
+										paths (incl. replace — fleeing blockers clear;
+										stationary targets stay); ordered simultaneous
+										sliding revalidates the second seat after the first.
+										Replace capture is rectangle | hex_offset | graph +
+										move; ordered simultaneous replace uses sequential
+										apply.
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
@@ -667,16 +668,53 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														/>
 													</FormControl>
 													<p className="text-xs text-muted-foreground">
-														1 = adjacent step; 2–8 = sliding on
+														1 = adjacent step; 2–8 = sliding / hop on
 														rectangle deltas, hex cube axes, or graph
-														edge chains (stops at occupied / dead-end /
-														junction).
+														(chain stops at junction; hop may turn).
 													</p>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
 									</div>
+									{topology === "graph" && (
+										<FormField
+											control={form.control}
+											name="movement.graphReach"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Graph reach</FormLabel>
+													<FormControl>
+														<Select
+															value={field.value ?? "chain"}
+															onValueChange={(v) => {
+																ensureMovement();
+																field.onChange(v);
+															}}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="chain" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="chain">
+																	chain (no junction turns)
+																</SelectItem>
+																<SelectItem value="hop">
+																	hop (BFS, may turn)
+																</SelectItem>
+															</SelectContent>
+														</Select>
+													</FormControl>
+													<p className="text-xs text-muted-foreground">
+														chain = unique-forward edge walk (Graph
+														Slide Race). hop = BFS within range —
+														may turn at junctions (Graph Hop Race).
+													</p>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									)}
 									<FormField
 										control={form.control}
 										name="movement.capture"

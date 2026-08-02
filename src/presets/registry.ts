@@ -2618,6 +2618,74 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"graph-hop-race": definePreset({
+		id: "graph-hop-race",
+		name: "Graph Hop Race",
+		tags: [
+			"move",
+			"hop",
+			"range",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Hop-ball race on a hub graph (range 2). Unlocks movement.graphReach = hop — BFS within range may turn at junctions (chain-walk Graph Slide Race cannot express spoke landings past a hub). Distinct from fog hop distance.",
+		config: {
+			metadata: { name: "Graph Hop Race", version: 1 },
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 2, col: 2, x: 2, y: 2 }
+				],
+				edges: [
+					["0,1", "1,1"],
+					["1,1", "2,0"],
+					["1,1", "2,2"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 2,
+				graphReach: "hop"
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 2, O: 0 }
+			},
+			tokens: [
+				{
+					id: "graph-hopper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-hopper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 0, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-step-race": definePreset({
 		id: "hex-step-race",
 		name: "Hex Step Race",

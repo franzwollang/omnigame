@@ -47,11 +47,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M28 | Next missing mechanism (compoundArity / 3-clause AND) | `done` |
 | M29 | Next missing mechanism (deduction query→eliminate phases) | `done` |
 | M30 | Next missing mechanism (simultaneous deduction joint query/guess) | `done` |
+| M31 | Next missing mechanism (graph hop-ball range) | `done` |
 
-**Optimizing for this marathon:** M30 simultaneous deduction foothold /
-Simultaneous Guess Who Lite closed. Pick **P3 next-missing-mechanism**
-(e.g. hop-ball, fire→move, simultaneous deduction extensions) or **P4** CI /
-semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M31 graph hop-ball / Graph Hop Race closed.
+Pick **P3 next-missing-mechanism** (e.g. fire→move, simultaneous deduction
+extensions) or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -66,7 +66,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥475** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥481** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -79,8 +79,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M30 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M30) — smallest new seam — or
+   (P0–P2 / M8–M31 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M31) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -93,7 +93,6 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 - No exhausting `references/` as a checklist (mechanism-first only)  
 - No Effect Schema migration; no arbitrary user code in specs  
 - No weakening / skipping tests to go green  
-- No hop-ball graph range until a game needs turning mid-slide  
 - Do not treat `docs/scratchpad.md` as current backlog  
 
 ## Decisions (locked)
@@ -142,7 +141,7 @@ guess / identify_secret** + **manual eliminate** (`autoEliminate: false`) +
 queries** (`queryShape: or`) + **N-clause compounds** (`compoundArity`).
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
-Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
+Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, **Graph Hop Race**, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
 Replace Race, **Hex Replace Race**, **Graph Replace Race**, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**,
@@ -150,15 +149,15 @@ Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Li
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
-`movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
-observation, etc., plus an in-UI “Form coverage” callout for remaining
-JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
-`placement.capture`, `deduction.*` / `identify_secret`, …). Range 2–8 unlocked
-for rectangle, hex, and graph (chain-walk).
+`movement.adjacency` / `movement.range` / `movement.capture` /
+`movement.graphReach`, placement, win, observation, etc., plus an in-UI
+“Form coverage” callout for remaining JSON/preset-only fields (`scheduler`,
+graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
+`identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
+(chain-walk or hop-ball).
 
-**Not yet:** full Go; hop-ball graph range; CI workflows;
-semantics doc refresh; fire→move reorder; simultaneous deduction
-compound/commitReveal/joint UCT.
+**Not yet:** full Go; CI workflows; semantics doc refresh; fire→move reorder;
+simultaneous deduction compound/commitReveal/joint UCT.
 
 ## Phase 2 exit criteria
 
@@ -382,7 +381,8 @@ compound/commitReveal/joint UCT.
 - Preset `guess-who-commit-phases-lite` + form options + same-turn
   query→eliminate transcript/replay tests — **done**
 - Out of scope closed by M30: simultaneous deduction foothold
-- Out of scope: hop-ball; fire→move; multi-eliminate budget within eliminate phase
+- Out of scope closed by M31: hop-ball graph range
+- Out of scope: fire→move; multi-eliminate budget within eliminate phase
 
 ### M30 — Simultaneous deduction (joint query/guess)
 
@@ -396,6 +396,18 @@ compound/commitReveal/joint UCT.
 - Preset `simultaneous-guess-who-lite` + transcript/replay tests — **done**
 - Out of scope: compound queries; manual eliminate; commitReveal; ordered;
   joint UCT over query cartesian; sandbox pendingQueries UI
+
+### M31 — Graph hop-ball range
+
+- Schema: `movement.graphReach = "chain" | "hop"` (default chain); hop requires
+  `grid.topology = graph` + move (or move phase) — **done**
+- Kernel: `hopGraphDestinations` BFS within range; empty-cell traversal;
+  blocker stop; replace lands on enemy (not traversable); default chain
+  preserves M22/M27 — **done**
+- Preset `graph-hop-race` (hub topology) + transcript/replay + chain contrast
+  tests; form Graph reach control — **done**
+- Out of scope: fire→move; simultaneous deduction compound/commitReveal/joint
+  UCT; multi-jump capture chains
 
 ## Sequencing notes
 

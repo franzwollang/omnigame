@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T06:10-00:00",
-  "turn": 58,
+  "updated_at": "2026-08-02T06:20-00:00",
+  "turn": 59,
   "focus": {
-    "milestone": "M30",
+    "milestone": "M31",
     "issue": "next-missing-mechanism",
-    "goal": "simultaneous deduction joint query/guess landed; hand off next seam or P4"
+    "goal": "graph hop-ball landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M29 from 7ddb onto 7dce",
-    "Landed M30 simultaneousQuery/Guess + Simultaneous Guess Who Lite",
-    "475 green; ScheduleSimultaneous CellsWritable-only for deduction"
+    "Synced M8–M30 from 7dce onto 3636",
+    "Landed M31 graphReach hop + Graph Hop Race hub preset",
+    "Form Graph reach control; chain default preserved"
   ],
   "discoveries": [
-    "ScheduleSimultaneous must not require ResolvedCell for deduction"
+    "Hop BFS turns at junctions; chain-walk cannot express spoke landings"
   ],
   "open_threads": [
-    "Next: hop-ball, fire→move, sim-deduction UCT/compound, or P4 CI/semantics"
+    "Next: fire→move, sim-deduction UCT/compound, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (hop-ball/fire→move/sim-deduction ext) or P4",
+  "next_step": "Pick next seam (fire→move/sim-deduction ext) or P4",
   "blockers": []
 }

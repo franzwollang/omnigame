@@ -4,8 +4,9 @@
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
  * (path empty except destination). Hex_offset: orthogonal cube-axis slides
  * (range 1..8, same blocker/replace rules). Graph: orthogonal chain-walk
- * along explicit edges (range 1..8; no turning at junctions; same
- * blocker/replace rules as rectangle/hex).
+ * along explicit edges (range 1..8; no turning at junctions) **or** hop-ball
+ * BFS within range (`graphReach: "hop"`; may turn at junctions) — same
+ * blocker/replace rules as rectangle/hex.
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -22,12 +23,21 @@ export type MovementAdjacency = "orthogonal" | "diagonal" | "king";
 
 export type MovementCapture = "none" | "replace";
 
+/** Graph path mode: chain-walk (default) or hop-ball BFS. */
+export type GraphReach = "chain" | "hop";
+
 export type MovementConfig = {
 	adjacency: MovementAdjacency;
-	/** Max steps along a ray (1 = adjacent only; >1 = sliding). */
+	/** Max steps along a ray / hop depth (1 = adjacent only; >1 = sliding/hop). */
 	range: number;
 	/** Move onto enemy removes occupant then lands. Default none. */
 	capture?: MovementCapture;
+	/**
+	 * Graph-only path mode. `chain` = unique-forward edge walk (no junction
+	 * turns). `hop` = BFS within range (may turn at junctions). Ignored on
+	 * rectangle / hex_offset.
+	 */
+	graphReach?: GraphReach;
 };
 
 export type MovementBoard = {
@@ -209,6 +219,50 @@ function slideGraphDestinations(
 	return out;
 }
 
+/**
+ * Graph hop-ball BFS: all empty nodes within `range` hops along explicit
+ * edges, traversing only through empty cells. With `capture: "replace"`,
+ * an enemy node within range is a legal landing (not traversable). Own
+ * pieces block. May turn at junctions — distinct from chain-walk.
+ * Range 1 degenerates to empty (or enemy) neighbors.
+ */
+function hopGraphDestinations(
+	grid: Grid,
+	from: Position,
+	config: MovementConfig,
+	graph: GraphTopologyData,
+	mover: Player
+): Position[] {
+	const range = Math.max(1, Math.floor(config.range));
+	const replace = config.capture === "replace";
+	const out: Position[] = [];
+	const seen = new Set<string>([posKey(from)]);
+	const queue: Array<{ pos: Position; dist: number }> = [
+		{ pos: from, dist: 0 }
+	];
+
+	while (queue.length > 0) {
+		const cur = queue.shift()!;
+		if (cur.dist >= range) continue;
+		for (const n of graph.neighborsOf.get(posKey(cur.pos)) ?? []) {
+			const key = posKey(n);
+			if (seen.has(key)) continue;
+			seen.add(key);
+			const occ = getCell(grid, n);
+			if (occ !== null) {
+				if (replace && occ !== mover && (occ === "X" || occ === "O")) {
+					out.push(n);
+				}
+				// Occupied cells are never traversable.
+				continue;
+			}
+			out.push(n);
+			queue.push({ pos: n, dist: cur.dist + 1 });
+		}
+	}
+	return out;
+}
+
 /** Neighbor cells for a range-1 step under the board topology. */
 export function movementNeighbors(
 	grid: Grid,
@@ -280,8 +334,11 @@ export function legalDestinations(
 	const { wrap, topology, graph } = opts;
 
 	if (topology === "graph") {
-		// Chain-walk slides along explicit edges (same blocker/replace as rect/hex).
+		// Chain-walk (default) or hop-ball BFS; same blocker/replace as rect/hex.
 		if (config.adjacency !== "orthogonal" || !graph) return [];
+		if (config.graphReach === "hop") {
+			return hopGraphDestinations(grid, from, config, graph, mover);
+		}
 		return slideGraphDestinations(grid, from, config, graph, mover);
 	}
 
