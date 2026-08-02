@@ -370,7 +370,7 @@ describe("movement.capture schema / validateConfig", () => {
 
 	it("rejects replace on graph topology", () => {
 		const bad = zConfig.safeParse({
-			...examplePresets["graph-step-race"].config,
+			...examplePresets["graph-slide-race"].config,
 			movement: {
 				adjacency: "orthogonal",
 				range: 1,
