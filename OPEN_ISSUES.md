@@ -2,8 +2,8 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M19 multi-action joint UCT in
-flight). Do not ask which fork — pick the smallest new seam under
+**Marathon rule:** Work **P3 → P4** in order (M19 multi-action joint UCT closed).
+Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
 ---
@@ -12,8 +12,8 @@ flight). Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Joint UCT/MCTS over multi-action open simultaneous (`actionsPerTurn > 1`) is
-M19 (in flight / landing this turn).
+Joint UCT/MCTS over multi-action open simultaneous (`actionsPerTurn > 1`)
+landed as M19.
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 

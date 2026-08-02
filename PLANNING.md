@@ -35,9 +35,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M16 | Next missing mechanism (move→fire in-turn phases) | `done` |
 | M17 | Next missing mechanism (joint replace vacated-origin hybrid) | `done` |
 | M18 | Next missing mechanism (joint UCT/MCTS under simultaneous) | `done` |
-| M19 | Next missing mechanism (joint UCT under multi-action simultaneous) | `in progress` |
+| M19 | Next missing mechanism (joint UCT under multi-action simultaneous) | `done` |
 
-**Optimizing for this marathon:** M19 joint multi-action UCT. Then **P3
+**Optimizing for this marathon:** M19 multi-action joint UCT closed. Pick **P3
 next-missing-mechanism** (e.g. commitReveal joint search) or **P4** CI /
 semantics refresh — without asking which fork.
 
