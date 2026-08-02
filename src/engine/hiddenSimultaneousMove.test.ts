@@ -11,7 +11,8 @@ import { replayActions } from "@/ir/gameIr";
 import { validateConfig } from "@/engine/validateConfig";
 import {
 	enumerateCommitRevealJoints,
-	isFreshCommitRound
+	isFreshCommitRound,
+	seatCommitFromJoint
 } from "@/agents/jointLegal";
 
 describe("schema: commitReveal × simultaneous move", () => {
@@ -192,6 +193,27 @@ describe("kernel: hidden simultaneous commitMove", () => {
 		expect(ignored.events[0]?.type).toBe("ignored");
 	});
 
+	it("rejects illegal destination on commitMove", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-step-race"].config
+		);
+		const state = kernel.initialState();
+		const bad = {
+			type: "commitMove" as const,
+			player: "X" as const,
+			from: { row: 4, col: 2 },
+			to: { row: 2, col: 2 } // range-1 orthogonal: two steps north — illegal
+		};
+		const explained = kernel.explainAction(state, 0, bad);
+		expect(explained.legal).toBe(false);
+		if (!explained.legal) {
+			expect(explained.reason).toBe("invalid_destination");
+		}
+		const ignored = kernel.stepSync(state, bad);
+		expect(ignored.events[0]?.type).toBe("ignored");
+		expect(ignored.nextState.committedMoves).toBeUndefined();
+	});
+
 	it("stepPly completes a full commit-reveal move round", () => {
 		const { kernel } = compileConfig(
 			examplePresets["hidden-simultaneous-step-race"].config
@@ -271,6 +293,36 @@ describe("agents: commitReveal move joints", () => {
 		}).nextState;
 		expect(isFreshCommitRound(state)).toBe(false);
 		expect(enumerateCommitRevealJoints(kernel, state)).toHaveLength(0);
+	});
+
+	it("seatCommitFromJoint maps simultaneousMove to commitMove", () => {
+		const { kernel } = compileConfig(
+			examplePresets["hidden-simultaneous-step-race"].config
+		);
+		const state = kernel.initialState();
+		const joints = enumerateCommitRevealJoints(kernel, state);
+		const joint = joints.find(
+			(j) =>
+				j.type === "simultaneousMove" &&
+				j.moves.X.from.row === 4 &&
+				j.moves.X.from.col === 2 &&
+				j.moves.X.to.row === 3 &&
+				j.moves.X.to.col === 2
+		);
+		expect(joint?.type).toBe("simultaneousMove");
+		if (joint?.type !== "simultaneousMove") throw new Error("expected joint");
+		expect(seatCommitFromJoint(joint, 0)).toEqual({
+			type: "commitMove",
+			player: "X",
+			from: joint.moves.X.from,
+			to: joint.moves.X.to
+		});
+		expect(seatCommitFromJoint(joint, 1)).toEqual({
+			type: "commitMove",
+			player: "O",
+			from: joint.moves.O.from,
+			to: joint.moves.O.to
+		});
 	});
 });
 
