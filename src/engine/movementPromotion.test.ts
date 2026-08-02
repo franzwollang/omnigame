@@ -22,7 +22,7 @@ const PROMO: MovementConfig = {
 	capture: "jump",
 	mustCapture: true,
 	promotion: {
-		targetRows: { X: 0, O: 4 },
+		targetRows: { X: 1, O: 3 },
 		crownedAdjacency: "king"
 	}
 };
@@ -39,8 +39,8 @@ describe("movement.promotion schema", () => {
 		expect(parsed.success).toBe(true);
 		if (parsed.success) {
 			expect(parsed.data.movement?.promotion?.targetRows).toEqual({
-				X: 0,
-				O: 4
+				X: 1,
+				O: 3
 			});
 			expect(parsed.data.movement?.promotion?.crownedAdjacency).toBe(
 				"king"
@@ -55,7 +55,7 @@ describe("movement.promotion schema", () => {
 			range: 1,
 			capture: "none",
 			promotion: {
-				targetRows: { X: 0, O: 4 },
+				targetRows: { X: 1, O: 3 },
 				crownedAdjacency: "king"
 			}
 		};
@@ -70,7 +70,7 @@ describe("movement.promotion schema", () => {
 			range: 1,
 			capture: "jump",
 			promotion: {
-				targetRows: { X: 0, O: 4 },
+				targetRows: { X: 1, O: 3 },
 				crownedAdjacency: "king"
 			}
 		};
@@ -85,7 +85,7 @@ describe("movement.promotion schema", () => {
 			range: 1,
 			capture: "jump",
 			promotion: {
-				targetRows: { X: 0, O: 4 },
+				targetRows: { X: 1, O: 3 },
 				crownedAdjacency: "king"
 			}
 		};
@@ -117,52 +117,52 @@ describe("promotion apply + events", () => {
 				range: 1,
 				capture: "jump",
 				promotion: {
-					targetRows: { X: 0, O: 4 },
+					targetRows: { X: 1, O: 3 },
 					crownedAdjacency: "king"
 				}
 			},
 			initial: [
-				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
 				{ row: 4, col: 4, player: "O", visibility: "public" }
 			]
 		});
-		expect(gameConfig.movement?.promotion?.targetRows.X).toBe(0);
+		expect(gameConfig.movement?.promotion?.targetRows.X).toBe(1);
 		const state = kernel.initialState(42);
-		expect(getCell(state.grid, { row: 1, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("X");
 		const quiet: KernelAction = {
 			type: "move",
-			from: { row: 1, col: 2 },
-			to: { row: 0, col: 1 }
+			from: { row: 2, col: 2 },
+			to: { row: 1, col: 1 }
 		};
 		const result = kernel.stepSync(state, quiet);
 		expect(result.events.some((e) => e.type === "ignored")).toBe(false);
-		expect(getCell(result.nextState.grid, { row: 0, col: 1 })).toBe("X+");
+		expect(getCell(result.nextState.grid, { row: 1, col: 1 })).toBe("X+");
 		expect(
 			result.events.some(
 				(e) =>
 					e.type === "piecePromoted" &&
 					e.player === "X" &&
-					e.at.row === 0 &&
+					e.at.row === 1 &&
 					e.at.col === 1
 			)
 		).toBe(true);
-		expect(result.nextState.status).toBe("won");
-		expect(result.nextState.winner).toBe("X");
+		// Promo row ≠ win row → still playing after quiet promote.
+		expect(result.nextState.status).toBe("playing");
 	});
 
-	it("jump land on promotion row promotes", () => {
+	it("jump land on promotion row promotes without winning", () => {
 		const cfg = examplePresets["crowned-jump-race"].config;
 		const { kernel } = compileConfig(cfg);
 		const state = kernel.initialState(cfg.rng.seed);
 		const jump: KernelAction = {
 			type: "move",
-			from: { row: 2, col: 2 },
-			to: { row: 0, col: 0 }
+			from: { row: 3, col: 2 },
+			to: { row: 1, col: 0 }
 		};
 		const result = kernel.stepSync(state, jump);
 		expect(result.events.some((e) => e.type === "ignored")).toBe(false);
-		expect(getCell(result.nextState.grid, { row: 0, col: 0 })).toBe("X+");
-		expect(getCell(result.nextState.grid, { row: 1, col: 1 })).toBeNull();
+		expect(getCell(result.nextState.grid, { row: 1, col: 0 })).toBe("X+");
+		expect(getCell(result.nextState.grid, { row: 2, col: 1 })).toBeNull();
 		expect(
 			result.events.some(
 				(e) =>
@@ -176,10 +176,12 @@ describe("promotion apply + events", () => {
 				(e) =>
 					e.type === "piecePromoted" &&
 					e.player === "X" &&
-					e.at.row === 0 &&
+					e.at.row === 1 &&
 					e.at.col === 0
 			)
 		).toBe(true);
+		expect(result.nextState.status).toBe("playing");
+		expect(result.nextState.currentPlayer).toBe("O");
 	});
 });
 
@@ -236,12 +238,14 @@ describe("mustCapture with crowned marks", () => {
 	});
 });
 
-describe("GameIR promote sequence", () => {
-	it("transcript + replay for promote jump", () => {
+describe("GameIR promote + crowned win sequence", () => {
+	it("transcript + replay: promote then crowned orthogonal win", () => {
 		const cfg = examplePresets["crowned-jump-race"].config;
 		const { gameConfig } = compileConfig(cfg);
 		const actions: KernelAction[] = [
-			{ type: "move", from: { row: 2, col: 2 }, to: { row: 0, col: 0 } }
+			{ type: "move", from: { row: 3, col: 2 }, to: { row: 1, col: 0 } },
+			{ type: "move", from: { row: 4, col: 4 }, to: { row: 3, col: 3 } },
+			{ type: "move", from: { row: 1, col: 0 }, to: { row: 0, col: 0 } }
 		];
 		const { finalState, faithful, events } = replayActions(
 			gameConfig,
@@ -249,29 +253,88 @@ describe("GameIR promote sequence", () => {
 			cfg.rng.seed
 		);
 		expect(faithful).toBe(true);
-		expect(getCell(finalState.grid, { row: 0, col: 0 })).toBe("X+");
 		expect(events.some((e) => e.type === "piecePromoted")).toBe(true);
+		expect(getCell(finalState.grid, { row: 0, col: 0 })).toBe("X+");
 		expect(finalState.status).toBe("won");
+		expect(finalState.winner).toBe("X");
 	});
 });
 
 describe("Crowned Kings Jump Lite preset", () => {
-	it("loads and demonstrates promotion on opening jump", () => {
+	it("opening jump promotes; crowned orthogonal then wins", () => {
 		const cfg = examplePresets["crowned-jump-race"].config;
 		expect(validateConfig(cfg).ok).toBe(true);
 		const { kernel, gameConfig } = compileConfig(cfg);
 		expect(gameConfig.movement?.promotion?.crownedAdjacency).toBe("king");
-		const state = createInitialState(gameConfig);
-		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("X");
-		const legal = kernel.legalActions(state, 0);
-		// mustCapture: only the promoting jump
-		expect(legal).toEqual([
-			{ type: "move", from: { row: 2, col: 2 }, to: { row: 0, col: 0 } }
+		expect(gameConfig.movement?.promotion?.targetRows).toEqual({
+			X: 1,
+			O: 3
+		});
+		expect(gameConfig.objectiveMode).toBe("reach_row");
+		expect(gameConfig.targetRows).toEqual({ X: 0, O: 4 });
+
+		let state = createInitialState(gameConfig);
+		expect(getCell(state.grid, { row: 3, col: 2 })).toBe("X");
+		const opening = kernel.legalActions(state, 0);
+		// mustCapture: only the promoting jump to row 1
+		expect(opening).toEqual([
+			{ type: "move", from: { row: 3, col: 2 }, to: { row: 1, col: 0 } }
 		]);
-		const result = kernel.stepSync(state, legal[0]!);
-		expect(getCell(result.nextState.grid, { row: 0, col: 0 })).toBe("X+");
+		let result = kernel.stepSync(state, opening[0]!);
+		expect(getCell(result.nextState.grid, { row: 1, col: 0 })).toBe("X+");
 		expect(result.events.some((e) => e.type === "piecePromoted")).toBe(
 			true
 		);
+		expect(result.nextState.status).toBe("playing");
+		state = result.nextState;
+
+		// O replies with a quiet diagonal step
+		const oLegal = kernel.legalActions(state, 1);
+		expect(
+			oLegal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 4 &&
+					a.from.col === 4 &&
+					a.to.row === 3 &&
+					a.to.col === 3
+			)
+		).toBe(true);
+		result = kernel.stepSync(state, {
+			type: "move",
+			from: { row: 4, col: 4 },
+			to: { row: 3, col: 3 }
+		});
+		state = result.nextState;
+
+		// Crowned X+ at (1,0): orthogonal (0,0) is legal; men would not have it
+		const crownedLegal = kernel.legalActions(state, 0);
+		expect(
+			crownedLegal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 1 &&
+					a.from.col === 0 &&
+					a.to.row === 0 &&
+					a.to.col === 0
+			)
+		).toBe(true);
+		// Sanity: uncrowned diagonal from (1,0) cannot step to (0,0)
+		expect(
+			legalDestinations(
+				{ ...state.grid, cells: setCell(state.grid, { row: 1, col: 0 }, "X") },
+				{ row: 1, col: 0 },
+				{ ...PROMO, mustCapture: false }
+			).some((p) => p.row === 0 && p.col === 0)
+		).toBe(false);
+
+		result = kernel.stepSync(state, {
+			type: "move",
+			from: { row: 1, col: 0 },
+			to: { row: 0, col: 0 }
+		});
+		expect(getCell(result.nextState.grid, { row: 0, col: 0 })).toBe("X+");
+		expect(result.nextState.status).toBe("won");
+		expect(result.nextState.winner).toBe("X");
 	});
 });

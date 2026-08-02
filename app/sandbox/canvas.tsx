@@ -864,6 +864,35 @@ export default function SandboxCanvas({
 				circle.position.z = 0.001;
 				marksGroup.add(circle);
 			}
+			if (crowned) {
+				const badge = document.createElement("canvas");
+				badge.width = 64;
+				badge.height = 64;
+				const bctx = badge.getContext("2d");
+				if (bctx) {
+					bctx.fillStyle = "#fbbf24";
+					bctx.font = "bold 48px sans-serif";
+					bctx.textAlign = "center";
+					bctx.textBaseline = "middle";
+					bctx.fillText("+", 32, 34);
+					const btex = new THREE.CanvasTexture(badge);
+					const bmat = new THREE.MeshBasicMaterial({
+						map: btex,
+						transparent: true
+					});
+					const bgeo = new THREE.PlaneGeometry(
+						cellSize * 0.28,
+						cellSize * 0.28
+					);
+					const bmesh = new THREE.Mesh(bgeo, bmat);
+					bmesh.position.set(
+						x + cellSize * 0.22,
+						y + cellSize * 0.22,
+						0.002
+					);
+					marksGroup.add(bmesh);
+				}
+			}
 		});
 
 		// Delayed-place intents: faint ghost marks on reserved pending cells /

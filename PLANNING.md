@@ -721,10 +721,12 @@ in M49).
 - Reducer/kernel: preserve crown on move; promote on land; `piecePromoted`
   event; crowned mid-capture clears with `pieceCaptured` owner — **done**
 - Contract `MovementPromotion`; preset `crowned-jump-race` (Crowned Kings
-  Jump Lite); canvas crowns; form JSON note — **done**
+  Jump Lite — mustCapture jump promotes on row 1, then crowned orthogonal
+  to win row 0; promo ≠ win so crowned adjacency is playable); canvas crowns;
+  form JSON note — **done**
 - Out of scope: simultaneous jump; forward-only men; longest-chain;
   hex/graph promotion
-- Green gate: 641 tests — **done**
+- Green gate: ≥641 tests — **done**
 
 ## Sequencing notes
 

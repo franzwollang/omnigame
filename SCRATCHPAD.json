@@ -1,19 +1,19 @@
 {
-  "updated_at": "2026-08-02T12:28-00:00",
-  "turn": 78,
+  "updated_at": "2026-08-02T12:35-00:00",
+  "turn": 79,
   "focus": {
     "milestone": "M49",
     "issue": "next-missing-mechanism",
     "goal": "crowned promotion landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Landed M48 graph jump + Graph Jump Race; 630 green",
     "Landed M49 crowned promotion + Crowned Kings Jump Lite; 641 green",
-    "Rejected forward-only men / hex-graph promo for v1 scope"
+    "Preset promo≠win so crowned ortho step is playable before terminal",
+    "Rejected fire→move / hex flood / memory bonusTurn as recombinations"
   ],
   "discoveries": [
     "CrownMark X+/O+ via cellOwner; effectiveMovement for crowned adjacency",
-    "promotion requires rectangle jump; promote on land emits piecePromoted"
+    "promotion requires rectangle jump; promo row should diverge from win row"
   ],
   "open_threads": [
     "Next: forward-only/longest-chain, full Go, realtime; reject fire→move"

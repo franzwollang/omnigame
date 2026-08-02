@@ -1870,7 +1870,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Diagonal jump race with Transform-lite promotion: land on the opponent back rank to crown (X+/O+). Crowned pieces use king adjacency (incl. orthogonal/backward) while men stay diagonal-only. mustCapture forces the opening leap that promotes. Unlocks movement.promotion — jump/mustCapture alone cannot change piece type in place.",
+			"Diagonal jump race with Transform-lite promotion: land on promotion row 1 to crown (X+/O+), then use crowned king adjacency (orthogonal) to reach win row 0 — a step men cannot take. mustCapture forces the opening leap that promotes (promo row ≠ win row so crowning does not end the game). Unlocks movement.promotion — jump/mustCapture alone cannot change piece type in place.",
 		config: {
 			metadata: { name: "Crowned Kings Jump Lite", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -1883,7 +1883,8 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				capture: "jump",
 				mustCapture: true,
 				promotion: {
-					targetRows: { X: 0, O: 4 },
+					// Promo row ≠ win row so a crowned orthogonal step is playable.
+					targetRows: { X: 1, O: 3 },
 					crownedAdjacency: "king"
 				}
 			},
@@ -1909,10 +1910,11 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			],
 			placements: [],
 			initial: [
-				// X(2,2) mustCapture-jumps O(1,1)→(0,0): promotes to X+ and wins row 0.
-				// Men are diagonal-only; after crowning, king adjacency unlocks orthogonal.
-				{ row: 2, col: 2, player: "X", visibility: "public" },
-				{ row: 1, col: 1, player: "O", visibility: "public" },
+				// X(3,2) mustCapture-jumps O(2,1)→(1,0): promotes to X+ (still playing).
+				// After O's reply, X+ at (1,0) walks orthogonal (0,0) to win — men
+				// (diagonal-only) have no (1,0)→(0,0) quiet step.
+				{ row: 3, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 1, player: "O", visibility: "public" },
 				{ row: 4, col: 4, player: "O", visibility: "public" }
 			]
 		}
