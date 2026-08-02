@@ -142,7 +142,9 @@ Replace Race / **Hex Replace Race** / **Graph Replace Race** demonstrate
 leap-over + `mustContinueFrom` chains); **Graph Jump Race** demonstrates
 `capture = jump` on graph (2-edge leap-over + chains); **Crowned Kings Jump
 Lite** demonstrates `movement.promotion` (Transform lite — crown on reach
-row; crowned adjacency).
+row; crowned adjacency); **Forward Men Jump Lite** demonstrates
+`promotion.menForwardOnly` (uncrowned advance toward promo side only;
+crowned unrestricted).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
 **Memory:** **Memory Flip Lite** demonstrates `memory_flip` + `flip` +
