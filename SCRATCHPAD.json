@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T01:15-00:00",
-  "turn": 40,
+  "updated_at": "2026-08-02T01:24-00:00",
+  "turn": 41,
   "focus": {
-    "milestone": "M15",
+    "milestone": "M16",
     "issue": "next-missing-mechanism",
-    "goal": "Simultaneous slide+replace landed; next seam or P4"
+    "goal": "Move→fire phases landed; next seam or P4"
   },
   "recent": [
-    "Synced M8–M14 from 855b onto 7034",
-    "M15: simultaneous slide+replace + Slide Replace Race presets",
-    "Green gate: typecheck + 366 tests"
+    "Synced M8–M15 from 7034 onto 7ab6",
+    "M16: turn.phases move→fire + Move & Fire Lite",
+    "Green gate: typecheck + 374 tests"
   ],
   "discoveries": [
-    "Joint replace slides use real-board (paths clear pre-round)",
-    "Ordered slide+replace reuses sequential path/capture apply"
+    "Kernel already routed move/fire by turnPhaseIndex",
+    "move→fire needs public seeds; fleets stay owner-hidden"
   ],
   "open_threads": [
-    "P3 next seam (phases / joint UCT / vacated hybrid) or P4"
+    "P3 next seam (joint UCT / vacated hybrid) or P4"
   ],
   "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []

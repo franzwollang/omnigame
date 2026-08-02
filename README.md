@@ -74,6 +74,7 @@ These are built from the same shared schema and operators.
 - **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
 - **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
 - **Place, Move & Fire Lite** (`turn.phases: ["place","move","fire"]` + `connect_or_destroy`)
+- **Move & Fire Lite** (`turn.phases: ["move","fire"]` — reposition spotter then fire; no place)
 - **Simultaneous Step Race** (`simultaneous` + `move` joint resolve; same-destination conflict)
 - **Simultaneous Slide Race** (`simultaneous` + `movement.range > 1`; vacated-origin path checks)
 - **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
@@ -117,7 +118,7 @@ fields (`scheduler`, graph `nodes`/`edges`, `initial`, `placements`,
 - `pnpm run dev` — Next.js sandbox
 - `pnpm run build` / `start` — production
 - `pnpm run typecheck` / `lint`
-- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥302 tests)
+- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥374 tests)
 - Green gate: `pnpm install && pnpm typecheck && pnpm test`
 
 Open work and marathon queue: `OPEN_ISSUES.md` / `PLANNING.md` (not this README).
@@ -162,7 +163,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   slide+replace; sequential path/capture); hex_offset / graph use topology
   neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph Step
   Race
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** presets
@@ -255,8 +256,8 @@ Turn logic is declarative:
 - N players
 - schedule: alternating, simultaneous place or move (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action place rounds), or multi-step alternating
 - phases: in-turn `turn.phases` (place→move, place→fire, place→move→fire with
-  `connect_or_destroy`); game-long fleet placement → combat; hex-graph phase
-  lifts still expanding
+  `connect_or_destroy`, or move→fire); game-long fleet placement → combat;
+  hex-graph phase lifts still expanding
 - action points / per-turn budgets
 
 ### 6) Observation primitive (high leverage; optional early, core later)
@@ -414,13 +415,14 @@ simultaneous sliding / Simultaneous Slide Race (M11), ordered simultaneous
 sliding / Ordered Simultaneous Slide Race (M12), joint simultaneous replace /
 Simultaneous Replace Race (M13), ordered simultaneous replace / Ordered
 Simultaneous Replace Race (M14), simultaneous slide+replace / Simultaneous +
-Ordered Slide Replace Race (M15).
+Ordered Slide Replace Race (M15), move→fire in-turn phases / Move & Fire Lite
+(M16).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  richer phases, joint UCT, vacated-origin hybrid for joint replace paths) or
-  P4 CI / semantics
+- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. joint
+  UCT, vacated-origin hybrid for joint replace paths, richer phases beyond
+  move→fire) or P4 CI / semantics
 - Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
   workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
   Who commit/hypothesis beyond query+guess

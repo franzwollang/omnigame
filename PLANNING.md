@@ -32,10 +32,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M13 | Next missing mechanism (joint simultaneous replace) | `done` |
 | M14 | Next missing mechanism (ordered simultaneous replace) | `done` |
 | M15 | Next missing mechanism (simultaneous slide+replace) | `done` |
+| M16 | Next missing mechanism (move→fire in-turn phases) | `done` |
 
-**Optimizing for this marathon:** M15 simultaneous slide+replace closed. Pick
-**P3 next-missing-mechanism** (smallest new seam) then P4 CI / semantics
-refresh — without asking which fork.
+**Optimizing for this marathon:** M16 move→fire closed. Pick **P3
+next-missing-mechanism** (smallest new seam) then P4 CI / semantics refresh —
+without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -50,7 +51,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥366** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥374** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -63,8 +64,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M15 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M15) — smallest new seam — or
+   (P0–P2 / M8–M16 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M16) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -113,15 +114,15 @@ observation (hit/miss + fog + **deduction**), fleet placement, Move
 (orthogonal/diagonal/king + sliding range on rectangle), tick/Life, simultaneous
 place/move (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
 sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
-place→fire / place→move→fire + `connect_or_destroy`), **query + guess /
-identify_secret**.
+place→fire / place→move→fire + `connect_or_destroy` / **move→fire**), **query +
+guess / identify_secret**.
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
 Replace Race, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
-Guess Who Lite, Simultaneous Step Race, Place Move & Fire Lite, Go Lite
-variants, etc.).
+Guess Who Lite, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
+Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
 `movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
@@ -195,6 +196,15 @@ CI workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
 - Joint real-board slide paths (clear pre-round) + ordered sequential path/capture — **done**
 - Presets `simultaneous-slide-replace-race` + `ordered-simultaneous-slide-replace-race` + tests — **done**
 - Out of scope: hex/graph replace; vacated-origin hybrid for joint replace paths
+
+### M16 — Move→fire in-turn phases
+
+- Schema allows `turn.phases: ["move","fire"]` (hit_miss + destroy_hidden +
+  movement + public spotter seeds) — **done**
+- Kernel phase routing already supported; wrong_phase + GameIR replay — **done**
+- Preset `move-fire-lite` + form phase option + tests — **done**
+- Out of scope: fire→move; hex/graph phases; simultaneous phases
+
 ## Sequencing notes
 
 1. Mechanism-first ports only — not “finish `references/`.”  

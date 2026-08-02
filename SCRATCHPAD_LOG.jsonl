@@ -61,3 +61,4 @@
 {"ts":"2026-08-01T19:50-05:00","focus":"M14 ordered simultaneous replace","summary":"Synced f8ed; landed ordered replace + Ordered Simultaneous Replace Race; 352 tests green","next":"Pick next seam (slide+replace / joint UCT / richer phases) or P4 CI/semantics"}
 {"ts":"2026-08-02T01:10-00:00","focus":"M15 simultaneous slide+replace","summary":"Synced 855b; unlocked slide+replace + two presets; tests added","next":"Pick next seam (richer phases / joint UCT / vacated hybrid) or P4 CI/semantics"}
 {"ts":"2026-08-02T01:15-00:00","focus":"M15 simultaneous slide+replace","summary":"Green gate: typecheck + 366 tests; handoff ready","next":"Pick next seam (richer phases / joint UCT / vacated hybrid) or P4 CI/semantics"}
+{"ts":"2026-08-02T01:24-00:00","focus":"M16 move→fire phases","summary":"Synced 7034; landed move→fire + Move & Fire Lite; typecheck + 374 tests green","next":"Pick next seam (joint UCT / vacated hybrid) or P4 CI/semantics"}

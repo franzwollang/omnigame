@@ -3,7 +3,7 @@
  *
  * full: identity view of the public grid.
  * hit_miss: each player sees own hidden fleet + public shot results + any
- * public spotters (X/O on the public grid from place→fire); opponent fleet
+ * public spotters (X/O on the public grid from place→fire / move→fire); opponent fleet
  * cells stay blank until marked hit/miss on the public grid.
  * fog: cells within `fogRadius` of any own piece are visible; others fogged.
  * Bootstrap: with no own pieces yet, the whole board is visible.
