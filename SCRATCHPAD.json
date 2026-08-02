@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-02T11:30-00:00",
+  "turn": 75,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M46",
+    "issue": "next-missing-mechanism",
+    "goal": "memory_flip landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced 0535 M45 tip onto 5795",
+    "Landed M46 memory_flip + Memory Flip Lite; 614 green",
+    "Rejected fire→move / flags; chose tile pair-matching"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "CellValue uses mem:N strings to avoid HazardCount collision",
+    "actionsPerTurn>1 refine needs memoryActive exemption"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: crowned kings, hex jump, full Go, realtime; reject fire→move"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M46",
   "blockers": []
 }
