@@ -197,20 +197,27 @@ describe("Simultaneous Replace Race", () => {
 	});
 
 	it("same-destination joint conflict still moves neither", () => {
-		const cfg = examplePresets["simultaneous-replace-race"].config;
+		const cfg = {
+			...examplePresets["simultaneous-replace-race"].config,
+			initial: [
+				{ row: 1, col: 2, player: "X" as const, visibility: "public" as const },
+				{ row: 0, col: 2, player: "O" as const, visibility: "public" as const },
+				{ row: 1, col: 0, player: "O" as const, visibility: "public" as const }
+			]
+		};
 		const { kernel } = compileConfig(cfg);
 		const action: Extract<KernelAction, { type: "simultaneousMove" }> = {
 			type: "simultaneousMove",
 			moves: {
 				X: { from: { row: 1, col: 2 }, to: { row: 1, col: 1 } },
-				O: { from: { row: 0, col: 0 }, to: { row: 1, col: 1 } }
+				O: { from: { row: 1, col: 0 }, to: { row: 1, col: 1 } }
 			}
 		};
 		const state = kernel.initialState(cfg.rng.seed);
 		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
 		const result = kernel.stepSync(state, action);
 		expect(getCell(result.nextState.grid, { row: 1, col: 2 })).toBe("X");
-		expect(getCell(result.nextState.grid, { row: 0, col: 0 })).toBe("O");
+		expect(getCell(result.nextState.grid, { row: 1, col: 0 })).toBe("O");
 		expect(getCell(result.nextState.grid, { row: 1, col: 1 })).toBeNull();
 		expect(result.nextState.status).toBe("playing");
 	});

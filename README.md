@@ -77,6 +77,7 @@ These are built from the same shared schema and operators.
 - **Simultaneous Step Race** (`simultaneous` + `move` joint resolve; same-destination conflict)
 - **Simultaneous Slide Race** (`simultaneous` + `movement.range > 1`; vacated-origin path checks)
 - **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
+- **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -150,8 +151,10 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   Simultaneous Slide Race**); joint simultaneous slides use vacated-origin path
   checks; ordered simultaneous slides revalidate the second seat after the first;
   `movement.capture = replace` moves onto an enemy cell (path empty except
-  destination) — Replace Race; hex_offset / graph use topology neighbors
-  (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph Step Race
+  destination) — Replace Race / **Simultaneous Replace Race** (joint range 1;
+  real-board legality so capture targets stay visible); hex_offset / graph use
+  topology neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous
+  Hex/Graph Step Race
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite); `none` (open-ended / tick demos)
@@ -163,7 +166,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
-machines, simultaneous replace capture, joint simultaneous search, richer Guess
+machines, ordered / slide+replace capture, joint simultaneous search, richer Guess
 Who commit/hypothesis beyond query+guess MVP, and a larger set of reusable
 operators/constraints.
 
@@ -402,12 +405,13 @@ explorer, debug overlays, baseline agents. Details: README status section +
 **Landed (Phase 2 so far):** composition honesty (M8), capture-by-replacement /
 Replace Race (M9), Guess Who Lite query+guess / `identify_secret` (M10), joint
 simultaneous sliding / Simultaneous Slide Race (M11), ordered simultaneous
-sliding / Ordered Simultaneous Slide Race (M12).
+sliding / Ordered Simultaneous Slide Race (M12), joint simultaneous replace /
+Simultaneous Replace Race (M13).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. richer
-  phases, joint UCT, simultaneous replace)
+- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. ordered
+  replace, slide+replace, richer phases, joint UCT) or P4 CI / semantics
 - Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
   workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
   Who commit/hypothesis beyond query+guess

@@ -258,10 +258,23 @@ describe("movement.capture schema / validateConfig", () => {
 		).toBe(true);
 	});
 
-	it("rejects replace under simultaneous move", () => {
+	it("accepts joint simultaneous replace at range 1", () => {
+		const base = examplePresets["simultaneous-step-race"].config;
+		const ok = {
+			...base,
+			movement: {
+				...base.movement!,
+				capture: "replace" as const
+			}
+		};
+		expect(validateConfig(ok).ok).toBe(true);
+	});
+
+	it("rejects ordered simultaneous + replace", () => {
 		const base = examplePresets["simultaneous-step-race"].config;
 		const bad = {
 			...base,
+			turn: { ...base.turn, resolveOrder: "x_first" as const },
 			movement: {
 				...base.movement!,
 				capture: "replace" as const

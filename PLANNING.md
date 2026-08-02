@@ -29,8 +29,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M10 | Next missing mechanism (Guess Who Lite query/guess) | `done` |
 | M11 | Next missing mechanism (joint simultaneous sliding) | `done` |
 | M12 | Next missing mechanism (ordered simultaneous sliding) | `done` |
+| M13 | Next missing mechanism (joint simultaneous replace) | `done` |
 
-**Optimizing for this marathon:** M12 ordered simultaneous sliding closed. Pick
+**Optimizing for this marathon:** M13 joint simultaneous replace closed. Pick
 **P3 next-missing-mechanism** (smallest new seam) then P4 CI / semantics
 refresh — without asking which fork.
 
@@ -47,7 +48,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥331** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥345** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -60,8 +61,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M11 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M11) — smallest new seam — or
+   (P0–P2 / M8–M13 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M13) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -75,7 +76,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 - No Effect Schema migration; no arbitrary user code in specs  
 - No weakening / skipping tests to go green  
 - No hex/graph `movement.range > 1` until a new seam forces it  
-- No simultaneous replace capture until per-seat vacate / capture apply exists  
+- No ordered simultaneous replace / slide+replace until those apply paths exist  
 - Do not treat `docs/scratchpad.md` as current backlog  
 
 ## Decisions (locked)
@@ -86,6 +87,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 | Product surfaces | Sandbox composer + Library explorer |
 | Reference games | Mechanism-first only (`.cursor/rules/project-structure.mdc`) |
 | Simultaneous × sliding | **Joint** vacated-origin paths; **ordered** sequential path revalidation |
+| Simultaneous × replace | **Joint** range 1 real-board legality; ordered / slide+replace deferred |
 | Marathon priority | Composition honesty **before** new mechanism |
 
 ## Product surfaces
@@ -104,18 +106,19 @@ preset demonstrates `capture = replace`.
 `identify_secret`, query + guess operators).
 
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
-variants, flip + liberties capture, **move capture-by-replacement**, point/
-positional/situational ko, observation (hit/miss + fog + **deduction**), fleet
-placement, Move (orthogonal/diagonal/king + sliding range on rectangle),
-tick/Life, simultaneous place/move (incl. ordered, hidden commit-reveal,
-multi-action, **joint + ordered sliding**), multi-step turns, delayed place/gravity,
-in-turn phases (place→move / place→fire / place→move→fire + `connect_or_destroy`),
-**query + guess / identify_secret**.
+variants, flip + liberties capture, **move capture-by-replacement** (incl.
+**joint simultaneous replace** at range 1), point/positional/situational ko,
+observation (hit/miss + fog + **deduction**), fleet placement, Move
+(orthogonal/diagonal/king + sliding range on rectangle), tick/Life, simultaneous
+place/move (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
+sliding**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
+place→fire / place→move→fire + `connect_or_destroy`), **query + guess /
+identify_secret**.
 
 Presets: see `src/presets/registry.ts` and README status (includes Fog Connect
 Lite, Slide Race, Simultaneous Slide Race, Ordered Simultaneous Slide Race,
-Replace Race, Guess Who Lite, Simultaneous Step Race, Place Move & Fire Lite,
-Go Lite variants, etc.).
+Replace Race, Simultaneous Replace Race, Guess Who Lite, Simultaneous Step Race,
+Place Move & Fire Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
 `movement.adjacency` / `movement.range` / `movement.capture`, placement, win,
@@ -124,7 +127,7 @@ JSON/preset-only fields (`scheduler`, graph nodes/edges, `initial`,
 `placement.capture`, `deduction.*` / `identify_secret`, …).
 
 **Not yet:** full Go; hex/graph sliding; joint UCT under simultaneous;
-simultaneous replace capture; CI workflows; richer Guess Who commit/hypothesis
+ordered / slide+replace capture; CI workflows; richer Guess Who commit/hypothesis
 beyond query+guess MVP.
 
 ## Phase 2 exit criteria
@@ -143,7 +146,7 @@ beyond query+guess MVP.
 - Preset + transcript/replay tests — **done** (Replace Race)
 - Contracts/validation; no forked per-game engine — **done**
 - Out of scope still deferred: multi-jump, capture chains, hex/graph replace,
-  simultaneous replace
+  ordered / slide+replace
 
 ### M10 — Guess Who Lite (query + guess)
 
@@ -158,14 +161,21 @@ beyond query+guess MVP.
 - Schema allows joint sliding — **done**
 - Preset `simultaneous-slide-race` + transcript/replay tests — **done**
 - Out of scope closed by M12: ordered sequential sliding
-- Still deferred: simultaneous replace capture
+- Out of scope closed by M13: joint simultaneous replace (range 1)
 
 ### M12 — Ordered simultaneous sliding
 
 - Sequential path revalidation (`canOrderedSimultaneousMoves`) — **done**
 - Schema allows ordered + `range > 1`; same-dest first-seat wins preserved — **done**
 - Preset `ordered-simultaneous-slide-race` + transcript/replay tests — **done**
-- Out of scope: simultaneous replace capture; hex/graph sliding
+- Out of scope: ordered replace; hex/graph sliding; slide+replace
+
+### M13 — Joint simultaneous replace
+
+- Real-board legality for joint + `capture: replace` (range 1) — **done**
+- Schema allows joint replace; forbids ordered replace and slide+replace — **done**
+- Preset `simultaneous-replace-race` + transcript/replay + `pieceCaptured` — **done**
+- Out of scope: ordered replace; simultaneous slide+replace; hex/graph replace
 
 ## Sequencing notes
 
