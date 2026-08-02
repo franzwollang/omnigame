@@ -80,7 +80,8 @@ These are built from the same shared schema and operators.
 - **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
 - **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
 - **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
-- **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; real-board paths)
+- **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; vacated-origin hybrid)
+- **Simultaneous Slide Replace Flee Race** (joint slide through fleeing blocker on the ray)
 - **Ordered Simultaneous Slide Replace Race** (`resolveOrder` + slide+replace; sequential path/capture)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
@@ -156,13 +157,14 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   checks; ordered simultaneous slides revalidate the second seat after the first;
   `movement.capture = replace` moves onto an enemy cell (path empty except
   destination) — Replace Race / **Simultaneous Replace Race** (joint range 1;
-  real-board legality so capture targets stay visible) / **Ordered Simultaneous
-  Replace Race** (sequential capture apply; priority can capture before prey
-  flees) / **Simultaneous Slide Replace Race** (joint slide+replace; clear
-  pre-round path) / **Ordered Simultaneous Slide Replace Race** (ordered
-  slide+replace; sequential path/capture); hex_offset / graph use topology
-  neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph Step
-  Race
+  vacated-origin hybrid restores fleeing capture targets at destination) /
+  **Ordered Simultaneous Replace Race** (sequential capture apply; priority can
+  capture before prey flees) / **Simultaneous Slide Replace Race** (joint
+  slide+replace; hybrid path-through-fleeing) / **Simultaneous Slide Replace
+  Flee Race** (demo of slide through a vacating blocker) / **Ordered
+  Simultaneous Slide Replace Race** (ordered slide+replace; sequential
+  path/capture); hex_offset / graph use topology neighbors (orthogonal, range
+  1) — Hex Step Race / Simultaneous Hex/Graph Step Race
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite); `none` (open-ended / tick demos)
@@ -416,13 +418,14 @@ sliding / Ordered Simultaneous Slide Race (M12), joint simultaneous replace /
 Simultaneous Replace Race (M13), ordered simultaneous replace / Ordered
 Simultaneous Replace Race (M14), simultaneous slide+replace / Simultaneous +
 Ordered Slide Replace Race (M15), move→fire in-turn phases / Move & Fire Lite
-(M16).
+(M16), vacated-origin hybrid for joint replace paths / Simultaneous Slide
+Replace Flee Race (M17).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g. joint
-  UCT, vacated-origin hybrid for joint replace paths, richer phases beyond
-  move→fire) or P4 CI / semantics
+  UCT / MCTS over simultaneous actions, richer phases beyond move→fire) or P4
+  CI / semantics
 - Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
   workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
   Who commit/hypothesis beyond query+guess

@@ -33,10 +33,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M14 | Next missing mechanism (ordered simultaneous replace) | `done` |
 | M15 | Next missing mechanism (simultaneous slide+replace) | `done` |
 | M16 | Next missing mechanism (move→fire in-turn phases) | `done` |
+| M17 | Next missing mechanism (joint replace vacated-origin hybrid) | `done` |
 
-**Optimizing for this marathon:** M16 move→fire closed. Pick **P3
-next-missing-mechanism** (smallest new seam) then P4 CI / semantics refresh —
-without asking which fork.
+**Optimizing for this marathon:** M17 joint replace hybrid closed. Pick **P3
+next-missing-mechanism** (smallest new seam — default joint UCT) then P4 CI /
+semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -193,9 +194,10 @@ CI workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
 ### M15 — Simultaneous slide + replace
 
 - Schema allows simultaneous + `capture: replace` + `range > 1` (joint + ordered) — **done**
-- Joint real-board slide paths (clear pre-round) + ordered sequential path/capture — **done**
+- Joint vacated-origin hybrid + ordered sequential path/capture — **done** (hybrid closed in M17)
 - Presets `simultaneous-slide-replace-race` + `ordered-simultaneous-slide-replace-race` + tests — **done**
-- Out of scope: hex/graph replace; vacated-origin hybrid for joint replace paths
+- Out of scope: hex/graph replace
+- Out of scope closed by M17: vacated-origin hybrid for joint replace paths
 
 ### M16 — Move→fire in-turn phases
 
@@ -204,6 +206,14 @@ CI workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
 - Kernel phase routing already supported; wrong_phase + GameIR replay — **done**
 - Preset `move-fire-lite` + form phase option + tests — **done**
 - Out of scope: fire→move; hex/graph phases; simultaneous phases
+
+### M17 — Joint replace vacated-origin hybrid
+
+- Joint + replace (+ slide): path cells treat opponent origin as empty; dest
+  landing on opponent origin restores occupant so replace stays required — **done**
+- Preset `simultaneous-slide-replace-flee-race` + legality/apply/replay tests — **done**
+- Stationary capture + static blockers unchanged — **done**
+- Out of scope: hex/graph replace; joint UCT over simultaneous actions
 
 ## Sequencing notes
 

@@ -30,6 +30,13 @@ describe("schema: simultaneous × slide × replace", () => {
 		expect(validateConfig(cfg).ok).toBe(true);
 	});
 
+	it("accepts simultaneous-slide-replace-flee-race (hybrid path-through)", () => {
+		const cfg =
+			examplePresets["simultaneous-slide-replace-flee-race"].config;
+		expect(zConfig.safeParse(cfg).success).toBe(true);
+		expect(validateConfig(cfg).ok).toBe(true);
+	});
+
 	it("accepts ordered-simultaneous-slide-replace-race", () => {
 		const cfg =
 			examplePresets["ordered-simultaneous-slide-replace-race"].config;
@@ -48,7 +55,7 @@ describe("schema: simultaneous × slide × replace", () => {
 	});
 });
 
-describe("canJointSimultaneousMoves slide+replace real-board", () => {
+describe("canJointSimultaneousMoves slide+replace hybrid", () => {
 	it("allows sliding onto a stationary enemy while the opponent moves a runner", () => {
 		const { kernel } = compileConfig(
 			examplePresets["simultaneous-slide-replace-race"].config
@@ -66,7 +73,71 @@ describe("canJointSimultaneousMoves slide+replace real-board", () => {
 		);
 	});
 
-	it("rejects a slide whose path is blocked on the pre-round board", () => {
+	it("allows a slide through a cell the opponent vacates (hybrid path)", () => {
+		const cfg = {
+			...examplePresets["simultaneous-slide-replace-race"].config,
+			initial: [
+				{
+					row: 4,
+					col: 2,
+					player: "X" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 2,
+					col: 2,
+					player: "O" as const,
+					visibility: "public" as const
+				}
+			]
+		};
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(42);
+		const moves = {
+			X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+			O: { from: { row: 2, col: 2 }, to: { row: 2, col: 3 } }
+		};
+		expect(
+			canJointSimultaneousMoves(state.grid, moves, SLIDE_REPLACE)
+		).toBe(true);
+		expect(canJointSimultaneousMoves(state.grid, moves, SLIDE_NONE)).toBe(
+			true
+		);
+	});
+
+	it("still requires replace when landing on a fleeing opponent origin", () => {
+		const cfg = {
+			...examplePresets["simultaneous-slide-replace-race"].config,
+			initial: [
+				{
+					row: 4,
+					col: 2,
+					player: "X" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 0,
+					col: 2,
+					player: "O" as const,
+					visibility: "public" as const
+				}
+			]
+		};
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(42);
+		const moves = {
+			X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+			O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+		};
+		expect(
+			canJointSimultaneousMoves(state.grid, moves, SLIDE_REPLACE)
+		).toBe(true);
+		expect(canJointSimultaneousMoves(state.grid, moves, SLIDE_NONE)).toBe(
+			false
+		);
+	});
+
+	it("rejects a slide whose path is blocked by a stationary piece", () => {
 		const cfg = {
 			...examplePresets["simultaneous-slide-replace-race"].config,
 			initial: [
@@ -213,6 +284,50 @@ describe("Simultaneous Slide Replace Race", () => {
 		expect(replay.finalState.winner).toBe("X");
 		expect(getCell(replay.finalState.grid, { row: 0, col: 2 })).toBe("X");
 		expect(getCell(replay.finalState.grid, { row: 1, col: 0 })).toBe("O");
+	});
+
+	it("joint slide through fleeing blocker reaches target row (no pieceCaptured)", () => {
+		const cfg = examplePresets["simultaneous-slide-replace-flee-race"].config;
+		const { kernel } = compileConfig(cfg);
+		const action: Extract<KernelAction, { type: "simultaneousMove" }> = {
+			type: "simultaneousMove",
+			moves: {
+				X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+				O: { from: { row: 2, col: 2 }, to: { row: 2, col: 3 } }
+			}
+		};
+		let state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
+		const result = kernel.stepSync(state, action);
+		expect(result.events.some((e) => e.type === "pieceCaptured")).toBe(
+			false
+		);
+		expect(result.events.some((e) => e.type === "terminal")).toBe(true);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 2, col: 3 })).toBe("O");
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBeNull();
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+	});
+
+	it("replays the flee-through transcript deterministically", () => {
+		const cfg = examplePresets["simultaneous-slide-replace-flee-race"].config;
+		const { gameConfig } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousMove",
+				moves: {
+					X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+					O: { from: { row: 2, col: 2 }, to: { row: 2, col: 3 } }
+				}
+			}
+		];
+		const replay = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 2, col: 3 })).toBe("O");
 	});
 });
 

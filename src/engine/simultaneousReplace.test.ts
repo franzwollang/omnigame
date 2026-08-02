@@ -52,7 +52,7 @@ describe("schema: simultaneous × replace", () => {
 	});
 });
 
-describe("canJointSimultaneousMoves replace real-board legality", () => {
+describe("canJointSimultaneousMoves replace vacated-origin hybrid", () => {
 	it("allows capture of a stationary enemy while the opponent moves another piece", () => {
 		const { kernel } = compileConfig(
 			examplePresets["simultaneous-replace-race"].config
@@ -65,7 +65,7 @@ describe("canJointSimultaneousMoves replace real-board legality", () => {
 		expect(canJointSimultaneousMoves(state.grid, moves, REPLACE)).toBe(
 			true
 		);
-		// Without replace, occupied destination stays illegal on the real board.
+		// Without replace, occupied destination stays illegal.
 		expect(canJointSimultaneousMoves(state.grid, moves, NONE)).toBe(false);
 	});
 

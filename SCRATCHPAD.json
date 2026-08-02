@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T01:24-00:00",
-  "turn": 41,
+  "updated_at": "2026-08-02T01:45-00:00",
+  "turn": 42,
   "focus": {
-    "milestone": "M16",
+    "milestone": "M17",
     "issue": "next-missing-mechanism",
-    "goal": "Move→fire phases landed; next seam or P4"
+    "goal": "Joint replace vacated-origin hybrid landed; next seam or P4"
   },
   "recent": [
-    "Synced M8–M15 from 7034 onto 7ab6",
-    "M16: turn.phases move→fire + Move & Fire Lite",
-    "Green gate: typecheck + 374 tests"
+    "Synced M8–M16 from 7ab6 onto 0916",
+    "M17: joint replace vacated-origin hybrid + flee-race preset",
+    "Green gate pending after implement"
   ],
   "discoveries": [
-    "Kernel already routed move/fire by turnPhaseIndex",
-    "move→fire needs public seeds; fleets stay owner-hidden"
+    "Hybrid restores opp origin only when it is the destination",
+    "Path-through-fleeing needs vacated origin; static blockers remain"
   ],
   "open_threads": [
-    "P3 next seam (joint UCT / vacated hybrid) or P4"
+    "P3 next seam (joint UCT) or P4 CI/semantics"
   ],
-  "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
+  "next_step": "Cloud: pick joint UCT over simultaneous or P4 tooling-ci / semantics refresh",
   "blockers": []
 }

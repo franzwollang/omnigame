@@ -950,13 +950,14 @@ function applySimultaneousMovePair(
 
 /**
  * Simultaneous schedule + move input: both seats submit one {from,to}.
- * Joint resolve validates on a vacated-origin board (sliding path integrity),
- * or on the real board when movement.capture = replace (capture targets stay
- * visible; slide+replace paths must be clear pre-round). Ordered resolve
- * validates first seat pre-round, then second after simulating the first
- * (sequential path / capture revalidation). Same destination under joint →
- * neither; ordered → first seat wins the cell when both claim it. Ordered
- * replace may overwrite enemies; priority can capture before prey flees.
+ * Joint resolve validates on a vacated-origin board (sliding path integrity).
+ * With replace, destinations that land on the opponent's origin restore that
+ * occupant so replace stays required; path cells treat the vacating origin as
+ * empty (hybrid: slide through fleeing blockers). Ordered resolve validates
+ * first seat pre-round, then second after simulating the first (sequential
+ * path / capture revalidation). Same destination under joint → neither;
+ * ordered → first seat wins the cell when both claim it. Ordered replace may
+ * overwrite enemies; priority can capture before prey flees.
  * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(

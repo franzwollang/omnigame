@@ -114,14 +114,14 @@ export const zConfig = z
 		 * (blocker-aware ray walk; range 1 = adjacent only).
 		 * `capture: "replace"` — move onto enemy clears occupant then lands
 		 * (rectangle + move input; path empty except destination).
-		 * Simultaneous + replace: joint uses real-board legality so capture
-		 * targets stay visible (paths must be clear on the pre-round board);
-		 * ordered uses sequential capture apply (priority can capture before
-		 * prey flees). Works with sliding `range > 1` on rectangle.
-		 * Joint simultaneous + range > 1 without replace uses vacated-origin
-		 * path checks; ordered simultaneous + range > 1 uses sequential path
-		 * revalidation. hex_offset / graph use topology neighbors (orthogonal,
-		 * range 1 only).
+		 * Simultaneous + replace: joint uses vacated-origin path checks with a
+		 * hybrid restore when the destination is the opponent's origin (so
+		 * replace is still required to land on a fleeing piece; slides may
+		 * pass through a vacating blocker). Ordered uses sequential capture
+		 * apply (priority can capture before prey flees). Works with sliding
+		 * `range > 1` on rectangle. Ordered simultaneous + range > 1 uses
+		 * sequential path revalidation. hex_offset / graph use topology
+		 * neighbors (orthogonal, range 1 only).
 		 */
 		movement: z
 			.object({
@@ -915,10 +915,10 @@ export const zConfig = z
 							"simultaneous move is incompatible with commitReveal (deferred)"
 					});
 				}
-				// Joint simultaneous sliding (no replace): vacated-origin paths.
+				// Joint simultaneous sliding: vacated-origin paths.
 				// Ordered simultaneous sliding: sequential path revalidation.
-				// Simultaneous replace (any range): joint = real-board legality;
-				// ordered = sequential capture apply (incl. slide+replace).
+				// Simultaneous replace (any range): joint = vacated-origin hybrid
+				// (restore fleeing dest); ordered = sequential capture apply.
 			}
 			if (hitMiss) {
 				ctx.addIssue({

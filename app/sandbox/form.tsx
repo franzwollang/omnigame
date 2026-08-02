@@ -565,11 +565,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										Required for input.mode = move and for phases that
 										include move. Diagonal/king and range &gt; 1 are
 										rectangle-only; joint simultaneous sliding uses
-										vacated-origin paths; ordered simultaneous sliding
-										revalidates the second seat after the first. Replace
-										capture is rectangle + move; simultaneous replace
-										(incl. slide) uses joint real-board or ordered
-										sequential apply.
+										vacated-origin paths (replace hybrid restores a
+										fleeing capture target at destination); ordered
+										simultaneous sliding revalidates the second seat
+										after the first. Replace capture is rectangle +
+										move; ordered simultaneous replace uses sequential
+										apply.
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField

@@ -2,9 +2,9 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M16 move→fire closed). Do not ask
-which fork — pick the smallest new seam under `next-missing-mechanism`, then
-P4 tooling/docs.
+**Marathon rule:** Work **P3 → P4** in order (M17 joint replace hybrid closed).
+Do not ask which fork — pick the smallest new seam under
+`next-missing-mechanism`, then P4 tooling/docs.
 
 ---
 
@@ -12,12 +12,12 @@ P4 tooling/docs.
 
 ### P3 — next-missing-mechanism
 
-Move→fire in-turn phases (`["move","fire"]` + Move & Fire Lite) landed as M16.
+Vacated-origin hybrid for joint replace paths (slide through fleeing blockers)
+landed as M17 (`simultaneous-slide-replace-flee-race`).
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
 - Joint UCT / MCTS over simultaneous actions (deeper than labeled random)
-- Vacated-origin hybrid for joint replace paths (slide through fleeing blockers)
 - Further phase sequences beyond place→* and move→fire (only if a new seam appears)
 - Hex/graph `range > 1` (only if a new seam appears)
 
@@ -38,7 +38,7 @@ exhaust `references/` or recombine covered primitives).
 - [ ] Sync compact draft with current kernel events/state/phases (incl.
       `pieceCaptured`, `queryAnswered` / `guessResult`, simultaneous, phases
       incl. move→fire, joint + ordered sliding, joint + ordered simultaneous
-      replace, simultaneous slide+replace)
+      replace, simultaneous slide+replace, joint replace vacated-origin hybrid)
 
 ---
 

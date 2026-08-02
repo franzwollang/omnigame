@@ -224,13 +224,13 @@ export type JointMoveSpec = { from: Position; to: Position };
 
 /**
  * Joint simultaneous move legality.
- * Default (no replace): both paths validated on a board where both origins are
- * vacated (so a vacating piece does not block the other).
- * Replace capture (any range, incl. slides): each seat validated on the real
- * board so enemy capture targets stay visible — vacated-origin would erase the
- * occupant and turn replace into empty-dest. Paths must therefore be clear on
- * the pre-round board. Same-destination pairs still return true here; apply
- * resolves conflict.
+ * Both seats validated on a vacated-origin board so a fleeing piece does not
+ * block the other's path (incl. slides through the vacating cell).
+ * Replace capture hybrid: destinations that land on the opponent's origin
+ * restore that occupant so `capture: "replace"` is still required (empty-dest
+ * would incorrectly accept `capture: "none"`). Stationary enemies elsewhere
+ * stay visible. Same-destination pairs still return true here; apply resolves
+ * conflict.
  */
 export function canJointSimultaneousMoves(
 	grid: Grid,
@@ -241,26 +241,26 @@ export function canJointSimultaneousMoves(
 	if (getCell(grid, moves.X.from) !== "X") return false;
 	if (getCell(grid, moves.O.from) !== "O") return false;
 
-	if (config.capture === "replace") {
-		// Real-board checks keep stationary (and fleeing) enemies visible.
-		return (
-			canMove(grid, moves.X.from, moves.X.to, "X", config, wrapOrBoard) &&
-			canMove(grid, moves.O.from, moves.O.to, "O", config, wrapOrBoard)
-		);
-	}
-
 	let cells = setCell(grid, moves.X.from, null);
 	cells = setCell({ ...grid, cells }, moves.O.from, null);
 	const vacated: Grid = { ...grid, cells };
 
-	const withX: Grid = {
-		...vacated,
-		cells: setCell(vacated, moves.X.from, "X")
+	const boardFor = (seat: Player, move: JointMoveSpec, oppFrom: Position) => {
+		let next = setCell(vacated, move.from, seat);
+		// Replace hybrid: keep fleeing capture targets visible at destination.
+		if (
+			config.capture === "replace" &&
+			move.to.row === oppFrom.row &&
+			move.to.col === oppFrom.col
+		) {
+			const opp: Player = seat === "X" ? "O" : "X";
+			next = setCell({ ...vacated, cells: next }, oppFrom, opp);
+		}
+		return { ...vacated, cells: next } as Grid;
 	};
-	const withO: Grid = {
-		...vacated,
-		cells: setCell(vacated, moves.O.from, "O")
-	};
+
+	const withX = boardFor("X", moves.X, moves.O.from);
+	const withO = boardFor("O", moves.O, moves.X.from);
 
 	return (
 		canMove(withX, moves.X.from, moves.X.to, "X", config, wrapOrBoard) &&
