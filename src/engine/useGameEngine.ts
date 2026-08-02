@@ -123,7 +123,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		(action: KernelAction) => {
 			const side = kernel.currentPlayer(stateRef.current);
 			const explainPlayer: PlayerId =
-				action.type === "commitPlace"
+				action.type === "commitPlace" ||
+				action.type === "commitQuery" ||
+				action.type === "commitGuess" ||
+				action.type === "commitEliminate"
 					? action.player === "X"
 						? 0
 						: 1
@@ -181,6 +184,11 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 			return null;
 		}
 		if (commitReveal) {
+			if ((config.inputMode ?? "cell") === "deduction") {
+				if (!state.committedDeduction?.X) return "X";
+				if (!state.committedDeduction?.O) return "O";
+				return null;
+			}
 			if (commitLen(state.committedPlacements, "X") < actionsPerRound)
 				return "X";
 			if (commitLen(state.committedPlacements, "O") < actionsPerRound)
@@ -198,9 +206,11 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		commitReveal,
 		state.status,
 		state.committedPlacements,
+		state.committedDeduction,
 		pendingPlacements,
 		pendingMoves,
-		actionsPerRound
+		actionsPerRound,
+		config.inputMode
 	]);
 
 	const placeMove = useCallback(
