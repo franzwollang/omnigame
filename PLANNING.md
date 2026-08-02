@@ -63,8 +63,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M45 | Next missing mechanism (mandatory jump-at-turn-start) | `done` |
 | M46 | Next missing mechanism (memory flip / tile pair-matching) | `done` |
 | M47 | Next missing mechanism (hex jump capture) | `done` |
+| M48 | Next missing mechanism (graph jump capture) | `done` |
 
-**Optimizing for this marathon:** M47 hex jump landed. Pick **P3
+**Optimizing for this marathon:** M48 graph jump landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -81,7 +82,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥622** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥630** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -94,7 +95,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M47 closed).  
+   (P0–P2 / M8–M48 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -136,7 +137,8 @@ Replace Race / **Hex Replace Race** / **Graph Replace Race** demonstrate
 `capture = replace` on rectangle | hex_offset | graph; **Jump Race** /
 **Mandatory Jump Race** demonstrate `capture = jump` on rectangle;
 **Hex Jump Race** demonstrates `capture = jump` on hex_offset (cube-axis
-leap-over + `mustContinueFrom` chains; graph jump deferred).
+leap-over + `mustContinueFrom` chains); **Graph Jump Race** demonstrates
+`capture = jump` on graph (2-edge leap-over + chains).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
 **Memory:** **Memory Flip Lite** demonstrates `memory_flip` + `flip` +
@@ -186,11 +188,12 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; crowned kings / checkers promotion; graph jump. Hex jump
-landed (M47 Hex Jump Race). Mandatory jump-at-turn-start landed (M45
-Mandatory Jump Race). CI: `.github/workflows/ci.yml` (Node 20.19 +
-pnpm 10.5.2). Semantics: `docs/semantics.md` (M42; jump in M43; flood_reveal
-in M44; mustCapture in M45; memory_flip in M46; hex jump in M47).
+scheduler; crowned kings / checkers promotion. Graph jump landed (M48
+Graph Jump Race). Hex jump landed (M47 Hex Jump Race). Mandatory
+jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
+`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics:
+`docs/semantics.md` (M42; jump in M43; flood_reveal in M44; mustCapture
+in M45; memory_flip in M46; hex jump in M47; graph jump in M48).
 
 ## Phase 2 exit criteria
 
@@ -622,8 +625,8 @@ in M44; mustCapture in M45; memory_flip in M46; hex jump in M47).
   transcript/replay/schema tests — **done**
 - Out of scope closed by M45: mandatory jump-at-turn-start
 - Out of scope closed by M47: hex jump
-- Out of scope: graph jump; simultaneous jump; crowned kings /
-  checkers promotion
+- Out of scope closed by M48: graph jump
+- Out of scope: simultaneous jump; crowned kings / checkers promotion
 - Green gate: 583 tests — **done**
 
 ### M44 — Flood-fill region reveal (Minesweeper-lite)
@@ -680,8 +683,25 @@ in M44; mustCapture in M45; memory_flip in M46; hex jump in M47).
 - Form: jump select enabled on hex_offset; helper copy updated — **done**
 - Preset `hex-jump-race` (cube-axis two-jump chain to reach_row) +
   helper/schema/transcript/replay tests — **done**
-- Out of scope: graph jump; simultaneous jump; crowned kings / promotion
+- Out of scope closed by M48: graph jump
+- Out of scope: simultaneous jump; crowned kings / promotion
 - Green gate: 622 tests — **done**
+
+### M48 — Graph jump capture
+
+- Schema: `movement.capture = "jump"` accepts `rectangle | hex_offset |
+  graph`; incompatible with `graphReach = hop`; same M43/M45
+  incompatibilities (simultaneous, phases, actionsPerTurn>1, range=1,
+  no placement.capture) — **done**
+- Movement: `jumpMid` / `jumpDestinations` / `isJumpCapture` /
+  `hasAnyJumpCapture` / `legalDestinations` topology-aware for graph
+  2-edge leap over enemy mid node; reducer/kernel unchanged via
+  board-aware helpers — **done**
+- Form: jump select enabled on graph; helper copy updated — **done**
+- Preset `graph-jump-race` (lane two-jump chain to reach_row) +
+  helper/schema/transcript/replay tests — **done**
+- Out of scope: simultaneous jump; crowned kings / promotion
+- Green gate: 630 tests — **done**
 
 ## Sequencing notes
 

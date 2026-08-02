@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T11:50-00:00",
-  "turn": 76,
+  "updated_at": "2026-08-02T12:10-00:00",
+  "turn": 77,
   "focus": {
-    "milestone": "M47",
+    "milestone": "M48",
     "issue": "next-missing-mechanism",
-    "goal": "hex jump landed; hand off next genuine P3 seam"
+    "goal": "graph jump landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced 5795 M46 tip onto 03f8",
-    "Landed M47 hex jump + Hex Jump Race; 622 green",
-    "Rejected fire→move / crowned kings; chose hex jump"
+    "Synced 03f8 M47 tip onto 9db2",
+    "Landed M48 graph jump + Graph Jump Race; 630 green",
+    "Rejected fire→move / crowned kings; chose graph jump"
   ],
   "discoveries": [
-    "jumpMid needs board+grid for hex cube-axis mid",
-    "Odd-r chain (4,2)→(2,1)→(0,0) via q:0,r:-1 axis"
+    "graph jump = 2-edge leap over enemy mid node",
+    "forbid graphReach=hop with capture=jump"
   ],
   "open_threads": [
-    "Next: graph jump, crowned kings, full Go, realtime; reject fire→move"
+    "Next: crowned kings, full Go, realtime; reject fire→move"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M47",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M48",
   "blockers": []
 }
