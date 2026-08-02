@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-02T10:40-00:00",
+  "turn": 72,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M43",
+    "issue": "next-missing-mechanism",
+    "goal": "Jump capture landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced de5b M42 tip onto 50f9",
+    "Rejected recombinations; chose jump capture chains",
+    "Landed M43 jump + Jump Race; 583 green"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "mustContinueFrom is the chain protocol (not actionsPerTurn)"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: flood-fill reveal or other small seam; reject fire→move"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism (flood-fill strong candidate)",
   "blockers": []
 }
