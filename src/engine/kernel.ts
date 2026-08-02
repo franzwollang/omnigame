@@ -77,7 +77,8 @@ export type KernelAction =
 			position: Position;
 	  }
 	| { type: "query"; trait: string; value: boolean }
-	| { type: "guess"; id: string };
+	| { type: "guess"; id: string }
+	| { type: "eliminate"; id: string };
 
 /** Structured legality failure codes for debug UI / agents. */
 export type IllegalReason =
@@ -134,6 +135,11 @@ export type KernelEvent =
 			player: Player;
 			targetId: string;
 			correct: boolean;
+	  }
+	| {
+			type: "candidateEliminated";
+			player: Player;
+			id: string;
 	  }
 	| { type: "phaseChanged"; phase: "placement" | "combat" }
 	| { type: "tickApplied"; generation: number }
@@ -236,6 +242,8 @@ function formatAction(action: KernelAction): string {
 			return `query ${action.trait}=${action.value}`;
 		case "guess":
 			return `guess ${action.id}`;
+		case "eliminate":
+			return `eliminate ${action.id}`;
 	}
 }
 
@@ -252,6 +260,8 @@ export function formatKernelEvent(event: KernelEvent): string {
 			return `${event.player}: query ${event.trait}=${event.value} → ${event.answer}`;
 		case "guessResult":
 			return `${event.player}: guess ${event.targetId} → ${event.correct ? "correct" : "wrong"}`;
+		case "candidateEliminated":
+			return `${event.player}: eliminate ${event.id}`;
 		case "phaseChanged":
 			return `phase → ${event.phase}`;
 		case "tickApplied":
@@ -454,6 +464,18 @@ function applyStep(
 			targetId: action.id,
 			correct
 		});
+	}
+
+	if (action.type === "eliminate" && actor !== "simultaneous") {
+		const before = new Set(state.deduction?.eliminated[actor] ?? []);
+		const after = nextState.deduction?.eliminated[actor] ?? [];
+		if (!before.has(action.id) && after.includes(action.id)) {
+			events.push({
+				type: "candidateEliminated",
+				player: actor,
+				id: action.id
+			});
+		}
 	}
 
 	if (action.type === "tick") {
@@ -697,6 +719,9 @@ function collectLegalActions(
 		for (const character of config.deduction.roster) {
 			if (!eliminated.has(character.id)) {
 				actions.push({ type: "guess", id: character.id });
+				if (config.deduction.autoEliminate === false) {
+					actions.push({ type: "eliminate", id: character.id });
+				}
 			}
 		}
 		return actions;
@@ -1316,6 +1341,43 @@ export function explainKernelAction(
 			}
 			break;
 		}
+		case "eliminate": {
+			if (inputMode !== "deduction" || !config.deduction) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (config.deduction.autoEliminate !== false) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const rosterIds = new Set(
+				config.deduction.roster.map((c) => c.id)
+			);
+			if (!rosterIds.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			const eliminated = new Set(
+				state.deduction?.eliminated[state.currentPlayer] ?? []
+			);
+			if (eliminated.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
+			break;
+		}
 		case "place": {
 			if (hitMiss) {
 				if (!usesPlacementPhase(config.fleet)) {
@@ -1592,6 +1654,8 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 			);
 		case "guess":
 			return b.type === "guess" && a.id === b.id;
+		case "eliminate":
+			return b.type === "eliminate" && a.id === b.id;
 	}
 }
 

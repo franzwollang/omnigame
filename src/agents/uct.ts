@@ -108,6 +108,8 @@ export function actionKey(action: KernelAction): string {
 			return `query:${action.trait}=${action.value}`;
 		case "guess":
 			return `guess:${action.id}`;
+		case "eliminate":
+			return `eliminate:${action.id}`;
 	}
 }
 

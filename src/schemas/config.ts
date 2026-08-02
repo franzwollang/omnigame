@@ -219,6 +219,8 @@ export const zConfig = z
 		/**
 		 * Deduction / Guess Who-lite: shared public roster + traits; each seat
 		 * gets a secret character. Query yes/no traits; guess to win.
+		 * When autoEliminate is false, query only records the answer — players
+		 * commit hypothesis via `{ type: "eliminate", id }` (README Commit).
 		 */
 		deduction: z
 			.object({
@@ -234,7 +236,9 @@ export const zConfig = z
 					.min(2)
 					.max(12),
 				traits: z.array(z.string().min(1)).min(1).max(6),
-				wrongGuess: z.enum(["lose", "end_turn"]).default("lose")
+				wrongGuess: z.enum(["lose", "end_turn"]).default("lose"),
+				/** When true (default), query auto-prunes inconsistent candidates. */
+				autoEliminate: z.boolean().default(true)
 			})
 			.strict()
 			.optional(),

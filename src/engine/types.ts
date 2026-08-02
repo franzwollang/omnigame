@@ -240,6 +240,12 @@ export type GuessEvent = {
 	id: string;
 };
 
+/** Manual hypothesis commit: prune one candidate from the actor's board. */
+export type EliminateEvent = {
+	type: "eliminate";
+	id: string;
+};
+
 export type GameEvent =
 	| PlaceMoveEvent
 	| MoveEvent
@@ -255,6 +261,7 @@ export type GameEvent =
 	| CommitPlaceEvent
 	| QueryEvent
 	| GuessEvent
+	| EliminateEvent
 	| ResetEvent;
 
 // Helper to convert row/col to flat index

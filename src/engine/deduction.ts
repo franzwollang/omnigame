@@ -58,6 +58,37 @@ export function eliminateAfterQuery(
 	return next;
 }
 
+/**
+ * Roster ids still active that are inconsistent with a query answer
+ * (candidates a rational player would flip after that answer).
+ */
+export function candidatesInconsistentWithQuery(
+	roster: readonly DeductionCharacter[],
+	eliminated: readonly string[],
+	trait: string,
+	value: boolean,
+	answer: boolean
+): string[] {
+	const already = new Set(eliminated);
+	const out: string[] = [];
+	for (const character of roster) {
+		if (already.has(character.id)) continue;
+		const matches = character.traits[trait] === value;
+		if (matches !== answer) out.push(character.id);
+	}
+	return out;
+}
+
+/** True when `id` is on the roster and not already eliminated. */
+export function canEliminate(
+	roster: readonly DeductionCharacter[],
+	eliminated: readonly string[],
+	id: string
+): boolean {
+	if (!roster.some((c) => c.id === id)) return false;
+	return !eliminated.includes(id);
+}
+
 export function isGuessCorrect(secretId: string, guessId: string): boolean {
 	return secretId === guessId;
 }

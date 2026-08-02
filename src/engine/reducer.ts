@@ -60,6 +60,7 @@ import { getCell as readCell } from "@/engine/types";
 import {
 	answerQuery,
 	assignSecrets,
+	canEliminate,
 	eliminateAfterQuery,
 	isGuessCorrect
 } from "@/engine/deduction";
@@ -160,6 +161,8 @@ export type GameConfig = {
 		roster: DeductionCharacter[];
 		traits: string[];
 		wrongGuess: "lose" | "end_turn";
+		/** When false, query answers without pruning; use eliminate actions. */
+		autoEliminate: boolean;
 	};
 	initial?: InitialSeed[];
 };
@@ -531,6 +534,8 @@ export function reduce(
 			return handleQuery(state, event.trait, event.value, config);
 		case "guess":
 			return handleGuess(state, event.id, config);
+		case "eliminate":
+			return handleEliminate(state, event.id, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -567,13 +572,16 @@ function handleQuery(
 		trait,
 		value
 	);
-	const eliminated = eliminateAfterQuery(
-		config.deduction.roster,
-		state.deduction.eliminated[player],
-		trait,
-		value,
-		answer
-	);
+	const autoEliminate = config.deduction.autoEliminate !== false;
+	const eliminated = autoEliminate
+		? eliminateAfterQuery(
+				config.deduction.roster,
+				state.deduction.eliminated[player],
+				trait,
+				value,
+				answer
+			)
+		: state.deduction.eliminated[player];
 	const newMoveCount = state.moveCount + 1;
 	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
@@ -634,6 +642,40 @@ function handleGuess(
 	return {
 		...state,
 		moveCount: newMoveCount,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleEliminate(
+	state: GameState,
+	id: string,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	// Manual eliminate only when auto-prune is off (Commit(hypothesis) seam).
+	if (config.deduction.autoEliminate !== false) return state;
+
+	const player = state.currentPlayer;
+	const already = state.deduction.eliminated[player];
+	if (!canEliminate(config.deduction.roster, already, id)) return state;
+
+	const newMoveCount = state.moveCount + 1;
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				...state.deduction.eliminated,
+				[player]: [...already, id]
+			}
+		},
 		currentPlayer: turn.currentPlayer,
 		actionsRemaining: turn.actionsRemaining,
 		turnPhaseIndex: turn.turnPhaseIndex

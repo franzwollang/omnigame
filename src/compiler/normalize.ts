@@ -94,7 +94,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 						traits: { ...c.traits }
 					})),
 					traits: [...config.deduction.traits],
-					wrongGuess: config.deduction.wrongGuess
+					wrongGuess: config.deduction.wrongGuess,
+					autoEliminate: config.deduction.autoEliminate ?? true
 				}
 			: undefined,
 		initial: config.initial

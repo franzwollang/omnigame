@@ -1595,6 +1595,48 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"guess-who-commit-lite": definePreset({
+		id: "guess-who-commit-lite",
+		name: "Guess Who Commit Lite",
+		tags: ["deduction", "query", "eliminate", "observation", "mechanism"],
+		description:
+			"Same roster as Guess Who Lite, but queries only answer yes/no — players manually eliminate candidates (Commit hypothesis). Wrong guess ends the turn (no instant loss).",
+		config: {
+			metadata: { name: "Guess Who Commit Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "alternating" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "end_turn",
+				autoEliminate: false,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"simultaneous-step-race": definePreset({
 		id: "simultaneous-step-race",
 		name: "Simultaneous Step Race",
