@@ -3,13 +3,20 @@
  *
  * full: identity view of the public grid.
  * hit_miss: each player sees own hidden fleet + public shot results + any
- * public spotters (X/O on the public grid from place→fire); opponent fleet
+ * public spotters (X/O on the public grid from place→fire / move→fire); opponent fleet
  * cells stay blank until marked hit/miss on the public grid.
  * fog: cells within `fogRadius` of any own piece are visible; others fogged.
  * Bootstrap: with no own pieces yet, the whole board is visible.
+ * deduction: dummy empty board + public roster / own eliminations / own lastQuery.
  */
 import type { GameConfig } from "@/engine/reducer";
-import type { CellValue, GameState, Player, Position } from "@/engine/types";
+import type {
+	CellValue,
+	DeductionCharacter,
+	GameState,
+	Player,
+	Position
+} from "@/engine/types";
 import { getCell, toIndex } from "@/engine/types";
 import {
 	offsetToCube,
@@ -31,6 +38,28 @@ export type PlayerObservation = {
 	 */
 	visible: boolean[];
 	lastShot?: { position: Position; result: ShotResult };
+	/** Deduction / Guess Who-lite private view. */
+	deduction?: {
+		roster: DeductionCharacter[];
+		eliminated: string[];
+		lastQuery?: {
+			by: Player;
+			trait?: string;
+			value?: boolean;
+			clauses?: Array<{ trait: string; value: boolean }>;
+			op?: "and" | "or";
+			answer: boolean;
+		};
+		/** Own pending commit under commitReveal (opponent hidden). */
+		pendingCommit?:
+			| {
+					kind: "query";
+					trait?: string;
+					value?: boolean;
+					clauses?: Array<{ trait: string; value: boolean }>;
+			  }
+			| { kind: "guess"; id: string };
+	};
 };
 
 function emptyCells(count: number): CellValue[] {
@@ -180,6 +209,43 @@ export function observe(
 ): PlayerObservation {
 	const size = state.grid.width * state.grid.height;
 	const mode = config.observationMode ?? "full";
+
+	if (mode === "deduction") {
+		const ded = state.deduction;
+		const roster = config.deduction?.roster ?? [];
+		const lastQuery =
+			ded?.lastQueries?.[player] ??
+			(ded?.lastQuery && ded.lastQuery.by === player
+				? ded.lastQuery
+				: undefined);
+		const ownCommit = state.committedDeduction?.[player];
+		const pendingCommit =
+			ownCommit?.kind === "query"
+				? {
+						kind: "query" as const,
+						trait: ownCommit.query.trait,
+						value: ownCommit.query.value,
+						clauses: ownCommit.query.clauses
+					}
+				: ownCommit?.kind === "guess"
+					? { kind: "guess" as const, id: ownCommit.id }
+					: undefined;
+		return {
+			player,
+			cells: emptyCells(size),
+			visible: allVisible(size),
+			lastShot,
+			deduction: {
+				roster: roster.map((c) => ({
+					id: c.id,
+					traits: { ...c.traits }
+				})),
+				eliminated: [...(ded?.eliminated[player] ?? [])],
+				...(lastQuery ? { lastQuery } : {}),
+				...(pendingCommit ? { pendingCommit } : {})
+			}
+		};
+	}
 
 	if (mode === "fog") {
 		return projectFog(config, state, player, lastShot);
