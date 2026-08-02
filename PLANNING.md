@@ -60,7 +60,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥426** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥438** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
