@@ -62,8 +62,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M44 | Next missing mechanism (flood-fill region reveal) | `done` |
 | M45 | Next missing mechanism (mandatory jump-at-turn-start) | `done` |
 | M46 | Next missing mechanism (memory flip / tile pair-matching) | `done` |
+| M47 | Next missing mechanism (hex jump capture) | `done` |
 
-**Optimizing for this marathon:** M46 `memory_flip` landed. Pick **P3
+**Optimizing for this marathon:** M47 hex jump landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -80,7 +81,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥614** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥622** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -93,7 +94,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M45 closed).  
+   (P0–P2 / M8–M47 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -133,11 +134,13 @@ Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/
 **Movement:** form exposes `adjacency` / `range` / `capture` / `mustCapture`;
 Replace Race / **Hex Replace Race** / **Graph Replace Race** demonstrate
 `capture = replace` on rectangle | hex_offset | graph; **Jump Race** /
-**Mandatory Jump Race** demonstrate `capture = jump` (leap over adjacent
-enemy + `mustContinueFrom` chains; optional vs `mustCapture` turn-start
-mandatory; rectangle + alternating).
+**Mandatory Jump Race** demonstrate `capture = jump` on rectangle;
+**Hex Jump Race** demonstrates `capture = jump` on hex_offset (cube-axis
+leap-over + `mustContinueFrom` chains; graph jump deferred).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
+**Memory:** **Memory Flip Lite** demonstrates `memory_flip` + `flip` +
+`match_pairs` + `memory` deck.
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
 `identify_secret`, query + guess), **Guess Who Commit Lite**
 (`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`),
@@ -183,10 +186,11 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; crowned kings / checkers promotion; hex/graph jump. Mandatory
-jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
-`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics:
-`docs/semantics.md` (M42; jump in M43; flood_reveal in M44; mustCapture in M45).
+scheduler; crowned kings / checkers promotion; graph jump. Hex jump
+landed (M47 Hex Jump Race). Mandatory jump-at-turn-start landed (M45
+Mandatory Jump Race). CI: `.github/workflows/ci.yml` (Node 20.19 +
+pnpm 10.5.2). Semantics: `docs/semantics.md` (M42; jump in M43; flood_reveal
+in M44; mustCapture in M45; memory_flip in M46; hex jump in M47).
 
 ## Phase 2 exit criteria
 
@@ -617,7 +621,8 @@ jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
 - Preset `jump-race` (diagonal two-jump chain to reach_row) +
   transcript/replay/schema tests — **done**
 - Out of scope closed by M45: mandatory jump-at-turn-start
-- Out of scope: hex/graph jump; simultaneous jump; crowned kings /
+- Out of scope closed by M47: hex jump
+- Out of scope: graph jump; simultaneous jump; crowned kings /
   checkers promotion
 - Green gate: 583 tests — **done**
 
@@ -649,9 +654,34 @@ jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
 - Preset `mandatory-jump-race` (quiet escape + jump both exist; only jump
   legal) + contrast vs optional jump + transcript/replay/schema tests —
   **done**
-- Out of scope: longest-chain rule; crowned kings / promotion; hex/graph /
-  simultaneous jump
+- Out of scope: longest-chain rule; crowned kings / promotion; graph /
+  simultaneous jump (hex closed by M47)
 - Green gate: 602 tests — **done**
+
+### M46 — Memory flip / tile pair-matching
+
+- Schema: `observation.mode = memory_flip` + `input.mode = flip` +
+  `objective.mode = match_pairs` + `memory` block — **done**
+- Kernel: flip two tiles; match scores; mismatch re-hides; `mem:N` CellValue
+  marks — **done**
+- Preset `memory-flip-lite` + transcript/replay/schema tests — **done**
+- Green gate: 614 tests — **done**
+
+### M47 — Hex jump capture
+
+- Schema: `movement.capture = "jump"` accepts `rectangle | hex_offset`;
+  graph still rejected; hex requires orthogonal (cube-axis); same
+  M43/M45 incompatibilities (simultaneous, phases, actionsPerTurn>1,
+  range=1, no placement.capture) — **done**
+- Movement: `jumpMid` / `jumpDestinations` / `isJumpCapture` /
+  `hasAnyJumpCapture` / `legalDestinations` topology-aware for hex
+  cube-axis double steps; reducer/kernel mid clear + `pieceCaptured`
+  unchanged via board-aware `jumpMid` — **done**
+- Form: jump select enabled on hex_offset; helper copy updated — **done**
+- Preset `hex-jump-race` (cube-axis two-jump chain to reach_row) +
+  helper/schema/transcript/replay tests — **done**
+- Out of scope: graph jump; simultaneous jump; crowned kings / promotion
+- Green gate: 622 tests — **done**
 
 ## Sequencing notes
 

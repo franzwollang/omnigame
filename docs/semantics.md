@@ -210,7 +210,7 @@ delayTurns → pendingPlaces.
 | flip | placement.captureMode | Reversi sandwich along adjacency |
 | liberties | placement.captureMode | Go-lite group removal + ko/superko |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
-| jump | movement.capture = jump | Leap over adjacent enemy to empty beyond; mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture` forbids quiet moves at turn start when any jump exists |
+| jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays or hex cube-axis); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; graph deferred |
 
 KoRule: none | point | positional | situational.
 
@@ -218,10 +218,11 @@ KoRule: none | point | positional | situational.
 
 - adjacency: orthogonal | diagonal | king (rect); hex/graph: orthogonal
 - range: 1..8 sliding (blocker-aware); range 1 = adjacent step
-- capture jump: rectangle + alternating only; quiet range 1; jump distance
-  always 2; chains via mustContinueFrom (not actionsPerTurn); optional
-  `mustCapture` forbids quiet moves at turn start when any jump exists
-  (Mandatory Jump Race)
+- capture jump: rectangle | hex_offset + alternating only; quiet range 1;
+  jump distance always 2 (cube-axis double step on hex); chains via
+  mustContinueFrom (not actionsPerTurn); optional `mustCapture` forbids quiet
+  moves at turn start when any jump exists (Mandatory Jump Race); graph jump
+  deferred (Hex Jump Race)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)
 - simultaneous: canJointSimultaneousMoves (vacated origins) /
   canOrderedSimultaneousMoves (sequential revalidation)

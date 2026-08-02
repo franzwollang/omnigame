@@ -57,6 +57,7 @@ These are built from the same shared schema and operators.
 - **Hex Replace Race** (`hex_offset` + `capture: replace` — cube-axis attrition)
 - **Graph Replace Race** (`graph` + `capture: replace` — chain-walk attrition)
 - **Jump Race** (`movement.capture = jump` — leap over enemy + mustContinueFrom chains)
+- **Hex Jump Race** (`hex_offset` + `capture: jump` — cube-axis leap-over chains)
 - **Mandatory Jump Race** (`mustCapture` — quiet moves illegal when any jump exists)
 - **Minesweeper Lite** (`flood_reveal` + `clear_hazards` + seeded mines)
 - **Memory Flip Lite** (`memory_flip` + `flip` + `match_pairs` — pair matching)
@@ -191,8 +192,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   (orthogonal, range 1..8; no junction turns; same replace rules) **or**
   hop-ball BFS (`movement.graphReach = hop`; may turn at junctions) —
   Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Hop Race** /
-  **Graph Replace Race**; jump capture (rectangle + alternating) — **Jump Race** /
-  **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump exists)
+  **Graph Replace Race**; jump capture (rectangle | hex_offset + alternating) —
+  **Jump Race** / **Hex Jump Race** / **Mandatory Jump Race** (`mustCapture`
+  forbids quiet moves when any jump exists; graph jump deferred)
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous place (Double-Place Simultaneous TTT / Hex / Graph) **or open simultaneous move** (Double Simultaneous Step Race; range 1, no replace) **or commitReveal simultaneous move** (Hidden Double Simultaneous Step Race); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Step Race** / **Hidden Double Simultaneous Step Race** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace /
   jump capture (`movement.capture`; optional `mustCapture` for jump)
@@ -205,8 +207,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder
-(only with anchor), realtime scheduler, crowned kings / promotion, and a
-larger set of reusable operators/constraints.
+(only with anchor), realtime scheduler, crowned kings / promotion, graph jump,
+and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -491,19 +493,20 @@ move / Double Simultaneous Step Race (M39), commitReveal multi-action
 simultaneous move / Hidden Double Simultaneous Step Race (M40), jump capture /
 multi-jump chains / Jump Race (M43), flood-fill region reveal /
 Minesweeper Lite (M44), mandatory jump-at-turn-start / Mandatory Jump Race
-(M45), memory flip / tile pair-matching / Memory Flip Lite (M46).
+(M45), memory flip / tile pair-matching / Memory Flip Lite (M46), hex jump
+capture / Hex Jump Race (M47).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
   fire→move only with anchor; full Go; realtime scheduler; crowned kings;
-  hex/graph jump; reject recombinations)
+  graph jump; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
   (recombination without anchor); crowned kings / checkers promotion;
-  memory bonus-turn-on-match / custom decks
+  graph jump; memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
-  mustCapture in M45; memory_flip in M46)
+  mustCapture in M45; memory_flip in M46; hex jump in M47)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

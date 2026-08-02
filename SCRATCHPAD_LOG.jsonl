@@ -99,3 +99,4 @@
 {"ts":"2026-08-02T10:55-00:00","focus":"M44 flood-fill reveal","summary":"Landed flood_reveal + Minesweeper Lite; 596 green; hand off next-missing-mechanism","next":"Pick smallest genuine next seam (reject fire→move without anchor)"}
 {"ts":"2026-08-02T11:10-00:00","focus":"M45 mustCapture","summary":"Landed mandatory jump-at-turn-start + Mandatory Jump Race; 602 green","next":"Pick smallest genuine P3 seam after M45"}
 {"ts":"2026-08-02T11:30-00:00","focus":"M46 memory flip","summary":"Landed memory_flip + Memory Flip Lite after syncing M45 tip; 614 green","next":"Pick smallest genuine P3 seam after M46"}
+{"ts":"2026-08-02T11:50-00:00","focus":"M47 hex jump","summary":"Landed hex jump capture + Hex Jump Race after syncing M46 tip; 622 green","next":"Pick smallest genuine P3 seam after M47"}
