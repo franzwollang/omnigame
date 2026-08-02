@@ -440,11 +440,50 @@ export const zConfig = z
 				});
 			}
 			if (simultaneous) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["turn", "schedule"],
-					message: "deduction is incompatible with simultaneous"
-				});
+				// Simultaneous deduction foothold: joint query/guess only.
+				if ((cfg.deduction?.queryShape ?? "single") !== "single") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "queryShape"],
+						message:
+							"simultaneous deduction requires queryShape = 'single' (compound deferred)"
+					});
+				}
+				if (cfg.deduction?.autoEliminate === false) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "autoEliminate"],
+						message:
+							"simultaneous deduction requires autoEliminate = true (manual eliminate deferred)"
+					});
+				}
+				if (inTurnPhases) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "phases"],
+						message:
+							"simultaneous deduction is incompatible with turn.phases"
+					});
+				}
+				if (cfg.turn.commitReveal === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "commitReveal"],
+						message:
+							"simultaneous deduction is incompatible with commitReveal"
+					});
+				}
+				if (
+					cfg.turn.resolveOrder !== undefined &&
+					cfg.turn.resolveOrder !== "joint"
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "resolveOrder"],
+						message:
+							"simultaneous deduction requires resolveOrder = 'joint' (ordered deferred)"
+					});
+				}
 			}
 			if (manualTick) {
 				ctx.addIssue({
@@ -911,17 +950,28 @@ export const zConfig = z
 			});
 		}
 
-		// Simultaneous joint place (cell + n-in-a-row) or joint move (move + reach_row)
+		// Simultaneous joint place / move / deduction (query+guess)
 		if (simultaneous) {
 			const simMove = moveInput;
 			const simPlace = cfg.input.mode === "cell";
-			if (!simMove && !simPlace) {
+			const simDeduction = deductionInput && identifySecret;
+			if (!simMove && !simPlace && !simDeduction) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["input", "mode"],
 					message:
-						"simultaneous requires input.mode = 'cell' (joint place) or 'move' (joint move)"
+						"simultaneous requires input.mode = 'cell' (joint place), 'move' (joint move), or 'deduction' (joint query/guess)"
 				});
+			}
+			if (simDeduction) {
+				if (!deductionObs || !hasDeductionBlock) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction"],
+						message:
+							"simultaneous deduction requires observation.mode = 'deduction' and a deduction block"
+					});
+				}
 			}
 			if (simPlace) {
 				if (cfg.objective.mode !== "n_in_a_row") {

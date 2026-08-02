@@ -1721,6 +1721,55 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"simultaneous-guess-who-lite": definePreset({
+		id: "simultaneous-guess-who-lite",
+		name: "Simultaneous Guess Who Lite",
+		tags: [
+			"deduction",
+			"query",
+			"simultaneous",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not compound queries, commitReveal, or joint UCT.",
+		config: {
+			metadata: { name: "Simultaneous Guess Who Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				queryShape: "single",
+				autoEliminate: true,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
 	"guess-who-commit-lite": definePreset({
 		id: "guess-who-commit-lite",
 		name: "Guess Who Commit Lite",

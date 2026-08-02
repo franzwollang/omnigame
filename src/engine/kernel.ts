@@ -77,6 +77,17 @@ export type KernelAction =
 			};
 	  }
 	| {
+			type: "simultaneousQuery";
+			queries: {
+				X: { type: "query"; trait?: string; value?: boolean; clauses?: QueryClause[] };
+				O: { type: "query"; trait?: string; value?: boolean; clauses?: QueryClause[] };
+			};
+	  }
+	| {
+			type: "simultaneousGuess";
+			guesses: { X: string; O: string };
+	  }
+	| {
 			type: "commitPlace";
 			player: Player;
 			position: Position;
@@ -243,6 +254,10 @@ function formatAction(action: KernelAction): string {
 				`(${m.from.row},${m.from.col})→(${m.to.row},${m.to.col})`;
 			return `joint move X${fmt(action.moves.X)} O${fmt(action.moves.O)}`;
 		}
+		case "simultaneousQuery":
+			return `joint query X${formatQueryFingerprint(action.queries.X)} O${formatQueryFingerprint(action.queries.O)}`;
+		case "simultaneousGuess":
+			return `joint guess X${action.guesses.X} O${action.guesses.O}`;
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
 		case "query":
@@ -353,7 +368,10 @@ function applyStep(
 	}
 
 	const actor: Player | "simultaneous" =
-		action.type === "simultaneousPlace" || action.type === "simultaneousMove"
+		action.type === "simultaneousPlace" ||
+		action.type === "simultaneousMove" ||
+		action.type === "simultaneousQuery" ||
+		action.type === "simultaneousGuess"
 			? "simultaneous"
 			: action.type === "commitPlace"
 				? action.player
@@ -464,6 +482,37 @@ function applyStep(
 				clauses: lq.clauses,
 				op: lq.op,
 				answer: lq.answer
+			});
+		}
+	}
+
+	if (action.type === "simultaneousQuery") {
+		for (const seat of ["X", "O"] as const) {
+			const lq = nextState.deduction?.lastQueries?.[seat];
+			if (!lq) continue;
+			events.push({
+				type: "queryAnswered",
+				player: lq.by,
+				trait: lq.trait,
+				value: lq.value,
+				clauses: lq.clauses,
+				op: lq.op,
+				answer: lq.answer
+			});
+		}
+	}
+
+	if (action.type === "simultaneousGuess") {
+		for (const seat of ["X", "O"] as const) {
+			const opponent: Player = seat === "X" ? "O" : "X";
+			const secretId = state.deduction?.secret[opponent];
+			const correct =
+				secretId !== undefined && secretId === action.guesses[seat];
+			events.push({
+				type: "guessResult",
+				player: seat,
+				targetId: action.guesses[seat],
+				correct
 			});
 		}
 	}
@@ -670,6 +719,24 @@ function collectLegalActions(
 					if (canMove(state.grid, from, to, acting, movement, board)) {
 						actions.push({ type: "move", from, to });
 					}
+				}
+			}
+			return actions;
+		}
+
+		// Simultaneous deduction: per-seat query or guess; compose via stepJoint.
+		if (inputMode === "deduction" && config.deduction) {
+			const shape = config.deduction.queryShape ?? "single";
+			if (shape === "single") {
+				for (const trait of config.deduction.traits) {
+					actions.push({ type: "query", trait, value: true });
+					actions.push({ type: "query", trait, value: false });
+				}
+			}
+			const eliminated = new Set(state.deduction?.eliminated[acting] ?? []);
+			for (const character of config.deduction.roster) {
+				if (!eliminated.has(character.id)) {
+					actions.push({ type: "guess", id: character.id });
 				}
 			}
 			return actions;
@@ -1127,6 +1194,13 @@ export function explainKernelAction(
 				detail: detailFor("mode_mismatch", action)
 			};
 		}
+		if ((config.inputMode ?? "cell") === "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
 		const budget = config.actionsPerTurn ?? 1;
 		const xs = asPlacementList(action.placements.X);
 		const os = asPlacementList(action.placements.O);
@@ -1203,6 +1277,75 @@ export function explainKernelAction(
 			legal: false,
 			reason: "invalid_destination",
 			detail: detailFor("invalid_destination", action)
+		};
+	}
+
+	// Joint query: both single-atom queries must be individually legal.
+	if (action.type === "simultaneousQuery") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (!config.deduction || (config.deduction.queryShape ?? "single") !== "single") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const qOk = (q: {
+			trait?: string;
+			value?: boolean;
+			clauses?: QueryClause[];
+		}) =>
+			q.trait !== undefined &&
+			q.value !== undefined &&
+			!(q.clauses && q.clauses.length > 0) &&
+			config.deduction!.traits.includes(q.trait);
+		if (qOk(action.queries.X) && qOk(action.queries.O)) {
+			return { legal: true };
+		}
+		return {
+			legal: false,
+			reason: "illegal_or_noop",
+			detail: detailFor("illegal_or_noop", action)
+		};
+	}
+
+	// Joint guess: both ids must be on roster and not already eliminated for that seat.
+	if (action.type === "simultaneousGuess") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (!config.deduction) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+		const xElim = new Set(state.deduction?.eliminated.X ?? []);
+		const oElim = new Set(state.deduction?.eliminated.O ?? []);
+		if (
+			rosterIds.has(action.guesses.X) &&
+			rosterIds.has(action.guesses.O) &&
+			!xElim.has(action.guesses.X) &&
+			!oElim.has(action.guesses.O)
+		) {
+			return { legal: true };
+		}
+		return {
+			legal: false,
+			reason: "illegal_or_noop",
+			detail: detailFor("illegal_or_noop", action)
 		};
 	}
 
@@ -1742,6 +1885,21 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 				moveEq(a.moves.X, b.moves.X) && moveEq(a.moves.O, b.moves.O)
 			);
 		}
+		case "simultaneousQuery": {
+			if (b.type !== "simultaneousQuery") return false;
+			return (
+				formatQueryFingerprint(a.queries.X) ===
+					formatQueryFingerprint(b.queries.X) &&
+				formatQueryFingerprint(a.queries.O) ===
+					formatQueryFingerprint(b.queries.O)
+			);
+		}
+		case "simultaneousGuess":
+			return (
+				b.type === "simultaneousGuess" &&
+				a.guesses.X === b.guesses.X &&
+				a.guesses.O === b.guesses.O
+			);
 		case "commitPlace":
 			return (
 				b.type === "commitPlace" &&
@@ -1785,6 +1943,43 @@ export function jointMoveFromActions(
 			X: { from: action0.from, to: action0.to },
 			O: { from: action1.from, to: action1.to }
 		}
+	};
+}
+
+/** Build a joint query action from two per-player query actions. */
+export function jointQueryFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "query" || action1.type !== "query") return null;
+	return {
+		type: "simultaneousQuery",
+		queries: {
+			X: {
+				type: "query",
+				trait: action0.trait,
+				value: action0.value,
+				clauses: action0.clauses
+			},
+			O: {
+				type: "query",
+				trait: action1.trait,
+				value: action1.value,
+				clauses: action1.clauses
+			}
+		}
+	};
+}
+
+/** Build a joint guess action from two per-player guess actions. */
+export function jointGuessFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "guess" || action1.type !== "guess") return null;
+	return {
+		type: "simultaneousGuess",
+		guesses: { X: action0.id, O: action1.id }
 	};
 }
 
@@ -1926,7 +2121,9 @@ export function createGameKernel(config: GameConfig): GameKernel {
 	): Effect.Effect<StepResult> => {
 		const built =
 			jointPlaceFromActions(joint[0], joint[1]) ??
-			jointMoveFromActions(joint[0], joint[1]);
+			jointMoveFromActions(joint[0], joint[1]) ??
+			jointQueryFromActions(joint[0], joint[1]) ??
+			jointGuessFromActions(joint[0], joint[1]);
 		if (!built) {
 			return Effect.sync(() => ({
 				nextState: state,
@@ -2024,8 +2221,20 @@ export function stepPly(
 			return last;
 		}
 		if (budget <= 1) {
-			const a0 = pickFor(0, kernel.legalActions(state, 0));
-			const a1 = pickFor(1, kernel.legalActions(state, 1));
+			const legal0 = kernel.legalActions(state, 0);
+			const legal1 = kernel.legalActions(state, 1);
+			// Simultaneous deduction: both seats must submit the same action
+			// kind (query+query or guess+guess) for joint resolve.
+			if ((kernel.config.inputMode ?? "cell") === "deduction") {
+				const a0 = pickFor(0, legal0);
+				if (!a0) return null;
+				const matching = legal1.filter((a) => a.type === a0.type);
+				const a1 = pickFor(1, matching.length > 0 ? matching : legal1);
+				if (!a1) return null;
+				return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
+			}
+			const a0 = pickFor(0, legal0);
+			const a1 = pickFor(1, legal1);
 			if (!a0 || !a1) return null;
 			return kernel.stepJointSync(state, { 0: a0, 1: a1 }, seed);
 		}

@@ -25,6 +25,8 @@ export function canSearchJointActions(kernel: GameKernel): boolean {
 	}
 	// Hidden commit-reveal uses a separate fresh-round plan search.
 	if (kernel.config.commitReveal === true) return false;
+	// Simultaneous deduction joint UCT deferred (query/guess cartesian).
+	if ((kernel.config.inputMode ?? "cell") === "deduction") return false;
 	return true;
 }
 

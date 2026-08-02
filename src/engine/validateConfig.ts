@@ -116,6 +116,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		if (cfg.input.mode === "move") {
 			features.push(Contracts.ScheduleSimultaneousMove());
 		}
+		if (cfg.input.mode === "deduction") {
+			features.push(Contracts.ScheduleSimultaneousDeduction());
+		}
 		if (cfg.turn.commitReveal === true) {
 			features.push(Contracts.ScheduleCommitReveal());
 		}

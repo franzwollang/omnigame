@@ -339,7 +339,9 @@ export const Contracts = {
 		resolveOrder: "joint" | "x_first" | "o_first" = "joint"
 	): FeatureContract => ({
 		id: "ScheduleSimultaneous",
-		requires: ["CellsWritable", "ResolvedCell"],
+		// CellsWritable only — place/move supply ResolvedCell; deduction joint
+		// query/guess does not place (same pattern as ScheduleInTurnPhases).
+		requires: ["CellsWritable"],
 		provides: [],
 		slots: [{ type: "Schedule", value: "simultaneous" }],
 		hooks: ["validateInput", "applyEffects"],
@@ -348,6 +350,22 @@ export const Contracts = {
 			resolveOrder === "joint"
 				? "sameCellConflictNeitherApplies"
 				: "sameCellConflictFirstSeatWins"
+		]
+	}),
+	/**
+	 * Simultaneous deduction (input.mode = deduction under simultaneous).
+	 * Joint query or joint guess per round; no board placement.
+	 */
+	ScheduleSimultaneousDeduction: (): FeatureContract => ({
+		id: "ScheduleSimultaneousDeduction",
+		requires: ["CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["validateInput", "applyEffects"],
+		invariants: [
+			"jointQueryOrGuessPerRound",
+			"independentSeatSecrets",
+			"jointUctDeferred"
 		]
 	}),
 	/**

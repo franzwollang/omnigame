@@ -103,6 +103,10 @@ export function actionKey(action: KernelAction): string {
 				`${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`;
 			return `jointMove:${fmt(action.moves.X)}|${fmt(action.moves.O)}`;
 		}
+		case "simultaneousQuery":
+			return `jointQuery:${formatQueryFingerprint(action.queries.X)}|${formatQueryFingerprint(action.queries.O)}`;
+		case "simultaneousGuess":
+			return `jointGuess:${action.guesses.X}|${action.guesses.O}`;
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
 		case "query":

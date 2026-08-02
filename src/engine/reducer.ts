@@ -541,6 +541,10 @@ export function reduce(
 			return handleSimultaneousPlace(state, event.placements, config);
 		case "simultaneousMove":
 			return handleSimultaneousMove(state, event.moves, config);
+		case "simultaneousQuery":
+			return handleSimultaneousQuery(state, event.queries, config);
+		case "simultaneousGuess":
+			return handleSimultaneousGuess(state, event.guesses, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
 		case "query":
@@ -573,6 +577,8 @@ function handleQuery(
 		return state;
 	}
 	if (state.status !== "playing") return state;
+	// Simultaneous games must use simultaneousQuery (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
 
 	const shape = config.deduction.queryShape ?? "single";
 	const player = state.currentPlayer;
@@ -675,6 +681,136 @@ function handleQuery(
 	};
 }
 
+/**
+ * Resolve one seat's single-atom query against the opponent secret.
+ * Does not advance turn / moveCount (caller owns joint bookkeeping).
+ */
+function resolveSingleQueryForPlayer(
+	state: GameState,
+	player: Player,
+	event: QueryEvent,
+	config: GameConfig
+): {
+	ok: boolean;
+	eliminated: string[];
+	lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
+} | null {
+	if (!config.deduction || !state.deduction) return null;
+	if (event.clauses && event.clauses.length > 0) return null;
+	const trait = event.trait;
+	const value = event.value;
+	if (trait === undefined || value === undefined) return null;
+	if (!config.deduction.traits.includes(trait)) return null;
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const answer = answerQuery(
+		secretId,
+		config.deduction.roster,
+		trait,
+		value
+	);
+	const eliminated = eliminateAfterQuery(
+		config.deduction.roster,
+		state.deduction.eliminated[player],
+		trait,
+		value,
+		answer
+	);
+	return {
+		ok: true,
+		eliminated,
+		lastQuery: { by: player, trait, value, answer }
+	};
+}
+
+/** Joint simultaneous query: both seats ask; independent auto-prune. */
+function handleSimultaneousQuery(
+	state: GameState,
+	queries: { X: QueryEvent; O: QueryEvent },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if ((config.deduction.queryShape ?? "single") !== "single") return state;
+	if (config.deduction.autoEliminate === false) return state;
+
+	const x = resolveSingleQueryForPlayer(state, "X", queries.X, config);
+	const o = resolveSingleQueryForPlayer(state, "O", queries.O, config);
+	if (!x || !o) return state;
+
+	return {
+		...state,
+		moveCount: state.moveCount + 1,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				X: x.eliminated,
+				O: o.eliminated
+			},
+			lastQuery: undefined,
+			lastQueries: {
+				X: x.lastQuery,
+				O: o.lastQuery
+			}
+		}
+	};
+}
+
+/** Joint simultaneous guess: both identify; one correct → win; both → draw. */
+function handleSimultaneousGuess(
+	state: GameState,
+	guesses: { X: string; O: string },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(guesses.X) || !rosterIds.has(guesses.O)) return state;
+
+	const xCorrect = isGuessCorrect(state.deduction.secret.O, guesses.X);
+	const oCorrect = isGuessCorrect(state.deduction.secret.X, guesses.O);
+	const newMoveCount = state.moveCount + 1;
+
+	if (xCorrect && oCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "draw",
+			winner: null
+		};
+	}
+	if (xCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: "X"
+		};
+	}
+	if (oCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: "O"
+		};
+	}
+
+	// Both wrong: continue (wrongGuess lose would mutual-eliminate both seats).
+	return {
+		...state,
+		moveCount: newMoveCount
+	};
+}
+
 function handleGuess(
 	state: GameState,
 	id: string,
@@ -684,6 +820,8 @@ function handleGuess(
 		return state;
 	}
 	if (state.status !== "playing") return state;
+	// Simultaneous games must use simultaneousGuess (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
 	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
 	if (!rosterIds.has(id)) return state;
 
@@ -733,6 +871,7 @@ function handleEliminate(
 	if (state.status !== "playing") return state;
 	// Manual eliminate only when auto-prune is off (Commit(hypothesis) seam).
 	if (config.deduction.autoEliminate !== false) return state;
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
 
 	const player = state.currentPlayer;
 	const already = state.deduction.eliminated[player];

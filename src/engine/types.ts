@@ -148,6 +148,8 @@ export type DeductionState = {
 	secret: { X: string; O: string };
 	eliminated: { X: string[]; O: string[] };
 	lastQuery?: DeductionLastQuery;
+	/** Simultaneous rounds: per-seat last query (observation reads own seat). */
+	lastQueries?: Partial<Record<Player, DeductionLastQuery>>;
 };
 
 /** Normalize a simultaneous placement payload to a position list. */
@@ -252,6 +254,24 @@ export type QueryEvent = {
 	clauses?: QueryClause[];
 };
 
+/** Joint query round: both seats submit one single-trait query. */
+export type SimultaneousQueryEvent = {
+	type: "simultaneousQuery";
+	queries: {
+		X: QueryEvent;
+		O: QueryEvent;
+	};
+};
+
+/** Joint guess round: both seats submit one secret guess. */
+export type SimultaneousGuessEvent = {
+	type: "simultaneousGuess";
+	guesses: {
+		X: string;
+		O: string;
+	};
+};
+
 export type GuessEvent = {
 	type: "guess";
 	id: string;
@@ -275,6 +295,8 @@ export type GameEvent =
 	| PassEvent
 	| SimultaneousPlaceEvent
 	| SimultaneousMoveEvent
+	| SimultaneousQueryEvent
+	| SimultaneousGuessEvent
 	| CommitPlaceEvent
 	| QueryEvent
 	| GuessEvent

@@ -205,9 +205,10 @@ export function observe(
 		const ded = state.deduction;
 		const roster = config.deduction?.roster ?? [];
 		const lastQuery =
-			ded?.lastQuery && ded.lastQuery.by === player
+			ded?.lastQueries?.[player] ??
+			(ded?.lastQuery && ded.lastQuery.by === player
 				? ded.lastQuery
-				: undefined;
+				: undefined);
 		return {
 			player,
 			cells: emptyCells(size),
