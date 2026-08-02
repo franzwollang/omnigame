@@ -727,7 +727,15 @@ function collectLegalActions(
 		// Simultaneous deduction: per-seat query or guess; compose via stepJoint.
 		if (inputMode === "deduction" && config.deduction) {
 			const shape = config.deduction.queryShape ?? "single";
-			if (shape === "single") {
+			if (shape === "and" || shape === "or") {
+				const arity = config.deduction.compoundArity ?? 2;
+				for (const q of enumerateCompoundQueries(
+					config.deduction.traits,
+					arity
+				)) {
+					actions.push(q);
+				}
+			} else {
 				for (const trait of config.deduction.traits) {
 					actions.push({ type: "query", trait, value: true });
 					actions.push({ type: "query", trait, value: false });
@@ -1280,7 +1288,7 @@ export function explainKernelAction(
 		};
 	}
 
-	// Joint query: both single-atom queries must be individually legal.
+	// Joint query: both seat queries must match queryShape and be legal.
 	if (action.type === "simultaneousQuery") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "deduction") {
 			return {
@@ -1289,22 +1297,35 @@ export function explainKernelAction(
 				detail: detailFor("mode_mismatch", action)
 			};
 		}
-		if (!config.deduction || (config.deduction.queryShape ?? "single") !== "single") {
+		if (!config.deduction) {
 			return {
 				legal: false,
 				reason: "mode_mismatch",
 				detail: detailFor("mode_mismatch", action)
 			};
 		}
+		const shape = config.deduction.queryShape ?? "single";
 		const qOk = (q: {
 			trait?: string;
 			value?: boolean;
 			clauses?: QueryClause[];
-		}) =>
-			q.trait !== undefined &&
-			q.value !== undefined &&
-			!(q.clauses && q.clauses.length > 0) &&
-			config.deduction!.traits.includes(q.trait);
+		}) => {
+			if (shape === "and" || shape === "or") {
+				const arity = config.deduction!.compoundArity ?? 2;
+				return (
+					!!q.clauses &&
+					validCompoundClauses(q.clauses, config.deduction!.traits, arity) &&
+					q.trait === undefined &&
+					q.value === undefined
+				);
+			}
+			return (
+				q.trait !== undefined &&
+				q.value !== undefined &&
+				!(q.clauses && q.clauses.length > 0) &&
+				config.deduction!.traits.includes(q.trait)
+			);
+		};
 		if (qOk(action.queries.X) && qOk(action.queries.O)) {
 			return { legal: true };
 		}

@@ -443,13 +443,14 @@ export const zConfig = z
 				});
 			}
 			if (simultaneous) {
-				// Simultaneous deduction foothold: joint query/guess only.
-				if ((cfg.deduction?.queryShape ?? "single") !== "single") {
+				// Simultaneous deduction: joint query/guess; single or compound.
+				const shape = cfg.deduction?.queryShape ?? "single";
+				if (shape !== "single" && shape !== "and" && shape !== "or") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["deduction", "queryShape"],
 						message:
-							"simultaneous deduction requires queryShape = 'single' (compound deferred)"
+							"simultaneous deduction requires queryShape = 'single' | 'and' | 'or'"
 					});
 				}
 				if (cfg.deduction?.autoEliminate === false) {

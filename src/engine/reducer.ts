@@ -682,10 +682,10 @@ function handleQuery(
 }
 
 /**
- * Resolve one seat's single-atom query against the opponent secret.
+ * Resolve one seat's query (single-atom or compound) against the opponent secret.
  * Does not advance turn / moveCount (caller owns joint bookkeeping).
  */
-function resolveSingleQueryForPlayer(
+function resolveQueryForPlayer(
 	state: GameState,
 	player: Player,
 	event: QueryEvent,
@@ -696,27 +696,82 @@ function resolveSingleQueryForPlayer(
 	lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
 } | null {
 	if (!config.deduction || !state.deduction) return null;
+	const shape = config.deduction.queryShape ?? "single";
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const autoEliminate = config.deduction.autoEliminate !== false;
+
+	if (shape === "and" || shape === "or") {
+		const clauses = event.clauses;
+		const arity = config.deduction.compoundArity ?? 2;
+		if (
+			!clauses ||
+			!validCompoundClauses(clauses, config.deduction.traits, arity)
+		) {
+			return null;
+		}
+		if (event.trait !== undefined || event.value !== undefined) return null;
+
+		const answer =
+			shape === "and"
+				? answerQueryConjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					)
+				: answerQueryDisjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					);
+		const eliminated = autoEliminate
+			? shape === "and"
+				? eliminateAfterQueryConjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+				: eliminateAfterQueryDisjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+			: state.deduction.eliminated[player];
+		return {
+			ok: true,
+			eliminated,
+			lastQuery: {
+				by: player,
+				op: shape,
+				clauses: clauses.map((c) => ({ trait: c.trait, value: c.value })),
+				answer
+			}
+		};
+	}
+
 	if (event.clauses && event.clauses.length > 0) return null;
 	const trait = event.trait;
 	const value = event.value;
 	if (trait === undefined || value === undefined) return null;
 	if (!config.deduction.traits.includes(trait)) return null;
 
-	const opponent: Player = player === "X" ? "O" : "X";
-	const secretId = state.deduction.secret[opponent];
 	const answer = answerQuery(
 		secretId,
 		config.deduction.roster,
 		trait,
 		value
 	);
-	const eliminated = eliminateAfterQuery(
-		config.deduction.roster,
-		state.deduction.eliminated[player],
-		trait,
-		value,
-		answer
-	);
+	const eliminated = autoEliminate
+		? eliminateAfterQuery(
+				config.deduction.roster,
+				state.deduction.eliminated[player],
+				trait,
+				value,
+				answer
+			)
+		: state.deduction.eliminated[player];
 	return {
 		ok: true,
 		eliminated,
@@ -735,11 +790,12 @@ function handleSimultaneousQuery(
 		return state;
 	}
 	if (state.status !== "playing") return state;
-	if ((config.deduction.queryShape ?? "single") !== "single") return state;
+	const shape = config.deduction.queryShape ?? "single";
+	if (shape !== "single" && shape !== "and" && shape !== "or") return state;
 	if (config.deduction.autoEliminate === false) return state;
 
-	const x = resolveSingleQueryForPlayer(state, "X", queries.X, config);
-	const o = resolveSingleQueryForPlayer(state, "O", queries.O, config);
+	const x = resolveQueryForPlayer(state, "X", queries.X, config);
+	const o = resolveQueryForPlayer(state, "O", queries.O, config);
 	if (!x || !o) return state;
 
 	return {

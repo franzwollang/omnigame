@@ -1732,7 +1732,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not compound queries, commitReveal, or joint UCT.",
+			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not commitReveal or joint UCT (compound covered by Simultaneous Guess Who And Lite).",
 		config: {
 			metadata: { name: "Simultaneous Guess Who Lite", version: 1 },
 			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
@@ -1746,6 +1746,56 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				traits: ["glasses", "hat"],
 				wrongGuess: "lose",
 				queryShape: "single",
+				autoEliminate: true,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"simultaneous-guess-who-and-lite": definePreset({
+		id: "simultaneous-guess-who-and-lite",
+		name: "Simultaneous Guess Who And Lite",
+		tags: [
+			"deduction",
+			"query",
+			"conjunction",
+			"simultaneous",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"Both seats ask one 2-clause AND query (or both guess) per round; joint resolve with independent compound prune. Unlocks simultaneous deduction + queryShape = and — not or-arity demos, commitReveal, or joint UCT.",
+		config: {
+			metadata: { name: "Simultaneous Guess Who And Lite", version: 1 },
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				queryShape: "and",
 				autoEliminate: true,
 				roster: [
 					{ id: "ann", traits: { glasses: true, hat: false } },

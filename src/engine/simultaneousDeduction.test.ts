@@ -36,7 +36,7 @@ describe("schema: simultaneous × deduction", () => {
 		expect(gameConfig.deduction?.autoEliminate).toBe(true);
 	});
 
-	it("rejects compound queryShape, autoEliminate false, phases, and commitReveal", () => {
+	it("rejects autoEliminate false, phases, and commitReveal; allows compound queryShape", () => {
 		const base = preset();
 		expect(
 			zConfig.safeParse({
@@ -48,7 +48,19 @@ describe("schema: simultaneous × deduction", () => {
 					roster: base.deduction!.roster
 				}
 			}).success
-		).toBe(false);
+		).toBe(true);
+
+		expect(
+			zConfig.safeParse({
+				...base,
+				deduction: {
+					...base.deduction!,
+					queryShape: "or",
+					traits: ["glasses", "hat"],
+					roster: base.deduction!.roster
+				}
+			}).success
+		).toBe(true);
 
 		expect(
 			zConfig.safeParse({

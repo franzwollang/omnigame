@@ -354,7 +354,7 @@ export const Contracts = {
 	}),
 	/**
 	 * Simultaneous deduction (input.mode = deduction under simultaneous).
-	 * Joint query or joint guess per round; no board placement.
+	 * Joint query (single or compound) or joint guess per round; no board placement.
 	 */
 	ScheduleSimultaneousDeduction: (): FeatureContract => ({
 		id: "ScheduleSimultaneousDeduction",
@@ -365,6 +365,7 @@ export const Contracts = {
 		invariants: [
 			"jointQueryOrGuessPerRound",
 			"independentSeatSecrets",
+			"compoundQueryShapesAllowed",
 			"jointUctDeferred"
 		]
 	}),
