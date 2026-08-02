@@ -135,6 +135,10 @@ export default function GamePage() {
 		currentConfig?.turn.schedule === "simultaneous";
 	const enableSimultaneousMove =
 		enableSimultaneous && currentConfig?.input.mode === "move";
+	const enableSimultaneousDeduction =
+		enableSimultaneous && currentConfig?.input.mode === "deduction";
+	const enableJointAgentSearch =
+		enableSimultaneous && !enableSimultaneousDeduction;
 	const enablePass = currentConfig?.objective.mode === "area_control";
 	const eventLines = useMemo(
 		() => eventLog.map(formatKernelEvent),
@@ -159,6 +163,18 @@ export default function GamePage() {
 		if (side === "simultaneous") {
 			const budget = actionsPerRound;
 			if (commitReveal) {
+				if (enableSimultaneousDeduction) {
+					const seat: PlayerId | null = !gameState.committedDeduction
+						?.X
+						? 0
+						: !gameState.committedDeduction?.O
+							? 1
+							: null;
+					if (seat === null) return;
+					const action = agentRef.current.act(kernel, gameState, seat);
+					if (action) dispatchAction(action);
+					return;
+				}
 				const xLen = gameState.committedPlacements?.X?.length ?? 0;
 				const oLen = gameState.committedPlacements?.O?.length ?? 0;
 				const seat: PlayerId | null =
@@ -543,8 +559,22 @@ export default function GamePage() {
 							<option value="random">random</option>
 							<option value="greedy">greedy</option>
 							<option value="hunt">hunt</option>
-							<option value="mcts">mcts</option>
-							<option value="uct">uct</option>
+							<option value="mcts">
+								mcts
+								{enableJointAgentSearch
+									? " (joint search)"
+									: enableSimultaneousDeduction
+										? " (random joint)"
+										: ""}
+							</option>
+							<option value="uct">
+								uct
+								{enableJointAgentSearch
+									? " (joint search)"
+									: enableSimultaneousDeduction
+										? " (random joint)"
+										: ""}
+							</option>
 						</select>
 						<Button
 							variant="outline"
@@ -555,11 +585,30 @@ export default function GamePage() {
 								legalActionsList.length === 0
 							}
 							onClick={stepAgent}
-							title="Play one kernel legal action from the selected agent"
+							title={
+								enableSimultaneousDeduction
+									? "Under simultaneous deduction, agents pick random joint query/guess (UCT/MCTS joint search deferred)"
+									: enableSimultaneous &&
+										  (agentKind === "mcts" || agentKind === "uct")
+										? "Under simultaneous, MCTS/UCT search joint place/move (open) or commitReveal fresh-round plans (incl. multi-action)"
+										: "Play one kernel legal action from the selected agent"
+							}
 						>
 							Agent step
 						</Button>
 					</div>
+					{enableSimultaneous &&
+						(agentKind === "mcts" ||
+							agentKind === "uct" ||
+							agentKind === "greedy") && (
+							<p className="mt-1 font-mono text-xs text-muted-foreground">
+								{enableSimultaneousDeduction
+									? "Simultaneous deduction: Agent step uses random joint query/guess (UCT/MCTS joint search deferred)."
+									: agentKind === "greedy"
+										? "Greedy skips lookahead under simultaneous (single place/move is a no-op until joint)."
+										: "MCTS/UCT: joint place/move search under open simultaneous (incl. multi-action); commitReveal fresh-round joint plan search (sequential commits)."}
+							</p>
+						)}
 					{enableTick && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Life Lite: place cells, then Tick for B3/S23 step
@@ -741,7 +790,11 @@ export default function GamePage() {
 							? popOutRow
 							: undefined
 					}
-					inputMode={currentConfig?.input.mode ?? "cell"}
+					inputMode={
+						currentConfig?.input.mode === "deduction"
+							? "cell"
+							: (currentConfig?.input.mode ?? "cell")
+					}
 					topology={currentConfig?.grid.topology ?? "rectangle"}
 					graph={engineConfig.graph}
 					highlightCells={highlightCells}

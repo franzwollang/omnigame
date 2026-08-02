@@ -116,11 +116,46 @@ export type GameState = {
 	 */
 	committedPlacements?: Partial<Record<Player, Position[]>>;
 	/**
+	 * Hidden simultaneous deduction: per-seat private query/guess commit.
+	 * Cleared after joint reveal (`simultaneousQuery` / `simultaneousGuess`).
+	 * Budget is always 1 under deduction.
+	 */
+	committedDeduction?: Partial<Record<Player, CommittedDeduction>>;
+	/**
 	 * In-turn phase index when `turn.phases` is set (0 .. phases.length-1).
 	 * Advances after each successful phase action; resets to 0 on handoff.
 	 * Distinct from fleet `phase` (game-long placement/combat).
 	 */
 	turnPhaseIndex?: number;
+	/** Deduction / Guess Who-lite secrets + per-player eliminations. */
+	deduction?: DeductionState;
+};
+
+export type DeductionCharacter = {
+	id: string;
+	traits: Record<string, boolean>;
+};
+
+export type QueryClause = { trait: string; value: boolean };
+
+export type DeductionLastQuery = {
+	by: Player;
+	answer: boolean;
+	/** Single-trait query (queryShape single). */
+	trait?: string;
+	value?: boolean;
+	/** Multi-clause query (queryShape and | or). */
+	clauses?: QueryClause[];
+	/** Clause operator when `clauses` is set. */
+	op?: "and" | "or";
+};
+
+export type DeductionState = {
+	secret: { X: string; O: string };
+	eliminated: { X: string[]; O: string[] };
+	lastQuery?: DeductionLastQuery;
+	/** Simultaneous rounds: per-seat last query (observation reads own seat). */
+	lastQueries?: Partial<Record<Player, DeductionLastQuery>>;
 };
 
 /** Normalize a simultaneous placement payload to a position list. */
@@ -216,6 +251,63 @@ export type ResetEvent = {
 	type: "reset";
 };
 
+export type QueryEvent = {
+	type: "query";
+	/** Single-trait atom (queryShape single). */
+	trait?: string;
+	value?: boolean;
+	/** Multi-clause compound (queryShape and | or; length = compoundArity). */
+	clauses?: QueryClause[];
+};
+
+/** Hidden simultaneous deduction: one seat's private query commit. */
+export type CommitQueryEvent = {
+	type: "commitQuery";
+	player: Player;
+	query: QueryEvent;
+};
+
+/** Hidden simultaneous deduction: one seat's private guess commit. */
+export type CommitGuessEvent = {
+	type: "commitGuess";
+	player: Player;
+	id: string;
+};
+
+/** One seat's hidden simultaneous deduction commit (query or guess). */
+export type CommittedDeduction =
+	| { kind: "query"; query: QueryEvent }
+	| { kind: "guess"; id: string };
+
+/** Joint query round: both seats submit one single-trait query. */
+export type SimultaneousQueryEvent = {
+	type: "simultaneousQuery";
+	queries: {
+		X: QueryEvent;
+		O: QueryEvent;
+	};
+};
+
+/** Joint guess round: both seats submit one secret guess. */
+export type SimultaneousGuessEvent = {
+	type: "simultaneousGuess";
+	guesses: {
+		X: string;
+		O: string;
+	};
+};
+
+export type GuessEvent = {
+	type: "guess";
+	id: string;
+};
+
+/** Manual hypothesis commit: prune one candidate from the actor's board. */
+export type EliminateEvent = {
+	type: "eliminate";
+	id: string;
+};
+
 export type GameEvent =
 	| PlaceMoveEvent
 	| MoveEvent
@@ -228,7 +320,14 @@ export type GameEvent =
 	| PassEvent
 	| SimultaneousPlaceEvent
 	| SimultaneousMoveEvent
+	| SimultaneousQueryEvent
+	| SimultaneousGuessEvent
 	| CommitPlaceEvent
+	| CommitQueryEvent
+	| CommitGuessEvent
+	| QueryEvent
+	| GuessEvent
+	| EliminateEvent
 	| ResetEvent;
 
 // Helper to convert row/col to flat index
