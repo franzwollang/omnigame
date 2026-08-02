@@ -56,11 +56,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M37 | Next missing mechanism (commitEliminate / commitReveal manual eliminate) | `done` |
 | M38 | Next missing mechanism (commitMove / commitReveal simultaneous move) | `done` |
 | M39 | Next missing mechanism (multi-action simultaneous move) | `done` |
+| M40 | Next missing mechanism (commitReveal multi-action move) | `done` |
 
-**Optimizing for this marathon:** M39 multi-action simultaneous move closed.
-Pick **P3 next-missing-mechanism** (e.g. fire→move only with anchor;
-commitReveal+multi-move follow-on) or **P4** CI / semantics refresh — without
-asking which fork.
+**Optimizing for this marathon:** M40 commitReveal + multi-action simultaneous
+move closed. Pick **P3 next-missing-mechanism** (e.g. fire→move only with
+anchor) or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -75,7 +75,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥563** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥571** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -88,8 +88,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M38 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M38) — smallest new seam — or
+   (P0–P2 / M8–M40 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M40) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -161,7 +161,7 @@ Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**,
 **Guess Who And3 Lite**, **Simultaneous Guess Who Lite**, **Simultaneous Guess Who
 Commit Lite**, **Simultaneous Guess Who And Lite**,
-**Hidden Simultaneous Guess Who Lite**, **Hidden Simultaneous Guess Who Commit Lite**, Simultaneous Step Race, **Hidden Simultaneous Step Race**, Place Move & Fire Lite, Move & Fire
+**Hidden Simultaneous Guess Who Lite**, **Hidden Simultaneous Guess Who Commit Lite**, Simultaneous Step Race, **Hidden Simultaneous Step Race**, **Double Simultaneous Step Race**, **Hidden Double Simultaneous Step Race**, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
@@ -541,8 +541,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 ### M39 — Multi-action simultaneous move
 
 - Schema: allow `actionsPerTurn > 1` under open simultaneous move +
-  `reach_row` + `range: 1` + no replace; forbid commitReveal multi-move —
-  **done**
+  `reach_row` + `range: 1` + no replace (commitReveal multi-move deferred to
+  M40) — **done**
 - Reducer: `handleSimultaneousMove` budget loop with sequential revalidation
   (same-piece chains; mid-round reach_row win) — **done**
 - Kernel: `asMoveList` / `jointMovesFromActions` / legality probe / format /
@@ -551,8 +551,24 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
   `jointSeatBudget` honor move arrays — **done**
 - Sandbox: pending move arrays + chain UX — **done**
 - Preset `double-simultaneous-step-race` + tests; 563 green — **done**
-- Out of scope: commitReveal multi-move; multi-action slide/replace;
-  fire→move
+- Out of scope closed by M40: commitReveal multi-move
+- Out of scope: multi-action slide/replace; fire→move
+
+### M40 — CommitReveal + multi-action simultaneous move
+
+- Schema: allow `commitReveal` + `actionsPerTurn > 1` under simultaneous move
+  (same foothold: reach_row + range 1 + no replace) — **done**
+- State: `committedMoves` as `MovePair[]` per seat; accumulate until budget —
+  **done**
+- Reducer: `handleCommitMove` probe-chain legality + budget reveal into
+  `handleSimultaneousMove` arrays — **done**
+- Kernel: budget-aware legals/explain/stepPly; observation multi-dest overlay —
+  **done**
+- Agents: `enumerateCommitRevealJoints` uses `orderedMoveChains` for budget>1;
+  fingerprints/activeCommitSeat array-aware — **done**
+- Sandbox: sequential commitMove + chain auto-select — **done**
+- Preset `hidden-double-simultaneous-step-race` + tests; 571 green — **done**
+- Out of scope: multi-action slide/replace under commitReveal; fire→move
 
 ## Sequencing notes
 

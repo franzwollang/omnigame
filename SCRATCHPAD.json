@@ -1,21 +1,21 @@
 {
-  "updated_at": "2026-08-02T09:15-00:00",
-  "turn": 68,
+  "updated_at": "2026-08-02T09:30-00:00",
+  "turn": 69,
   "focus": {
-    "milestone": "M39",
+    "milestone": "M40",
     "issue": "next-missing-mechanism",
-    "goal": "multi-action sim move landed; hand off next seam or P4"
+    "goal": "commitReveal multi-move landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M38 tip 8286 onto 9042",
-    "Landed M39 multi-action simultaneous move + Double Step Race",
-    "563 green; commitReveal/slide/replace multi still deferred"
+    "Synced M39 tip 9042 onto 2d9a",
+    "Landed M40 commitReveal+multi-move + Hidden Double Step Race",
+    "571 green; slide/replace multi still deferred"
   ],
   "discoveries": [
-    "Move multi-action needs sequential revalidation (unlike place)"
+    "committedMoves as MovePair[]; probe-chain for private commit #k"
   ],
   "open_threads": [
-    "Next: commitReveal+multi-move / fire→move+anchor / P4 CI"
+    "Next: fire→move+anchor / P4 CI / semantics — reject recombinations"
   ],
   "next_step": "Pick next seam (not fire→move without anchor) or P4",
   "blockers": []

@@ -92,3 +92,4 @@
 {"ts":"2026-08-02T08:50-00:00","focus":"M38 commitMove","summary":"Landed commitReveal under simultaneous move + Hidden Simultaneous Step Race; 549 green","next":"Pick fire→move with anchor or P4 CI/semantics"}
 {"ts":"2026-08-02T08:55-00:00","focus":"M38 commitMove","summary":"PR #78 opened; 551 green; hardened commitMove tests + agent copy","next":"Pick next seam or P4 CI/semantics"}
 {"ts":"2026-08-02T09:15-00:00","focus":"M39 multi-action simultaneous move","summary":"Landed actionsPerTurn under open simultaneous move + Double Simultaneous Step Race; 563 green","next":"Pick next seam or P4 CI/semantics"}
+{"ts":"2026-08-02T09:30-00:00","focus":"M40 commitReveal multi-action move","summary":"Landed Hidden Double Simultaneous Step Race; 571 green; hand off next seam or P4","next":"Pick next-missing-mechanism or P4 CI/semantics"}
