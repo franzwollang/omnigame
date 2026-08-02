@@ -1648,7 +1648,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Joint simultaneous step with replace capture: X can take a stationary O on the target row while O moves a second piece. Vacated-origin hybrid restores a fleeing capture target at destination so replace stays required. Unlocks simultaneous × replace — ordered replace is Ordered Simultaneous Replace Race; slide+replace is Simultaneous Slide Replace Race.",
+			"Joint simultaneous step with replace capture: X can take a stationary O on the target row while O moves a second piece. Joint legality uses vacated-origin paths (same as joint slides) so fleers clear rays while stationary targets stay. Unlocks simultaneous × replace — ordered replace is Ordered Simultaneous Replace Race; slide+replace is Simultaneous Slide Replace Race.",
 		config: {
 			metadata: { name: "Simultaneous Replace Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -1847,7 +1847,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Joint simultaneous rook slide (range 4) with replace: X slides onto a stationary O on the target row while O moves a runner. Vacated-origin hybrid keeps the capture target visible and clears fleeing blockers on the path. Unlocks simultaneous × slide × replace.",
+			"Joint simultaneous rook slide (range 4) with replace: X slides onto a stationary O on the target row while O moves a runner. Vacated-origin legality clears fleeing blockers on the path while stationary capture targets stay. Unlocks simultaneous × slide × replace.",
 		config: {
 			metadata: { name: "Simultaneous Slide Replace Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },

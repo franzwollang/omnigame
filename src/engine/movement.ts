@@ -225,12 +225,11 @@ export type JointMoveSpec = { from: Position; to: Position };
 /**
  * Joint simultaneous move legality.
  * Both seats validated on a vacated-origin board so a fleeing piece does not
- * block the other's path (incl. slides through the vacating cell).
- * Replace capture hybrid: destinations that land on the opponent's origin
- * restore that occupant so `capture: "replace"` is still required (empty-dest
- * would incorrectly accept `capture: "none"`). Stationary enemies elsewhere
- * stay visible. Same-destination pairs still return true here; apply resolves
- * conflict.
+ * block the other's path (incl. slides through the vacating cell) and so a
+ * seat may land on the opponent's vacated origin (joint apply clears both
+ * origins before landing — no pieceCaptured for a fleer). Stationary enemies
+ * stay visible, so `capture: "replace"` is still required to take them.
+ * Same-destination pairs still return true here; apply resolves conflict.
  */
 export function canJointSimultaneousMoves(
 	grid: Grid,
@@ -245,22 +244,14 @@ export function canJointSimultaneousMoves(
 	cells = setCell({ ...grid, cells }, moves.O.from, null);
 	const vacated: Grid = { ...grid, cells };
 
-	const boardFor = (seat: Player, move: JointMoveSpec, oppFrom: Position) => {
-		let next = setCell(vacated, move.from, seat);
-		// Replace hybrid: keep fleeing capture targets visible at destination.
-		if (
-			config.capture === "replace" &&
-			move.to.row === oppFrom.row &&
-			move.to.col === oppFrom.col
-		) {
-			const opp: Player = seat === "X" ? "O" : "X";
-			next = setCell({ ...vacated, cells: next }, oppFrom, opp);
-		}
-		return { ...vacated, cells: next } as Grid;
+	const withX: Grid = {
+		...vacated,
+		cells: setCell(vacated, moves.X.from, "X")
 	};
-
-	const withX = boardFor("X", moves.X, moves.O.from);
-	const withO = boardFor("O", moves.O, moves.X.from);
+	const withO: Grid = {
+		...vacated,
+		cells: setCell(vacated, moves.O.from, "O")
+	};
 
 	return (
 		canMove(withX, moves.X.from, moves.X.to, "X", config, wrapOrBoard) &&

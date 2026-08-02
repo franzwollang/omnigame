@@ -1094,9 +1094,9 @@ export function explainKernelAction(
 		};
 	}
 
-	// Joint move: joint resolve uses vacated-origin path checks (replace
-	// hybrid restores fleeing capture targets at destination); ordered uses
-	// sequential path / capture revalidation.
+	// Joint move: joint resolve uses vacated-origin path checks (incl. replace
+	// slides through fleeing blockers); ordered uses sequential path / capture
+	// revalidation.
 	if (action.type === "simultaneousMove") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
 			return {

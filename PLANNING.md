@@ -90,7 +90,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 | Product surfaces | Sandbox composer + Library explorer |
 | Reference games | Mechanism-first only (`.cursor/rules/project-structure.mdc`) |
 | Simultaneous × sliding | **Joint** vacated-origin paths; **ordered** sequential path revalidation |
-| Simultaneous × replace | **Joint** real-board (any range, paths clear pre-round); **ordered** sequential capture (any range, incl. slide) |
+| Simultaneous × replace | **Joint** vacated-origin paths (any range; stationary replace still required); **ordered** sequential capture (any range, incl. slide) |
 | Marathon priority | Composition honesty **before** new mechanism |
 
 ## Product surfaces
@@ -209,10 +209,11 @@ CI workflows; richer Guess Who commit/hypothesis beyond query+guess MVP.
 
 ### M17 — Joint replace vacated-origin hybrid
 
-- Joint + replace (+ slide): path cells treat opponent origin as empty; dest
-  landing on opponent origin restores occupant so replace stays required — **done**
+- Joint + replace (+ slide): same vacated-origin path checks as joint slides —
+  fleeing blockers clear the ray; stationary enemies stay and still need
+  replace — **done**
 - Preset `simultaneous-slide-replace-flee-race` + legality/apply/replay tests — **done**
-- Stationary capture + static blockers unchanged — **done**
+- Stationary capture + static blockers + seat-swap unchanged — **done**
 - Out of scope: hex/graph replace; joint UCT over simultaneous actions
 
 ## Sequencing notes

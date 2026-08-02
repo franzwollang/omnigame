@@ -105,7 +105,7 @@ describe("canJointSimultaneousMoves slide+replace hybrid", () => {
 		);
 	});
 
-	it("still requires replace when landing on a fleeing opponent origin", () => {
+	it("allows landing on a fleeing opponent origin (joint vacate; no capture needed)", () => {
 		const cfg = {
 			...examplePresets["simultaneous-slide-replace-race"].config,
 			initial: [
@@ -129,11 +129,12 @@ describe("canJointSimultaneousMoves slide+replace hybrid", () => {
 			X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
 			O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
 		};
+		// Joint apply clears both origins before landing, so this is empty-dest.
 		expect(
 			canJointSimultaneousMoves(state.grid, moves, SLIDE_REPLACE)
 		).toBe(true);
 		expect(canJointSimultaneousMoves(state.grid, moves, SLIDE_NONE)).toBe(
-			false
+			true
 		);
 	});
 

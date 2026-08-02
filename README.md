@@ -157,10 +157,10 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   checks; ordered simultaneous slides revalidate the second seat after the first;
   `movement.capture = replace` moves onto an enemy cell (path empty except
   destination) — Replace Race / **Simultaneous Replace Race** (joint range 1;
-  vacated-origin hybrid restores fleeing capture targets at destination) /
+  vacated-origin paths; stationary replace still required) /
   **Ordered Simultaneous Replace Race** (sequential capture apply; priority can
   capture before prey flees) / **Simultaneous Slide Replace Race** (joint
-  slide+replace; hybrid path-through-fleeing) / **Simultaneous Slide Replace
+  slide+replace; path-through-fleeing) / **Simultaneous Slide Replace
   Flee Race** (demo of slide through a vacating blocker) / **Ordered
   Simultaneous Slide Replace Race** (ordered slide+replace; sequential
   path/capture); hex_offset / graph use topology neighbors (orthogonal, range
