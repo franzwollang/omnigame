@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-08-02T05:20-00:00",
-  "turn": 53,
+  "updated_at": "2026-08-02T05:25-00:00",
+  "turn": 54,
   "focus": {
     "milestone": "M27",
     "issue": "next-missing-mechanism",
@@ -9,7 +9,7 @@
   "recent": [
     "Synced M8–M26 from 6ac1 onto 860a",
     "Landed M27 graph replace + graph-replace-race",
-    "Ready for typecheck + test green gate"
+    "449 green after typecheck+test"
   ],
   "discoveries": [
     "slideGraphDestinations needed replace branch (unlike hex which had it)"
