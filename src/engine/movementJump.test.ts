@@ -237,13 +237,27 @@ describe("movement.capture = jump schema / validateConfig", () => {
 		expect(zConfig.safeParse(cfg).success).toBe(true);
 	});
 
-	it("rejects jump on graph", () => {
+	it("accepts jump on graph with orthogonal adjacency", () => {
 		const cfg = {
 			...examplePresets["graph-replace-race"].config,
 			movement: {
 				adjacency: "orthogonal" as const,
 				range: 1,
 				capture: "jump" as const
+			}
+		};
+		expect(validateConfig(cfg).ok).toBe(true);
+		expect(zConfig.safeParse(cfg).success).toBe(true);
+	});
+
+	it("rejects jump with graphReach = hop", () => {
+		const cfg = {
+			...examplePresets["graph-jump-race"].config,
+			movement: {
+				adjacency: "orthogonal" as const,
+				range: 1,
+				capture: "jump" as const,
+				graphReach: "hop" as const
 			}
 		};
 		expect(validateConfig(cfg).ok).toBe(false);
@@ -670,6 +684,245 @@ describe("Hex Jump Race (movement.capture = jump on hex_offset)", () => {
 		const state = createInitialState(gameConfig);
 		expect(
 			hasAnyJumpCapture(state.grid, "X", HEX_JUMP, HEX_BOARD)
+		).toBe(true);
+	});
+});
+
+const GRAPH_JUMP: MovementConfig = {
+	adjacency: "orthogonal",
+	range: 1,
+	capture: "jump"
+};
+
+describe("graph jump capture helpers", () => {
+	it("lists 2-edge leap landings over an adjacent enemy node", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const from = { row: 4, col: 0 };
+		expect(getCell(state.grid, from)).toBe("X");
+		expect(getCell(state.grid, { row: 3, col: 0 })).toBe("O");
+		const dests = jumpDestinations(
+			state.grid,
+			from,
+			GRAPH_JUMP,
+			board,
+			"X"
+		);
+		expect(dests).toEqual([{ row: 2, col: 0 }]);
+		expect(
+			jumpMid(from, { row: 2, col: 0 }, GRAPH_JUMP, board, state.grid)
+		).toEqual({ row: 3, col: 0 });
+		expect(
+			isJumpCapture(
+				state.grid,
+				from,
+				{ row: 2, col: 0 },
+				"X",
+				GRAPH_JUMP,
+				board
+			)
+		).toBe(true);
+	});
+
+	it("unions quiet edge neighbors with jump landings", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const from = { row: 4, col: 0 };
+		const dests = legalDestinations(state.grid, from, GRAPH_JUMP, board);
+		// Only edge neighbor is O(3,0) — occupied, so quiet empty neighbors none;
+		// jump landing (2,0) is the sole legal destination.
+		expect(dests).toEqual([{ row: 2, col: 0 }]);
+		expect(
+			canMove(
+				state.grid,
+				from,
+				{ row: 2, col: 0 },
+				"X",
+				GRAPH_JUMP,
+				board
+			)
+		).toBe(true);
+		// Cannot land on the enemy (replace-style).
+		expect(
+			canMove(
+				state.grid,
+				from,
+				{ row: 3, col: 0 },
+				"X",
+				GRAPH_JUMP,
+				board
+			)
+		).toBe(false);
+	});
+
+	it("rejects jumping over empty or own piece on graph", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const from = { row: 4, col: 0 };
+		// Clear mid — empty mid is not a jump.
+		const cleared = {
+			...state.grid,
+			cells: setCell(state.grid, { row: 3, col: 0 }, null)
+		};
+		expect(
+			isJumpCapture(
+				cleared,
+				from,
+				{ row: 2, col: 0 },
+				"X",
+				GRAPH_JUMP,
+				board
+			)
+		).toBe(false);
+		const withOwn = {
+			...state.grid,
+			cells: setCell(state.grid, { row: 3, col: 0 }, "X")
+		};
+		expect(
+			isJumpCapture(
+				withOwn,
+				from,
+				{ row: 2, col: 0 },
+				"X",
+				GRAPH_JUMP,
+				board
+			)
+		).toBe(false);
+	});
+});
+
+describe("Graph Jump Race (movement.capture = jump on graph)", () => {
+	it("validates and compiles the graph-jump-race preset", () => {
+		const cfg = examplePresets["graph-jump-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const parsed = zConfig.safeParse(cfg);
+		expect(parsed.success).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.movement?.capture).toBe("jump");
+		expect(gameConfig.movement?.adjacency).toBe("orthogonal");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(getCell(state.grid, { row: 4, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 3, col: 0 })).toBe("O");
+		const legal = kernel.legalActions(state, 0);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 4 &&
+					a.from.col === 0 &&
+					a.to.row === 2 &&
+					a.to.col === 0
+			)
+		).toBe(true);
+	});
+
+	it("single graph jump clears mid, emits pieceCaptured, continues chain", () => {
+		const cfg = examplePresets["graph-jump-race"].config;
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const jump: KernelAction = {
+			type: "move",
+			from: { row: 4, col: 0 },
+			to: { row: 2, col: 0 }
+		};
+		const result = kernel.stepSync(state, jump);
+		expect(result.events.some((e) => e.type === "ignored")).toBe(false);
+		expect(
+			result.events.some(
+				(e) =>
+					e.type === "pieceCaptured" &&
+					e.position.row === 3 &&
+					e.position.col === 0 &&
+					e.captured === "O" &&
+					e.by === "X"
+			)
+		).toBe(true);
+		expect(getCell(result.nextState.grid, { row: 4, col: 0 })).toBe(null);
+		expect(getCell(result.nextState.grid, { row: 3, col: 0 })).toBe(null);
+		expect(getCell(result.nextState.grid, { row: 2, col: 0 })).toBe("X");
+		expect(result.nextState.currentPlayer).toBe("X");
+		expect(result.nextState.mustContinueFrom).toEqual({ row: 2, col: 0 });
+		const chainLegal = kernel.legalActions(result.nextState, 0);
+		expect(
+			chainLegal.every(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 2 &&
+					a.from.col === 0
+			)
+		).toBe(true);
+		expect(
+			chainLegal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 0
+			)
+		).toBe(true);
+	});
+
+	it("graph chain second jump wins reach_row (transcript + replay)", () => {
+		const cfg = examplePresets["graph-jump-race"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const actions: KernelAction[] = [
+			{ type: "move", from: { row: 4, col: 0 }, to: { row: 2, col: 0 } },
+			{ type: "move", from: { row: 2, col: 0 }, to: { row: 0, col: 0 } }
+		];
+		let cur = state;
+		const events: Array<{ type: string }> = [];
+		for (const action of actions) {
+			const step = kernel.stepSync(cur, action);
+			events.push(...step.events);
+			cur = step.nextState;
+		}
+		expect(cur.status).toBe("won");
+		expect(cur.winner).toBe("X");
+		expect(cur.mustContinueFrom).toBeUndefined();
+		expect(
+			events.filter((e) => e.type === "pieceCaptured")
+		).toHaveLength(2);
+		expect(getCell(cur.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(cur.grid, { row: 1, col: 0 })).toBe(null);
+
+		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replayed.finalState.status).toBe("won");
+		expect(replayed.finalState.winner).toBe("X");
+		expect(getCell(replayed.finalState.grid, { row: 0, col: 0 })).toBe("X");
+	});
+
+	it("hasAnyJumpCapture sees graph leaps", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		expect(
+			hasAnyJumpCapture(state.grid, "X", GRAPH_JUMP, board)
 		).toBe(true);
 	});
 });

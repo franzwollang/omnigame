@@ -139,12 +139,14 @@ export const zConfig = z
 		 * (cube-axis rays), and graph (edge chain-walk or hop-ball BFS).
 		 * Ordered simultaneous + range > 1 uses sequential path revalidation.
 		 * `capture: "jump"` — leap over an adjacent enemy to the empty cell
-		 * beyond (rectangle | hex_offset + alternating only; quiet moves stay
-		 * range 1; hex uses cube-axis double steps). After a jump, further
-		 * jumps from the landing cell keep the same seat (`mustContinueFrom`
+		 * beyond (rectangle | hex_offset | graph + alternating only; quiet
+		 * moves stay range 1; hex uses cube-axis double steps; graph uses a
+		 * 2-edge leap over an enemy mid node). After a jump, further jumps
+		 * from the landing cell keep the same seat (`mustContinueFrom`
 		 * chain). Optional `mustCapture: true` forbids quiet moves at turn
 		 * start when any jump exists (Checkers-lite mandatory capture).
-		 * Distinct from replace and hop-ball. Graph jump deferred.
+		 * Distinct from replace and hop-ball. Incompatible with
+		 * `graphReach: "hop"` (jump has fixed 2-edge semantics).
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -2074,7 +2076,7 @@ export const zConfig = z
 			}
 		}
 
-		// Jump capture / multi-jump chains: rectangle | hex_offset + alternating
+		// Jump capture / multi-jump chains: rectangle | hex_offset | graph + alternating
 		if (cfg.movement?.capture === "jump") {
 			if (!moveInput) {
 				ctx.addIssue({
@@ -2086,13 +2088,22 @@ export const zConfig = z
 			}
 			if (
 				cfg.grid.topology !== "rectangle" &&
-				cfg.grid.topology !== "hex_offset"
+				cfg.grid.topology !== "hex_offset" &&
+				cfg.grid.topology !== "graph"
 			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["movement", "capture"],
 					message:
-						"movement.capture = 'jump' requires grid.topology = 'rectangle' or 'hex_offset' (graph deferred)"
+						"movement.capture = 'jump' requires grid.topology = 'rectangle', 'hex_offset', or 'graph'"
+				});
+			}
+			if (cfg.movement.graphReach === "hop") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "graphReach"],
+					message:
+						"movement.capture = 'jump' is incompatible with graphReach = 'hop' (jump uses fixed 2-edge leaps)"
 				});
 			}
 			if (captureEnabled) {

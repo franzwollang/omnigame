@@ -92,7 +92,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 		topology === "hex_offset" ||
 		topology === "graph";
 	const jumpTopologyOk =
-		topology === "rectangle" || topology === "hex_offset";
+		topology === "rectangle" ||
+		topology === "hex_offset" ||
+		topology === "graph";
 	const schedule = (form.watch("turn.schedule") as string | undefined) ?? "alternating";
 	const captureValue = form.watch("movement.capture") as string | undefined;
 	// Rectangle / hex cube-axis / graph chain-walk slides unlocked (range 1..8).
@@ -781,8 +783,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													(path empty except destination; rectangle |
 													hex | graph). Jump: leap over an adjacent
 													enemy to the empty cell beyond (rectangle |
-													hex cube-axis + alternating; further jumps
-													keep the same seat). Not placement.capture.
+													hex cube-axis | graph 2-edge + alternating;
+													further jumps keep the same seat). Not
+													placement.capture.
 												</p>
 												<FormMessage />
 											</FormItem>

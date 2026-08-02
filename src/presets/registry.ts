@@ -1680,7 +1680,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Cube-axis jump race on odd-r hex: leap over an adjacent enemy along a cube direction to the empty cell beyond. Further jumps from the landing keep the same seat (mustContinueFrom). Unlocks movement.capture = jump on hex_offset — rectangle Jump Race cannot express hex leap-over geometry; graph jump remains deferred.",
+			"Cube-axis jump race on odd-r hex: leap over an adjacent enemy along a cube direction to the empty cell beyond. Further jumps from the landing keep the same seat (mustContinueFrom). Unlocks movement.capture = jump on hex_offset — rectangle Jump Race cannot express hex leap-over geometry; Graph Jump Race covers explicit-edge leaps.",
 		config: {
 			metadata: { name: "Hex Jump Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
@@ -1715,6 +1715,85 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 3, col: 1, player: "O", visibility: "public" },
 				{ row: 1, col: 0, player: "O", visibility: "public" },
 				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"graph-jump-race": definePreset({
+		id: "graph-jump-race",
+		name: "Graph Jump Race",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"chain",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Two-lane graph jump race: leap over an edge-adjacent enemy node to the empty node two hops away. Further jumps from the landing keep the same seat (mustContinueFrom). Unlocks movement.capture = jump on graph — Graph Replace lands on the enemy; Graph Hop walks empties; neither expresses leap-over capture chains on explicit edges.",
+		config: {
+			metadata: { name: "Graph Jump Race", version: 1 },
+			grid: {
+				width: 2,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "jump" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Lane 0 chain: X(4,0) → jump O(3,0) → (2,0) → jump O(1,0) → (0,0) wins.
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "O", visibility: "public" },
+				{ row: 4, col: 1, player: "O", visibility: "public" }
 			]
 		}
 	}),
