@@ -61,8 +61,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M43 | Next missing mechanism (jump capture / multi-jump chains) | `done` |
 | M44 | Next missing mechanism (flood-fill region reveal) | `done` |
 | M45 | Next missing mechanism (mandatory jump-at-turn-start) | `done` |
+| M46 | Next missing mechanism (memory flip / tile pair-matching) | `done` |
 
-**Optimizing for this marathon:** M45 `mustCapture` landed. Pick **P3
+**Optimizing for this marathon:** M46 `memory_flip` landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -79,7 +80,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥602** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥614** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)

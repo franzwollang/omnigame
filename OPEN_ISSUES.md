@@ -11,9 +11,10 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Mandatory jump-at-turn-start (`movement.mustCapture` + Mandatory Jump Race)
-landed as **M45**. P4 tooling-ci and semantics-doc-refresh already closed
-(M41–M42). Flood-fill reveal closed as M44.
+Memory Flip / tile pair-matching (`observation.mode = memory_flip` +
+`input.mode = flip` + `objective.mode = match_pairs` + Memory Flip Lite)
+landed as **M46**. P4 tooling-ci and semantics-doc-refresh already closed
+(M41–M42). Flood-fill reveal closed as M44; mustCapture as M45.
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -23,16 +24,16 @@ e.g.:
 - Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
   recombination of reveal)
 - Hex/graph hazard adjacency (only if a new seam appears)
+- Memory bonus-turn-on-match / custom decks (schema field exists; deferred)
 - commitReveal + slide/replace demos (kernel complete — preset-only unless a
   new seam appears)
 - multi-action slide/replace under simultaneous (deferred composition; only if
   a new seam appears — not a recombination demo)
 - `queryShape: not` (reject unless nested AST / new pruning class)
-- Crowned kings / checkers promotion (Transform operator — larger than M45)
+- Crowned kings / checkers promotion (Transform operator — larger)
 - Hex/graph jump capture (topology extension of jump)
 - Full Go rules (large; prefer smaller seams first)
 - Realtime / continuous scheduler (large)
-- Tile pair-matching / memory flip (new action family — candidate small seam)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -65,8 +66,10 @@ BFS. **Jump Race** covers leap-over capture + same-seat chains
 (`movement.capture = jump` / `mustContinueFrom`). **Mandatory Jump Race**
 covers Checkers-lite turn-start mandatory capture (`mustCapture`).
 **Minesweeper Lite** covers flood-fill region reveal (`flood_reveal` /
-`clear_hazards` / `hazards`). Open simultaneous deduction joint UCT covers
-agent search over query/guess(/eliminate) cartesian (fire→move still open if
-an anchor appears). CI green gate: `.github/workflows/ci.yml` (Node 20.19 +
-pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; jump in M43;
-flood_reveal in M44; mustCapture in M45).
+`clear_hazards` / `hazards`). **Memory Flip Lite** covers tile pair-matching
+(`memory_flip` / `flip` / `match_pairs` / `memory`). Open simultaneous
+deduction joint UCT covers agent search over query/guess(/eliminate) cartesian
+(fire→move still open if an anchor appears). CI green gate:
+`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics draft:
+`docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
+mustCapture in M45; memory_flip in M46).

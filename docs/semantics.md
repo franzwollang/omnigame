@@ -36,6 +36,7 @@ Grounded in `src/engine/types.ts`, `reducer.ts`, `kernel.ts`, `contracts.ts`,
 | move | from, to |
 | fire | position |
 | reveal | position (flood_reveal / Minesweeper-lite) |
+| flip | position (memory_flip / Memory Flip Lite) |
 | activateColumn / activateRow | col / row |
 | popOutColumn / popOutRow | col / row |
 | tick | — |
@@ -64,6 +65,8 @@ Not reducer inputs — emitted by `GameKernel.step` / `stepJoint`:
 - `shotResult` — fire mark (hit \| miss)
 - `cellsRevealed` — flood_reveal positions + counts (0–8)
 - `mineHit` — flood_reveal exploded mine at position
+- `tilesFlipped` — memory_flip face-up positions + symbols
+- `pairResolved` — memory_flip match/mismatch outcome (+ scorer on match)
 - `pieceCaptured` — replace capture at destination; jump capture at mid cell
 - `queryAnswered` — trait/clauses + boolean answer
 - `guessResult` — targetId + correct
@@ -226,17 +229,26 @@ KoRule: none | point | positional | situational.
 ### Objectives
 
 n_in_a_row | reach_row (+ targetRows) | destroy_hidden | connect_or_destroy |
-area_control (two passes → score) | identify_secret | clear_hazards | none.
+area_control (two passes → score) | identify_secret | clear_hazards |
+match_pairs | none.
 
 ### Observation
 
 full | hit_miss | fog (radius + metric) | deduction (roster / eliminations /
-lastQuery; commit pending overlay) | flood_reveal (shared counts; hidden mines).
+lastQuery; commit pending overlay) | flood_reveal (shared counts; hidden mines)
+| memory_flip (shared face-up / matched marks; hidden deck).
 
 ### Hazards (flood_reveal)
 
 hazards.{count, firstRevealSafe}; reveal action floods zero-count regions and
 opens numbered frontiers; mineHit → opponent wins; all safe revealed → draw.
+
+### Memory (memory_flip)
+
+memory.{pairCount, bonusTurnOnMatch}; input.mode = flip; actionsPerTurn = 2;
+hidden deck holds `mem:N` marks (exactly two each); flip two tiles per turn;
+match stays + scores; mismatch re-hides synchronously; all matched → higher
+score wins (tie → draw).
 
 ### Fleet / scheduler
 

@@ -25,7 +25,7 @@ type Props = {
 	onActivateRow?: (row: number) => void;
 	onPopOutColumn?: (col: number) => void;
 	onPopOutRow?: (row: number) => void;
-	inputMode?: "cell" | "column" | "row" | "move";
+	inputMode?: "cell" | "column" | "row" | "move" | "flip" | "deduction";
 	enablePopOutButtons?: boolean;
 	/** Which board edge hosts pop-out buttons (exit side). */
 	popOutSide?: "top" | "bottom" | "left" | "right";
@@ -749,6 +749,7 @@ export default function SandboxCanvas({
 			}
 
 			// If a token is assigned to this player, render its image/label
+			if (value !== "X" && value !== "O") return;
 			const token = tokenForPlayer(value);
 			if (token && token.asset?.type === "image") {
 				let tex = textureCacheRef.current.get(token.asset.url);

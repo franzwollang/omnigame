@@ -19,6 +19,7 @@ export type Slot =
 				| "areaControl"
 				| "identifySecret"
 				| "clearHazards"
+				| "matchPairs"
 				| "none";
 	  }
 	| { type: "Schedule"; value: "alternating" | "manualTick" | "simultaneous" };

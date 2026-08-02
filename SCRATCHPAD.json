@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-02T11:10-00:00",
-  "turn": 74,
+  "updated_at": "2026-08-02T11:30-00:00",
+  "turn": 75,
   "focus": {
-    "milestone": "M45",
+    "milestone": "M46",
     "issue": "next-missing-mechanism",
-    "goal": "mustCapture landed; hand off next genuine P3 seam"
+    "goal": "memory_flip landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced ead2 M44 tip onto 0535",
-    "Landed M45 mustCapture + Mandatory Jump Race; 602 green",
-    "Rejected fire→move / flags; chose M43 deferred mandatory jump"
+    "Synced 0535 M45 tip onto 5795",
+    "Landed M46 memory_flip + Memory Flip Lite; 614 green",
+    "Rejected fire→move / flags; chose tile pair-matching"
   ],
   "discoveries": [
-    "Jump Race opening has no quiet escape — need contrast board for mustCapture"
+    "CellValue uses mem:N strings to avoid HazardCount collision",
+    "actionsPerTurn>1 refine needs memoryActive exemption"
   ],
   "open_threads": [
-    "Next: tile-match, crowned kings, hex jump, full Go, realtime; reject fire→move"
+    "Next: crowned kings, hex jump, full Go, realtime; reject fire→move"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M45",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M46",
   "blockers": []
 }

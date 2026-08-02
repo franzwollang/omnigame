@@ -1496,6 +1496,8 @@ export const zConfig = z
 							"actionsPerTurn > 1 is incompatible with placement.delayTurns > 0"
 					});
 				}
+			} else if (memoryActive) {
+				// Memory Flip: actionsPerTurn = 2 is required; lockstep enforced above.
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
