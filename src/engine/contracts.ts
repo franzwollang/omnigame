@@ -447,11 +447,13 @@ export const Contracts = {
 	 * Ordered in-turn phase sequence (place→move / place→fire /
 	 * place→move→fire / move→fire, or deduction query→eliminate /
 	 * query→guess / query→eliminate→guess before handoff). Distinct from
-	 * ScheduleMultiStep (N copies of one action type).
+	 * ScheduleMultiStep (N copies of one action type). Board phases still
+	 * pull ResolvedCell from PlacementDirect / InputMove; deduction phases
+	 * only need the writable board scaffold.
 	 */
 	ScheduleInTurnPhases: (): FeatureContract => ({
 		id: "ScheduleInTurnPhases",
-		requires: ["CellsWritable", "ResolvedCell"],
+		requires: ["CellsWritable"],
 		provides: [],
 		slots: [],
 		hooks: ["validateInput", "nextTurn"],

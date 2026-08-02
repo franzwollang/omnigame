@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T05:45-00:00",
-  "turn": 56,
+  "updated_at": "2026-08-02T05:46-00:00",
+  "turn": 57,
   "focus": {
-    "milestone": "M28",
+    "milestone": "M29",
     "issue": "next-missing-mechanism",
-    "goal": "compoundArity / Guess Who And3 Lite landed; hand off next seam or P4"
+    "goal": "deduction query→eliminate phases landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M27 from 860a onto 9fbb",
-    "Landed M28 compoundArity + guess-who-and3-lite",
-    "459 green after typecheck+test"
+    "Synced M8–M28 from 9fbb onto 7ddb",
+    "Landed M29 query→eliminate phases + Commit Phases Lite",
+    "467 green after ScheduleInTurnPhases CellsWritable-only"
   ],
   "discoveries": [
-    "Prune helpers already N-general; only kernel/reducer arity=2 was hardwired"
+    "ScheduleInTurnPhases must not require ResolvedCell for deduction phases"
   ],
   "open_threads": [
-    "Next: richer phases, hop-ball, simultaneous deduction, or P4 CI/semantics"
+    "Next: hop-ball, simultaneous deduction, fire→move, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (phases/hop-ball/simultaneous deduction) or P4",
+  "next_step": "Pick next seam (hop-ball/simultaneous deduction/fire→move) or P4",
   "blockers": []
 }

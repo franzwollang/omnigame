@@ -80,3 +80,4 @@
 {"ts":"2026-08-02T05:25-00:00","focus":"M27 graph replace","summary":"Green gate 449; typecheck+test pass after graph replace unlock","next":"Pick richer phases/3+AND/hop-ball or P4 CI/semantics"}
 {"ts":"2026-08-02T05:40-00:00","focus":"M28 compoundArity","summary":"Landed 3-clause AND via compoundArity + And3 Lite preset","next":"Pick next seam or P4 CI/semantics"}
 {"ts":"2026-08-02T05:45-00:00","focus":"M28 compoundArity","summary":"459 green after import fix; hand off next seam or P4","next":"Pick next seam or P4 CI/semantics"}
+{"ts":"2026-08-02T05:46-00:00","focus":"M29 deduction phases","summary":"467 green after query→eliminate unlock; hand off next seam or P4","next":"Pick hop-ball/simultaneous deduction/fire→move or P4 CI/semantics"}

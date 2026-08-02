@@ -45,11 +45,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M26 | Next missing mechanism (hex replace capture) | `done` |
 | M27 | Next missing mechanism (graph replace capture) | `done` |
 | M28 | Next missing mechanism (compoundArity / 3-clause AND) | `done` |
+| M29 | Next missing mechanism (deduction query→eliminate phases) | `done` |
 
-**Optimizing for this marathon:** M28 compoundArity / Guess Who And3 Lite
-closed. Pick **P3 next-missing-mechanism** (e.g. richer phases, hop-ball,
-simultaneous deduction) or **P4** CI / semantics refresh — without asking
-which fork.
+**Optimizing for this marathon:** M29 deduction query→eliminate phases /
+Guess Who Commit Phases Lite closed. Pick **P3 next-missing-mechanism**
+(e.g. hop-ball, simultaneous deduction, fire→move) or **P4** CI /
+semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -64,7 +65,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥459** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥467** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -77,7 +78,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M28 closed).  
+   (P0–P2 / M8–M29 closed).  
 2. Start **P3** `next-missing-mechanism` (post-M28) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -307,10 +308,11 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
   when autoEliminate is false — **done**
 - Preset `guess-who-commit-lite` (`wrongGuess: end_turn`) + transcript/replay
   tests — **done**
-- Out of scope: simultaneous deduction; deduction + phases; batch eliminate;
+- Out of scope: simultaneous deduction; batch eliminate;
   full canvas UI
 - Out of scope closed by M24: trait conjunction queries
 - Out of scope closed by M25: trait disjunction queries
+- Out of scope closed by M29: deduction + phases (query→eliminate)
 
 ### M24 — Guess Who trait-conjunction queries (AND)
 
@@ -319,8 +321,9 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
   `eliminateAfterQueryConjunction`; legal enum C(n,2)×4 — **done**
 - Preset `guess-who-and-lite` + transcript/replay tests — **done**
 - Out of scope closed by M25: OR queries
-- Out of scope: NOT / 3+ clause AND; simultaneous deduction; deduction +
-  phases; full canvas UI
+- Out of scope closed by M28: 3+ clause AND via compoundArity
+- Out of scope closed by M29: deduction + phases
+- Out of scope: NOT; simultaneous deduction; full canvas UI
 
 ### M25 — Guess Who trait-disjunction queries (OR)
 
@@ -329,8 +332,9 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
   `eliminateAfterQueryDisjunction`); shared `enumerateTwoClauseQueries`;
   `lastQuery.op` / `queryAnswered.op` — **done**
 - Preset `guess-who-or-lite` + transcript/replay tests — **done**
-- Out of scope: NOT / 3+ clause AND/OR; simultaneous deduction; deduction +
-  phases; full canvas UI
+- Out of scope closed by M28: 3+ clause OR via compoundArity
+- Out of scope closed by M29: deduction + phases
+- Out of scope: NOT; simultaneous deduction; full canvas UI
 
 ### M26 — Hex replace capture
 
@@ -361,7 +365,21 @@ semantics doc refresh; simultaneous deduction / 3+ clause AND.
   `enumerateCompoundQueries` — **done**
 - Preset `guess-who-and3-lite` (3 traits × arity 3; 8 legal queries) +
   transcript/replay + prune-≠-2-clause tests — **done**
+- Out of scope closed by M29: deduction + phases (query→eliminate)
 - Out of scope: simultaneous deduction; hop-ball; fire→move reorder
+
+### M29 — Deduction query→eliminate in-turn phases
+
+- Schema allows deduction-only `turn.phases`: `["query","eliminate"]`,
+  `["query","guess"]`, or `["query","eliminate","guess"]`; forbids mixing
+  with place/move/fire; eliminate requires `autoEliminate: false` — **done**
+- Kernel phase-gates legalActions / wrong_phase; guess legal during
+  eliminate phase; `ScheduleInTurnPhases` requires CellsWritable only —
+  **done**
+- Preset `guess-who-commit-phases-lite` + form options + same-turn
+  query→eliminate transcript/replay tests — **done**
+- Out of scope: simultaneous deduction; hop-ball; fire→move; multi-eliminate
+  budget within eliminate phase
 
 ## Sequencing notes
 

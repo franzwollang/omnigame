@@ -60,6 +60,7 @@ These are built from the same shared schema and operators.
 - **Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction queries)
 - **Guess Who Or Lite** (`queryShape: or` — 2-clause trait disjunction queries)
 - **Guess Who And3 Lite** (`compoundArity: 3` — 3-clause trait conjunction)
+- **Guess Who Commit Phases Lite** (`turn.phases: ["query","eliminate"]` same-turn commit)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
@@ -176,18 +177,18 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   Race** / Simultaneous Hex Step Race; graph uses edge chain-walk slides
   (orthogonal, range 1..8; no junction turns; same replace rules) —
   Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Replace Race**
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / And / Or / And3); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** presets
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), or `deduction` (public roster + own eliminations / last query); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who Commit Phases Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
-machines, hop-ball graph range, simultaneous deduction, and a larger set of
+What’s **roadmap**, not fully realized yet: full Go rules, hop-ball graph
+range, simultaneous deduction, fire→move reorder, and a larger set of
 reusable operators/constraints.
 
 ## Technical vision (expanded)
@@ -269,7 +270,8 @@ Turn logic is declarative:
 - N players
 - schedule: alternating, simultaneous place or move (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action place rounds), or multi-step alternating
 - phases: in-turn `turn.phases` (place→move, place→fire, place→move→fire with
-  `connect_or_destroy`, or move→fire); game-long fleet placement → combat;
+  `connect_or_destroy`, move→fire, or deduction query→eliminate /
+  query→guess / query→eliminate→guess); game-long fleet placement → combat;
   hex-graph phase lifts still expanding
 - action points / per-turn budgets
 
@@ -369,9 +371,11 @@ The goal is to converge on a “complete-ish” primitive set by implementing a 
   **Landed (MVP):** Guess Who Lite — `deduction` input/observation,
   `identify_secret`, query + guess; **Guess Who Commit Lite** —
   `autoEliminate: false` + `{ type: "eliminate" }` (manual hypothesis commit);
-  **Guess Who And Lite** — `queryShape: and` (2-clause trait conjunction);
-  **Guess Who Or Lite** — `queryShape: or` (2-clause trait disjunction);
-  **Guess Who And3 Lite** — `compoundArity: 3` (3-clause conjunction)
+  **Guess Who Commit Phases Lite** — `turn.phases: ["query","eliminate"]`
+  (same-turn ask then flip); **Guess Who And Lite** — `queryShape: and`
+  (2-clause trait conjunction); **Guess Who Or Lite** — `queryShape: or`
+  (2-clause trait disjunction); **Guess Who And3 Lite** — `compoundArity: 3`
+  (3-clause conjunction)
 - **Go-lite / territory fill**: place + adjacency/liberty constraints + area scoring (simplified)  
   Stresses: stepping + constraints + scoring
 
@@ -447,15 +451,16 @@ manual commit / Guess Who Commit Lite (M23), Guess Who trait-conjunction
 queries / Guess Who And Lite (M24), Guess Who trait-disjunction queries /
 Guess Who Or Lite (M25), hex replace capture / Hex Replace Race (M26),
 graph replace capture / Graph Replace Race (M27), compoundArity /
-Guess Who And3 Lite (M28).
+Guess Who And3 Lite (M28), deduction query→eliminate phases /
+Guess Who Commit Phases Lite (M29).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  richer phases, hop-ball, simultaneous deduction) or P4 CI / semantics refresh
+  hop-ball, simultaneous deduction, fire→move) or P4 CI / semantics refresh
 - Deferred: full Go rules; hop-ball graph range; CI workflows;
   `docs/semantics.md` refresh vs current kernel events; simultaneous
-  deduction / richer phases
+  deduction / fire→move reorder
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
