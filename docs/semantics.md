@@ -8,7 +8,9 @@ Grounded in `src/engine/types.ts`, `reducer.ts`, `kernel.ts`, `contracts.ts`,
 ## 1. Core Syntax
 
 - Players: P = {X, O}
-- Cell marks: CellValue = P ∪ {hit, miss, ∅}
+- Crown marks: CrownMark = {X+, O+} (promoted / Transform lite)
+- Cell marks: CellValue = P ∪ CrownMark ∪ {hit, miss, ∅} (+ hazard counts,
+  memory marks, mine as elsewhere)
 - Grid: G = (W, H, cells) with cells ∈ CellValue^{W×H}; optional owner-only
   hidden fleet layer H
 - Topology: rectangle | hex_offset | graph (explicit edges)
@@ -27,6 +29,8 @@ Grounded in `src/engine/types.ts`, `reducer.ts`, `kernel.ts`, `contracts.ts`,
   - deduction?: { secret, eliminated, lastQuery?, lastQueries? }
 - Config κ drives guards (input, placement, capture, movement, schedule,
   observation, objective, phases, deduction, …)
+- Piece helpers: cellOwner(v) ∈ P ∪ {∅}; isCrowned; promote : CellValue →
+  CrownMark ∪ {∅}
 
 ### 1.1 Reducer events ε (`GameEvent`)
 
@@ -68,6 +72,9 @@ Not reducer inputs — emitted by `GameKernel.step` / `stepJoint`:
 - `tilesFlipped` — memory_flip face-up positions + symbols
 - `pairResolved` — memory_flip match/mismatch outcome (+ scorer on match)
 - `pieceCaptured` — replace capture at destination; jump capture at mid cell
+  (captured reports seat owner via cellOwner, incl. crowned mid)
+- `piecePromoted` — Transform lite: uncrowned piece landed on
+  movement.promotion.targetRows[seat] → CrownMark
 - `queryAnswered` — trait/clauses + boolean answer
 - `guessResult` — targetId + correct
 - `candidateEliminated` — pruned roster id
@@ -211,6 +218,7 @@ delayTurns → pendingPlaces.
 | liberties | placement.captureMode | Go-lite group removal + ko/superko |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; incompatible with `graphReach: hop` |
+| promote | movement.promotion | Transform on reach row (rectangle jump only): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king) via `effectiveMovement` |
 
 KoRule: none | point | positional | situational.
 
@@ -224,6 +232,9 @@ KoRule: none | point | positional | situational.
   optional `mustCapture` forbids quiet moves at turn start when any jump
   exists (Mandatory Jump Race); Graph Jump Race covers explicit-edge leaps
   (incompatible with graphReach hop)
+- promotion: optional `movement.promotion` (rectangle + jump only);
+  `targetRows` + `crownedAdjacency`; preserve crown on move; emit
+  `piecePromoted` (Crowned Kings Jump Lite)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)
 - simultaneous: canJointSimultaneousMoves (vacated origins) /
   canOrderedSimultaneousMoves (sequential revalidation)

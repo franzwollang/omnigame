@@ -64,8 +64,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M46 | Next missing mechanism (memory flip / tile pair-matching) | `done` |
 | M47 | Next missing mechanism (hex jump capture) | `done` |
 | M48 | Next missing mechanism (graph jump capture) | `done` |
+| M49 | Next missing mechanism (crowned promotion / Transform lite) | `done` |
 
-**Optimizing for this marathon:** M48 graph jump landed. Pick **P3
+**Optimizing for this marathon:** M49 crowned promotion landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -82,7 +83,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥630** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥641** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -95,7 +96,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M48 closed).  
+   (P0–P2 / M8–M49 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -138,7 +139,9 @@ Replace Race / **Hex Replace Race** / **Graph Replace Race** demonstrate
 **Mandatory Jump Race** demonstrate `capture = jump` on rectangle;
 **Hex Jump Race** demonstrates `capture = jump` on hex_offset (cube-axis
 leap-over + `mustContinueFrom` chains); **Graph Jump Race** demonstrates
-`capture = jump` on graph (2-edge leap-over + chains).
+`capture = jump` on graph (2-edge leap-over + chains); **Crowned Kings Jump
+Lite** demonstrates `movement.promotion` (Transform lite — crown on reach
+row; crowned adjacency).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
 **Memory:** **Memory Flip Lite** demonstrates `memory_flip` + `flip` +
@@ -188,12 +191,14 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; crowned kings / checkers promotion. Graph jump landed (M48
+scheduler; forward-only men / longest-chain / hex-graph promotion. Crowned
+promotion landed (M49 Crowned Kings Jump Lite). Graph jump landed (M48
 Graph Jump Race). Hex jump landed (M47 Hex Jump Race). Mandatory
 jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
 `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics:
 `docs/semantics.md` (M42; jump in M43; flood_reveal in M44; mustCapture
-in M45; memory_flip in M46; hex jump in M47; graph jump in M48).
+in M45; memory_flip in M46; hex jump in M47; graph jump in M48; promotion
+in M49).
 
 ## Phase 2 exit criteria
 
@@ -702,6 +707,24 @@ in M45; memory_flip in M46; hex jump in M47; graph jump in M48).
   helper/schema/transcript/replay tests — **done**
 - Out of scope: simultaneous jump; crowned kings / promotion
 - Green gate: 630 tests — **done**
+
+### M49 — Crowned kings / promotion (Transform lite)
+
+- Schema: optional `movement.promotion` (`targetRows` + `crownedAdjacency`
+  default king); requires `capture = jump`, `input.mode = move`, rectangle,
+  alternating, range 1; same jump incompatibilities (no simultaneous,
+  phases, actionsPerTurn>1, placement.capture); reject hex/graph — **done**
+- Types: `CrownMark` (`X+`|`O+`) on `CellValue`; helpers `cellOwner` /
+  `isCrowned` / `promote` / `isPieceMark` — **done**
+- Movement: `effectiveMovement` (crowned → crownedAdjacency); jump/quiet
+  legality + mustCapture scans via `cellOwner` — **done**
+- Reducer/kernel: preserve crown on move; promote on land; `piecePromoted`
+  event; crowned mid-capture clears with `pieceCaptured` owner — **done**
+- Contract `MovementPromotion`; preset `crowned-jump-race` (Crowned Kings
+  Jump Lite); canvas crowns; form JSON note — **done**
+- Out of scope: simultaneous jump; forward-only men; longest-chain;
+  hex/graph promotion
+- Green gate: 641 tests — **done**
 
 ## Sequencing notes
 

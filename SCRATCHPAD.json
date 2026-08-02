@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T12:10-00:00",
-  "turn": 77,
+  "updated_at": "2026-08-02T12:28-00:00",
+  "turn": 78,
   "focus": {
-    "milestone": "M48",
+    "milestone": "M49",
     "issue": "next-missing-mechanism",
-    "goal": "graph jump landed; hand off next genuine P3 seam"
+    "goal": "crowned promotion landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced 03f8 M47 tip onto 9db2",
     "Landed M48 graph jump + Graph Jump Race; 630 green",
-    "Rejected fire→move / crowned kings; chose graph jump"
+    "Landed M49 crowned promotion + Crowned Kings Jump Lite; 641 green",
+    "Rejected forward-only men / hex-graph promo for v1 scope"
   ],
   "discoveries": [
-    "graph jump = 2-edge leap over enemy mid node",
-    "forbid graphReach=hop with capture=jump"
+    "CrownMark X+/O+ via cellOwner; effectiveMovement for crowned adjacency",
+    "promotion requires rectangle jump; promote on land emits piecePromoted"
   ],
   "open_threads": [
-    "Next: crowned kings, full Go, realtime; reject fire→move"
+    "Next: forward-only/longest-chain, full Go, realtime; reject fire→move"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M48",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M49",
   "blockers": []
 }

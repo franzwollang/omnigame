@@ -101,3 +101,4 @@
 {"ts":"2026-08-02T11:30-00:00","focus":"M46 memory flip","summary":"Landed memory_flip + Memory Flip Lite after syncing M45 tip; 614 green","next":"Pick smallest genuine P3 seam after M46"}
 {"ts":"2026-08-02T11:50-00:00","focus":"M47 hex jump","summary":"Landed hex jump capture + Hex Jump Race after syncing M46 tip; 622 green","next":"Pick smallest genuine P3 seam after M47"}
 {"ts":"2026-08-02T12:10-00:00","focus":"M48 graph jump","summary":"Landed graph 2-edge jump capture + Graph Jump Race; 630 green","next":"Pick smallest genuine next-missing-mechanism after M48"}
+{"ts":"2026-08-02T12:28-00:00","focus":"M49 crowned promotion","summary":"Landed movement.promotion + Crowned Kings Jump Lite after M48; 641 green","next":"Pick smallest genuine next-missing-mechanism after M49"}
