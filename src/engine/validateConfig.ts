@@ -36,13 +36,23 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.input.mode === "column") features.push(Contracts.InputTargetColumn());
 	if (cfg.input.mode === "row") features.push(Contracts.InputTargetRow());
 	if (cfg.input.mode === "move") features.push(Contracts.InputMove());
+	if (cfg.input.mode === "deduction") features.push(Contracts.InputDeduction());
+	if (cfg.movement?.capture === "replace") {
+		features.push(Contracts.MovementReplaceCapture());
+	}
+	if (cfg.movement?.capture === "jump") {
+		features.push(Contracts.MovementJumpCapture());
+	}
+	if (cfg.movement?.promotion) {
+		features.push(Contracts.MovementPromotion());
+	}
 
 	// Placement policy (mode or gravity.enabled sugar — macros expand the latter)
 	const gravityImplied =
 		cfg.placement.mode === "gravity" ||
 		cfg.placement.gravity?.enabled === true;
 
-	if (cfg.input.mode !== "move") {
+	if (cfg.input.mode !== "move" && cfg.input.mode !== "deduction") {
 		if (cfg.placement.mode === "direct" && !gravityImplied) {
 			features.push(Contracts.PlacementDirect());
 		}
@@ -84,6 +94,17 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.observation.mode === "fog") {
 		features.push(Contracts.ObservationFog());
 	}
+	if (cfg.observation.mode === "deduction") {
+		features.push(Contracts.ObservationDeduction());
+	}
+	if (cfg.observation.mode === "flood_reveal") {
+		features.push(Contracts.ObservationFloodReveal());
+		if (cfg.hazards) features.push(Contracts.HazardLayout());
+	}
+	if (cfg.observation.mode === "memory_flip") {
+		features.push(Contracts.ObservationMemoryFlip());
+		if (cfg.memory) features.push(Contracts.MemoryDeck());
+	}
 	if (cfg.objective.mode === "destroy_hidden") {
 		features.push(Contracts.DestroyHidden());
 	} else if (cfg.objective.mode === "connect_or_destroy") {
@@ -92,6 +113,12 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.ReachRow());
 	} else if (cfg.objective.mode === "area_control") {
 		features.push(Contracts.AreaControl());
+	} else if (cfg.objective.mode === "identify_secret") {
+		features.push(Contracts.IdentifySecret());
+	} else if (cfg.objective.mode === "clear_hazards") {
+		features.push(Contracts.ClearHazards());
+	} else if (cfg.objective.mode === "match_pairs") {
+		features.push(Contracts.MatchPairs());
 	} else if (cfg.objective.mode === "none") {
 		features.push(Contracts.OpenEnded());
 	} else {
@@ -106,6 +133,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 		features.push(Contracts.ScheduleSimultaneous(resolveOrder));
 		if (cfg.input.mode === "move") {
 			features.push(Contracts.ScheduleSimultaneousMove());
+		}
+		if (cfg.input.mode === "deduction") {
+			features.push(Contracts.ScheduleSimultaneousDeduction());
 		}
 		if (cfg.turn.commitReveal === true) {
 			features.push(Contracts.ScheduleCommitReveal());
