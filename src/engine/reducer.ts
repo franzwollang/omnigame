@@ -547,6 +547,10 @@ export function reduce(
 			return handleSimultaneousGuess(state, event.guesses, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
+		case "commitQuery":
+			return handleCommitQuery(state, event.player, event.query, config);
+		case "commitGuess":
+			return handleCommitGuess(state, event.player, event.id, config);
 		case "query":
 			return handleQuery(state, event, config);
 		case "guess":
@@ -1432,6 +1436,105 @@ function handleCommitPlace(
 		...state,
 		committedPlacements: nextCommits
 		// moveCount unchanged until reveal
+	};
+}
+
+/**
+ * Hidden simultaneous deduction: record a private query commit. When both
+ * seats have committed matching kinds, reveal via handleSimultaneousQuery.
+ */
+function handleCommitQuery(
+	state: GameState,
+	player: Player,
+	query: QueryEvent,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if (config.deduction.autoEliminate === false) return state;
+
+	const prior = state.committedDeduction ?? {};
+	if (prior[player]) return state; // already committed this round
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const oppCommit = prior[opponent];
+	if (oppCommit && oppCommit.kind !== "query") return state; // kind mismatch
+
+	const nextCommits: Partial<Record<Player, NonNullable<GameState["committedDeduction"]>[Player]>> = {
+		...prior,
+		[player]: { kind: "query", query }
+	};
+
+	const x = nextCommits.X;
+	const o = nextCommits.O;
+	if (x?.kind === "query" && o?.kind === "query") {
+		const revealed = handleSimultaneousQuery(
+			{ ...state, committedDeduction: nextCommits },
+			{ X: x.query, O: o.query },
+			config
+		);
+		return { ...revealed, committedDeduction: undefined };
+	}
+
+	return {
+		...state,
+		committedDeduction: nextCommits
+	};
+}
+
+/**
+ * Hidden simultaneous deduction: record a private guess commit. When both
+ * seats have committed matching kinds, reveal via handleSimultaneousGuess.
+ */
+function handleCommitGuess(
+	state: GameState,
+	player: Player,
+	id: string,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const prior = state.committedDeduction ?? {};
+	if (prior[player]) return state;
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const oppCommit = prior[opponent];
+	if (oppCommit && oppCommit.kind !== "guess") return state;
+
+	const eliminated = new Set(state.deduction.eliminated[player] ?? []);
+	if (eliminated.has(id)) return state;
+
+	const nextCommits: Partial<Record<Player, NonNullable<GameState["committedDeduction"]>[Player]>> = {
+		...prior,
+		[player]: { kind: "guess", id }
+	};
+
+	const x = nextCommits.X;
+	const o = nextCommits.O;
+	if (x?.kind === "guess" && o?.kind === "guess") {
+		const revealed = handleSimultaneousGuess(
+			{ ...state, committedDeduction: nextCommits },
+			{ X: x.id, O: o.id },
+			config
+		);
+		return { ...revealed, committedDeduction: undefined };
+	}
+
+	return {
+		...state,
+		committedDeduction: nextCommits
 	};
 }
 

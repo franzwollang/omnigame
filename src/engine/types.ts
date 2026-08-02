@@ -116,6 +116,12 @@ export type GameState = {
 	 */
 	committedPlacements?: Partial<Record<Player, Position[]>>;
 	/**
+	 * Hidden simultaneous deduction: per-seat private query/guess commit.
+	 * Cleared after joint reveal (`simultaneousQuery` / `simultaneousGuess`).
+	 * Budget is always 1 under deduction.
+	 */
+	committedDeduction?: Partial<Record<Player, CommittedDeduction>>;
+	/**
 	 * In-turn phase index when `turn.phases` is set (0 .. phases.length-1).
 	 * Advances after each successful phase action; resets to 0 on handoff.
 	 * Distinct from fleet `phase` (game-long placement/combat).
@@ -254,6 +260,25 @@ export type QueryEvent = {
 	clauses?: QueryClause[];
 };
 
+/** Hidden simultaneous deduction: one seat's private query commit. */
+export type CommitQueryEvent = {
+	type: "commitQuery";
+	player: Player;
+	query: QueryEvent;
+};
+
+/** Hidden simultaneous deduction: one seat's private guess commit. */
+export type CommitGuessEvent = {
+	type: "commitGuess";
+	player: Player;
+	id: string;
+};
+
+/** One seat's hidden simultaneous deduction commit (query or guess). */
+export type CommittedDeduction =
+	| { kind: "query"; query: QueryEvent }
+	| { kind: "guess"; id: string };
+
 /** Joint query round: both seats submit one single-trait query. */
 export type SimultaneousQueryEvent = {
 	type: "simultaneousQuery";
@@ -298,6 +323,8 @@ export type GameEvent =
 	| SimultaneousQueryEvent
 	| SimultaneousGuessEvent
 	| CommitPlaceEvent
+	| CommitQueryEvent
+	| CommitGuessEvent
 	| QueryEvent
 	| GuessEvent
 	| EliminateEvent

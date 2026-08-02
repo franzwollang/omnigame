@@ -109,6 +109,10 @@ export function actionKey(action: KernelAction): string {
 			return `jointGuess:${action.guesses.X}|${action.guesses.O}`;
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
+		case "commitQuery":
+			return `commitQuery:${action.player}:${formatQueryFingerprint(action.query)}`;
+		case "commitGuess":
+			return `commitGuess:${action.player}:${action.id}`;
 		case "query":
 			return `query:${formatQueryFingerprint(action)}`;
 		case "guess":
@@ -131,6 +135,21 @@ function stateFingerprint(state: GameState): string {
 			.join(";"),
 		state.committedPlacements
 			? `cX:${(state.committedPlacements.X ?? []).map((p) => `${p.row},${p.col}`).join("+")}|cO:${(state.committedPlacements.O ?? []).map((p) => `${p.row},${p.col}`).join("+")}`
+			: "",
+		state.committedDeduction
+			? `cdX:${
+					state.committedDeduction.X
+						? state.committedDeduction.X.kind === "query"
+							? `q:${formatQueryFingerprint(state.committedDeduction.X.query)}`
+							: `g:${state.committedDeduction.X.id}`
+						: ""
+				}|cdO:${
+					state.committedDeduction.O
+						? state.committedDeduction.O.kind === "query"
+							? `q:${formatQueryFingerprint(state.committedDeduction.O.query)}`
+							: `g:${state.committedDeduction.O.id}`
+						: ""
+				}`
 			: "",
 		state.consecutivePasses ?? "",
 		state.koPoint

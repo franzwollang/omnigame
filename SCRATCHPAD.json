@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T06:45-00:00",
-  "turn": 60,
+  "updated_at": "2026-08-02T07:10-00:00",
+  "turn": 61,
   "focus": {
-    "milestone": "M32",
+    "milestone": "M33",
     "issue": "next-missing-mechanism",
-    "goal": "simultaneous compound deduction landed; hand off next seam or P4"
+    "goal": "simultaneous deduction commitReveal landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M31 from 3636 onto c888",
-    "Landed M32 simultaneous queryShape and|or + And Lite preset",
-    "489 green; joint UCT / commitReveal still deferred"
+    "Synced M8–M32 from c888 onto bad6",
+    "Landed M33 commitQuery/commitGuess + Hidden Simultaneous Guess Who Lite",
+    "498 green; joint UCT / manual eliminate still deferred"
   ],
   "discoveries": [
-    "fire→move is recombination; compound×simultaneous was smallest kernel seam"
+    "ScheduleCommitReveal needs CellsWritable-only for deduction (no ResolvedCell)"
   ],
   "open_threads": [
-    "Next: commitReveal/joint UCT/manual eliminate, or P4 CI/semantics"
+    "Next: joint UCT for deduction / manual eliminate, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (sim-deduction ext / fire→move) or P4",
+  "next_step": "Pick next seam (joint UCT / manual elim) or P4",
   "blockers": []
 }

@@ -1732,11 +1732,68 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not commitReveal or joint UCT (compound covered by Simultaneous Guess Who And Lite).",
+			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not commitReveal or joint UCT (compound covered by Simultaneous Guess Who And Lite; hidden commits by Hidden Simultaneous Guess Who Lite).",
 		config: {
 			metadata: { name: "Simultaneous Guess Who Lite", version: 1 },
 			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
 			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "lose",
+				queryShape: "single",
+				autoEliminate: true,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"hidden-simultaneous-guess-who-lite": definePreset({
+		id: "hidden-simultaneous-guess-who-lite",
+		name: "Hidden Simultaneous Guess Who Lite",
+		tags: [
+			"deduction",
+			"query",
+			"simultaneous",
+			"commitReveal",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"Same roster as Simultaneous Guess Who Lite, but each seat commits a query (or guess) privately; answers and auto-prune reveal only when both have committed. Unlocks turn.commitReveal under simultaneous deduction — not joint UCT or manual eliminate.",
+		config: {
+			metadata: {
+				name: "Hidden Simultaneous Guess Who Lite",
+				version: 1
+			},
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				commitReveal: true
+			},
 			rng: { seed: 42 },
 			input: { mode: "deduction" },
 			placement: { mode: "direct", overflow: "reject" },
@@ -1782,7 +1839,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Both seats ask one 2-clause AND query (or both guess) per round; joint resolve with independent compound prune. Unlocks simultaneous deduction + queryShape = and — not or-arity demos, commitReveal, or joint UCT.",
+			"Both seats ask one 2-clause AND query (or both guess) per round; joint resolve with independent compound prune. Unlocks simultaneous deduction + queryShape = and — not or-arity demos, commitReveal (see Hidden Simultaneous Guess Who Lite), or joint UCT.",
 		config: {
 			metadata: { name: "Simultaneous Guess Who And Lite", version: 1 },
 			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },

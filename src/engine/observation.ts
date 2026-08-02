@@ -50,6 +50,15 @@ export type PlayerObservation = {
 			op?: "and" | "or";
 			answer: boolean;
 		};
+		/** Own pending commit under commitReveal (opponent hidden). */
+		pendingCommit?:
+			| {
+					kind: "query";
+					trait?: string;
+					value?: boolean;
+					clauses?: Array<{ trait: string; value: boolean }>;
+			  }
+			| { kind: "guess"; id: string };
 	};
 };
 
@@ -209,6 +218,18 @@ export function observe(
 			(ded?.lastQuery && ded.lastQuery.by === player
 				? ded.lastQuery
 				: undefined);
+		const ownCommit = state.committedDeduction?.[player];
+		const pendingCommit =
+			ownCommit?.kind === "query"
+				? {
+						kind: "query" as const,
+						trait: ownCommit.query.trait,
+						value: ownCommit.query.value,
+						clauses: ownCommit.query.clauses
+					}
+				: ownCommit?.kind === "guess"
+					? { kind: "guess" as const, id: ownCommit.id }
+					: undefined;
 		return {
 			player,
 			cells: emptyCells(size),
@@ -220,7 +241,8 @@ export function observe(
 					traits: { ...c.traits }
 				})),
 				eliminated: [...(ded?.eliminated[player] ?? [])],
-				...(lastQuery ? { lastQuery } : {})
+				...(lastQuery ? { lastQuery } : {}),
+				...(pendingCommit ? { pendingCommit } : {})
 			}
 		};
 	}

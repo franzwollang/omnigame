@@ -355,6 +355,7 @@ export const Contracts = {
 	/**
 	 * Simultaneous deduction (input.mode = deduction under simultaneous).
 	 * Joint query (single or compound) or joint guess per round; no board placement.
+	 * Optional commitReveal hides each seat's query/guess until both commit.
 	 */
 	ScheduleSimultaneousDeduction: (): FeatureContract => ({
 		id: "ScheduleSimultaneousDeduction",
@@ -366,6 +367,7 @@ export const Contracts = {
 			"jointQueryOrGuessPerRound",
 			"independentSeatSecrets",
 			"compoundQueryShapesAllowed",
+			"commitRevealOptional",
 			"jointUctDeferred"
 		]
 	}),
@@ -409,10 +411,12 @@ export const Contracts = {
 	/**
 	 * Hidden simultaneous (commit-then-reveal). Keeps Schedule = simultaneous;
 	 * adds private commit buffer before joint resolve.
+	 * CellsWritable only — place games supply ResolvedCell; deduction commits
+	 * queries/guesses without board placement (same pattern as ScheduleSimultaneous).
 	 */
 	ScheduleCommitReveal: (): FeatureContract => ({
 		id: "ScheduleCommitReveal",
-		requires: ["CellsWritable", "ResolvedCell"],
+		requires: ["CellsWritable"],
 		provides: [],
 		slots: [],
 		hooks: ["validateInput", "applyEffects"],

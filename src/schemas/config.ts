@@ -469,14 +469,9 @@ export const zConfig = z
 							"simultaneous deduction is incompatible with turn.phases"
 					});
 				}
-				if (cfg.turn.commitReveal === true) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["turn", "commitReveal"],
-						message:
-							"simultaneous deduction is incompatible with commitReveal"
-					});
-				}
+				// commitReveal allowed under simultaneous deduction (hidden
+				// query/guess until both seats commit; see Hidden Simultaneous
+				// Guess Who Lite). Still forbidden under alternating deduction.
 				if (
 					cfg.turn.resolveOrder !== undefined &&
 					cfg.turn.resolveOrder !== "joint"
@@ -496,11 +491,12 @@ export const zConfig = z
 					message: "deduction is incompatible with manual_tick"
 				});
 			}
-			if (cfg.turn.commitReveal === true) {
+			if (cfg.turn.commitReveal === true && !simultaneous) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "commitReveal"],
-					message: "deduction is incompatible with commitReveal"
+					message:
+						"deduction commitReveal requires turn.schedule = 'simultaneous'"
 				});
 			}
 			if (inTurnPhases) {

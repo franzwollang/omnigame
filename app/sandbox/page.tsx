@@ -163,6 +163,18 @@ export default function GamePage() {
 		if (side === "simultaneous") {
 			const budget = actionsPerRound;
 			if (commitReveal) {
+				if (enableSimultaneousDeduction) {
+					const seat: PlayerId | null = !gameState.committedDeduction
+						?.X
+						? 0
+						: !gameState.committedDeduction?.O
+							? 1
+							: null;
+					if (seat === null) return;
+					const action = agentRef.current.act(kernel, gameState, seat);
+					if (action) dispatchAction(action);
+					return;
+				}
 				const xLen = gameState.committedPlacements?.X?.length ?? 0;
 				const oLen = gameState.committedPlacements?.O?.length ?? 0;
 				const seat: PlayerId | null =
