@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T03:05-00:00",
-  "turn": 46,
+  "updated_at": "2026-08-02T03:10-00:00",
+  "turn": 47,
   "focus": {
     "milestone": "M21",
     "issue": "next-missing-mechanism",
-    "goal": "Hex cube-axis sliding (range > 1 on hex_offset)"
+    "goal": "Hex cube-axis sliding landed; hand off next seam"
   },
   "recent": [
     "Synced M8–M20 from a211 onto f1af",
-    "slideHexDestinations + schema unlock + hex-slide-race",
-    "Form rangeMax hex unlocked; graph stays 1"
+    "Landed M21 hex sliding + hex-slide-race",
+    "typecheck + 400 tests green"
   ],
   "discoveries": [
     "Odd-r same column ≠ cube-axis ray; O at (0,2) off X's NW/NE slides",
     "Graph sliding still needs explicit chain/hop semantics"
   ],
   "open_threads": [
-    "After green: mark M21 done; next graph sliding, phases, Guess Who, or P4"
+    "Next: graph sliding, richer phases/Guess Who, or P4 CI/semantics"
   ],
-  "next_step": "Green gate then hand off graph sliding or P4 CI/semantics",
+  "next_step": "Pick graph sliding (chain-walk) or P4 CI/semantics refresh",
   "blockers": []
 }
