@@ -70,8 +70,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	const hexOrGraph = topology === "hex_offset" || topology === "graph";
 	const simultaneousMove = schedule === "simultaneous" && inputMode === "move";
 	const orderedReplaceOk = simultaneousMove && !hexOrGraph;
-	// Hex cube-axis slides unlocked (M21); graph sliding still deferred.
-	const rangeMax = topology === "graph" ? 1 : 8;
+	// Rectangle / hex cube-axis / graph chain-walk slides unlocked (range 1..8).
+	const rangeMax = 8;
 
 	const ensureMovement = () => {
 		const current = form.getValues("movement");
@@ -641,11 +641,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													</FormControl>
 													<p className="text-xs text-muted-foreground">
 														1 = adjacent step; 2–8 = sliding ray on
-														rectangle deltas or hex cube axes (stops at
-														occupied / edge).
-														{rangeMax === 1
-															? " Locked to 1 for graph (sliding deferred)."
-															: ""}
+														rectangle deltas, hex cube axes, or graph
+														edge chains (stops at occupied / edge /
+														junction).
 													</p>
 													<FormMessage />
 												</FormItem>

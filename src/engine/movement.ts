@@ -3,8 +3,9 @@
  * Rectangle: orthogonal | diagonal | king with sliding range 1..8 (blocker-
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
  * (path empty except destination). Hex_offset: orthogonal cube-axis slides
- * (range 1..8, same blocker/replace rules). Graph: topology neighbors,
- * orthogonal only, range 1 (replace is rectangle-only via schema).
+ * (range 1..8, same blocker/replace rules). Graph: orthogonal chain-walk
+ * along explicit edges (range 1..8; no turning at junctions; replace remains
+ * rectangle-only via schema).
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -153,6 +154,48 @@ function slideHexDestinations(
 	return out;
 }
 
+/**
+ * Graph chain-walk slides: for each first edge from `from`, walk forward
+ * along the unique non-backtrack neighbor up to `range`. Empty cells along
+ * the chain are destinations. Occupied cells block (no replace on graph).
+ * Junctions (|forward| ≠ 1) stop the chain — no turning mid-slide. Range 1
+ * degenerates to empty neighbors. Distinct from fog hop-ball BFS.
+ */
+function slideGraphDestinations(
+	grid: Grid,
+	from: Position,
+	config: MovementConfig,
+	graph: GraphTopologyData
+): Position[] {
+	const range = Math.max(1, Math.floor(config.range));
+	const out: Position[] = [];
+	const seen = new Set<string>();
+
+	for (const n1 of graph.neighborsOf.get(posKey(from)) ?? []) {
+		let cur = n1;
+		let prev = from;
+		const pathSeen = new Set<string>([posKey(from)]);
+		for (let dist = 1; dist <= range; dist++) {
+			const key = posKey(cur);
+			if (pathSeen.has(key)) break;
+			pathSeen.add(key);
+			if (getCell(grid, cur) !== null) break;
+			if (!seen.has(key)) {
+				seen.add(key);
+				out.push(cur);
+			}
+			if (dist === range) break;
+			const forward = (graph.neighborsOf.get(key) ?? []).filter(
+				(p) => p.row !== prev.row || p.col !== prev.col
+			);
+			if (forward.length !== 1) break;
+			prev = cur;
+			cur = forward[0]!;
+		}
+	}
+	return out;
+}
+
 /** Neighbor cells for a range-1 step under the board topology. */
 export function movementNeighbors(
 	grid: Grid,
@@ -164,9 +207,8 @@ export function movementNeighbors(
 	if (!inBounds(grid, from)) return [];
 
 	if (topology === "graph") {
-		// Graph foothold: orthogonal = explicit edges; sliding deferred.
+		// Graph: orthogonal = explicit edges; range applied in legalDestinations.
 		if (config.adjacency !== "orthogonal") return [];
-		if (config.range !== 1) return [];
 		return neighbors(grid, from, topology, graph, wrap);
 	}
 
@@ -225,15 +267,9 @@ export function legalDestinations(
 	const { wrap, topology, graph } = opts;
 
 	if (topology === "graph") {
-		// Graph: range-1 empty neighbors only (sliding deferred; replace rect-only).
-		if (config.adjacency !== "orthogonal") return [];
-		if (config.range !== 1) return [];
-		const out: Position[] = [];
-		for (const to of neighbors(grid, from, topology, graph, wrap)) {
-			if (getCell(grid, to) !== null) continue;
-			out.push(to);
-		}
-		return out;
+		// Chain-walk slides along explicit edges; replace remains rectangle-only.
+		if (config.adjacency !== "orthogonal" || !graph) return [];
+		return slideGraphDestinations(grid, from, config, graph);
 	}
 
 	if (topology === "hex_offset") {

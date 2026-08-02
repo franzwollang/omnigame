@@ -120,7 +120,8 @@ export const zConfig = z
  * capture apply (priority can capture before prey flees). Works with sliding
  * `range > 1` on rectangle and hex_offset (cube-axis rays). Ordered
  * simultaneous + range > 1 uses sequential path revalidation. graph uses
- * topology neighbors (orthogonal, range 1 only — sliding deferred).
+ * topology-neighbor chain-walk (orthogonal, range 1..8; no turning at
+ * junctions; replace remains rectangle-only).
 		 */
 		movement: z
 			.object({
@@ -626,7 +627,7 @@ export const zConfig = z
 							"hex_offset move requires movement.adjacency = 'orthogonal' (diagonal/king deferred)"
 					});
 				}
-				// hex_offset sliding range 1..8 on cube axes (M21); graph still range 1
+				// hex_offset sliding range 1..8 on cube axes (M21)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
@@ -695,14 +696,7 @@ export const zConfig = z
 							"graph move requires movement.adjacency = 'orthogonal' (uses explicit edges)"
 					});
 				}
-				if (cfg.movement && cfg.movement.range !== 1) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement", "range"],
-						message:
-							"graph move requires movement.range = 1 (sliding deferred)"
-					});
-				}
+				// graph chain-walk sliding range 1..8 (M22); replace still rect-only
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
