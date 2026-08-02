@@ -11,16 +11,18 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Jump capture / multi-jump chains (`movement.capture = jump` + Jump Race /
-`mustContinueFrom`) landed as **M43**. P4 tooling-ci and semantics-doc-refresh
-already closed (M41–M42).
+Flood-fill region reveal (`observation.mode = flood_reveal` + `clear_hazards` +
+`hazards` + Minesweeper Lite) landed as **M44**. P4 tooling-ci and
+semantics-doc-refresh already closed (M41–M42).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
-- Flood-fill region reveal (Minesweeper-style) — strong reference anchor
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
+- Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
+  recombination of reveal)
+- Hex/graph hazard adjacency (only if a new seam appears)
 - commitReveal + slide/replace demos (kernel complete — preset-only unless a
   new seam appears)
 - multi-action slide/replace under simultaneous (deferred composition; only if
@@ -57,8 +59,9 @@ Simultaneous Step Race** covers `actionsPerTurn > 1` under open simultaneous
 move. **Hidden Double Simultaneous Step Race** covers commitReveal +
 `actionsPerTurn > 1` under simultaneous move. Graph Hop Race covers hop-ball
 BFS. **Jump Race** covers leap-over capture + same-seat chains
-(`movement.capture = jump` / `mustContinueFrom`). Open simultaneous deduction
-joint UCT covers agent search over query/guess(/eliminate) cartesian
-(fire→move still open if an anchor appears). CI green gate:
+(`movement.capture = jump` / `mustContinueFrom`). **Minesweeper Lite** covers
+flood-fill region reveal (`flood_reveal` / `clear_hazards` / `hazards`). Open
+simultaneous deduction joint UCT covers agent search over query/guess(/eliminate)
+cartesian (fire→move still open if an anchor appears). CI green gate:
 `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics draft:
-`docs/semantics.md` (M42 refresh; jump capture noted in M43).
+`docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44).

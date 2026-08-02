@@ -59,8 +59,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M41 | Tooling CI (GitHub Actions typecheck + test) | `done` |
 | M42 | Semantics doc refresh (`docs/semantics.md` ↔ kernel) | `done` |
 | M43 | Next missing mechanism (jump capture / multi-jump chains) | `done` |
+| M44 | Next missing mechanism (flood-fill region reveal) | `done` |
 
-**Optimizing for this marathon:** M43 jump capture landed. Pick **P3
+**Optimizing for this marathon:** M44 flood-fill reveal landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -77,7 +78,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥583** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥596** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -90,7 +91,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M43 closed).  
+   (P0–P2 / M8–M44 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -132,6 +133,8 @@ Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/
 on rectangle | hex_offset | graph; **Jump Race** demonstrates
 `capture = jump` (leap over adjacent enemy + `mustContinueFrom` chains;
 rectangle + alternating).
+**Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
+`clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
 `identify_secret`, query + guess), **Guess Who Commit Lite**
 (`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`),
@@ -147,7 +150,7 @@ simultaneous deduction — private query/guess then reveal).
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement** (incl.
 **joint + ordered simultaneous replace** and **slide+replace**), point/positional/situational ko,
-observation (hit/miss + fog + **deduction**), fleet placement, Move
+observation (hit/miss + fog + **deduction** + **flood_reveal**), fleet placement, Move
 (orthogonal/diagonal/king + sliding range on rectangle **and hex_offset cube
 axes** + **graph edge chain-walk**; replace on rectangle | hex_offset | **graph**), tick/Life, simultaneous
 place/move/deduction (incl. ordered, hidden commit-reveal for place **and
@@ -177,8 +180,9 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; Minesweeper-style flood-fill reveal. CI: `.github/workflows/ci.yml`
-(Node 20.19 + pnpm 10.5.2). Semantics: `docs/semantics.md` (M42; jump in M43).
+scheduler. Flood-fill reveal landed (M44 Minesweeper Lite). CI:
+`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics:
+`docs/semantics.md` (M42; jump in M43; flood_reveal in M44).
 
 ## Phase 2 exit criteria
 
@@ -611,6 +615,22 @@ scheduler; Minesweeper-style flood-fill reveal. CI: `.github/workflows/ci.yml`
 - Out of scope: mandatory jump-at-turn-start; hex/graph jump; simultaneous
   jump; crowned kings / checkers promotion
 - Green gate: 583 tests — **done**
+
+### M44 — Flood-fill region reveal (Minesweeper-lite)
+
+- Schema: `observation.mode = flood_reveal` + `objective.mode = clear_hazards`
+  + `hazards.{count,firstRevealSafe}`; rectangle only; lockstep forbids
+  hit_miss/fog/deduction/fleet/movement/simultaneous/phases/hex/graph — **done**
+- Kernel: `reveal` action; seeded mine layout (deferred when firstRevealSafe);
+  adjacent count 0–8; flood through zeros + numbered frontier;
+  `cellsRevealed` / `mineHit` events; mine → opponent wins; all safe → draw —
+  **done**
+- Contracts `ObservationFloodReveal` / `HazardLayout` / `ClearHazards`;
+  canvas counts + mine; form options — **done**
+- Preset `minesweeper-lite` + transcript/replay/schema tests — **done**
+- Out of scope: flags, chord-click, hex/graph adjacency, timers, difficulty
+  tiers
+- Green gate: 596 tests — **done**
 
 ## Sequencing notes
 

@@ -35,6 +35,7 @@ Grounded in `src/engine/types.ts`, `reducer.ts`, `kernel.ts`, `contracts.ts`,
 | place | position |
 | move | from, to |
 | fire | position |
+| reveal | position (flood_reveal / Minesweeper-lite) |
 | activateColumn / activateRow | col / row |
 | popOutColumn / popOutRow | col / row |
 | tick | — |
@@ -61,6 +62,8 @@ Not reducer inputs — emitted by `GameKernel.step` / `stepJoint`:
 
 - `actionApplied` — accepted KernelAction + actor (P | simultaneous)
 - `shotResult` — fire mark (hit \| miss)
+- `cellsRevealed` — flood_reveal positions + counts (0–8)
+- `mineHit` — flood_reveal exploded mine at position
 - `pieceCaptured` — replace capture at destination; jump capture at mid cell
 - `queryAnswered` — trait/clauses + boolean answer
 - `guessResult` — targetId + correct
@@ -221,12 +224,17 @@ KoRule: none | point | positional | situational.
 ### Objectives
 
 n_in_a_row | reach_row (+ targetRows) | destroy_hidden | connect_or_destroy |
-area_control (two passes → score) | identify_secret | none.
+area_control (two passes → score) | identify_secret | clear_hazards | none.
 
 ### Observation
 
 full | hit_miss | fog (radius + metric) | deduction (roster / eliminations /
-lastQuery; commit pending overlay).
+lastQuery; commit pending overlay) | flood_reveal (shared counts; hidden mines).
+
+### Hazards (flood_reveal)
+
+hazards.{count, firstRevealSafe}; reveal action floods zero-count regions and
+opens numbered frontiers; mineHit → opponent wins; all safe revealed → draw.
 
 ### Fleet / scheduler
 

@@ -96,3 +96,4 @@
 {"ts":"2026-08-02T09:45-00:00","focus":"M41 tooling-ci","summary":"Synced 2d9a; landed CI workflow; 571 green; hand off semantics or next seam","next":"Refresh docs/semantics.md or pick genuine next-missing-mechanism"}
 {"ts":"2026-08-02T10:20-00:00","focus":"M42 semantics-doc-refresh","summary":"Synced beb7; refreshed docs/semantics.md vs kernel; resolved P4 semantics","next":"Pick smallest genuine P3 next-missing-mechanism seam"}
 {"ts":"2026-08-02T10:40-00:00","focus":"M43 jump capture","summary":"Landed movement.capture=jump + Jump Race after syncing M42 tip; hand off flood-fill/other P3 seam","next":"Pick smallest genuine next-missing-mechanism"}
+{"ts":"2026-08-02T10:55-00:00","focus":"M44 flood-fill reveal","summary":"Landed flood_reveal + Minesweeper Lite; 596 green; hand off next-missing-mechanism","next":"Pick smallest genuine next seam (reject fire→move without anchor)"}

@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T10:40-00:00",
-  "turn": 72,
+  "updated_at": "2026-08-02T10:55-00:00",
+  "turn": 73,
   "focus": {
-    "milestone": "M43",
+    "milestone": "M44",
     "issue": "next-missing-mechanism",
-    "goal": "Jump capture landed; hand off next genuine P3 seam"
+    "goal": "Flood-fill reveal landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced de5b M42 tip onto 50f9",
-    "Rejected recombinations; chose jump capture chains",
-    "Landed M43 jump + Jump Race; 583 green"
+    "Synced 50f9 M43 tip onto ead2",
+    "Landed M44 flood_reveal + Minesweeper Lite; 596 green",
+    "Rejected recombinations; chose flood-fill over fire→move"
   ],
   "discoveries": [
-    "mustContinueFrom is the chain protocol (not actionsPerTurn)"
+    "CellValue 0 is falsy — canvas must use == null checks"
   ],
   "open_threads": [
-    "Next: flood-fill reveal or other small seam; reject fire→move"
+    "Next: full Go, realtime, or other small seam; reject fire→move"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism (flood-fill strong candidate)",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M44",
   "blockers": []
 }
