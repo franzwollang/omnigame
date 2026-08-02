@@ -1732,7 +1732,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not commitReveal (compound covered by Simultaneous Guess Who And Lite; hidden commits by Hidden Simultaneous Guess Who Lite; open joint UCT by M34).",
+			"Both seats ask one single-trait query (or both guess) per round; joint resolve against opponent secrets with auto-prune. Unlocks turn.schedule = simultaneous + input.mode = deduction — not commitReveal (compound covered by Simultaneous Guess Who And Lite; hidden commits by Hidden Simultaneous Guess Who Lite; manual eliminate by Simultaneous Guess Who Commit Lite; open joint UCT by M34).",
 		config: {
 			metadata: { name: "Simultaneous Guess Who Lite", version: 1 },
 			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
@@ -1747,6 +1747,59 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				wrongGuess: "lose",
 				queryShape: "single",
 				autoEliminate: true,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"simultaneous-guess-who-commit-lite": definePreset({
+		id: "simultaneous-guess-who-commit-lite",
+		name: "Simultaneous Guess Who Commit Lite",
+		tags: [
+			"deduction",
+			"query",
+			"eliminate",
+			"simultaneous",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"Same roster as Simultaneous Guess Who Lite, but queries only answer — both seats manually eliminate (or guess) on separate joint rounds. Unlocks autoEliminate = false under open simultaneous deduction + simultaneousEliminate — not commitReveal, not in-turn phases.",
+		config: {
+			metadata: {
+				name: "Simultaneous Guess Who Commit Lite",
+				version: 1
+			},
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "end_turn",
+				queryShape: "single",
+				autoEliminate: false,
 				roster: [
 					{ id: "ann", traits: { glasses: true, hat: false } },
 					{ id: "bob", traits: { glasses: false, hat: true } },

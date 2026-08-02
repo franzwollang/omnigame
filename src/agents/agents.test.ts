@@ -20,6 +20,7 @@ import {
 } from "@/agents";
 import { examplePresets } from "@/presets/registry";
 import {
+	jointEliminateFromActions,
 	jointGuessFromActions,
 	jointPlaceFromActions,
 	jointPlacesFromActions,
@@ -28,6 +29,18 @@ import {
 import type { KernelAction } from "@/engine/kernel";
 import type { CellValue } from "@/engine/types";
 import { setCell } from "@/engine/types";
+
+function jointFromSeatPair(
+	a0: KernelAction,
+	a1: KernelAction
+): KernelAction | null {
+	return (
+		jointPlaceFromActions(a0, a1) ??
+		jointQueryFromActions(a0, a1) ??
+		jointGuessFromActions(a0, a1) ??
+		jointEliminateFromActions(a0, a1)
+	);
+}
 
 describe("kernel agents (M6)", () => {
 	it("random agent only picks from legalActions", () => {
@@ -834,10 +847,7 @@ describe("joint UCT/MCTS under simultaneous deduction (M34)", () => {
 		expect(a1).not.toBeNull();
 		expect(a0!.type === "query" || a0!.type === "guess").toBe(true);
 		expect(a1!.type).toBe(a0!.type);
-		const joint =
-			a0!.type === "query"
-				? jointQueryFromActions(a0!, a1!)
-				: jointGuessFromActions(a0!, a1!);
+		const joint = jointFromSeatPair(a0!, a1!);
 		expect(joint).not.toBeNull();
 		expect(seatComponentFromJoint(joint!, 0)).toEqual(a0);
 		expect(seatComponentFromJoint(joint!, 1)).toEqual(a1);
@@ -888,10 +898,7 @@ describe("joint UCT/MCTS under simultaneous deduction (M34)", () => {
 		expect(a0).not.toBeNull();
 		expect(a1).not.toBeNull();
 		expect(a0!.type === a1!.type).toBe(true);
-		const joint =
-			a0!.type === "query"
-				? jointQueryFromActions(a0!, a1!)
-				: jointGuessFromActions(a0!, a1!);
+		const joint = jointFromSeatPair(a0!, a1!);
 		expect(joint).not.toBeNull();
 		const again0 = agent.act(kernel, state, 0);
 		expect(again0).toEqual(a0);
@@ -911,10 +918,67 @@ describe("joint UCT/MCTS under simultaneous deduction (M34)", () => {
 			expect(a0).not.toBeNull();
 			expect(a1).not.toBeNull();
 			expect(a0!.type).toBe(a1!.type);
-			const joint =
-				a0!.type === "query"
-					? jointQueryFromActions(a0!, a1!)
-					: jointGuessFromActions(a0!, a1!);
+			const joint = jointFromSeatPair(a0!, a1!);
+			expect(joint).not.toBeNull();
+			state = kernel.stepSync(state, joint!).nextState;
+			guard += 1;
+		}
+		expect(state.status === "won" || state.status === "draw").toBe(true);
+	});
+});
+
+describe("joint UCT under simultaneous deduction manual eliminate (M35)", () => {
+	it("enumerates 48 kind-matched joints on simultaneous-guess-who-commit-lite", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-commit-lite"].config
+		);
+		const state = kernel.initialState(42);
+		expect(canSearchJointActions(kernel)).toBe(true);
+		const joints = enumerateJointLegalActions(kernel, state);
+		expect(joints).toHaveLength(48);
+		expect(
+			joints.filter((a) => a.type === "simultaneousEliminate")
+		).toHaveLength(16);
+	});
+
+	it("uct dual-act returns consistent eliminate seat components", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-commit-lite"].config
+		);
+		const state = kernel.initialState(11);
+		const agent = createUctAgent(11, { simulations: 48 });
+		const a0 = agent.act(kernel, state, 0);
+		const a1 = agent.act(kernel, state, 1);
+		expect(a0).not.toBeNull();
+		expect(a1).not.toBeNull();
+		expect(
+			a0!.type === "query" ||
+				a0!.type === "guess" ||
+				a0!.type === "eliminate"
+		).toBe(true);
+		expect(a1!.type).toBe(a0!.type);
+		const joint = jointFromSeatPair(a0!, a1!);
+		expect(joint).not.toBeNull();
+		expect(seatComponentFromJoint(joint!, 0)).toEqual(a0);
+		expect(seatComponentFromJoint(joint!, 1)).toEqual(a1);
+		expect(jointSeatBudget(joint!)).toBe(1);
+	});
+
+	it("uct completes a short simultaneous-guess-who-commit-lite playout", () => {
+		const { kernel } = compileConfig(
+			examplePresets["simultaneous-guess-who-commit-lite"].config
+		);
+		let state = kernel.initialState(17);
+		const uct = createUctAgent(17, { simulations: 40, reuseTree: true });
+		let guard = 0;
+		while (state.status === "playing" && guard < 24) {
+			expect(kernel.currentPlayer(state)).toBe("simultaneous");
+			const a0 = uct.act(kernel, state, 0);
+			const a1 = uct.act(kernel, state, 1);
+			expect(a0).not.toBeNull();
+			expect(a1).not.toBeNull();
+			expect(a0!.type).toBe(a1!.type);
+			const joint = jointFromSeatPair(a0!, a1!);
 			expect(joint).not.toBeNull();
 			state = kernel.stepSync(state, joint!).nextState;
 			guard += 1;

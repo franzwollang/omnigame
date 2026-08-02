@@ -297,6 +297,15 @@ export type SimultaneousGuessEvent = {
 	};
 };
 
+/** Joint eliminate round: both seats prune one candidate (manual mode). */
+export type SimultaneousEliminateEvent = {
+	type: "simultaneousEliminate";
+	eliminations: {
+		X: string;
+		O: string;
+	};
+};
+
 export type GuessEvent = {
 	type: "guess";
 	id: string;
@@ -322,6 +331,7 @@ export type GameEvent =
 	| SimultaneousMoveEvent
 	| SimultaneousQueryEvent
 	| SimultaneousGuessEvent
+	| SimultaneousEliminateEvent
 	| CommitPlaceEvent
 	| CommitQueryEvent
 	| CommitGuessEvent

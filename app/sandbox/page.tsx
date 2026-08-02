@@ -17,6 +17,7 @@ import { useGameEngine } from "@/engine/useGameEngine";
 import {
 	formatKernelEvent,
 	highlightCellsForActions,
+	jointEliminateFromActions,
 	jointGuessFromActions,
 	jointMoveFromActions,
 	jointPlaceFromActions,
@@ -196,7 +197,8 @@ export default function GamePage() {
 					jointPlaceFromActions(a0, a1) ??
 					jointMoveFromActions(a0, a1) ??
 					jointQueryFromActions(a0, a1) ??
-					jointGuessFromActions(a0, a1);
+					jointGuessFromActions(a0, a1) ??
+					jointEliminateFromActions(a0, a1);
 				if (joint) dispatchAction(joint);
 				return;
 			}

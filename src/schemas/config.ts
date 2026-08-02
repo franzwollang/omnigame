@@ -453,12 +453,18 @@ export const zConfig = z
 							"simultaneous deduction requires queryShape = 'single' | 'and' | 'or'"
 					});
 				}
-				if (cfg.deduction?.autoEliminate === false) {
+				// Manual eliminate under open simultaneous is allowed (joint
+				// simultaneousEliminate). Still forbidden with commitReveal —
+				// hidden commitEliminate / joint UCT deferred.
+				if (
+					cfg.deduction?.autoEliminate === false &&
+					cfg.turn.commitReveal === true
+				) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["deduction", "autoEliminate"],
 						message:
-							"simultaneous deduction requires autoEliminate = true (manual eliminate deferred)"
+							"simultaneous deduction commitReveal requires autoEliminate = true (manual eliminate deferred)"
 					});
 				}
 				if (inTurnPhases) {

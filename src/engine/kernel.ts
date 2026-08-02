@@ -88,6 +88,10 @@ export type KernelAction =
 			guesses: { X: string; O: string };
 	  }
 	| {
+			type: "simultaneousEliminate";
+			eliminations: { X: string; O: string };
+	  }
+	| {
 			type: "commitPlace";
 			player: Player;
 			position: Position;
@@ -269,6 +273,8 @@ function formatAction(action: KernelAction): string {
 			return `joint query X${formatQueryFingerprint(action.queries.X)} O${formatQueryFingerprint(action.queries.O)}`;
 		case "simultaneousGuess":
 			return `joint guess X${action.guesses.X} O${action.guesses.O}`;
+		case "simultaneousEliminate":
+			return `joint eliminate X${action.eliminations.X} O${action.eliminations.O}`;
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
 		case "commitQuery":
@@ -389,7 +395,8 @@ function applyStep(
 		action.type === "simultaneousPlace" ||
 		action.type === "simultaneousMove" ||
 		action.type === "simultaneousQuery" ||
-		action.type === "simultaneousGuess"
+		action.type === "simultaneousGuess" ||
+		action.type === "simultaneousEliminate"
 			? "simultaneous"
 			: action.type === "commitPlace" ||
 				  action.type === "commitQuery" ||
@@ -616,6 +623,21 @@ function applyStep(
 				player: actor,
 				id: action.id
 			});
+		}
+	}
+
+	if (action.type === "simultaneousEliminate") {
+		for (const seat of ["X", "O"] as const) {
+			const id = action.eliminations[seat];
+			const before = new Set(state.deduction?.eliminated[seat] ?? []);
+			const after = nextState.deduction?.eliminated[seat] ?? [];
+			if (!before.has(id) && after.includes(id)) {
+				events.push({
+					type: "candidateEliminated",
+					player: seat,
+					id
+				});
+			}
 		}
 	}
 
@@ -876,6 +898,9 @@ function collectLegalActions(
 			for (const character of config.deduction.roster) {
 				if (!eliminated.has(character.id)) {
 					actions.push({ type: "guess", id: character.id });
+					if (config.deduction.autoEliminate === false) {
+						actions.push({ type: "eliminate", id: character.id });
+					}
 				}
 			}
 			return actions;
@@ -1501,6 +1526,40 @@ export function explainKernelAction(
 		};
 	}
 
+	// Joint eliminate: both ids on roster, not already eliminated, manual mode.
+	if (action.type === "simultaneousEliminate") {
+		if (!simultaneous || (config.inputMode ?? "cell") !== "deduction") {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (!config.deduction || config.deduction.autoEliminate !== false) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+		const xElim = new Set(state.deduction?.eliminated.X ?? []);
+		const oElim = new Set(state.deduction?.eliminated.O ?? []);
+		if (
+			rosterIds.has(action.eliminations.X) &&
+			rosterIds.has(action.eliminations.O) &&
+			!xElim.has(action.eliminations.X) &&
+			!oElim.has(action.eliminations.O)
+		) {
+			return { legal: true };
+		}
+		return {
+			legal: false,
+			reason: "illegal_or_noop",
+			detail: detailFor("illegal_or_noop", action)
+		};
+	}
+
 	if (action.type === "commitPlace") {
 		if (!simultaneous || !config.commitReveal) {
 			return {
@@ -1854,8 +1913,11 @@ export function explainKernelAction(
 					detail: detailFor("illegal_or_noop", action)
 				};
 			}
+			const eliminatedSeat = simultaneous
+				? playerOf(player)
+				: state.currentPlayer;
 			const eliminated = new Set(
-				state.deduction?.eliminated[state.currentPlayer] ?? []
+				state.deduction?.eliminated[eliminatedSeat] ?? []
 			);
 			if (eliminated.has(action.id)) {
 				return {
@@ -2142,6 +2204,12 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 				a.guesses.X === b.guesses.X &&
 				a.guesses.O === b.guesses.O
 			);
+		case "simultaneousEliminate":
+			return (
+				b.type === "simultaneousEliminate" &&
+				a.eliminations.X === b.eliminations.X &&
+				a.eliminations.O === b.eliminations.O
+			);
 		case "commitPlace":
 			return (
 				b.type === "commitPlace" &&
@@ -2235,6 +2303,20 @@ export function jointGuessFromActions(
 	return {
 		type: "simultaneousGuess",
 		guesses: { X: action0.id, O: action1.id }
+	};
+}
+
+/** Build a joint eliminate action from two per-player eliminate actions. */
+export function jointEliminateFromActions(
+	action0: KernelAction,
+	action1: KernelAction
+): KernelAction | null {
+	if (action0.type !== "eliminate" || action1.type !== "eliminate") {
+		return null;
+	}
+	return {
+		type: "simultaneousEliminate",
+		eliminations: { X: action0.id, O: action1.id }
 	};
 }
 
@@ -2378,7 +2460,8 @@ export function createGameKernel(config: GameConfig): GameKernel {
 			jointPlaceFromActions(joint[0], joint[1]) ??
 			jointMoveFromActions(joint[0], joint[1]) ??
 			jointQueryFromActions(joint[0], joint[1]) ??
-			jointGuessFromActions(joint[0], joint[1]);
+			jointGuessFromActions(joint[0], joint[1]) ??
+			jointEliminateFromActions(joint[0], joint[1]);
 		if (!built) {
 			return Effect.sync(() => ({
 				nextState: state,

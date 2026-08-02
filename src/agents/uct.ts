@@ -107,6 +107,8 @@ export function actionKey(action: KernelAction): string {
 			return `jointQuery:${formatQueryFingerprint(action.queries.X)}|${formatQueryFingerprint(action.queries.O)}`;
 		case "simultaneousGuess":
 			return `jointGuess:${action.guesses.X}|${action.guesses.O}`;
+		case "simultaneousEliminate":
+			return `jointEliminate:${action.eliminations.X}|${action.eliminations.O}`;
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
 		case "commitQuery":

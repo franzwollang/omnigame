@@ -36,7 +36,7 @@ describe("schema: simultaneous × deduction", () => {
 		expect(gameConfig.deduction?.autoEliminate).toBe(true);
 	});
 
-	it("rejects autoEliminate false and phases; allows compound queryShape and commitReveal", () => {
+	it("allows autoEliminate false and compound queryShape; rejects phases; allows commitReveal only with autoEliminate true", () => {
 		const base = preset();
 		expect(
 			zConfig.safeParse({
@@ -67,7 +67,7 @@ describe("schema: simultaneous × deduction", () => {
 				...base,
 				deduction: { ...base.deduction!, autoEliminate: false }
 			}).success
-		).toBe(false);
+		).toBe(true);
 
 		expect(
 			zConfig.safeParse({
@@ -90,6 +90,18 @@ describe("schema: simultaneous × deduction", () => {
 				}
 			}).success
 		).toBe(true);
+
+		expect(
+			zConfig.safeParse({
+				...base,
+				turn: {
+					mode: "turn",
+					schedule: "simultaneous",
+					commitReveal: true
+				},
+				deduction: { ...base.deduction!, autoEliminate: false }
+			}).success
+		).toBe(false);
 	});
 });
 

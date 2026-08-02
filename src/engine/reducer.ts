@@ -545,6 +545,8 @@ export function reduce(
 			return handleSimultaneousQuery(state, event.queries, config);
 		case "simultaneousGuess":
 			return handleSimultaneousGuess(state, event.guesses, config);
+		case "simultaneousEliminate":
+			return handleSimultaneousEliminate(state, event.eliminations, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
 		case "commitQuery":
@@ -796,7 +798,6 @@ function handleSimultaneousQuery(
 	if (state.status !== "playing") return state;
 	const shape = config.deduction.queryShape ?? "single";
 	if (shape !== "single" && shape !== "and" && shape !== "or") return state;
-	if (config.deduction.autoEliminate === false) return state;
 
 	const x = resolveQueryForPlayer(state, "X", queries.X, config);
 	const o = resolveQueryForPlayer(state, "O", queries.O, config);
@@ -868,6 +869,41 @@ function handleSimultaneousGuess(
 	return {
 		...state,
 		moveCount: newMoveCount
+	};
+}
+
+/** Joint simultaneous eliminate: both seats prune one candidate (manual mode). */
+function handleSimultaneousEliminate(
+	state: GameState,
+	eliminations: { X: string; O: string },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if (config.deduction.autoEliminate !== false) return state;
+
+	const xAlready = state.deduction.eliminated.X;
+	const oAlready = state.deduction.eliminated.O;
+	if (!canEliminate(config.deduction.roster, xAlready, eliminations.X)) {
+		return state;
+	}
+	if (!canEliminate(config.deduction.roster, oAlready, eliminations.O)) {
+		return state;
+	}
+
+	return {
+		...state,
+		moveCount: state.moveCount + 1,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				X: [...xAlready, eliminations.X],
+				O: [...oAlready, eliminations.O]
+			}
+		}
 	};
 }
 
