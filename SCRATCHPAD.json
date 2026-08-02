@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T19:30-05:00",
-  "turn": 37,
+  "updated_at": "2026-08-01T19:50-05:00",
+  "turn": 38,
   "focus": {
-    "milestone": "M13",
+    "milestone": "M14",
     "issue": "next-missing-mechanism",
-    "goal": "Joint simultaneous replace landed; next seam or P4"
+    "goal": "Ordered simultaneous replace landed; next seam or P4"
   },
   "recent": [
-    "Synced M8–M12 from a776 onto f8ed",
-    "M13: joint simultaneous replace + Simultaneous Replace Race",
-    "Green gate: typecheck + 345 tests"
+    "Synced M8–M13 from f8ed onto 855b",
+    "M14: ordered simultaneous replace + Ordered Simultaneous Replace Race",
+    "Green gate: typecheck + 352 tests"
   ],
   "discoveries": [
-    "Replace under joint uses real-board legality (not both-vacate)",
-    "pieceCaptured skips fleeing targets; fires for stationary prey"
+    "Ordered replace: capture of fleeing piece makes second a legal noop",
+    "Same-dest ordered replace must not let second capture first lander"
   ],
   "open_threads": [
-    "P3 next seam (ordered replace / slide+replace / joint UCT) or P4"
+    "P3 next seam (slide+replace / joint UCT / richer phases) or P4"
   ],
   "next_step": "Cloud: pick smallest next seam or P4 tooling-ci / semantics refresh",
   "blockers": []

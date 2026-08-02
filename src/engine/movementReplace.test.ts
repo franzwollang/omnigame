@@ -270,9 +270,9 @@ describe("movement.capture schema / validateConfig", () => {
 		expect(validateConfig(ok).ok).toBe(true);
 	});
 
-	it("rejects ordered simultaneous + replace", () => {
+	it("accepts ordered simultaneous + replace at range 1", () => {
 		const base = examplePresets["simultaneous-step-race"].config;
-		const bad = {
+		const ok = {
 			...base,
 			turn: { ...base.turn, resolveOrder: "x_first" as const },
 			movement: {
@@ -280,10 +280,6 @@ describe("movement.capture schema / validateConfig", () => {
 				capture: "replace" as const
 			}
 		};
-		const result = validateConfig(bad);
-		expect(result.ok).toBe(false);
-		expect(
-			result.errors.some((e) => e.toLowerCase().includes("replace"))
-		).toBe(true);
+		expect(validateConfig(ok).ok).toBe(true);
 	});
 });

@@ -1095,7 +1095,7 @@ export function explainKernelAction(
 	}
 
 	// Joint move: joint resolve uses vacated-origin path checks (or real-board
-	// when capture=replace); ordered uses sequential path revalidation.
+	// when capture=replace); ordered uses sequential path / capture revalidation.
 	if (action.type === "simultaneousMove") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
 			return {
