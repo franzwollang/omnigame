@@ -55,10 +55,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M36 | Next missing mechanism (commitReveal deduction joint UCT) | `done` |
 | M37 | Next missing mechanism (commitEliminate / commitReveal manual eliminate) | `done` |
 | M38 | Next missing mechanism (commitMove / commitReveal simultaneous move) | `done` |
+| M39 | Next missing mechanism (multi-action simultaneous move) | `done` |
 
-**Optimizing for this marathon:** M38 commitMove closed. Pick **P3
-next-missing-mechanism** (e.g. fire→move only with anchor) or **P4** CI /
-semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M39 multi-action simultaneous move closed.
+Pick **P3 next-missing-mechanism** (e.g. fire→move only with anchor;
+commitReveal+multi-move follow-on) or **P4** CI / semantics refresh — without
+asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -73,7 +75,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥551** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥563** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -533,8 +535,24 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 - Sandbox: commitReveal+move emits `commitMove`; seat from `committedMoves` —
   **done**
 - Preset `hidden-simultaneous-step-race` + tests; 549 green — **done**
-- Out of scope: multi-action simultaneous move; commitReveal + replace/slide
-  variants; fire→move
+- Out of scope closed by M39: multi-action simultaneous move
+- Out of scope: commitReveal + replace/slide variants; fire→move
+
+### M39 — Multi-action simultaneous move
+
+- Schema: allow `actionsPerTurn > 1` under open simultaneous move +
+  `reach_row` + `range: 1` + no replace; forbid commitReveal multi-move —
+  **done**
+- Reducer: `handleSimultaneousMove` budget loop with sequential revalidation
+  (same-piece chains; mid-round reach_row win) — **done**
+- Kernel: `asMoveList` / `jointMovesFromActions` / legality probe / format /
+  equality / `stepPly` chained picks — **done**
+- Agents: `orderedMoveChains` + joint enum; `seatComponentFromJoint` /
+  `jointSeatBudget` honor move arrays — **done**
+- Sandbox: pending move arrays + chain UX — **done**
+- Preset `double-simultaneous-step-race` + tests; 563 green — **done**
+- Out of scope: commitReveal multi-move; multi-action slide/replace;
+  fire→move
 
 ## Sequencing notes
 

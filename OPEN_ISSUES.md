@@ -2,9 +2,9 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M38 commitMove closed). Do
-not ask which fork — pick the smallest new seam under `next-missing-mechanism`,
-then P4 tooling/docs.
+**Marathon rule:** Work **P3 → P4** in order (M39 multi-action simultaneous
+move closed). Do not ask which fork — pick the smallest new seam under
+`next-missing-mechanism`, then P4 tooling/docs.
 
 ---
 
@@ -12,15 +12,18 @@ then P4 tooling/docs.
 
 ### P3 — next-missing-mechanism
 
-CommitReveal under simultaneous move (`commitMove` / Hidden Simultaneous Step
-Race) landed as M38.
+Multi-action simultaneous move (`actionsPerTurn > 1` under open simultaneous
+move / Double Simultaneous Step Race) landed as M39.
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
-- Simultaneous OR-arity demo only if a new seam appears (and already schema-legal)
+- commitReveal + multi-action move (follow-on to M39)
+- commitReveal + slide/replace demos (kernel complete — preset-only unless a
+  new seam appears)
+- `queryShape: not` (reject unless nested AST / new pruning class)
 - Full Go rules (large; prefer smaller seams first)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
@@ -46,7 +49,8 @@ exhaust `references/` or recombine covered primitives).
       simultaneous deduction**, **simultaneous deduction manual eliminate /
       simultaneousEliminate**, **commitReveal deduction joint UCT**,
       **commitEliminate / commitReveal + manual eliminate**, **commitMove /
-      commitReveal under simultaneous move**, hex cube-axis
+      commitReveal under simultaneous move**, **multi-action simultaneous
+      move / actionsPerTurn under open simultaneous move**, hex cube-axis
       sliding, graph chain-walk sliding, graph hop-ball (`graphReach`), hex +
       graph replace capture, Guess Who manual eliminate / `autoEliminate`,
       trait-conjunction `queryShape: and`, trait-disjunction `queryShape: or`,
@@ -75,7 +79,8 @@ eliminate + same-turn query→eliminate + 2-clause AND/OR + N-clause AND via
 eliminate + joint simultaneous compound AND + hidden commitReveal under
 simultaneous deduction + commitReveal deduction joint UCT + **commitReveal +
 manual eliminate (`commitEliminate`)**. **Hidden Simultaneous Step Race**
-covers commitReveal under simultaneous move / `commitMove`. Graph Hop Race
-covers hop-ball BFS. Open simultaneous deduction joint UCT covers agent search
-over query/guess(/eliminate) cartesian (fire→move still open if an anchor
-appears).
+covers commitReveal under simultaneous move / `commitMove`. **Double
+Simultaneous Step Race** covers `actionsPerTurn > 1` under open simultaneous
+move. Graph Hop Race covers hop-ball BFS. Open simultaneous deduction joint
+UCT covers agent search over query/guess(/eliminate) cartesian (fire→move
+still open if an anchor appears).

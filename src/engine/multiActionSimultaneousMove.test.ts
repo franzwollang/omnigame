@@ -109,7 +109,7 @@ describe("kernel: multi-action simultaneous move", () => {
 		const { kernel } = compileConfig(
 			examplePresets["double-simultaneous-step-race"].config
 		);
-		// Place pieces adjacent so index-0 can conflict on the same destination.
+		// Place pieces so both can step onto the same adjacent cell.
 		let state = kernel.initialState();
 		state = {
 			...state,
@@ -117,7 +117,7 @@ describe("kernel: multi-action simultaneous move", () => {
 				...state.grid,
 				cells: (() => {
 					const cells = Array(25).fill(null) as Array<"X" | "O" | null>;
-					cells[2 * 5 + 2] = "X"; // (2,2)
+					cells[2 * 5 + 1] = "X"; // (2,1)
 					cells[2 * 5 + 3] = "O"; // (2,3)
 					return cells;
 				})()
@@ -127,20 +127,20 @@ describe("kernel: multi-action simultaneous move", () => {
 			type: "simultaneousMove",
 			moves: {
 				X: [
-					{ from: { row: 2, col: 2 }, to: { row: 2, col: 1 } },
-					{ from: { row: 2, col: 2 }, to: { row: 1, col: 2 } }
+					{ from: { row: 2, col: 1 }, to: { row: 2, col: 2 } },
+					{ from: { row: 2, col: 1 }, to: { row: 1, col: 1 } }
 				],
 				O: [
-					{ from: { row: 2, col: 3 }, to: { row: 2, col: 1 } },
+					{ from: { row: 2, col: 3 }, to: { row: 2, col: 2 } },
 					{ from: { row: 2, col: 3 }, to: { row: 1, col: 3 } }
 				]
 			}
 		}).nextState;
-		// Index 0 same dest (2,1) → neither; pieces stay. Index 1 applies from originals.
-		expect(getCell(state.grid, { row: 2, col: 1 })).toBe(null);
-		expect(getCell(state.grid, { row: 1, col: 2 })).toBe("X");
-		expect(getCell(state.grid, { row: 1, col: 3 })).toBe("O");
+		// Index 0 same dest (2,2) → neither; pieces stay. Index 1 applies from originals.
 		expect(getCell(state.grid, { row: 2, col: 2 })).toBe(null);
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe("X");
+		expect(getCell(state.grid, { row: 1, col: 3 })).toBe("O");
+		expect(getCell(state.grid, { row: 2, col: 1 })).toBe(null);
 		expect(getCell(state.grid, { row: 2, col: 3 })).toBe(null);
 		expect(state.moveCount).toBe(1);
 	});
