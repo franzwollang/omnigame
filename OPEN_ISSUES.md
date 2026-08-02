@@ -2,8 +2,8 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M31 graph hop-ball closed). Do
-not ask which fork — pick the smallest new seam under
+**Marathon rule:** Work **P3 → P4** in order (M32 simultaneous compound
+deduction closed). Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
 ---
@@ -12,15 +12,16 @@ not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Graph hop-ball (`movement.graphReach = hop` + Graph Hop Race) landed as M31.
-Chain-walk remains the default; hop BFS may turn at junctions.
+Simultaneous compound deduction (`queryShape` and|or under simultaneous +
+Simultaneous Guess Who And Lite) landed as M32. Single-atom simultaneous
+deduction (M30) remains the default foothold.
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
 - fire→move phase reorder (only if a new seam / anchor appears)
-- Simultaneous deduction compound / commitReveal / joint UCT (extensions of M30)
-- Higher compoundArity demos / OR-arity presets only if a new seam appears
+- Simultaneous deduction commitReveal / joint UCT / manual eliminate
+- Simultaneous OR-arity demo only if a new seam appears (and already schema-legal)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -42,11 +43,11 @@ exhaust `references/` or recombine covered primitives).
       + ordered sliding, joint + ordered simultaneous replace, simultaneous
       slide+replace, joint replace vacated-origin hybrid, joint UCT under open
       + multi-action + commitReveal simultaneous, hex cube-axis sliding, graph
-      chain-walk sliding, **graph hop-ball** (`graphReach`), hex + graph replace
+      chain-walk sliding, graph hop-ball (`graphReach`), hex + graph replace
       capture, Guess Who manual eliminate / `autoEliminate`, trait-conjunction
       `queryShape: and`, trait-disjunction `queryShape: or`, `compoundArity` /
       3-clause AND, deduction in-turn phases, simultaneous deduction joint
-      query/guess)
+      query/guess, **simultaneous compound deduction** (`queryShape` and|or))
 
 ---
 
@@ -60,7 +61,8 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 
 Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite +
 Commit Lite + Commit Phases Lite + And Lite + Or Lite + And3 Lite +
-**Simultaneous Guess Who Lite** cover query/guess + hypothesis eliminate +
-same-turn query→eliminate + 2-clause AND/OR + N-clause AND via `compoundArity`
-+ joint simultaneous query/guess. **Graph Hop Race** covers hop-ball BFS
-(fire→move / simultaneous deduction extensions still open).
+Simultaneous Guess Who Lite + **Simultaneous Guess Who And Lite** cover
+query/guess + hypothesis eliminate + same-turn query→eliminate + 2-clause
+AND/OR + N-clause AND via `compoundArity` + joint simultaneous query/guess +
+**joint simultaneous compound AND**. Graph Hop Race covers hop-ball BFS
+(fire→move / simultaneous deduction commitReveal/joint UCT still open).

@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T06:20-00:00",
-  "turn": 59,
+  "updated_at": "2026-08-02T06:45-00:00",
+  "turn": 60,
   "focus": {
-    "milestone": "M31",
+    "milestone": "M32",
     "issue": "next-missing-mechanism",
-    "goal": "graph hop-ball landed; hand off next seam or P4"
+    "goal": "simultaneous compound deduction landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M30 from 7dce onto 3636",
-    "Landed M31 graphReach hop + Graph Hop Race hub preset",
-    "Form Graph reach control; chain default preserved"
+    "Synced M8–M31 from 3636 onto c888",
+    "Landed M32 simultaneous queryShape and|or + And Lite preset",
+    "489 green; joint UCT / commitReveal still deferred"
   ],
   "discoveries": [
-    "Hop BFS turns at junctions; chain-walk cannot express spoke landings"
+    "fire→move is recombination; compound×simultaneous was smallest kernel seam"
   ],
   "open_threads": [
-    "Next: fire→move, sim-deduction UCT/compound, or P4 CI/semantics"
+    "Next: commitReveal/joint UCT/manual eliminate, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (fire→move/sim-deduction ext) or P4",
+  "next_step": "Pick next seam (sim-deduction ext / fire→move) or P4",
   "blockers": []
 }

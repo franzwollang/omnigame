@@ -48,10 +48,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M29 | Next missing mechanism (deduction query→eliminate phases) | `done` |
 | M30 | Next missing mechanism (simultaneous deduction joint query/guess) | `done` |
 | M31 | Next missing mechanism (graph hop-ball range) | `done` |
+| M32 | Next missing mechanism (simultaneous compound deduction) | `done` |
 
-**Optimizing for this marathon:** M31 graph hop-ball / Graph Hop Race closed.
-Pick **P3 next-missing-mechanism** (e.g. fire→move, simultaneous deduction
-extensions) or **P4** CI / semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M32 simultaneous compound deduction /
+Simultaneous Guess Who And Lite closed. Pick **P3 next-missing-mechanism**
+(e.g. fire→move, simultaneous deduction commitReveal/joint UCT) or **P4** CI /
+semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -66,7 +68,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥482** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥489** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -79,8 +81,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M31 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M31) — smallest new seam — or
+   (P0–P2 / M8–M32 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M32) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -125,7 +127,8 @@ on rectangle | hex_offset | graph.
 **Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction),
 **Guess Who Or Lite** (`queryShape: or` — 2-clause trait disjunction),
 **Guess Who And3 Lite** (`compoundArity: 3` — 3-clause AND),
-**Simultaneous Guess Who Lite** (joint query/guess under simultaneous).
+**Simultaneous Guess Who Lite** (joint query/guess under simultaneous),
+**Simultaneous Guess Who And Lite** (joint compound AND under simultaneous).
 
 Mechanisms include: rect/hex/graph topology, wrap (rect+hex), gravity + pop-out
 variants, flip + liberties capture, **move capture-by-replacement** (incl.
@@ -134,7 +137,7 @@ observation (hit/miss + fog + **deduction**), fleet placement, Move
 (orthogonal/diagonal/king + sliding range on rectangle **and hex_offset cube
 axes** + **graph edge chain-walk**; replace on rectangle | hex_offset | **graph**), tick/Life, simultaneous
 place/move/deduction (incl. ordered, hidden commit-reveal, multi-action, **joint + ordered
-sliding**, **joint query/guess**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
+sliding**, **joint query/guess** + **joint compound query**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire** / query→eliminate), **query +
 guess / identify_secret** + **manual eliminate** (`autoEliminate: false`) +
 **trait-conjunction queries** (`queryShape: and`) + **trait-disjunction
@@ -145,7 +148,7 @@ Lite, Slide Race, **Hex Slide Race**, **Graph Slide Race**, **Graph Hop Race**, 
 Replace Race, **Hex Replace Race**, **Graph Replace Race**, Simultaneous Replace Race, Ordered Simultaneous Replace Race,
 Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**,
-**Guess Who And3 Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
+**Guess Who And3 Lite**, **Simultaneous Guess Who Lite**, **Simultaneous Guess Who And Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
@@ -157,7 +160,7 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; CI workflows; semantics doc refresh; fire→move reorder;
-simultaneous deduction compound/commitReveal/joint UCT.
+simultaneous deduction commitReveal/joint UCT/manual eliminate.
 
 ## Phase 2 exit criteria
 
@@ -394,7 +397,8 @@ simultaneous deduction compound/commitReveal/joint UCT.
   `ScheduleSimultaneous` CellsWritable-only + `ScheduleSimultaneousDeduction`;
   joint UCT deferred (`canSearchJointActions` false) — **done**
 - Preset `simultaneous-guess-who-lite` + transcript/replay tests — **done**
-- Out of scope: compound queries; manual eliminate; commitReveal; ordered;
+- Out of scope closed by M32: compound queries under simultaneous
+- Out of scope: manual eliminate; commitReveal; ordered;
   joint UCT over query cartesian; sandbox pendingQueries UI
 
 ### M31 — Graph hop-ball range
@@ -406,8 +410,20 @@ simultaneous deduction compound/commitReveal/joint UCT.
   preserves M22/M27 — **done**
 - Preset `graph-hop-race` (hub topology) + transcript/replay + chain contrast
   tests; form Graph reach control — **done**
-- Out of scope: fire→move; simultaneous deduction compound/commitReveal/joint
-  UCT; multi-jump capture chains
+- Out of scope: fire→move; simultaneous deduction commitReveal/joint UCT;
+  multi-jump capture chains
+
+### M32 — Simultaneous compound deduction
+
+- Schema allows `queryShape` and|or under `schedule = simultaneous` +
+  deduction (still requires `autoEliminate: true`; forbids phases /
+  commitReveal / ordered) — **done**
+- Kernel/reducer: joint compound resolve via `resolveQueryForPlayer`;
+  legal enumeration via `enumerateCompoundQueries`;
+  `simultaneousQuery` legality matches shape — **done**
+- Preset `simultaneous-guess-who-and-lite` + transcript/replay tests — **done**
+- Out of scope: commitReveal; joint UCT; manual eliminate; OR-arity demo
+  preset (schema already accepts `or`)
 
 ## Sequencing notes
 
