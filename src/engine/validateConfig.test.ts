@@ -215,9 +215,9 @@ describe("validateConfig", () => {
 		expect(result.errors.some((e) => e.includes("overflow"))).toBe(true);
 	});
 
-	it("rejects ordered simultaneous move with movement.range > 1", () => {
+	it("accepts ordered simultaneous move with movement.range > 1", () => {
 		const base = examplePresets["simultaneous-step-race"].config;
-		const bad = {
+		const ok = {
 			...base,
 			movement: { ...base.movement!, range: 4 as const },
 			turn: {
@@ -226,11 +226,8 @@ describe("validateConfig", () => {
 				resolveOrder: "x_first" as const
 			}
 		};
-		const result = validateConfig(bad);
-		expect(result.ok).toBe(false);
-		expect(
-			result.errors.some((e) => e.toLowerCase().includes("range"))
-		).toBe(true);
+		const result = validateConfig(ok);
+		expect(result.ok).toBe(true);
 	});
 
 	it("accepts joint simultaneous move with movement.range > 1", () => {

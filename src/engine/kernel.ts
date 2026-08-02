@@ -32,6 +32,7 @@ import {
 } from "@/engine/fleet";
 import {
 	canJointSimultaneousMoves,
+	canOrderedSimultaneousMoves,
 	canMove,
 	legalDestinations,
 	movementBoardFrom
@@ -1037,7 +1038,7 @@ export function explainKernelAction(
 	}
 
 	// Joint move: joint resolve uses vacated-origin path checks; ordered uses
-	// independent pre-round canMove (schema keeps ordered at range 1).
+	// sequential path revalidation (first pre-round, second after first).
 	if (action.type === "simultaneousMove") {
 		if (!simultaneous || (config.inputMode ?? "cell") !== "move") {
 			return {
@@ -1064,20 +1065,11 @@ export function explainKernelAction(
 						movement,
 						board
 					)
-				: canMove(
+				: canOrderedSimultaneousMoves(
 						state.grid,
-						action.moves.X.from,
-						action.moves.X.to,
-						"X",
+						action.moves,
 						movement,
-						board
-					) &&
-					canMove(
-						state.grid,
-						action.moves.O.from,
-						action.moves.O.to,
-						"O",
-						movement,
+						resolveOrder,
 						board
 					);
 		if (ok) return { legal: true };

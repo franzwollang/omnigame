@@ -3,7 +3,10 @@ import { compileConfig } from "@/compiler";
 import { zConfig } from "@/schemas/config";
 import { examplePresets } from "@/presets/registry";
 import { getCell, setCell, type Grid } from "@/engine/types";
-import { canJointSimultaneousMoves } from "@/engine/movement";
+import {
+	canJointSimultaneousMoves,
+	canOrderedSimultaneousMoves
+} from "@/engine/movement";
 import { type KernelAction } from "@/engine/kernel";
 import { replayActions } from "@/ir/gameIr";
 import { validateConfig } from "@/engine/validateConfig";
@@ -26,17 +29,15 @@ describe("schema: simultaneous × sliding", () => {
 		expect(validated.ok).toBe(true);
 	});
 
-	it("rejects ordered simultaneous with movement.range > 1", () => {
-		const base = examplePresets["simultaneous-slide-race"].config;
-		const bad = {
-			...base,
-			turn: {
-				mode: "turn" as const,
-				schedule: "simultaneous" as const,
-				resolveOrder: "x_first" as const
-			}
-		};
-		expect(zConfig.safeParse(bad).success).toBe(false);
+	it("accepts ordered-simultaneous-slide-race (ordered + range > 1)", () => {
+		const ok = zConfig.safeParse(
+			examplePresets["ordered-simultaneous-slide-race"].config
+		);
+		expect(ok.success).toBe(true);
+		const validated = validateConfig(
+			examplePresets["ordered-simultaneous-slide-race"].config
+		);
+		expect(validated.ok).toBe(true);
 	});
 
 	it("still rejects simultaneous + capture replace", () => {
@@ -85,6 +86,59 @@ describe("canJointSimultaneousMoves vacated-origin paths", () => {
 			O: { from: { row: 0, col: 0 }, to: { row: 0, col: 1 } }
 		};
 		expect(canJointSimultaneousMoves(blocked, moves, SLIDE)).toBe(false);
+	});
+});
+
+describe("canOrderedSimultaneousMoves sequential path revalidation", () => {
+	const blockerSetup = {
+		...examplePresets["ordered-simultaneous-slide-race"].config,
+		initial: [
+			{ row: 4, col: 2, player: "X" as const, visibility: "public" as const },
+			{ row: 2, col: 2, player: "O" as const, visibility: "public" as const }
+		]
+	};
+	const moves = {
+		X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+		O: { from: { row: 2, col: 2 }, to: { row: 2, col: 3 } }
+	};
+
+	it("rejects x_first when X would slide through O before O steps aside", () => {
+		const { kernel } = compileConfig(blockerSetup);
+		const state = kernel.initialState();
+		expect(
+			canOrderedSimultaneousMoves(state.grid, moves, SLIDE, "x_first")
+		).toBe(false);
+		// Joint still allows the same pair via vacated-origin checks.
+		expect(canJointSimultaneousMoves(state.grid, moves, SLIDE)).toBe(true);
+	});
+
+	it("allows o_first when O vacates the ray before X slides", () => {
+		const { kernel } = compileConfig({
+			...blockerSetup,
+			turn: {
+				mode: "turn" as const,
+				schedule: "simultaneous" as const,
+				resolveOrder: "o_first" as const
+			}
+		});
+		const state = kernel.initialState();
+		expect(
+			canOrderedSimultaneousMoves(state.grid, moves, SLIDE, "o_first")
+		).toBe(true);
+	});
+
+	it("allows ordered slides that do not interact", () => {
+		const { kernel } = compileConfig(
+			examplePresets["ordered-simultaneous-slide-race"].config
+		);
+		const state = kernel.initialState();
+		const independent = {
+			X: { from: { row: 4, col: 2 }, to: { row: 1, col: 2 } },
+			O: { from: { row: 0, col: 2 }, to: { row: 0, col: 4 } }
+		};
+		expect(
+			canOrderedSimultaneousMoves(state.grid, independent, SLIDE, "x_first")
+		).toBe(true);
 	});
 });
 
@@ -219,5 +273,119 @@ describe("kernel: simultaneous joint sliding", () => {
 		expect(gameConfig.turnSchedule).toBe("simultaneous");
 		expect(gameConfig.movement?.range).toBe(4);
 		expect(gameConfig.resolveOrder ?? "joint").toBe("joint");
+	});
+});
+
+describe("kernel: ordered simultaneous sliding", () => {
+	it("x_first rejects slide through opponent who has not yet vacated", () => {
+		const seeded = {
+			...examplePresets["ordered-simultaneous-slide-race"].config,
+			initial: [
+				{ row: 4, col: 2, player: "X" as const, visibility: "public" as const },
+				{ row: 2, col: 2, player: "O" as const, visibility: "public" as const }
+			]
+		};
+		const { kernel } = compileConfig(seeded);
+		const state = kernel.initialState();
+		const joint: KernelAction = {
+			type: "simultaneousMove",
+			moves: {
+				X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+				O: { from: { row: 2, col: 2 }, to: { row: 2, col: 4 } }
+			}
+		};
+		expect(kernel.explainAction(state, 0, joint).legal).toBe(false);
+		const next = kernel.stepSync(state, joint).nextState;
+		expect(getCell(next.grid, { row: 4, col: 2 })).toBe("X");
+		expect(getCell(next.grid, { row: 2, col: 2 })).toBe("O");
+	});
+
+	it("o_first applies when O vacates then X slides through", () => {
+		const seeded = {
+			...examplePresets["ordered-simultaneous-slide-race"].config,
+			turn: {
+				mode: "turn" as const,
+				schedule: "simultaneous" as const,
+				resolveOrder: "o_first" as const
+			},
+			initial: [
+				{ row: 4, col: 2, player: "X" as const, visibility: "public" as const },
+				{ row: 2, col: 2, player: "O" as const, visibility: "public" as const }
+			]
+		};
+		const { kernel } = compileConfig(seeded);
+		let state = kernel.initialState();
+		const joint: KernelAction = {
+			type: "simultaneousMove",
+			moves: {
+				X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+				O: { from: { row: 2, col: 2 }, to: { row: 2, col: 4 } }
+			}
+		};
+		expect(kernel.explainAction(state, 0, joint).legal).toBe(true);
+		state = kernel.stepSync(state, joint).nextState;
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 2, col: 4 })).toBe("O");
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+	});
+
+	it("ordered same-destination: first seat wins the cell", () => {
+		const seeded = {
+			...examplePresets["ordered-simultaneous-slide-race"].config,
+			initial: [
+				{ row: 4, col: 0, player: "X" as const, visibility: "public" as const },
+				{ row: 4, col: 4, player: "O" as const, visibility: "public" as const }
+			]
+		};
+		const { kernel } = compileConfig(seeded);
+		let state = kernel.initialState();
+		const joint: KernelAction = {
+			type: "simultaneousMove",
+			moves: {
+				X: { from: { row: 4, col: 0 }, to: { row: 4, col: 2 } },
+				O: { from: { row: 4, col: 4 }, to: { row: 4, col: 2 } }
+			}
+		};
+		expect(kernel.explainAction(state, 0, joint).legal).toBe(true);
+		state = kernel.stepSync(state, joint).nextState;
+		expect(getCell(state.grid, { row: 4, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 4, col: 0 })).toBe(null);
+		expect(getCell(state.grid, { row: 4, col: 4 })).toBe("O");
+	});
+
+	it("replays ordered-simultaneous-slide-race transcript", () => {
+		const { kernel, gameConfig } = compileConfig(
+			examplePresets["ordered-simultaneous-slide-race"].config
+		);
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousMove",
+				moves: {
+					X: { from: { row: 4, col: 2 }, to: { row: 1, col: 2 } },
+					O: { from: { row: 0, col: 2 }, to: { row: 0, col: 4 } }
+				}
+			}
+		];
+		const live = actions.reduce(
+			(s, a) => kernel.stepSync(s, a).nextState,
+			kernel.initialState()
+		);
+		expect(getCell(live.grid, { row: 1, col: 2 })).toBe("X");
+		expect(getCell(live.grid, { row: 0, col: 4 })).toBe("O");
+
+		const replayed = replayActions(gameConfig, actions);
+		expect(replayed.finalState.grid.cells).toEqual(live.grid.cells);
+		expect(replayed.finalState.moveCount).toBe(live.moveCount);
+		expect(replayed.faithful).toBe(true);
+	});
+
+	it("normalizes ordered-simultaneous-slide-race through compiler", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["ordered-simultaneous-slide-race"].config
+		);
+		expect(gameConfig.turnSchedule).toBe("simultaneous");
+		expect(gameConfig.movement?.range).toBe(4);
+		expect(gameConfig.resolveOrder).toBe("x_first");
 	});
 });

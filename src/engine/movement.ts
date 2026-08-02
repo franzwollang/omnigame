@@ -255,6 +255,69 @@ export function canJointSimultaneousMoves(
 	);
 }
 
+/**
+ * Ordered simultaneous move legality (resolveOrder = x_first | o_first):
+ * first seat validated on the pre-round board; second seat validated after
+ * simulating the first seat's move (sequential path revalidation).
+ * Same-destination conflict: both paths must be legal on the pre-round board
+ * (apply gives the cell to the first seat).
+ */
+export function canOrderedSimultaneousMoves(
+	grid: Grid,
+	moves: { X: JointMoveSpec; O: JointMoveSpec },
+	config: MovementConfig,
+	resolveOrder: "x_first" | "o_first",
+	wrapOrBoard: boolean | MovementBoard = false
+): boolean {
+	if (getCell(grid, moves.X.from) !== "X") return false;
+	if (getCell(grid, moves.O.from) !== "O") return false;
+
+	const first: Player = resolveOrder === "x_first" ? "X" : "O";
+	const second: Player = first === "X" ? "O" : "X";
+	const firstMove = moves[first];
+	const secondMove = moves[second];
+
+	if (
+		!canMove(
+			grid,
+			firstMove.from,
+			firstMove.to,
+			first,
+			config,
+			wrapOrBoard
+		)
+	) {
+		return false;
+	}
+
+	const sameDest =
+		firstMove.to.row === secondMove.to.row &&
+		firstMove.to.col === secondMove.to.col;
+	if (sameDest) {
+		return canMove(
+			grid,
+			secondMove.from,
+			secondMove.to,
+			second,
+			config,
+			wrapOrBoard
+		);
+	}
+
+	let cells = setCell(grid, firstMove.from, null);
+	cells = setCell({ ...grid, cells }, firstMove.to, first);
+	const afterFirst: Grid = { ...grid, cells };
+
+	return canMove(
+		afterFirst,
+		secondMove.from,
+		secondMove.to,
+		second,
+		config,
+		wrapOrBoard
+	);
+}
+
 /** Build movement board context from a GameConfig-like object. */
 export function movementBoardFrom(config: {
 	topology?: GridTopology;

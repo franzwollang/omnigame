@@ -1622,6 +1622,59 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"ordered-simultaneous-slide-race": definePreset({
+		id: "ordered-simultaneous-slide-race",
+		name: "Ordered Simultaneous Slide Race",
+		tags: [
+			"move",
+			"slide",
+			"range",
+			"reach-row",
+			"simultaneous",
+			"resolve-order",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"X-first ordered simultaneous rook slides (range 4). Second seat path revalidated after the first seat moves — priority order changes sliding legality, not only same-cell ties. Unlocks ordered simultaneous × sliding.",
+		config: {
+			metadata: { name: "Ordered Simultaneous Slide Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				resolveOrder: "x_first"
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 4 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "ordered-slider-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "ordered-slider-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"simultaneous-hex-step-race": definePreset({
 		id: "simultaneous-hex-step-race",
 		name: "Simultaneous Hex Step Race",

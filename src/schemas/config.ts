@@ -115,7 +115,7 @@ export const zConfig = z
 		 * `capture: "replace"` — move onto enemy clears occupant then lands
 		 * (rectangle + move input; path empty except destination).
 		 * Joint simultaneous + range > 1 uses vacated-origin path checks;
-		 * ordered simultaneous still requires range = 1.
+		 * ordered simultaneous + range > 1 uses sequential path revalidation.
 		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
 		 */
 		movement: z
@@ -911,19 +911,7 @@ export const zConfig = z
 					});
 				}
 				// Joint simultaneous sliding uses vacated-origin path checks.
-				// Ordered resolve still lacks sequential path revalidation.
-				if (
-					(cfg.movement?.range ?? 1) > 1 &&
-					(cfg.turn.resolveOrder === "x_first" ||
-						cfg.turn.resolveOrder === "o_first")
-				) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement", "range"],
-						message:
-							"ordered simultaneous move requires movement.range = 1 (sequential sliding path integrity deferred)"
-					});
-				}
+				// Ordered simultaneous sliding uses sequential path revalidation.
 				if (cfg.movement?.capture === "replace") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,

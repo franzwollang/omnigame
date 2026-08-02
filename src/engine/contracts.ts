@@ -365,6 +365,7 @@ export const Contracts = {
 	/**
 	 * Ordered simultaneous resolve (resolveOrder = x_first | o_first). Keeps
 	 * Schedule = simultaneous; earlier seat wins same-cell conflicts.
+	 * Sliding paths revalidated sequentially (first pre-round, second after).
 	 */
 	ScheduleOrderedResolve: (): FeatureContract => ({
 		id: "ScheduleOrderedResolve",
@@ -372,7 +373,11 @@ export const Contracts = {
 		provides: [],
 		slots: [],
 		hooks: ["applyEffects"],
-		invariants: ["sequentialApplyWithinRound", "sameCellConflictFirstSeatWins"]
+		invariants: [
+			"sequentialApplyWithinRound",
+			"sameCellConflictFirstSeatWins",
+			"orderedSlideSequentialPathRevalidation"
+		]
 	}),
 	/**
 	 * Hidden simultaneous (commit-then-reveal). Keeps Schedule = simultaneous;

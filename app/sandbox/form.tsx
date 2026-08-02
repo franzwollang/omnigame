@@ -55,19 +55,11 @@ function keyToPhases(key: PhaseKey): ("place" | "move" | "fire")[] | undefined {
 export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	const inputMode = form.watch("input.mode") as string | undefined;
 	const topology = (form.watch("grid.topology") as string | undefined) ?? "rectangle";
-	const schedule =
-		(form.watch("turn.schedule") as string | undefined) ?? "alternating";
-	const resolveOrder =
-		(form.watch("turn.resolveOrder") as string | undefined) ?? "joint";
 	const phases = form.watch("turn.phases") as string[] | undefined;
 	const phasesNeedMove = Array.isArray(phases) && phases.includes("move");
 	const showMovement = inputMode === "move" || phasesNeedMove;
 	const hexOrGraph = topology === "hex_offset" || topology === "graph";
-	const simultaneousMove = schedule === "simultaneous" && inputMode === "move";
-	const orderedSimMove =
-		simultaneousMove &&
-		(resolveOrder === "x_first" || resolveOrder === "o_first");
-	const rangeMax = hexOrGraph || orderedSimMove ? 1 : 8;
+	const rangeMax = hexOrGraph ? 1 : 8;
 
 	const ensureMovement = () => {
 		const current = form.getValues("movement");
@@ -560,10 +552,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<p className="text-xs text-muted-foreground">
 										Required for input.mode = move and for phases that
 										include move. Diagonal/king and range &gt; 1 are
-										rectangle-only; joint simultaneous allows sliding
-										(vacated-origin paths); ordered simultaneous still
-										requires range = 1. Replace capture is rectangle +
-										alternating move only.
+										rectangle-only; joint simultaneous sliding uses
+										vacated-origin paths; ordered simultaneous sliding
+										revalidates the second seat after the first. Replace
+										capture is rectangle + alternating move only.
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
@@ -635,7 +627,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														1 = adjacent step; 2–8 = sliding ray on
 														rectangle (stops at occupied / edge).
 														{rangeMax === 1
-															? " Locked to 1 for hex/graph or ordered simultaneous."
+															? " Locked to 1 for hex/graph."
 															: ""}
 													</p>
 													<FormMessage />
