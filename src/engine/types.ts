@@ -116,6 +116,12 @@ export type GameState = {
 	 */
 	committedPlacements?: Partial<Record<Player, Position[]>>;
 	/**
+	 * Hidden simultaneous move: per-seat private {from,to} commit. Cleared after
+	 * joint reveal (`simultaneousMove`). Budget is always 1 under simultaneous
+	 * move (actionsPerTurn > 1 forbidden).
+	 */
+	committedMoves?: Partial<Record<Player, { from: Position; to: Position }>>;
+	/**
 	 * Hidden simultaneous deduction: per-seat private query/guess/eliminate
 	 * commit. Cleared after joint reveal (`simultaneousQuery` /
 	 * `simultaneousGuess` / `simultaneousEliminate`). Budget is always 1 under
@@ -248,6 +254,14 @@ export type CommitPlaceEvent = {
 	position: Position;
 };
 
+/** Hidden simultaneous move: one seat's private {from,to} commit. */
+export type CommitMoveEvent = {
+	type: "commitMove";
+	player: Player;
+	from: Position;
+	to: Position;
+};
+
 export type ResetEvent = {
 	type: "reset";
 };
@@ -342,6 +356,7 @@ export type GameEvent =
 	| SimultaneousGuessEvent
 	| SimultaneousEliminateEvent
 	| CommitPlaceEvent
+	| CommitMoveEvent
 	| CommitQueryEvent
 	| CommitGuessEvent
 	| CommitEliminateEvent

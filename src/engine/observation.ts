@@ -38,6 +38,11 @@ export type PlayerObservation = {
 	 */
 	visible: boolean[];
 	lastShot?: { position: Position; result: ShotResult };
+	/**
+	 * Own pending move commit under commitReveal (opponent hidden). Separate
+	 * from deduction.pendingCommit so deduction overlays stay untouched.
+	 */
+	pendingCommit?: { kind: "move"; from: Position; to: Position };
 	/** Deduction / Guess Who-lite private view. */
 	deduction?: {
 		roster: DeductionCharacter[];
@@ -263,11 +268,27 @@ export function observe(
 				cells[toIndex(pos, state.grid.width)] = player;
 			}
 		}
+		// Hidden simultaneous move: overlay own destination (intent to land);
+		// do not vacate from — piece stays publicly at origin until reveal.
+		if (config.commitReveal && state.committedMoves?.[player]) {
+			const dest = state.committedMoves[player]!.to;
+			cells[toIndex(dest, state.grid.width)] = player;
+		}
+		const ownMove = state.committedMoves?.[player];
 		return {
 			player,
 			cells,
 			visible: allVisible(size),
-			lastShot
+			lastShot,
+			...(ownMove
+				? {
+						pendingCommit: {
+							kind: "move" as const,
+							from: ownMove.from,
+							to: ownMove.to
+						}
+					}
+				: {})
 		};
 	}
 

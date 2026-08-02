@@ -22,6 +22,7 @@ function centerBias(state: GameState, action: KernelAction): number {
 			col = action.position.col;
 			break;
 		case "move":
+		case "commitMove":
 			row = action.to.row;
 			col = action.to.col;
 			break;
@@ -46,7 +47,8 @@ function captureBias(state: GameState, action: KernelAction): number {
 	if (
 		action.type !== "place" &&
 		action.type !== "move" &&
-		action.type !== "commitPlace"
+		action.type !== "commitPlace" &&
+		action.type !== "commitMove"
 	) {
 		return 0;
 	}

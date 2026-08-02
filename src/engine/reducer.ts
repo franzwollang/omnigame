@@ -549,6 +549,14 @@ export function reduce(
 			return handleSimultaneousEliminate(state, event.eliminations, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
+		case "commitMove":
+			return handleCommitMove(
+				state,
+				event.player,
+				event.from,
+				event.to,
+				config
+			);
 		case "commitQuery":
 			return handleCommitQuery(state, event.player, event.query, config);
 		case "commitGuess":
@@ -1351,7 +1359,8 @@ function handleSimultaneousMove(
 	const nextBase: GameState = {
 		...state,
 		grid: workingGrid,
-		moveCount: state.moveCount + 1
+		moveCount: state.moveCount + 1,
+		committedMoves: undefined
 	};
 
 	const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
@@ -1474,6 +1483,53 @@ function handleCommitPlace(
 		...state,
 		committedPlacements: nextCommits
 		// moveCount unchanged until reveal
+	};
+}
+
+/**
+ * Hidden simultaneous move: record a private {from,to} commit. When both seats
+ * have committed, reveal via handleSimultaneousMove (budget always 1).
+ */
+function handleCommitMove(
+	state: GameState,
+	player: Player,
+	from: Position,
+	to: Position,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") !== "move") return state;
+	const movement = config.movement;
+	if (!movement) return state;
+
+	const board = movementBoardFrom(config);
+	if (!canMove(state.grid, from, to, player, movement, board)) return state;
+
+	const prior = state.committedMoves ?? {};
+	if (prior[player]) return state; // already committed this round
+
+	const nextCommits: Partial<
+		Record<Player, { from: Position; to: Position }>
+	> = {
+		...prior,
+		[player]: { from, to }
+	};
+
+	const x = nextCommits.X;
+	const o = nextCommits.O;
+	if (x && o) {
+		return handleSimultaneousMove(
+			{ ...state, committedMoves: nextCommits },
+			{ X: x, O: o },
+			config
+		);
+	}
+
+	return {
+		...state,
+		committedMoves: nextCommits
 	};
 }
 

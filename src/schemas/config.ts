@@ -989,20 +989,13 @@ export const zConfig = z
 			if (simMove) {
 				// reach_row pairing enforced below with moveInput !== reachRow
 				// Topology-aware movement: rectangle | hex_offset | graph
+				// commitReveal allowed (Hidden Simultaneous Step Race / commitMove).
 				if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["turn", "actionsPerTurn"],
 						message:
 							"simultaneous move does not support actionsPerTurn > 1"
-					});
-				}
-				if (cfg.turn.commitReveal === true) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["turn", "commitReveal"],
-						message:
-							"simultaneous move is incompatible with commitReveal (deferred)"
 					});
 				}
 				// Joint simultaneous sliding / replace: vacated-origin paths

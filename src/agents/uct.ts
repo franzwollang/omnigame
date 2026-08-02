@@ -38,7 +38,7 @@ type JointDecisionCache = {
 	joint: KernelAction;
 	/** Next place-index per seat for multi-action dual-`act` (mod budget). */
 	nextIndex: { 0: number; 1: number };
-	/** When true, emit commitPlace/commitQuery/commitGuess/commitEliminate (commitReveal). */
+	/** When true, emit commitPlace/commitMove/commitQuery/commitGuess/commitEliminate (commitReveal). */
 	asCommit?: boolean;
 };
 
@@ -111,6 +111,8 @@ export function actionKey(action: KernelAction): string {
 			return `jointEliminate:${action.eliminations.X}|${action.eliminations.O}`;
 		case "commitPlace":
 			return `commit:${action.player}:${action.position.row},${action.position.col}`;
+		case "commitMove":
+			return `commitMove:${action.player}:${action.from.row},${action.from.col}->${action.to.row},${action.to.col}`;
 		case "commitQuery":
 			return `commitQuery:${action.player}:${formatQueryFingerprint(action.query)}`;
 		case "commitGuess":
@@ -139,6 +141,17 @@ function stateFingerprint(state: GameState): string {
 			.join(";"),
 		state.committedPlacements
 			? `cX:${(state.committedPlacements.X ?? []).map((p) => `${p.row},${p.col}`).join("+")}|cO:${(state.committedPlacements.O ?? []).map((p) => `${p.row},${p.col}`).join("+")}`
+			: "",
+		state.committedMoves
+			? `cmX:${
+					state.committedMoves.X
+						? `${state.committedMoves.X.from.row},${state.committedMoves.X.from.col}->${state.committedMoves.X.to.row},${state.committedMoves.X.to.col}`
+						: ""
+				}|cmO:${
+					state.committedMoves.O
+						? `${state.committedMoves.O.from.row},${state.committedMoves.O.from.col}->${state.committedMoves.O.to.row},${state.committedMoves.O.to.col}`
+						: ""
+				}`
 			: "",
 		state.committedDeduction
 			? `cdX:${
@@ -240,7 +253,12 @@ function makeNode(
 				const budget = kernel.config.actionsPerTurn ?? 1;
 				const deduction =
 					(kernel.config.inputMode ?? "cell") === "deduction";
-				const active = activeCommitSeat(state, budget, { deduction });
+				const move =
+					(kernel.config.inputMode ?? "cell") === "move";
+				const active = activeCommitSeat(state, budget, {
+					deduction,
+					move
+				});
 				untried =
 					active == null ? [] : [...kernel.legalActions(state, active)];
 			} else {
@@ -367,7 +385,7 @@ export type UctOptions = {
  * place/move/query/guess/eliminate cartesian and caches the chosen joint so
  * sandbox dual-/multi-`act` stays consistent. Under commitReveal, searches
  * fresh-round reveal joints (place or deduction query/guess/eliminate) and
- * caches sequential `commitPlace` / `commitQuery` / `commitGuess` /
+ * caches sequential `commitPlace` / `commitMove` / `commitQuery` / `commitGuess` /
  * `commitEliminate` emissions. On hit/miss configs, delegates to the
  * observation hunt agent.
  */

@@ -97,6 +97,12 @@ export type KernelAction =
 			position: Position;
 	  }
 	| {
+			type: "commitMove";
+			player: Player;
+			from: Position;
+			to: Position;
+	  }
+	| {
 			type: "commitQuery";
 			player: Player;
 			query: {
@@ -278,6 +284,8 @@ function formatAction(action: KernelAction): string {
 			return `joint eliminate X${action.eliminations.X} O${action.eliminations.O}`;
 		case "commitPlace":
 			return `commit ${action.player} (${action.position.row},${action.position.col})`;
+		case "commitMove":
+			return `commitMove ${action.player} (${action.from.row},${action.from.col})→(${action.to.row},${action.to.col})`;
 		case "commitQuery":
 			return `commitQuery ${action.player} ${formatQueryFingerprint(action.query)}`;
 		case "commitGuess":
@@ -340,6 +348,7 @@ function isNoop(before: GameState, after: GameState): boolean {
 		before.hidden?.cells === after.hidden?.cells &&
 		before.pendingPlaces === after.pendingPlaces &&
 		before.committedPlacements === after.committedPlacements &&
+		before.committedMoves === after.committedMoves &&
 		before.committedDeduction === after.committedDeduction &&
 		before.positionHistory === after.positionHistory &&
 		before.deduction === after.deduction
@@ -371,6 +380,7 @@ function applyStep(
 	if (isNoop(state, nextState)) {
 		const probePlayer =
 			action.type === "commitPlace" ||
+			action.type === "commitMove" ||
 			action.type === "commitQuery" ||
 			action.type === "commitGuess" ||
 			action.type === "commitEliminate"
@@ -403,6 +413,7 @@ function applyStep(
 		action.type === "simultaneousEliminate"
 			? "simultaneous"
 			: 		action.type === "commitPlace" ||
+				  action.type === "commitMove" ||
 				  action.type === "commitQuery" ||
 				  action.type === "commitGuess" ||
 				  action.type === "commitEliminate"
@@ -846,10 +857,37 @@ function collectLegalActions(
 		const budget = config.actionsPerTurn ?? 1;
 
 		// Simultaneous move: per-seat {from,to}; compose via stepJoint.
+		// Under commitReveal, emit private commitMove until both seats reveal.
 		if (inputMode === "move") {
 			const movement = config.movement;
 			if (!movement) return [];
 			const board = movementBoardFrom(config);
+			if (commitReveal) {
+				if (state.committedMoves?.[acting]) return [];
+				for (const from of allActivePositions(
+					state.grid,
+					config.topology ?? "rectangle",
+					config.graph
+				)) {
+					if (getCell(state.grid, from) !== acting) continue;
+					for (const to of legalDestinations(
+						state.grid,
+						from,
+						movement,
+						board
+					)) {
+						if (canMove(state.grid, from, to, acting, movement, board)) {
+							actions.push({
+								type: "commitMove",
+								player: acting,
+								from,
+								to
+							});
+						}
+					}
+				}
+				return actions;
+			}
 			for (const from of allActivePositions(
 				state.grid,
 				config.topology ?? "rectangle",
@@ -1654,6 +1692,60 @@ export function explainKernelAction(
 		return { legal: true };
 	}
 
+	if (action.type === "commitMove") {
+		if (
+			!simultaneous ||
+			!config.commitReveal ||
+			(config.inputMode ?? "cell") !== "move"
+		) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		if (playerIdOf(action.player) !== player) {
+			return {
+				legal: false,
+				reason: "wrong_player",
+				detail: detailFor("wrong_player", action)
+			};
+		}
+		if (state.committedMoves?.[action.player]) {
+			return {
+				legal: false,
+				reason: "already_committed",
+				detail: detailFor("already_committed", action)
+			};
+		}
+		const movement = config.movement;
+		if (!movement) {
+			return {
+				legal: false,
+				reason: "mode_mismatch",
+				detail: detailFor("mode_mismatch", action)
+			};
+		}
+		const board = movementBoardFrom(config);
+		if (
+			!canMove(
+				state.grid,
+				action.from,
+				action.to,
+				action.player,
+				movement,
+				board
+			)
+		) {
+			return {
+				legal: false,
+				reason: "invalid_destination",
+				detail: detailFor("invalid_destination", action)
+			};
+		}
+		return { legal: true };
+	}
+
 	if (
 		action.type === "commitQuery" ||
 		action.type === "commitGuess" ||
@@ -2302,6 +2394,15 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 				a.position.row === b.position.row &&
 				a.position.col === b.position.col
 			);
+		case "commitMove":
+			return (
+				b.type === "commitMove" &&
+				a.player === b.player &&
+				a.from.row === b.from.row &&
+				a.from.col === b.from.col &&
+				a.to.row === b.to.row &&
+				a.to.col === b.to.col
+			);
 		case "commitQuery":
 			return (
 				b.type === "commitQuery" &&
@@ -2466,6 +2567,7 @@ export function highlightCellsForActions(
 				push(action.position);
 				break;
 			case "move":
+			case "commitMove":
 				if (selected) {
 					if (
 						action.from.row === selected.row &&
@@ -2625,6 +2727,7 @@ export function stepPly(
 		if (kernel.config.commitReveal) {
 			const deduction =
 				(kernel.config.inputMode ?? "cell") === "deduction";
+			const moveMode = (kernel.config.inputMode ?? "cell") === "move";
 			let s = state;
 			let last: StepResult | null = null;
 			// Fill each seat's commit; reveal fires when both are ready.
@@ -2644,6 +2747,25 @@ export function stepPly(
 					if (
 						s.committedDeduction?.X == null &&
 						s.committedDeduction?.O == null &&
+						s.moveCount > state.moveCount
+					) {
+						return last;
+					}
+				} else if (moveMode) {
+					const xReady = s.committedMoves?.X != null;
+					const oReady = s.committedMoves?.O != null;
+					if (xReady && oReady) break;
+					const pid: PlayerId = !xReady ? 0 : 1;
+					const legal = kernel.legalActions(s, pid);
+					const action = pickFor(pid, legal);
+					if (!action) return last;
+					last = kernel.stepSync(s, action, seed);
+					s = last.nextState;
+					if (s.status !== "playing") return last;
+					// After reveal, committedMoves clears — stop.
+					if (
+						s.committedMoves?.X == null &&
+						s.committedMoves?.O == null &&
 						s.moveCount > state.moveCount
 					) {
 						return last;

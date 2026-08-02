@@ -1,10 +1,12 @@
 /**
  * Joint legal enumeration for open simultaneous place/move/deduction and
  * commitReveal fresh-round plans (evaluated as simultaneousPlace /
- * simultaneousQuery / simultaneousGuess / simultaneousEliminate).
+ * simultaneousMove / simultaneousQuery / simultaneousGuess /
+ * simultaneousEliminate).
  * Budget 1: scalar cartesian. Budget > 1: ordered distinct place tuples.
  * Deduction: kind-matched query×query + guess×guess + eliminate×eliminate
- * (budget 1; commitReveal maps commit* → open joints including commitEliminate).
+ * (budget 1; commitReveal maps commit* → open joints including commitEliminate
+ * and commitMove).
  */
 import type { GameState } from "@/engine/types";
 import { asPlacementList, pendingFingerprint } from "@/engine/types";
@@ -27,7 +29,7 @@ import { formatQueryFingerprint } from "@/engine/deduction";
 /**
  * Open simultaneous place/move/deduction — joint cartesian is searchable
  * (any budget for place; deduction is always budget 1). CommitReveal uses
- * a separate fresh-round plan search (place + deduction query/guess).
+ * a separate fresh-round plan search (place + move + deduction).
  */
 export function canSearchJointActions(kernel: GameKernel): boolean {
 	if ((kernel.config.turnSchedule ?? "alternating") !== "simultaneous") {
@@ -43,17 +45,19 @@ export function isFreshCommitRound(state: GameState): boolean {
 	const placeFresh =
 		(state.committedPlacements?.X?.length ?? 0) === 0 &&
 		(state.committedPlacements?.O?.length ?? 0) === 0;
+	const moveFresh =
+		state.committedMoves?.X == null && state.committedMoves?.O == null;
 	const deductionFresh =
 		state.committedDeduction?.X == null &&
 		state.committedDeduction?.O == null;
-	return placeFresh && deductionFresh;
+	return placeFresh && moveFresh && deductionFresh;
 }
 
 /**
  * Fresh commitReveal round: enumerate joint reveal outcomes as
- * `simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess` /
- * `simultaneousEliminate` (same combinatorics as open simultaneous for that
- * input mode).
+ * `simultaneousPlace` / `simultaneousMove` / `simultaneousQuery` /
+ * `simultaneousGuess` / `simultaneousEliminate` (same combinatorics as open
+ * simultaneous for that input mode).
  */
 export function canSearchCommitRevealJoint(
 	kernel: GameKernel,
@@ -110,6 +114,19 @@ function commitPlacesAsPlaceActions(
 	for (const a of commits) {
 		if (a.type === "commitPlace") {
 			out.push({ type: "place", position: a.position });
+		}
+	}
+	return out;
+}
+
+/** Map private commitMove legals to open move actions. */
+function commitMovesAsMoveActions(
+	commits: readonly KernelAction[]
+): KernelAction[] {
+	const out: KernelAction[] = [];
+	for (const a of commits) {
+		if (a.type === "commitMove") {
+			out.push({ type: "move", from: a.from, to: a.to });
 		}
 	}
 	return out;
@@ -224,8 +241,9 @@ export function enumerateJointLegalActions(
 
 /**
  * Fresh commitReveal: cartesian of commit legals evaluated as open joints
- * (`simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess` /
- * `simultaneousEliminate`) for perfect-info plan search / reveal simulation.
+ * (`simultaneousPlace` / `simultaneousMove` / `simultaneousQuery` /
+ * `simultaneousGuess` / `simultaneousEliminate`) for perfect-info plan search /
+ * reveal simulation.
  */
 export function enumerateCommitRevealJoints(
 	kernel: GameKernel,
@@ -236,6 +254,11 @@ export function enumerateCommitRevealJoints(
 		const a0 = commitDeductionAsOpenActions(kernel.legalActions(state, 0));
 		const a1 = commitDeductionAsOpenActions(kernel.legalActions(state, 1));
 		return enumerateDeductionJointsFromSeatActions(a0, a1);
+	}
+	if ((kernel.config.inputMode ?? "cell") === "move") {
+		const a0 = commitMovesAsMoveActions(kernel.legalActions(state, 0));
+		const a1 = commitMovesAsMoveActions(kernel.legalActions(state, 1));
+		return enumeratePlaceJointsFromSeatPlaces(a0, a1, 1);
 	}
 	const budget = kernel.config.actionsPerTurn ?? 1;
 	const a0 = commitPlacesAsPlaceActions(kernel.legalActions(state, 0));
@@ -291,7 +314,8 @@ export function seatComponentFromJoint(
 /**
  * Extract a private commit from a searched reveal joint for sequential sandbox
  * commitReveal clicks (X fills budget, then O). Place → `commitPlace`;
- * query/guess/eliminate → `commitQuery` / `commitGuess` / `commitEliminate`.
+ * move → `commitMove`; query/guess/eliminate → `commitQuery` / `commitGuess` /
+ * `commitEliminate`.
  */
 export function seatCommitFromJoint(
 	joint: KernelAction,
@@ -307,6 +331,16 @@ export function seatCommitFromJoint(
 			type: "commitPlace",
 			player: playerOf(player),
 			position: list[index]!
+		};
+	}
+	if (joint.type === "simultaneousMove") {
+		if (index !== 0) return null;
+		const m = player === 0 ? joint.moves.X : joint.moves.O;
+		return {
+			type: "commitMove",
+			player: playerOf(player),
+			from: m.from,
+			to: m.to
 		};
 	}
 	if (joint.type === "simultaneousQuery") {
@@ -369,16 +403,21 @@ export function jointSeatBudget(joint: KernelAction): number {
 /**
  * Active seat under commitReveal (X fills entirely, then O — matches stepPly).
  * Pass `deduction: true` for commitQuery/commitGuess/commitEliminate rounds
- * (one commit/seat).
+ * (one commit/seat). Pass `move: true` for commitMove rounds.
  */
 export function activeCommitSeat(
 	state: GameState,
 	budget: number,
-	opts?: { deduction?: boolean }
+	opts?: { deduction?: boolean; move?: boolean }
 ): PlayerId | null {
 	if (opts?.deduction) {
 		if (state.committedDeduction?.X == null) return 0;
 		if (state.committedDeduction?.O == null) return 1;
+		return null;
+	}
+	if (opts?.move) {
+		if (state.committedMoves?.X == null) return 0;
+		if (state.committedMoves?.O == null) return 1;
 		return null;
 	}
 	const xLen = state.committedPlacements?.X?.length ?? 0;
@@ -386,6 +425,15 @@ export function activeCommitSeat(
 	if (xLen < budget) return 0;
 	if (oLen < budget) return 1;
 	return null;
+}
+
+function committedMovesFingerprint(state: GameState): string {
+	if (!state.committedMoves) return "";
+	const fmt = (m: { from: { row: number; col: number }; to: { row: number; col: number } } | undefined) =>
+		m
+			? `${m.from.row},${m.from.col}->${m.to.row},${m.to.col}`
+			: "";
+	return `cmX:${fmt(state.committedMoves.X)}|cmO:${fmt(state.committedMoves.O)}`;
 }
 
 /** Fingerprint for caching a joint decision across dual `act(0)` / `act(1)` calls. */
@@ -403,6 +451,7 @@ export function jointStateFingerprint(state: GameState): string {
 		state.committedPlacements
 			? `cX:${(state.committedPlacements.X ?? []).map((p) => `${p.row},${p.col}`).join("+")}|cO:${(state.committedPlacements.O ?? []).map((p) => `${p.row},${p.col}`).join("+")}`
 			: "",
+		committedMovesFingerprint(state),
 		state.consecutivePasses ?? "",
 		state.koPoint ? `${state.koPoint.row},${state.koPoint.col}` : "",
 		(state.positionHistory ?? []).join(";"),
@@ -420,7 +469,8 @@ export function jointStateFingerprint(state: GameState): string {
 
 /**
  * Round fingerprint for commitReveal plan cache — ignores `committedPlacements`
- * so sequential sandbox commits within a round share one searched plan.
+ * / `committedMoves` so sequential sandbox commits within a round share one
+ * searched plan.
  */
 export function commitRevealRoundFingerprint(state: GameState): string {
 	return [

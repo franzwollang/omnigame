@@ -2285,6 +2285,53 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"hidden-simultaneous-step-race": definePreset({
+		id: "hidden-simultaneous-step-race",
+		name: "Hidden Simultaneous Step Race",
+		tags: [
+			"move",
+			"reach-row",
+			"simultaneous",
+			"commitReveal",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Each seat privately commits a step; pieces move when both have committed. Same destination → neither moves. Unlocks turn.commitReveal under simultaneous move / commitMove — not multi-action, not replace.",
+		config: {
+			metadata: { name: "Hidden Simultaneous Step Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous", commitReveal: true },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hidden-runner-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hidden-runner-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"simultaneous-replace-race": definePreset({
 		id: "simultaneous-replace-race",
 		name: "Simultaneous Replace Race",

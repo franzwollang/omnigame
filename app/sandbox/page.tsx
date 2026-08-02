@@ -179,6 +179,17 @@ export default function GamePage() {
 					if (action) dispatchAction(action);
 					return;
 				}
+				if ((engineConfig.inputMode ?? "cell") === "move") {
+					const seat: PlayerId | null = !gameState.committedMoves?.X
+						? 0
+						: !gameState.committedMoves?.O
+							? 1
+							: null;
+					if (seat === null) return;
+					const action = agentRef.current.act(kernel, gameState, seat);
+					if (action) dispatchAction(action);
+					return;
+				}
 				const xLen = gameState.committedPlacements?.X?.length ?? 0;
 				const oLen = gameState.committedPlacements?.O?.length ?? 0;
 				const seat: PlayerId | null =
@@ -618,22 +629,37 @@ export default function GamePage() {
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							{enableSimultaneousMove ? (
 								<>
-									Simultaneous move
-									{resolveOrder !== "joint"
-										? ` (${resolveOrder})`
-										: ""}
-									: select {simultaneousSeat ?? "X"}&apos;s piece then
-									destination
-									{pendingMoves.X
-										? ` (X ${pendingMoves.X.from.row},${pendingMoves.X.from.col}→${pendingMoves.X.to.row},${pendingMoves.X.to.col})`
-										: ""}
-									{pendingMoves.O
-										? ` (O ${pendingMoves.O.from.row},${pendingMoves.O.from.col}→${pendingMoves.O.to.row},${pendingMoves.O.to.col})`
-										: ""}
-									; same destination →{" "}
-									{resolveOrder === "joint"
-										? "neither moves"
-										: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+									{commitReveal ? (
+										<>
+											Hidden simultaneous move: select{" "}
+											{simultaneousSeat ?? "X"}&apos;s piece then
+											destination (own commit destination overlaid;
+											opponent hidden); board reveals when both commit;
+											same destination →{" "}
+											{resolveOrder === "joint"
+												? "neither moves"
+												: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+										</>
+									) : (
+										<>
+											Simultaneous move
+											{resolveOrder !== "joint"
+												? ` (${resolveOrder})`
+												: ""}
+											: select {simultaneousSeat ?? "X"}&apos;s piece then
+											destination
+											{pendingMoves.X
+												? ` (X ${pendingMoves.X.from.row},${pendingMoves.X.from.col}→${pendingMoves.X.to.row},${pendingMoves.X.to.col})`
+												: ""}
+											{pendingMoves.O
+												? ` (O ${pendingMoves.O.from.row},${pendingMoves.O.from.col}→${pendingMoves.O.to.row},${pendingMoves.O.to.col})`
+												: ""}
+											; same destination →{" "}
+											{resolveOrder === "joint"
+												? "neither moves"
+												: `${resolveOrder === "x_first" ? "X" : "O"} wins cell`}
+										</>
+									)}
 								</>
 							) : commitReveal ? (
 								<>
