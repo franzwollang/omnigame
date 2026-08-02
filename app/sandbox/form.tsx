@@ -91,8 +91,11 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 		topology === "rectangle" ||
 		topology === "hex_offset" ||
 		topology === "graph";
+	const jumpTopologyOk = topology === "rectangle";
+	const schedule = (form.watch("turn.schedule") as string | undefined) ?? "alternating";
+	const captureValue = form.watch("movement.capture") as string | undefined;
 	// Rectangle / hex cube-axis / graph chain-walk slides unlocked (range 1..8).
-	const rangeMax = 8;
+	const rangeMax = captureValue === "jump" ? 1 : 8;
 
 	const ensureMovement = () => {
 		const current = form.getValues("movement");
@@ -727,9 +730,15 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														onValueChange={(v) => {
 															ensureMovement();
 															field.onChange(v);
+															if (v === "jump") {
+																form.setValue("movement.range", 1, {
+																	shouldDirty: true
+																});
+															}
 														}}
 														disabled={
-															!replaceTopologyOk || inputMode !== "move"
+															inputMode !== "move" ||
+															(!replaceTopologyOk && !jumpTopologyOk)
 														}
 													>
 														<SelectTrigger>
@@ -737,18 +746,31 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														</SelectTrigger>
 														<SelectContent>
 															<SelectItem value="none">none</SelectItem>
-															<SelectItem value="replace">
+															<SelectItem
+																value="replace"
+																disabled={!replaceTopologyOk}
+															>
 																replace (onto enemy)
+															</SelectItem>
+															<SelectItem
+																value="jump"
+																disabled={
+																	!jumpTopologyOk ||
+																	schedule === "simultaneous"
+																}
+															>
+																jump (over enemy, land 2 away)
 															</SelectItem>
 														</SelectContent>
 													</Select>
 												</FormControl>
 												<p className="text-xs text-muted-foreground">
 													Replace: land on an enemy cell to remove it
-													(path must be empty except destination).
-													Rectangle, hex_offset, or graph + move input;
-													simultaneous OK (joint or ordered, any
-													range); not placement.capture.
+													(path empty except destination; rectangle |
+													hex | graph). Jump: leap over an adjacent
+													enemy to the empty cell beyond (rectangle +
+													alternating; further jumps keep the same seat).
+													Not placement.capture.
 												</p>
 												<FormMessage />
 											</FormItem>

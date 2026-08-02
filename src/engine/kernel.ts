@@ -39,6 +39,8 @@ import {
 	canJointSimultaneousMoves,
 	canOrderedSimultaneousMoves,
 	canMove,
+	jumpDestinations,
+	jumpMid,
 	legalDestinations,
 	movementBoardFrom
 } from "@/engine/movement";
@@ -351,6 +353,10 @@ function isNoop(before: GameState, after: GameState): boolean {
 		(before.phase ?? "combat") === (after.phase ?? "combat") &&
 		(before.turnPhaseIndex ?? 0) === (after.turnPhaseIndex ?? 0) &&
 		(before.actionsRemaining ?? null) === (after.actionsRemaining ?? null) &&
+		(before.mustContinueFrom?.row ?? null) ===
+			(after.mustContinueFrom?.row ?? null) &&
+		(before.mustContinueFrom?.col ?? null) ===
+			(after.mustContinueFrom?.col ?? null) &&
 		(before.koPoint?.row ?? null) === (after.koPoint?.row ?? null) &&
 		(before.koPoint?.col ?? null) === (after.koPoint?.col ?? null) &&
 		before.grid.cells === after.grid.cells &&
@@ -463,6 +469,31 @@ function applyStep(
 				captured: prior,
 				by: actor
 			});
+		}
+	}
+
+	if (
+		action.type === "move" &&
+		config.movement?.capture === "jump" &&
+		actor !== "simultaneous" &&
+		(actor === "X" || actor === "O")
+	) {
+		const mid = jumpMid(action.from, action.to, config.movement);
+		if (mid) {
+			const prior = getCell(state.grid, mid);
+			if (
+				(prior === "X" || prior === "O") &&
+				prior !== actor &&
+				getCell(nextState.grid, mid) === null &&
+				getCell(nextState.grid, action.to) === actor
+			) {
+				events.push({
+					type: "pieceCaptured",
+					position: mid,
+					captured: prior,
+					by: actor
+				});
+			}
 		}
 	}
 
@@ -845,6 +876,31 @@ function canFireCell(
 	return true;
 }
 
+/** Jump-chain continuation: only leaps from mustContinueFrom. */
+function collectJumpChainActions(
+	config: GameConfig,
+	state: GameState,
+	actingPlayer: Player
+): KernelAction[] | null {
+	const chainFrom = state.mustContinueFrom;
+	if (!chainFrom || config.movement?.capture !== "jump") return null;
+	const movement = config.movement;
+	if (!movement) return [];
+	if (getCell(state.grid, chainFrom) !== actingPlayer) return [];
+	const board = movementBoardFrom(config);
+	const actions: KernelAction[] = [];
+	for (const to of jumpDestinations(
+		state.grid,
+		chainFrom,
+		movement,
+		board,
+		actingPlayer
+	)) {
+		actions.push({ type: "move", from: chainFrom, to });
+	}
+	return actions;
+}
+
 function collectLegalActions(
 	config: GameConfig,
 	state: GameState,
@@ -862,6 +918,9 @@ function collectLegalActions(
 	const hitMiss = (config.observationMode ?? "full") === "hit_miss";
 	const manualTick = (config.turnSchedule ?? "alternating") === "manual_tick";
 	const actingPlayer = simultaneous ? playerOf(player) : state.currentPlayer;
+
+	const jumpChain = collectJumpChainActions(config, state, actingPlayer);
+	if (jumpChain) return jumpChain;
 
 	if (simultaneous) {
 		const commitReveal = config.commitReveal === true;

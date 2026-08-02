@@ -556,6 +556,9 @@ export function jointStateFingerprint(state: GameState): string {
 		state.winner ?? "",
 		state.actionsRemaining ?? "",
 		state.turnPhaseIndex ?? "",
+		state.mustContinueFrom
+			? `mcf:${state.mustContinueFrom.row},${state.mustContinueFrom.col}`
+			: "",
 		(state.pendingPlaces ?? [])
 			.map((p) => pendingFingerprint(p))
 			.join(";"),
@@ -591,6 +594,9 @@ export function commitRevealRoundFingerprint(state: GameState): string {
 		state.winner ?? "",
 		state.actionsRemaining ?? "",
 		state.turnPhaseIndex ?? "",
+		state.mustContinueFrom
+			? `mcf:${state.mustContinueFrom.row},${state.mustContinueFrom.col}`
+			: "",
 		(state.pendingPlaces ?? [])
 			.map((p) => pendingFingerprint(p))
 			.join(";"),

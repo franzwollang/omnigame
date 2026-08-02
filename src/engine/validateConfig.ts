@@ -40,6 +40,9 @@ export function buildFeatureContracts(cfg: Config): FeatureContract[] {
 	if (cfg.movement?.capture === "replace") {
 		features.push(Contracts.MovementReplaceCapture());
 	}
+	if (cfg.movement?.capture === "jump") {
+		features.push(Contracts.MovementJumpCapture());
+	}
 
 	// Placement policy (mode or gravity.enabled sugar — macros expand the latter)
 	const gravityImplied =

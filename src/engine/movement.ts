@@ -2,11 +2,13 @@
  * Pure movement legality helpers (M5 Move foothold + piece-table adjacency).
  * Rectangle: orthogonal | diagonal | king with sliding range 1..8 (blocker-
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
- * (path empty except destination). Hex_offset: orthogonal cube-axis slides
- * (range 1..8, same blocker/replace rules). Graph: orthogonal chain-walk
- * along explicit edges (range 1..8; no turning at junctions) **or** hop-ball
- * BFS within range (`graphReach: "hop"`; may turn at junctions) — same
- * blocker/replace rules as rectangle/hex.
+ * (path empty except destination). Optional `capture: "jump"` leaps over an
+ * adjacent enemy to the empty cell beyond (rectangle foothold; quiet moves
+ * stay range 1). Hex_offset: orthogonal cube-axis slides (range 1..8, same
+ * blocker/replace rules). Graph: orthogonal chain-walk along explicit edges
+ * (range 1..8; no turning at junctions) **or** hop-ball BFS within range
+ * (`graphReach: "hop"`; may turn at junctions) — same blocker/replace rules
+ * as rectangle/hex. Jump capture is rectangle-only (not hex/graph).
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -21,7 +23,7 @@ import {
 
 export type MovementAdjacency = "orthogonal" | "diagonal" | "king";
 
-export type MovementCapture = "none" | "replace";
+export type MovementCapture = "none" | "replace" | "jump";
 
 /** Graph path mode: chain-walk (default) or hop-ball BFS. */
 export type GraphReach = "chain" | "hop";
@@ -30,7 +32,10 @@ export type MovementConfig = {
 	adjacency: MovementAdjacency;
 	/** Max steps along a ray / hop depth (1 = adjacent only; >1 = sliding/hop). */
 	range: number;
-	/** Move onto enemy removes occupant then lands. Default none. */
+	/**
+	 * Capture geometry. `replace` = land on enemy. `jump` = leap over adjacent
+	 * enemy to empty cell beyond (rectangle only). Default none.
+	 */
 	capture?: MovementCapture;
 	/**
 	 * Graph-only path mode. `chain` = unique-forward edge walk (no junction
@@ -85,6 +90,79 @@ function boardOpts(
 
 function posKey(p: Position): string {
 	return `${p.row},${p.col}`;
+}
+
+/**
+ * Mid cell for a 2-step jump along one adjacency ray. Returns null when
+ * `to` is not exactly two steps from `from` on a single adjacency delta.
+ */
+export function jumpMid(
+	from: Position,
+	to: Position,
+	config: MovementConfig
+): Position | null {
+	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
+		if (to.row === from.row + 2 * dr && to.col === from.col + 2 * dc) {
+			return { row: from.row + dr, col: from.col + dc };
+		}
+	}
+	return null;
+}
+
+/**
+ * Landing cells reachable by jumping over exactly one enemy to an empty
+ * square (rectangle adjacency rays). Distinct from replace (land on enemy)
+ * and hop-ball (BFS through empties).
+ */
+export function jumpDestinations(
+	grid: Grid,
+	from: Position,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false,
+	mover?: Player
+): Position[] {
+	if (!inBounds(grid, from)) return [];
+	const opts = boardOpts(wrapOrBoard);
+	if (opts.topology !== "rectangle") return [];
+	const piece = mover ?? getCell(grid, from);
+	if (piece !== "X" && piece !== "O") return [];
+	const out: Position[] = [];
+	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
+		const mid = step(grid, from, { row: dr, col: dc }, opts.wrap);
+		if (!mid) continue;
+		const occ = getCell(grid, mid);
+		if (occ === null || occ === piece || (occ !== "X" && occ !== "O")) {
+			continue;
+		}
+		const land = step(grid, mid, { row: dr, col: dc }, opts.wrap);
+		if (!land || getCell(grid, land) !== null) continue;
+		out.push(land);
+	}
+	return out;
+}
+
+/** True when from→to is a jump capture (enemy mid, empty landing). */
+export function isJumpCapture(
+	grid: Grid,
+	from: Position,
+	to: Position,
+	player: Player,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false
+): boolean {
+	if (config.capture !== "jump") return false;
+	const mid = jumpMid(from, to, config);
+	if (!mid || !inBounds(grid, mid) || !inBounds(grid, to)) return false;
+	const occ = getCell(grid, mid);
+	if (occ === null || occ === player || (occ !== "X" && occ !== "O")) {
+		return false;
+	}
+	if (getCell(grid, to) !== null) return false;
+	const opts = boardOpts(wrapOrBoard);
+	if (opts.topology !== "rectangle") return false;
+	return jumpDestinations(grid, from, config, wrapOrBoard, player).some(
+		(p) => p.row === to.row && p.col === to.col
+	);
 }
 
 /**
@@ -335,6 +413,8 @@ export function legalDestinations(
 
 	if (topology === "graph") {
 		// Chain-walk (default) or hop-ball BFS; same blocker/replace as rect/hex.
+		// Jump capture is rectangle-only.
+		if (config.capture === "jump") return [];
 		if (config.adjacency !== "orthogonal" || !graph) return [];
 		if (config.graphReach === "hop") {
 			return hopGraphDestinations(grid, from, config, graph, mover);
@@ -345,7 +425,30 @@ export function legalDestinations(
 	if (topology === "hex_offset") {
 		// Cube-axis slides with the same blocker / replace rules as rectangle.
 		if (config.adjacency !== "orthogonal") return [];
+		if (config.capture === "jump") return [];
 		return slideHexDestinations(grid, from, config, wrap, mover);
+	}
+
+	// Rectangle: jump capture unions quiet adjacent empties with leap landings.
+	if (config.capture === "jump") {
+		const quiet = slideDestinations(
+			grid,
+			from,
+			{ ...config, capture: "none", range: 1 },
+			wrap,
+			mover
+		);
+		const jumps = jumpDestinations(grid, from, config, opts, mover);
+		const seen = new Set(quiet.map(posKey));
+		const out = [...quiet];
+		for (const j of jumps) {
+			const k = posKey(j);
+			if (!seen.has(k)) {
+				seen.add(k);
+				out.push(j);
+			}
+		}
+		return out;
 	}
 
 	// Rectangle: sliding ray walk (range 1 ≡ adjacent; replace may land on enemy).

@@ -124,6 +124,21 @@ export const Contracts = {
 			"orderedSimultaneousReplaceSequentialCaptureApply"
 		]
 	}),
+	MovementJumpCapture: (): FeatureContract => ({
+		id: "MovementJumpCapture",
+		requires: ["ResolvedCell", "CellsWritable"],
+		provides: [],
+		slots: [],
+		hooks: ["applyEffects", "nextTurn"],
+		invariants: [
+			"jumpClearsMidEnemyAndLandsEmpty",
+			"jumpDistanceAlwaysTwo",
+			"quietMovesRangeOne",
+			"mandatoryChainWhenFurtherJumpsExist",
+			"mustContinueFromRestrictsLegality",
+			"alternatingOnlyNoSimultaneous"
+		]
+	}),
 	PlacementDirect: (): FeatureContract => ({
 		id: "PlacementDirect",
 		requires: ["CellsWritable"],

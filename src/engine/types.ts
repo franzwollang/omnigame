@@ -134,6 +134,13 @@ export type GameState = {
 	 * Distinct from fleet `phase` (game-long placement/combat).
 	 */
 	turnPhaseIndex?: number;
+	/**
+	 * Jump capture chain: after a jump, if further jumps exist from the
+	 * landing cell, the same player must continue with that piece only.
+	 * Cleared on handoff / reset / terminal. Alternating +
+	 * `movement.capture = "jump"` only.
+	 */
+	mustContinueFrom?: Position;
 	/** Deduction / Guess Who-lite secrets + per-player eliminations. */
 	deduction?: DeductionState;
 };

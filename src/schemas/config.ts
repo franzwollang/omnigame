@@ -131,6 +131,10 @@ export const zConfig = z
 		 * prey flees). Works with sliding `range > 1` on rectangle, hex_offset
 		 * (cube-axis rays), and graph (edge chain-walk or hop-ball BFS).
 		 * Ordered simultaneous + range > 1 uses sequential path revalidation.
+		 * `capture: "jump"` — leap over an adjacent enemy to the empty cell
+		 * beyond (rectangle + alternating only; quiet moves stay range 1).
+		 * After a jump, further jumps from the landing cell keep the same
+		 * seat (`mustContinueFrom` chain). Distinct from replace and hop-ball.
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -141,7 +145,7 @@ export const zConfig = z
 					.enum(["orthogonal", "diagonal", "king"])
 					.default("orthogonal"),
 				range: z.number().int().min(1).max(8).default(1),
-				capture: z.enum(["none", "replace"]).default("none"),
+				capture: z.enum(["none", "replace", "jump"]).default("none"),
 				/** Graph-only: chain-walk (default) or hop-ball BFS. */
 				graphReach: z.enum(["chain", "hop"]).optional()
 			})
@@ -1695,6 +1699,82 @@ export const zConfig = z
 					path: ["movement", "capture"],
 					message:
 						"movement.capture = 'replace' is incompatible with placement.capture"
+				});
+			}
+		}
+
+		// Jump capture / multi-jump chains: rectangle + alternating foothold
+		if (cfg.movement?.capture === "jump") {
+			if (!moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'jump' requires input.mode = 'move'"
+				});
+			}
+			if (cfg.grid.topology !== "rectangle") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'jump' requires grid.topology = 'rectangle' (hex/graph deferred)"
+				});
+			}
+			if (captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'jump' is incompatible with placement.capture"
+				});
+			}
+			if (cfg.turn.schedule === "simultaneous") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'jump' is incompatible with simultaneous (alternating only)"
+				});
+			}
+			if (cfg.turn.schedule === "manual_tick") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'jump' is incompatible with manual_tick"
+				});
+			}
+			if ((cfg.movement.range ?? 1) !== 1) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "range"],
+					message:
+						"movement.capture = 'jump' requires movement.range = 1 (jump distance is always 2)"
+				});
+			}
+			if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message:
+						"movement.capture = 'jump' is incompatible with actionsPerTurn > 1 (chains use mustContinueFrom)"
+				});
+			}
+			if ((cfg.turn.phases?.length ?? 0) > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "phases"],
+					message:
+						"movement.capture = 'jump' is incompatible with turn.phases (deferred)"
+				});
+			}
+			if ((cfg.placement.delayTurns ?? 0) > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message:
+						"movement.capture = 'jump' is incompatible with delayTurns"
 				});
 			}
 		}

@@ -138,6 +138,9 @@ function stateFingerprint(state: GameState): string {
 		state.winner ?? "",
 		state.actionsRemaining ?? "",
 		state.turnPhaseIndex ?? "",
+		state.mustContinueFrom
+			? `mcf:${state.mustContinueFrom.row},${state.mustContinueFrom.col}`
+			: "",
 		(state.pendingPlaces ?? [])
 			.map((p) => pendingFingerprint(p))
 			.join(";"),

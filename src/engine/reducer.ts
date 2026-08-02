@@ -50,6 +50,9 @@ import {
 	canJointSimultaneousMoves,
 	canOrderedSimultaneousMoves,
 	canMove,
+	isJumpCapture,
+	jumpDestinations,
+	jumpMid,
 	movementBoardFrom,
 	type MovementConfig
 } from "@/engine/movement";
@@ -1763,14 +1766,49 @@ function handleMove(
 		return state;
 	}
 
+	// Mid-chain: only jumps from mustContinueFrom are legal.
+	const chainFrom = state.mustContinueFrom;
+	if (chainFrom) {
+		if (from.row !== chainFrom.row || from.col !== chainFrom.col) {
+			return state;
+		}
+		if (
+			!isJumpCapture(
+				state.grid,
+				from,
+				to,
+				state.currentPlayer,
+				movement,
+				movementBoardFrom(config)
+			)
+		) {
+			return state;
+		}
+	}
+
+	const board = movementBoardFrom(config);
+	const jumping = isJumpCapture(
+		state.grid,
+		from,
+		to,
+		state.currentPlayer,
+		movement,
+		board
+	);
+	const mid = jumping ? jumpMid(from, to, movement) : null;
+
 	let cells = setCell(state.grid, from, null);
+	if (mid) {
+		cells = setCell({ ...state.grid, cells }, mid, null);
+	}
 	cells = setCell({ ...state.grid, cells }, to, state.currentPlayer);
 	const newGrid = { ...state.grid, cells };
 	const newMoveCount = state.moveCount + 1;
 	const next: GameState = {
 		...state,
 		grid: newGrid,
-		moveCount: newMoveCount
+		moveCount: newMoveCount,
+		mustContinueFrom: undefined
 	};
 
 	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
@@ -1810,9 +1848,26 @@ function handleMove(
 		}
 	}
 
+	// Capture chain: further jumps from landing keep the same seat.
+	if (
+		jumping &&
+		movement.capture === "jump" &&
+		jumpDestinations(newGrid, to, movement, board, state.currentPlayer)
+			.length > 0
+	) {
+		return {
+			...next,
+			mustContinueFrom: to,
+			currentPlayer: state.currentPlayer,
+			actionsRemaining: state.actionsRemaining,
+			turnPhaseIndex: state.turnPhaseIndex
+		};
+	}
+
 	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
 		...next,
+		mustContinueFrom: undefined,
 		currentPlayer: turn.currentPlayer,
 		actionsRemaining: turn.actionsRemaining,
 		turnPhaseIndex: turn.turnPhaseIndex

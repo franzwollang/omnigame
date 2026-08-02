@@ -1554,6 +1554,49 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"jump-race": definePreset({
+		id: "jump-race",
+		name: "Jump Race",
+		tags: ["move", "capture", "jump", "chain", "reach-row", "5x5", "mechanism"],
+		description:
+			"Diagonal step race with jump capture: leap over an adjacent enemy to the empty cell beyond, clearing the mid cell. Further jumps from the landing keep the same seat (mustContinueFrom chain). Unlocks movement.capture = jump — replace lands on the enemy; hop-ball walks empties; neither expresses leap-over capture chains.",
+		config: {
+			metadata: { name: "Jump Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "diagonal", range: 1, capture: "jump" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Diagonal chain: X(4,0) → jump O(3,1) → (2,2) → jump O(1,3) → (0,4) wins.
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 3, player: "O", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-replace-race": definePreset({
 		id: "hex-replace-race",
 		name: "Hex Replace Race",
