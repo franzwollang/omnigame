@@ -50,11 +50,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M31 | Next missing mechanism (graph hop-ball range) | `done` |
 | M32 | Next missing mechanism (simultaneous compound deduction) | `done` |
 | M33 | Next missing mechanism (simultaneous deduction commitReveal) | `done` |
+| M34 | Next missing mechanism (joint UCT under simultaneous deduction) | `done` |
 
-**Optimizing for this marathon:** M33 simultaneous deduction commitReveal /
-Hidden Simultaneous Guess Who Lite closed. Pick **P3 next-missing-mechanism**
-(e.g. joint UCT for deduction, manual eliminate under simultaneous, fire→move
-only with anchor) or **P4** CI / semantics refresh — without asking which fork.
+**Optimizing for this marathon:** M34 simultaneous deduction joint UCT closed.
+Pick **P3 next-missing-mechanism** (e.g. manual eliminate under simultaneous,
+commitReveal deduction joint UCT, fire→move only with anchor) or **P4** CI /
+semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -69,7 +70,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥498** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥505** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -82,8 +83,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M33 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M33) — smallest new seam — or
+   (P0–P2 / M8–M34 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M34) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -165,7 +166,7 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; CI workflows; semantics doc refresh; fire→move reorder;
-simultaneous deduction joint UCT / manual eliminate.
+simultaneous deduction manual eliminate; commitReveal deduction joint UCT.
 
 ## Phase 2 exit criteria
 
@@ -400,12 +401,14 @@ simultaneous deduction joint UCT / manual eliminate.
 - Kernel/reducer: `simultaneousQuery` / `simultaneousGuess`;
   `jointQueryFromActions` / `jointGuessFromActions`; `lastQueries` observation;
   `ScheduleSimultaneous` CellsWritable-only + `ScheduleSimultaneousDeduction`;
-  joint UCT deferred (`canSearchJointActions` false) — **done**
+  joint UCT deferred (`canSearchJointActions` false) — **done** (open joint
+  UCT closed by M34; commitReveal joint UCT still deferred)
 - Preset `simultaneous-guess-who-lite` + transcript/replay tests — **done**
 - Out of scope closed by M32: compound queries under simultaneous
 - Out of scope closed by M33: commitReveal under simultaneous deduction
-- Out of scope: manual eliminate; ordered;
-  joint UCT over query cartesian; sandbox pendingQueries UI
+- Out of scope closed by M34: joint UCT over open query/guess cartesian
+- Out of scope: manual eliminate; ordered; sandbox pendingQueries UI
+- Out of scope still deferred: commitReveal deduction joint UCT
 
 ### M31 — Graph hop-ball range
 
@@ -416,7 +419,7 @@ simultaneous deduction joint UCT / manual eliminate.
   preserves M22/M27 — **done**
 - Preset `graph-hop-race` (hub topology) + transcript/replay + chain contrast
   tests; form Graph reach control — **done**
-- Out of scope: fire→move; simultaneous deduction joint UCT;
+- Out of scope: fire→move; commitReveal deduction joint UCT;
   multi-jump capture chains
 
 ### M32 — Simultaneous compound deduction
@@ -429,7 +432,8 @@ simultaneous deduction joint UCT / manual eliminate.
   `simultaneousQuery` legality matches shape — **done**
 - Preset `simultaneous-guess-who-and-lite` + transcript/replay tests — **done**
 - Out of scope closed by M33: commitReveal
-- Out of scope: joint UCT; manual eliminate; OR-arity demo
+- Out of scope closed by M34: open joint UCT
+- Out of scope: manual eliminate; OR-arity demo
   preset (schema already accepts `or`)
 
 ### M33 — Simultaneous deduction commitReveal
@@ -444,6 +448,23 @@ simultaneous deduction joint UCT / manual eliminate.
   **done**
 - Out of scope: joint UCT over commitReveal query cartesian; manual eliminate;
   compound commitReveal demo (schema already allows)
+
+### M34 — Joint UCT under simultaneous deduction
+
+- `canSearchJointActions` true for open simultaneous deduction
+  (`commitReveal: false`); still false under commitReveal — **done**
+- `enumerateJointLegalActions`: kind-matched query×query + guess×guess
+  (32 joints on Simultaneous Guess Who Lite / And Lite) — **done**
+- `seatComponentFromJoint` / `jointSeatBudget` for
+  `simultaneousQuery` / `simultaneousGuess`; UCT + MCTS dual-`act` cache —
+  **done**
+- Sandbox Agent step composes `jointQueryFromActions` /
+  `jointGuessFromActions`; UI labels joint search for open deduction —
+  **done**
+- Tests: enum counts, dual-act consistency, immediate winning guess, short
+  playout; 505 green — **done**
+- Out of scope: commitReveal deduction joint UCT; manual eliminate under
+  simultaneous; fire→move
 
 ## Sequencing notes
 

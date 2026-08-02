@@ -2,8 +2,8 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M33 simultaneous deduction
-commitReveal closed). Do not ask which fork — pick the smallest new seam under
+**Marathon rule:** Work **P3 → P4** in order (M34 simultaneous deduction joint
+UCT closed). Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
 ---
@@ -12,16 +12,16 @@ commitReveal closed). Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Simultaneous deduction commitReveal (`commitQuery` / `commitGuess` + Hidden
-Simultaneous Guess Who Lite) landed as M33. Open simultaneous + compound
-simultaneous deduction remain the default footholds.
+Simultaneous deduction joint UCT/MCTS (kind-matched query×query + guess×guess)
+landed as M34. Open simultaneous + compound simultaneous deduction remain the
+default footholds for play; agents now search those joints.
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
 - fire→move phase reorder (only if a new seam / anchor appears)
-- Simultaneous deduction joint UCT / MCTS over query/guess cartesian
 - Simultaneous deduction manual eliminate (`autoEliminate: false`)
+- Simultaneous deduction commitReveal joint UCT (fresh-round commitQuery/Guess)
 - Simultaneous OR-arity demo only if a new seam appears (and already schema-legal)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
@@ -43,13 +43,14 @@ exhaust `references/` or recombine covered primitives).
       simultaneous, phases incl. move→fire + deduction query→eliminate, joint
       + ordered sliding, joint + ordered simultaneous replace, simultaneous
       slide+replace, joint replace vacated-origin hybrid, joint UCT under open
-      + multi-action + commitReveal simultaneous, hex cube-axis sliding, graph
-      chain-walk sliding, graph hop-ball (`graphReach`), hex + graph replace
-      capture, Guess Who manual eliminate / `autoEliminate`, trait-conjunction
-      `queryShape: and`, trait-disjunction `queryShape: or`, `compoundArity` /
-      3-clause AND, deduction in-turn phases, simultaneous deduction joint
-      query/guess, simultaneous compound deduction, **simultaneous deduction
-      commitReveal** / `commitQuery` / `commitGuess`)
+      + multi-action + commitReveal simultaneous, **joint UCT under open
+      simultaneous deduction**, hex cube-axis sliding, graph chain-walk sliding,
+      graph hop-ball (`graphReach`), hex + graph replace capture, Guess Who
+      manual eliminate / `autoEliminate`, trait-conjunction `queryShape: and`,
+      trait-disjunction `queryShape: or`, `compoundArity` / 3-clause AND,
+      deduction in-turn phases, simultaneous deduction joint query/guess,
+      simultaneous compound deduction, simultaneous deduction commitReveal /
+      `commitQuery` / `commitGuess`)
 
 ---
 
@@ -68,5 +69,6 @@ Simultaneous Guess Who Lite** cover query/guess + hypothesis eliminate +
 same-turn query→eliminate + 2-clause AND/OR + N-clause AND via `compoundArity`
 + joint simultaneous query/guess + joint simultaneous compound AND + **hidden
 commitReveal under simultaneous deduction**. Graph Hop Race covers hop-ball
-BFS (fire→move / simultaneous deduction joint UCT / manual eliminate still
-open).
+BFS. **Open simultaneous deduction joint UCT** covers agent search over
+query/guess cartesian (fire→move / commitReveal deduction joint UCT / manual
+eliminate under simultaneous still open).

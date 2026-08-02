@@ -132,7 +132,7 @@ fields (`scheduler`, graph `nodes`/`edges`, `initial`, `placements`,
 - `pnpm run dev` — Next.js sandbox
 - `pnpm run build` / `start` — production
 - `pnpm run typecheck` / `lint`
-- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥498 tests)
+- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥505 tests)
 - Green gate: `pnpm install && pnpm typecheck && pnpm test`
 
 Open work and marathon queue: `OPEN_ISSUES.md` / `PLANNING.md` (not this README).
@@ -194,8 +194,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder,
-simultaneous deduction commitReveal/joint UCT, and a larger set of
-reusable operators/constraints.
+simultaneous deduction manual eliminate / commitReveal joint UCT, and a larger
+set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -413,15 +413,17 @@ Baseline agents (enough to prove the ABI):
 - tiny flat MCTS
 - UCT tree search (UCB1 + optional tree reuse)
 
-**Simultaneous search:** Under open `turn.schedule = simultaneous` (place or
-move; any `actionsPerTurn`, including multi-action place rounds), MCTS and UCT
-search the joint action cartesian (`simultaneousPlace` / `simultaneousMove`) and
-cache the decision so sandbox dual-/multi-`act` stays consistent. Under
-`commitReveal`, they search fresh-round reveal joints (same cartesian, evaluated
-via `simultaneousPlace`) and cache sequential `commitPlace` emissions so
-sandbox X-then-O clicks stay on one plan. Mid-round commits without a cached
-plan fall back to per-seat search. Greedy still skips lookahead under
-simultaneous.
+**Simultaneous search:** Under open `turn.schedule = simultaneous` (place,
+move, or deduction; any `actionsPerTurn` for place, including multi-action
+rounds), MCTS and UCT search the joint action cartesian
+(`simultaneousPlace` / `simultaneousMove` / kind-matched `simultaneousQuery` /
+`simultaneousGuess`) and cache the decision so sandbox dual-/multi-`act` stays
+consistent. Under `commitReveal` **place**, they search fresh-round reveal
+joints (same cartesian, evaluated via `simultaneousPlace`) and cache sequential
+`commitPlace` emissions so sandbox X-then-O clicks stay on one plan. Mid-round
+commits without a cached plan fall back to per-seat search. CommitReveal
+**deduction** joint plan search remains deferred (per-seat
+`commitQuery`/`commitGuess`). Greedy still skips lookahead under simultaneous.
 
 ## Suggested module structure (directional)
 
@@ -465,16 +467,17 @@ Guess Who And3 Lite (M28), deduction query→eliminate phases /
 Guess Who Commit Phases Lite (M29), simultaneous deduction joint query/guess /
 Simultaneous Guess Who Lite (M30), graph hop-ball range / Graph Hop Race (M31),
 simultaneous compound deduction / Simultaneous Guess Who And Lite (M32),
-simultaneous deduction commitReveal / Hidden Simultaneous Guess Who Lite (M33).
+simultaneous deduction commitReveal / Hidden Simultaneous Guess Who Lite (M33),
+joint UCT/MCTS under open simultaneous deduction (M34).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor, simultaneous deduction joint UCT / manual
-  eliminate) or P4 CI / semantics refresh
+  fire→move only with anchor, simultaneous deduction manual eliminate,
+  commitReveal deduction joint UCT) or P4 CI / semantics refresh
 - Deferred: full Go rules; CI workflows; `docs/semantics.md` refresh vs current
   kernel events; fire→move reorder; simultaneous deduction extensions
-  (joint UCT / manual eliminate)
+  (manual eliminate / commitReveal joint UCT)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
