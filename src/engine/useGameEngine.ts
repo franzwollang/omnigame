@@ -123,7 +123,11 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		(action: KernelAction) => {
 			const side = kernel.currentPlayer(stateRef.current);
 			const explainPlayer: PlayerId =
-				action.type === "commitPlace"
+				action.type === "commitPlace" ||
+				action.type === "commitMove" ||
+				action.type === "commitQuery" ||
+				action.type === "commitGuess" ||
+				action.type === "commitEliminate"
 					? action.player === "X"
 						? 0
 						: 1
@@ -176,11 +180,21 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 	const simultaneousSeat: Player | null = useMemo(() => {
 		if (!simultaneous || state.status !== "playing") return null;
 		if (simultaneousMove) {
+			if (commitReveal) {
+				if (!state.committedMoves?.X) return "X";
+				if (!state.committedMoves?.O) return "O";
+				return null;
+			}
 			if (!pendingMoves.X) return "X";
 			if (!pendingMoves.O) return "O";
 			return null;
 		}
 		if (commitReveal) {
+			if ((config.inputMode ?? "cell") === "deduction") {
+				if (!state.committedDeduction?.X) return "X";
+				if (!state.committedDeduction?.O) return "O";
+				return null;
+			}
 			if (commitLen(state.committedPlacements, "X") < actionsPerRound)
 				return "X";
 			if (commitLen(state.committedPlacements, "O") < actionsPerRound)
@@ -198,14 +212,53 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		commitReveal,
 		state.status,
 		state.committedPlacements,
+		state.committedMoves,
+		state.committedDeduction,
 		pendingPlacements,
 		pendingMoves,
-		actionsPerRound
+		actionsPerRound,
+		config.inputMode
 	]);
 
 	const placeMove = useCallback(
 		(pos: Position) => {
 			if (simultaneous && simultaneousMove) {
+				if (commitReveal) {
+					const seat: Player | null = !stateRef.current.committedMoves?.X
+						? "X"
+						: !stateRef.current.committedMoves?.O
+							? "O"
+							: null;
+					if (!seat) return;
+					const selected = selectedFromRef.current;
+					const occupant = getCell(stateRef.current.grid, pos);
+					if (!selected) {
+						if (occupant === seat) {
+							selectedFromRef.current = pos;
+							setSelectedFrom(pos);
+						}
+						return;
+					}
+					if (positionsEqual(selected, pos)) {
+						selectedFromRef.current = null;
+						setSelectedFrom(null);
+						return;
+					}
+					if (occupant === seat) {
+						selectedFromRef.current = pos;
+						setSelectedFrom(pos);
+						return;
+					}
+					applyAction({
+						type: "commitMove",
+						player: seat,
+						from: selected,
+						to: pos
+					});
+					selectedFromRef.current = null;
+					setSelectedFrom(null);
+					return;
+				}
 				const seat: Player | null = !pendingMovesRef.current.X
 					? "X"
 					: !pendingMovesRef.current.O
