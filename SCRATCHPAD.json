@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-02T12:50-00:00",
+  "turn": 80,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M50",
+    "issue": "next-missing-mechanism",
+    "goal": "forward-only men landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Landed M50 menForwardOnly + Forward Men Jump Lite; ≥649 green",
+    "Uncrowned forward row-delta filter; crowned ignores; promo≠win",
+    "O spare piece above promo row so forward reply exists"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "manForwardRowSign from relative targetRows; equal rows → X−1/O+1",
+    "Men past promo row have no quiet forward — place spare on approach side"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: longest-chain, hex-graph promo, full Go, realtime; reject fire→move"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M50",
   "blockers": []
 }
