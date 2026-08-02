@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-08-02T05:40-00:00",
-  "turn": 55,
+  "updated_at": "2026-08-02T05:45-00:00",
+  "turn": 56,
   "focus": {
     "milestone": "M28",
     "issue": "next-missing-mechanism",
@@ -9,7 +9,7 @@
   "recent": [
     "Synced M8–M27 from 860a onto 9fbb",
     "Landed M28 compoundArity + guess-who-and3-lite",
-    "Green gate pending typecheck+test"
+    "459 green after typecheck+test"
   ],
   "discoveries": [
     "Prune helpers already N-general; only kernel/reducer arity=2 was hardwired"
