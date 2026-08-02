@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-02T12:10-00:00",
+  "turn": 77,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M48",
+    "issue": "next-missing-mechanism",
+    "goal": "graph jump landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced 03f8 M47 tip onto 9db2",
+    "Landed M48 graph jump + Graph Jump Race; 630 green",
+    "Rejected fire→move / crowned kings; chose graph jump"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "graph jump = 2-edge leap over enemy mid node",
+    "forbid graphReach=hop with capture=jump"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: crowned kings, full Go, realtime; reject fire→move"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M48",
   "blockers": []
 }
