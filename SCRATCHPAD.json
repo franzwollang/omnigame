@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T12:35-00:00",
-  "turn": 79,
+  "updated_at": "2026-08-02T12:50-00:00",
+  "turn": 80,
   "focus": {
-    "milestone": "M49",
+    "milestone": "M50",
     "issue": "next-missing-mechanism",
-    "goal": "crowned promotion landed; hand off next genuine P3 seam"
+    "goal": "forward-only men landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Landed M49 crowned promotion + Crowned Kings Jump Lite; 641 green",
-    "Preset promo≠win so crowned ortho step is playable before terminal",
-    "Rejected fire→move / hex flood / memory bonusTurn as recombinations"
+    "Landed M50 menForwardOnly + Forward Men Jump Lite; ≥649 green",
+    "Uncrowned forward row-delta filter; crowned ignores; promo≠win",
+    "O spare piece above promo row so forward reply exists"
   ],
   "discoveries": [
-    "CrownMark X+/O+ via cellOwner; effectiveMovement for crowned adjacency",
-    "promotion requires rectangle jump; promo row should diverge from win row"
+    "manForwardRowSign from relative targetRows; equal rows → X−1/O+1",
+    "Men past promo row have no quiet forward — place spare on approach side"
   ],
   "open_threads": [
-    "Next: forward-only/longest-chain, full Go, realtime; reject fire→move"
+    "Next: longest-chain, hex-graph promo, full Go, realtime; reject fire→move"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M49",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M50",
   "blockers": []
 }

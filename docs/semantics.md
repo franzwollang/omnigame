@@ -218,7 +218,7 @@ delayTurns → pendingPlaces.
 | liberties | placement.captureMode | Go-lite group removal + ko/superko |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; incompatible with `graphReach: hop` |
-| promote | movement.promotion | Transform on reach row (rectangle jump only): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king) via `effectiveMovement` |
+| promote | movement.promotion | Transform on reach row (rectangle jump only): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king) via `effectiveMovement`; optional `menForwardOnly` |
 
 KoRule: none | point | positional | situational.
 
@@ -234,7 +234,9 @@ KoRule: none | point | positional | situational.
   (incompatible with graphReach hop)
 - promotion: optional `movement.promotion` (rectangle + jump only);
   `targetRows` + `crownedAdjacency`; preserve crown on move; emit
-  `piecePromoted` (Crowned Kings Jump Lite)
+  `piecePromoted` (Crowned Kings Jump Lite); optional `menForwardOnly`
+  restricts uncrowned quiet/jump row deltas toward the promotion side
+  (Forward Men Jump Lite; crowned unrestricted)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)
 - simultaneous: canJointSimultaneousMoves (vacated origins) /
   canOrderedSimultaneousMoves (sequential revalidation)

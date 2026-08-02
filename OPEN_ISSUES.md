@@ -11,10 +11,10 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Crowned promotion / Transform lite (`movement.promotion` + Crowned Kings Jump
-Lite) landed as **M49**. Graph jump closed as M48; hex jump as M47; memory flip
-as M46; mustCapture as M45; flood_reveal as M44. P4 tooling-ci and
-semantics-doc-refresh already closed (M41–M42).
+Forward-only men (`promotion.menForwardOnly` + Forward Men Jump Lite) landed
+as **M50**. Crowned promotion closed as M49; graph jump as M48; hex jump as
+M47; memory flip as M46; mustCapture as M45; flood_reveal as M44. P4 tooling-ci
+and semantics-doc-refresh already closed (M41–M42).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -30,7 +30,7 @@ e.g.:
 - multi-action slide/replace under simultaneous (deferred composition; only if
   a new seam appears — not a recombination demo)
 - `queryShape: not` (reject unless nested AST / new pruning class)
-- Forward-only men / longest-chain / hex-graph promotion (extensions of M49 —
+- Longest-chain mandatory / hex-graph promotion (extensions of M49/M50 —
   only if a new seam appears)
 - Full Go rules (large; prefer smaller seams first)
 - Realtime / continuous scheduler (large)
@@ -69,6 +69,8 @@ covers Checkers-lite turn-start mandatory capture (`mustCapture`).
 covers jump on `graph` (2-edge leap-over; simultaneous jump still deferred).
 **Crowned Kings Jump Lite** covers Transform-lite promotion
 (`movement.promotion` / `X+`|`O+` / `piecePromoted`; rectangle jump only).
+**Forward Men Jump Lite** covers Checkers-lite forward-only men
+(`promotion.menForwardOnly`; uncrowned row-delta filter; crowned unrestricted).
 **Minesweeper Lite** covers flood-fill region reveal (`flood_reveal` /
 `clear_hazards` / `hazards`). **Memory Flip Lite** covers tile pair-matching
 (`memory_flip` / `flip` / `match_pairs` / `memory`). Open simultaneous
@@ -77,4 +79,4 @@ deduction joint UCT covers agent search over query/guess(/eliminate) cartesian
 `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics draft:
 `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
 mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
-promotion in M49).
+promotion in M49; menForwardOnly in M50).

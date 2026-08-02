@@ -65,8 +65,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M47 | Next missing mechanism (hex jump capture) | `done` |
 | M48 | Next missing mechanism (graph jump capture) | `done` |
 | M49 | Next missing mechanism (crowned promotion / Transform lite) | `done` |
+| M50 | Next missing mechanism (forward-only men) | `done` |
 
-**Optimizing for this marathon:** M49 crowned promotion landed. Pick **P3
+**Optimizing for this marathon:** M50 forward-only men landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -83,7 +84,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥641** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥649** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -96,7 +97,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M49 closed).  
+   (P0–P2 / M8–M50 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -191,14 +192,14 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; forward-only men / longest-chain / hex-graph promotion. Crowned
-promotion landed (M49 Crowned Kings Jump Lite). Graph jump landed (M48
-Graph Jump Race). Hex jump landed (M47 Hex Jump Race). Mandatory
-jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
-`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics:
-`docs/semantics.md` (M42; jump in M43; flood_reveal in M44; mustCapture
-in M45; memory_flip in M46; hex jump in M47; graph jump in M48; promotion
-in M49).
+scheduler; longest-chain / hex-graph promotion. Forward-only men landed
+(M50 Forward Men Jump Lite). Crowned promotion landed (M49 Crowned Kings
+Jump Lite). Graph jump landed (M48 Graph Jump Race). Hex jump landed
+(M47 Hex Jump Race). Mandatory jump-at-turn-start landed (M45 Mandatory
+Jump Race). CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
+Semantics: `docs/semantics.md` (M42; jump in M43; flood_reveal in M44;
+mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in
+M48; promotion in M49; menForwardOnly in M50).
 
 ## Phase 2 exit criteria
 
@@ -727,6 +728,21 @@ in M49).
 - Out of scope: simultaneous jump; forward-only men; longest-chain;
   hex/graph promotion
 - Green gate: ≥641 tests — **done**
+
+### M50 — Forward-only men (Checkers-lite direction)
+
+- Schema: optional `movement.promotion.menForwardOnly` (boolean); inherits
+  promotion constraints (rectangle jump, alternating, range 1) — **done**
+- Movement: `manForwardRowSign` / `pieceAdjacencyDeltas` /
+  `filterMenForwardDestinations`; uncrowned quiet + jump filtered to
+  forward row-delta; crowned ignores filter — **done**
+- Normalize passes `menForwardOnly`; contract invariant
+  `menForwardOnlyRestrictsUncrowned` — **done**
+- Preset `forward-men-jump-lite` (Forward Men Jump Lite — mustCapture
+  forward jump promotes, crowned retreat/ortho win); form JSON note;
+  transcript/replay + helper tests — **done**
+- Out of scope: longest-chain mandatory; hex/graph promotion; simultaneous
+- Green gate: ≥649 tests — **done**
 
 ## Sequencing notes
 

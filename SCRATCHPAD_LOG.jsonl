@@ -103,3 +103,4 @@
 {"ts":"2026-08-02T12:10-00:00","focus":"M48 graph jump","summary":"Landed graph 2-edge jump capture + Graph Jump Race; 630 green","next":"Pick smallest genuine next-missing-mechanism after M48"}
 {"ts":"2026-08-02T12:28-00:00","focus":"M49 crowned promotion","summary":"Landed movement.promotion + Crowned Kings Jump Lite after M48; 641 green","next":"Pick smallest genuine next-missing-mechanism after M49"}
 {"ts":"2026-08-02T12:35-00:00","focus":"M49 crowned promotion","summary":"Fixed crowned-jump-race demo: promo row 1 ≠ win row 0 so crowned orthogonal step is playable; canvas geometric + badge; 641 green","next":"Pick smallest genuine next-missing-mechanism after M49"}
+{"ts":"2026-08-02T12:50-00:00","focus":"M50 forward-only men","summary":"Landed promotion.menForwardOnly + Forward Men Jump Lite after M49; ≥649 green","next":"Pick smallest genuine next-missing-mechanism after M50"}
