@@ -481,16 +481,17 @@ deduction joint UCT / Hidden Simultaneous Guess Who Lite plan search (M36),
 commitEliminate / Hidden Simultaneous Guess Who Commit Lite (M37),
 commitMove / Hidden Simultaneous Step Race (M38), multi-action simultaneous
 move / Double Simultaneous Step Race (M39), commitReveal multi-action
-simultaneous move / Hidden Double Simultaneous Step Race (M40).
+simultaneous move / Hidden Double Simultaneous Step Race (M40), jump capture /
+multi-jump chains / Jump Race (M43).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor; reject recombinations)
+  flood-fill reveal; fire→move only with anchor; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
   (recombination without anchor)
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
-- Semantics: `docs/semantics.md` (M42 refresh vs kernel)
+- Semantics: `docs/semantics.md` (M42 refresh; jump capture in M43)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

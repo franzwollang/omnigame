@@ -58,8 +58,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M40 | Next missing mechanism (commitReveal multi-action move) | `done` |
 | M41 | Tooling CI (GitHub Actions typecheck + test) | `done` |
 | M42 | Semantics doc refresh (`docs/semantics.md` ↔ kernel) | `done` |
+| M43 | Next missing mechanism (jump capture / multi-jump chains) | `done` |
 
-**Optimizing for this marathon:** M42 semantics refresh landed. Pick **P3
+**Optimizing for this marathon:** M43 jump capture landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -76,7 +77,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥571** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥583** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -89,7 +90,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M42 closed).  
+   (P0–P2 / M8–M43 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -128,7 +129,9 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
 **Movement:** form exposes `adjacency` / `range` / `capture`; Replace Race /
 **Hex Replace Race** / **Graph Replace Race** demonstrate `capture = replace`
-on rectangle | hex_offset | graph.
+on rectangle | hex_offset | graph; **Jump Race** demonstrates
+`capture = jump` (leap over adjacent enemy + `mustContinueFrom` chains;
+rectangle + alternating).
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
 `identify_secret`, query + guess), **Guess Who Commit Lite**
 (`autoEliminate: false` + eliminate operator; `wrongGuess: end_turn`),
@@ -174,8 +177,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler. CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
-Semantics: `docs/semantics.md` (M42).
+scheduler; Minesweeper-style flood-fill reveal. CI: `.github/workflows/ci.yml`
+(Node 20.19 + pnpm 10.5.2). Semantics: `docs/semantics.md` (M42; jump in M43).
 
 ## Phase 2 exit criteria
 
@@ -593,6 +596,21 @@ Semantics: `docs/semantics.md` (M42).
   still range=1 / no replace — **done**
 - Resolve OPEN_ISSUES `semantics-doc-refresh`; hand off P3
   `next-missing-mechanism` — **done**
+
+### M43 — Jump capture / multi-jump chains
+
+- Schema: `movement.capture = "jump"` (rectangle + alternating; range 1;
+  incompatible with simultaneous / phases / actionsPerTurn>1 /
+  placement.capture / hex/graph) — **done**
+- Kernel: leap over adjacent enemy to empty landing; clear mid;
+  `pieceCaptured` at mid; `mustContinueFrom` continues same seat when
+  further jumps exist; legality restricted to that piece’s jumps — **done**
+- Contract `MovementJumpCapture` + form select + agent fingerprints — **done**
+- Preset `jump-race` (diagonal two-jump chain to reach_row) +
+  transcript/replay/schema tests — **done**
+- Out of scope: mandatory jump-at-turn-start; hex/graph jump; simultaneous
+  jump; crowned kings / checkers promotion
+- Green gate: 583 tests — **done**
 
 ## Sequencing notes
 

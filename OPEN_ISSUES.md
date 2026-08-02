@@ -2,9 +2,8 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3** `next-missing-mechanism` (P4 tooling-ci and
-semantics-doc-refresh closed). Do not ask which fork — pick the smallest new
-seam; reject recombinations without an anchor.
+**Marathon rule:** Work **P3** `next-missing-mechanism`. Do not ask which fork —
+pick the smallest new seam; reject recombinations without an anchor.
 
 ---
 
@@ -12,14 +11,14 @@ seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-CommitReveal + multi-action simultaneous move (`actionsPerTurn > 1` under
-`commitReveal` move / Hidden Double Simultaneous Step Race) landed as M40.
-P4 tooling-ci landed (`.github/workflows/ci.yml`). P4 semantics-doc-refresh
-landed (M42 — `docs/semantics.md` synced to kernel events/state/phases).
+Jump capture / multi-jump chains (`movement.capture = jump` + Jump Race /
+`mustContinueFrom`) landed as **M43**. P4 tooling-ci and semantics-doc-refresh
+already closed (M41–M42).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
+- Flood-fill region reveal (Minesweeper-style) — strong reference anchor
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
 - commitReveal + slide/replace demos (kernel complete — preset-only unless a
@@ -57,7 +56,9 @@ covers commitReveal under simultaneous move / `commitMove`. **Double
 Simultaneous Step Race** covers `actionsPerTurn > 1` under open simultaneous
 move. **Hidden Double Simultaneous Step Race** covers commitReveal +
 `actionsPerTurn > 1` under simultaneous move. Graph Hop Race covers hop-ball
-BFS. Open simultaneous deduction joint UCT covers agent search over
-query/guess(/eliminate) cartesian (fire→move still open if an anchor appears).
-CI green gate: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
-Semantics draft: `docs/semantics.md` (M42 refresh).
+BFS. **Jump Race** covers leap-over capture + same-seat chains
+(`movement.capture = jump` / `mustContinueFrom`). Open simultaneous deduction
+joint UCT covers agent search over query/guess(/eliminate) cartesian
+(fire→move still open if an anchor appears). CI green gate:
+`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics draft:
+`docs/semantics.md` (M42 refresh; jump capture noted in M43).

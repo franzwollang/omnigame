@@ -121,12 +121,12 @@ describe("Jump Race (movement.capture = jump)", () => {
 					e.by === "X"
 			)
 		).toBe(true);
-		expect(getCell(result.state.grid, { row: 4, col: 0 })).toBe(null);
-		expect(getCell(result.state.grid, { row: 3, col: 1 })).toBe(null);
-		expect(getCell(result.state.grid, { row: 2, col: 2 })).toBe("X");
-		expect(result.state.currentPlayer).toBe("X");
-		expect(result.state.mustContinueFrom).toEqual({ row: 2, col: 2 });
-		const chainLegal = kernel.legalActions(result.state, 0);
+		expect(getCell(result.nextState.grid, { row: 4, col: 0 })).toBe(null);
+		expect(getCell(result.nextState.grid, { row: 3, col: 1 })).toBe(null);
+		expect(getCell(result.nextState.grid, { row: 2, col: 2 })).toBe("X");
+		expect(result.nextState.currentPlayer).toBe("X");
+		expect(result.nextState.mustContinueFrom).toEqual({ row: 2, col: 2 });
+		const chainLegal = kernel.legalActions(result.nextState, 0);
 		expect(chainLegal.every((a) => a.type === "move")).toBe(true);
 		expect(
 			chainLegal.every(
@@ -148,13 +148,13 @@ describe("Jump Race (movement.capture = jump)", () => {
 			from: { row: 2, col: 2 },
 			to: { row: 1, col: 1 }
 		};
-		const ignored = kernel.stepSync(result.state, quiet);
+		const ignored = kernel.stepSync(result.nextState, quiet);
 		expect(ignored.events[0]?.type).toBe("ignored");
 	});
 
 	it("chain second jump wins reach_row (transcript + replay)", () => {
 		const cfg = examplePresets["jump-race"].config;
-		const { kernel } = compileConfig(cfg);
+		const { kernel, gameConfig } = compileConfig(cfg);
 		const state = kernel.initialState(cfg.rng.seed);
 		const actions: KernelAction[] = [
 			{ type: "move", from: { row: 4, col: 0 }, to: { row: 2, col: 2 } },
@@ -165,7 +165,7 @@ describe("Jump Race (movement.capture = jump)", () => {
 		for (const action of actions) {
 			const step = kernel.stepSync(cur, action);
 			events.push(...step.events);
-			cur = step.state;
+			cur = step.nextState;
 		}
 		expect(cur.status).toBe("won");
 		expect(cur.winner).toBe("X");
@@ -176,10 +176,10 @@ describe("Jump Race (movement.capture = jump)", () => {
 		expect(getCell(cur.grid, { row: 0, col: 4 })).toBe("X");
 		expect(getCell(cur.grid, { row: 1, col: 3 })).toBe(null);
 
-		const replayed = replayActions(kernel, state, actions);
-		expect(replayed.status).toBe("won");
-		expect(replayed.winner).toBe("X");
-		expect(getCell(replayed.grid, { row: 0, col: 4 })).toBe("X");
+		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replayed.finalState.status).toBe("won");
+		expect(replayed.finalState.winner).toBe("X");
+		expect(getCell(replayed.finalState.grid, { row: 0, col: 4 })).toBe("X");
 	});
 
 	it("non-chain jump hands off when no further leaps", () => {
@@ -210,9 +210,9 @@ describe("Jump Race (movement.capture = jump)", () => {
 					e.position.col === 2
 			)
 		).toBe(true);
-		expect(result.state.mustContinueFrom).toBeUndefined();
-		expect(result.state.currentPlayer).toBe("O");
-		expect(result.state.status).toBe("playing");
+		expect(result.nextState.mustContinueFrom).toBeUndefined();
+		expect(result.nextState.currentPlayer).toBe("O");
+		expect(result.nextState.status).toBe("playing");
 	});
 });
 

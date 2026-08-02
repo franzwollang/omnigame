@@ -23,6 +23,7 @@ Grounded in `src/engine/types.ts`, `reducer.ts`, `kernel.ts`, `contracts.ts`,
   - simultaneous buffers: committedPlacements?, committedMoves?,
     committedDeduction?
   - in-turn: turnPhaseIndex? (index into turn.phases)
+  - jump chain: mustContinueFrom? (landing cell when further jumps exist)
   - deduction?: { secret, eliminated, lastQuery?, lastQueries? }
 - Config κ drives guards (input, placement, capture, movement, schedule,
   observation, objective, phases, deduction, …)
@@ -60,7 +61,7 @@ Not reducer inputs — emitted by `GameKernel.step` / `stepJoint`:
 
 - `actionApplied` — accepted KernelAction + actor (P | simultaneous)
 - `shotResult` — fire mark (hit \| miss)
-- `pieceCaptured` — replace capture at destination
+- `pieceCaptured` — replace capture at destination; jump capture at mid cell
 - `queryAnswered` — trait/clauses + boolean answer
 - `guessResult` — targetId + correct
 - `candidateEliminated` — pruned roster id
@@ -203,6 +204,7 @@ delayTurns → pendingPlaces.
 | flip | placement.captureMode | Reversi sandwich along adjacency |
 | liberties | placement.captureMode | Go-lite group removal + ko/superko |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
+| jump | movement.capture = jump | Leap over adjacent enemy to empty beyond; mid cleared; further jumps keep seat (`mustContinueFrom`) |
 
 KoRule: none | point | positional | situational.
 
@@ -210,6 +212,8 @@ KoRule: none | point | positional | situational.
 
 - adjacency: orthogonal | diagonal | king (rect); hex/graph: orthogonal
 - range: 1..8 sliding (blocker-aware); range 1 = adjacent step
+- capture jump: rectangle + alternating only; quiet range 1; jump distance
+  always 2; chains via mustContinueFrom (not actionsPerTurn)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)
 - simultaneous: canJointSimultaneousMoves (vacated origins) /
   canOrderedSimultaneousMoves (sequential revalidation)

@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T10:20-00:00",
-  "turn": 71,
+  "updated_at": "2026-08-02T10:40-00:00",
+  "turn": 72,
   "focus": {
-    "milestone": "M42",
+    "milestone": "M43",
     "issue": "next-missing-mechanism",
-    "goal": "Semantics refreshed; hand off genuine P3 seam"
+    "goal": "Jump capture landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced M41 tip beb7 onto de5b",
-    "Rejected stale main P1; trust MEMORIES over main scratchpad",
-    "Landed M42 semantics-doc-refresh (docs/semantics.md ↔ kernel)"
+    "Synced de5b M42 tip onto 50f9",
+    "Rejected recombinations; chose jump capture chains",
+    "Landed M43 jump + Jump Race; 583 green"
   ],
   "discoveries": [
-    "Single-action simultaneous sliding allowed; multi-action move still range=1"
+    "mustContinueFrom is the chain protocol (not actionsPerTurn)"
   ],
   "open_threads": [
-    "Next: smallest P3 seam; reject fire→move / queryShape:not without anchor"
+    "Next: flood-fill reveal or other small seam; reject fire→move"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism seam (not recombination)",
+  "next_step": "Pick smallest genuine next-missing-mechanism (flood-fill strong candidate)",
   "blockers": []
 }

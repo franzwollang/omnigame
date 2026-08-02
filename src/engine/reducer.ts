@@ -1268,7 +1268,7 @@ function applySimultaneousMovePair(
 	grid: Grid,
 	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
 	resolveOrder: "joint" | "x_first" | "o_first",
-	capture: "none" | "replace" = "none"
+	capture: "none" | "replace" | "jump" = "none"
 ): { grid: Grid; conflict: boolean; applied: { X: boolean; O: boolean } } {
 	const sameDest = positionsEqual(moves.X.to, moves.O.to);
 
