@@ -553,6 +553,8 @@ export function reduce(
 			return handleCommitQuery(state, event.player, event.query, config);
 		case "commitGuess":
 			return handleCommitGuess(state, event.player, event.id, config);
+		case "commitEliminate":
+			return handleCommitEliminate(state, event.player, event.id, config);
 		case "query":
 			return handleQuery(state, event, config);
 		case "guess":
@@ -1491,7 +1493,6 @@ function handleCommitQuery(
 		return state;
 	}
 	if (state.status !== "playing") return state;
-	if (config.deduction.autoEliminate === false) return state;
 
 	const prior = state.committedDeduction ?? {};
 	if (prior[player]) return state; // already committed this round
@@ -1561,6 +1562,61 @@ function handleCommitGuess(
 	const o = nextCommits.O;
 	if (x?.kind === "guess" && o?.kind === "guess") {
 		const revealed = handleSimultaneousGuess(
+			{ ...state, committedDeduction: nextCommits },
+			{ X: x.id, O: o.id },
+			config
+		);
+		return { ...revealed, committedDeduction: undefined };
+	}
+
+	return {
+		...state,
+		committedDeduction: nextCommits
+	};
+}
+
+/**
+ * Hidden simultaneous deduction: record a private eliminate commit. When both
+ * seats have committed matching kinds, reveal via handleSimultaneousEliminate.
+ */
+function handleCommitEliminate(
+	state: GameState,
+	player: Player,
+	id: string,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if (config.deduction.autoEliminate !== false) return state;
+
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const prior = state.committedDeduction ?? {};
+	if (prior[player]) return state;
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const oppCommit = prior[opponent];
+	if (oppCommit && oppCommit.kind !== "eliminate") return state;
+
+	const eliminated = new Set(state.deduction.eliminated[player] ?? []);
+	if (eliminated.has(id)) return state;
+
+	const nextCommits: Partial<
+		Record<Player, NonNullable<GameState["committedDeduction"]>[Player]>
+	> = {
+		...prior,
+		[player]: { kind: "eliminate", id }
+	};
+
+	const x = nextCommits.X;
+	const o = nextCommits.O;
+	if (x?.kind === "eliminate" && o?.kind === "eliminate") {
+		const revealed = handleSimultaneousEliminate(
 			{ ...state, committedDeduction: nextCommits },
 			{ X: x.id, O: o.id },
 			config

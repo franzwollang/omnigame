@@ -1782,7 +1782,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Same roster as Simultaneous Guess Who Lite, but queries only answer — both seats manually eliminate (or guess) on separate joint rounds. Unlocks autoEliminate = false under open simultaneous deduction + simultaneousEliminate — not commitReveal, not in-turn phases.",
+			"Same roster as Simultaneous Guess Who Lite, but queries only answer — both seats manually eliminate (or guess) on separate joint rounds. Unlocks autoEliminate = false under open simultaneous deduction + simultaneousEliminate — not commitReveal (see Hidden Simultaneous Guess Who Commit Lite), not in-turn phases.",
 		config: {
 			metadata: {
 				name: "Simultaneous Guess Who Commit Lite",
@@ -1835,7 +1835,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Same roster as Simultaneous Guess Who Lite, but each seat commits a query (or guess) privately; answers and auto-prune reveal only when both have committed. Unlocks turn.commitReveal under simultaneous deduction + fresh-round joint UCT/MCTS over reveal plans (M36) — not manual eliminate (needs commitEliminate).",
+			"Same roster as Simultaneous Guess Who Lite, but each seat commits a query (or guess) privately; answers and auto-prune reveal only when both have committed. Unlocks turn.commitReveal under simultaneous deduction + fresh-round joint UCT/MCTS over reveal plans (M36). Manual eliminate under commitReveal: see Hidden Simultaneous Guess Who Commit Lite.",
 		config: {
 			metadata: {
 				name: "Hidden Simultaneous Guess Who Lite",
@@ -1857,6 +1857,64 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				wrongGuess: "lose",
 				queryShape: "single",
 				autoEliminate: true,
+				roster: [
+					{ id: "ann", traits: { glasses: true, hat: false } },
+					{ id: "bob", traits: { glasses: false, hat: true } },
+					{ id: "cara", traits: { glasses: true, hat: true } },
+					{ id: "dan", traits: { glasses: false, hat: false } }
+				]
+			},
+			tokens: [
+				{
+					id: "guess-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "guess-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			]
+		}
+	}),
+	"hidden-simultaneous-guess-who-commit-lite": definePreset({
+		id: "hidden-simultaneous-guess-who-commit-lite",
+		name: "Hidden Simultaneous Guess Who Commit Lite",
+		tags: [
+			"deduction",
+			"query",
+			"eliminate",
+			"simultaneous",
+			"commitReveal",
+			"observation",
+			"mechanism"
+		],
+		description:
+			"CommitReveal + manual eliminate: each seat privately commits query, guess, or eliminate; matching-kind reveal when both ready. Unlocks commitEliminate under simultaneous deduction commitReveal (M37) + fresh-round joint UCT over 48 reveal plans (16 query + 16 guess + 16 eliminate).",
+		config: {
+			metadata: {
+				name: "Hidden Simultaneous Guess Who Commit Lite",
+				version: 1
+			},
+			grid: { width: 1, height: 1, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				commitReveal: true
+			},
+			rng: { seed: 42 },
+			input: { mode: "deduction" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "deduction" },
+			objective: { mode: "identify_secret" },
+			deduction: {
+				traits: ["glasses", "hat"],
+				wrongGuess: "end_turn",
+				queryShape: "single",
+				autoEliminate: false,
 				roster: [
 					{ id: "ann", traits: { glasses: true, hat: false } },
 					{ id: "bob", traits: { glasses: false, hat: true } },

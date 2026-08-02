@@ -140,8 +140,9 @@ function seatPickFromCache(
  * `kernel.stepSync` and pick the best mean score. Under open simultaneous
  * (any budget), evaluates joint place/move/query/guess/eliminate actions and
  * caches the decision for dual-/multi-`act` consistency. Under commitReveal,
- * evaluates fresh-round reveal joints (place or deduction query/guess) and
- * caches sequential `commitPlace` / `commitQuery` / `commitGuess` picks.
+ * evaluates fresh-round reveal joints (place or deduction query/guess/eliminate)
+ * and caches sequential `commitPlace` / `commitQuery` / `commitGuess` /
+ * `commitEliminate` picks.
  * Large multi-action cartesians are sampled to keep flat eval bounded. On
  * hit/miss configs, delegates to the observation hunt agent (no hidden-fleet
  * rollouts).

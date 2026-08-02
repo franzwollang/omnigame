@@ -116,9 +116,10 @@ export type GameState = {
 	 */
 	committedPlacements?: Partial<Record<Player, Position[]>>;
 	/**
-	 * Hidden simultaneous deduction: per-seat private query/guess commit.
-	 * Cleared after joint reveal (`simultaneousQuery` / `simultaneousGuess`).
-	 * Budget is always 1 under deduction.
+	 * Hidden simultaneous deduction: per-seat private query/guess/eliminate
+	 * commit. Cleared after joint reveal (`simultaneousQuery` /
+	 * `simultaneousGuess` / `simultaneousEliminate`). Budget is always 1 under
+	 * deduction.
 	 */
 	committedDeduction?: Partial<Record<Player, CommittedDeduction>>;
 	/**
@@ -274,10 +275,18 @@ export type CommitGuessEvent = {
 	id: string;
 };
 
-/** One seat's hidden simultaneous deduction commit (query or guess). */
+/** Hidden simultaneous deduction: one seat's private eliminate commit. */
+export type CommitEliminateEvent = {
+	type: "commitEliminate";
+	player: Player;
+	id: string;
+};
+
+/** One seat's hidden simultaneous deduction commit (query, guess, or eliminate). */
 export type CommittedDeduction =
 	| { kind: "query"; query: QueryEvent }
-	| { kind: "guess"; id: string };
+	| { kind: "guess"; id: string }
+	| { kind: "eliminate"; id: string };
 
 /** Joint query round: both seats submit one single-trait query. */
 export type SimultaneousQueryEvent = {
@@ -335,6 +344,7 @@ export type GameEvent =
 	| CommitPlaceEvent
 	| CommitQueryEvent
 	| CommitGuessEvent
+	| CommitEliminateEvent
 	| QueryEvent
 	| GuessEvent
 	| EliminateEvent

@@ -125,7 +125,8 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 			const explainPlayer: PlayerId =
 				action.type === "commitPlace" ||
 				action.type === "commitQuery" ||
-				action.type === "commitGuess"
+				action.type === "commitGuess" ||
+				action.type === "commitEliminate"
 					? action.player === "X"
 						? 0
 						: 1

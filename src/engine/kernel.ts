@@ -107,6 +107,7 @@ export type KernelAction =
 			};
 	  }
 	| { type: "commitGuess"; player: Player; id: string }
+	| { type: "commitEliminate"; player: Player; id: string }
 	| { type: "query"; trait?: string; value?: boolean; clauses?: QueryClause[] }
 	| { type: "guess"; id: string }
 	| { type: "eliminate"; id: string };
@@ -281,6 +282,8 @@ function formatAction(action: KernelAction): string {
 			return `commitQuery ${action.player} ${formatQueryFingerprint(action.query)}`;
 		case "commitGuess":
 			return `commitGuess ${action.player} ${action.id}`;
+		case "commitEliminate":
+			return `commitEliminate ${action.player} ${action.id}`;
 		case "query":
 			return `query ${formatQueryFingerprint(action)}`;
 		case "guess":
@@ -369,7 +372,8 @@ function applyStep(
 		const probePlayer =
 			action.type === "commitPlace" ||
 			action.type === "commitQuery" ||
-			action.type === "commitGuess"
+			action.type === "commitGuess" ||
+			action.type === "commitEliminate"
 				? playerIdOf(action.player)
 				: (config.turnSchedule ?? "alternating") === "simultaneous"
 					? 0
@@ -398,9 +402,10 @@ function applyStep(
 		action.type === "simultaneousGuess" ||
 		action.type === "simultaneousEliminate"
 			? "simultaneous"
-			: action.type === "commitPlace" ||
+			: 		action.type === "commitPlace" ||
 				  action.type === "commitQuery" ||
-				  action.type === "commitGuess"
+				  action.type === "commitGuess" ||
+				  action.type === "commitEliminate"
 				? action.player
 				: state.currentPlayer;
 	const events: KernelEvent[] = [
@@ -598,6 +603,42 @@ function applyStep(
 					targetId,
 					correct
 				});
+			}
+		}
+	}
+
+	// commitEliminate reveal: emit candidateEliminated from committed pair
+	if (
+		action.type === "commitEliminate" &&
+		nextState.moveCount > state.moveCount
+	) {
+		const commits = state.committedDeduction ?? {};
+		const xId =
+			commits.X?.kind === "eliminate"
+				? commits.X.id
+				: action.player === "X"
+					? action.id
+					: undefined;
+		const oId =
+			commits.O?.kind === "eliminate"
+				? commits.O.id
+				: action.player === "O"
+					? action.id
+					: undefined;
+		if (xId !== undefined && oId !== undefined) {
+			for (const [seat, id] of [
+				["X", xId],
+				["O", oId]
+			] as const) {
+				const before = new Set(state.deduction?.eliminated[seat] ?? []);
+				const after = nextState.deduction?.eliminated[seat] ?? [];
+				if (!before.has(id) && after.includes(id)) {
+					events.push({
+						type: "candidateEliminated",
+						player: seat,
+						id
+					});
+				}
 			}
 		}
 	}
@@ -834,6 +875,9 @@ function collectLegalActions(
 				const oppCommit = state.committedDeduction?.[opponent];
 				const allowQuery = !oppCommit || oppCommit.kind === "query";
 				const allowGuess = !oppCommit || oppCommit.kind === "guess";
+				const allowEliminate =
+					config.deduction.autoEliminate === false &&
+					(!oppCommit || oppCommit.kind === "eliminate");
 				if (allowQuery) {
 					const shape = config.deduction.queryShape ?? "single";
 					if (shape === "and" || shape === "or") {
@@ -863,17 +907,26 @@ function collectLegalActions(
 						}
 					}
 				}
-				if (allowGuess) {
+				if (allowGuess || allowEliminate) {
 					const eliminated = new Set(
 						state.deduction?.eliminated[acting] ?? []
 					);
 					for (const character of config.deduction.roster) {
 						if (!eliminated.has(character.id)) {
-							actions.push({
-								type: "commitGuess",
-								player: acting,
-								id: character.id
-							});
+							if (allowGuess) {
+								actions.push({
+									type: "commitGuess",
+									player: acting,
+									id: character.id
+								});
+							}
+							if (allowEliminate) {
+								actions.push({
+									type: "commitEliminate",
+									player: acting,
+									id: character.id
+								});
+							}
 						}
 					}
 				}
@@ -1601,7 +1654,11 @@ export function explainKernelAction(
 		return { legal: true };
 	}
 
-	if (action.type === "commitQuery" || action.type === "commitGuess") {
+	if (
+		action.type === "commitQuery" ||
+		action.type === "commitGuess" ||
+		action.type === "commitEliminate"
+	) {
 		if (
 			!simultaneous ||
 			!config.commitReveal ||
@@ -1666,6 +1723,34 @@ export function explainKernelAction(
 						detail: detailFor("illegal_or_noop", action)
 					};
 				}
+			}
+			return { legal: true };
+		}
+		if (action.type === "commitEliminate") {
+			if (config.deduction.autoEliminate !== false) {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			if (oppCommit && oppCommit.kind !== "eliminate") {
+				return {
+					legal: false,
+					reason: "mode_mismatch",
+					detail: detailFor("mode_mismatch", action)
+				};
+			}
+			const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+			const eliminated = new Set(
+				state.deduction?.eliminated[action.player] ?? []
+			);
+			if (!rosterIds.has(action.id) || eliminated.has(action.id)) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
 			}
 			return { legal: true };
 		}
@@ -2227,6 +2312,12 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "commitGuess":
 			return (
 				b.type === "commitGuess" &&
+				a.player === b.player &&
+				a.id === b.id
+			);
+		case "commitEliminate":
+			return (
+				b.type === "commitEliminate" &&
 				a.player === b.player &&
 				a.id === b.id
 			);

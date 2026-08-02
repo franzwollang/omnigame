@@ -38,7 +38,7 @@ type JointDecisionCache = {
 	joint: KernelAction;
 	/** Next place-index per seat for multi-action dual-`act` (mod budget). */
 	nextIndex: { 0: number; 1: number };
-	/** When true, emit commitPlace/commitQuery/commitGuess (commitReveal). */
+	/** When true, emit commitPlace/commitQuery/commitGuess/commitEliminate (commitReveal). */
 	asCommit?: boolean;
 };
 
@@ -115,6 +115,8 @@ export function actionKey(action: KernelAction): string {
 			return `commitQuery:${action.player}:${formatQueryFingerprint(action.query)}`;
 		case "commitGuess":
 			return `commitGuess:${action.player}:${action.id}`;
+		case "commitEliminate":
+			return `commitEliminate:${action.player}:${action.id}`;
 		case "query":
 			return `query:${formatQueryFingerprint(action)}`;
 		case "guess":
@@ -143,13 +145,17 @@ function stateFingerprint(state: GameState): string {
 					state.committedDeduction.X
 						? state.committedDeduction.X.kind === "query"
 							? `q:${formatQueryFingerprint(state.committedDeduction.X.query)}`
-							: `g:${state.committedDeduction.X.id}`
+							: state.committedDeduction.X.kind === "guess"
+								? `g:${state.committedDeduction.X.id}`
+								: `e:${state.committedDeduction.X.id}`
 						: ""
 				}|cdO:${
 					state.committedDeduction.O
 						? state.committedDeduction.O.kind === "query"
 							? `q:${formatQueryFingerprint(state.committedDeduction.O.query)}`
-							: `g:${state.committedDeduction.O.id}`
+							: state.committedDeduction.O.kind === "guess"
+								? `g:${state.committedDeduction.O.id}`
+								: `e:${state.committedDeduction.O.id}`
 						: ""
 				}`
 			: "",
@@ -360,9 +366,10 @@ export type UctOptions = {
  * Under open simultaneous (any `actionsPerTurn`), searches the joint
  * place/move/query/guess/eliminate cartesian and caches the chosen joint so
  * sandbox dual-/multi-`act` stays consistent. Under commitReveal, searches
- * fresh-round reveal joints (place or deduction query/guess) and caches
- * sequential `commitPlace` / `commitQuery` / `commitGuess` emissions. On
- * hit/miss configs, delegates to the observation hunt agent.
+ * fresh-round reveal joints (place or deduction query/guess/eliminate) and
+ * caches sequential `commitPlace` / `commitQuery` / `commitGuess` /
+ * `commitEliminate` emissions. On hit/miss configs, delegates to the
+ * observation hunt agent.
  */
 export function createUctAgent(seed: Seed = 0, opts?: UctOptions): Agent {
 	const simulations = opts?.simulations ?? DEFAULT_SIMULATIONS;

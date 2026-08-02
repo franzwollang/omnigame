@@ -48,14 +48,14 @@ describe("schema: simultaneous deduction × commitReveal", () => {
 		).toBe(false);
 	});
 
-	it("rejects autoEliminate false under commitReveal simultaneous", () => {
+	it("accepts autoEliminate false under commitReveal simultaneous", () => {
 		const base = preset();
 		expect(
 			zConfig.safeParse({
 				...base,
 				deduction: { ...base.deduction!, autoEliminate: false }
 			}).success
-		).toBe(false);
+		).toBe(true);
 	});
 });
 

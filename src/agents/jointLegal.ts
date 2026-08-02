@@ -1,10 +1,10 @@
 /**
  * Joint legal enumeration for open simultaneous place/move/deduction and
  * commitReveal fresh-round plans (evaluated as simultaneousPlace /
- * simultaneousQuery / simultaneousGuess).
+ * simultaneousQuery / simultaneousGuess / simultaneousEliminate).
  * Budget 1: scalar cartesian. Budget > 1: ordered distinct place tuples.
  * Deduction: kind-matched query×query + guess×guess + eliminate×eliminate
- * (budget 1; commitReveal: query/guess only — no commitEliminate yet).
+ * (budget 1; commitReveal maps commit* → open joints including commitEliminate).
  */
 import type { GameState } from "@/engine/types";
 import { asPlacementList, pendingFingerprint } from "@/engine/types";
@@ -51,8 +51,9 @@ export function isFreshCommitRound(state: GameState): boolean {
 
 /**
  * Fresh commitReveal round: enumerate joint reveal outcomes as
- * `simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess`
- * (same combinatorics as open simultaneous for that input mode).
+ * `simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess` /
+ * `simultaneousEliminate` (same combinatorics as open simultaneous for that
+ * input mode).
  */
 export function canSearchCommitRevealJoint(
 	kernel: GameKernel,
@@ -114,7 +115,7 @@ function commitPlacesAsPlaceActions(
 	return out;
 }
 
-/** Map private commitQuery/commitGuess legals to open query/guess for joint enum. */
+/** Map private commitQuery/commitGuess/commitEliminate legals to open actions. */
 function commitDeductionAsOpenActions(
 	commits: readonly KernelAction[]
 ): KernelAction[] {
@@ -129,6 +130,8 @@ function commitDeductionAsOpenActions(
 			});
 		} else if (a.type === "commitGuess") {
 			out.push({ type: "guess", id: a.id });
+		} else if (a.type === "commitEliminate") {
+			out.push({ type: "eliminate", id: a.id });
 		}
 	}
 	return out;
@@ -221,8 +224,8 @@ export function enumerateJointLegalActions(
 
 /**
  * Fresh commitReveal: cartesian of commit legals evaluated as open joints
- * (`simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess`) for
- * perfect-info plan search / reveal simulation.
+ * (`simultaneousPlace` / `simultaneousQuery` / `simultaneousGuess` /
+ * `simultaneousEliminate`) for perfect-info plan search / reveal simulation.
  */
 export function enumerateCommitRevealJoints(
 	kernel: GameKernel,
@@ -288,7 +291,7 @@ export function seatComponentFromJoint(
 /**
  * Extract a private commit from a searched reveal joint for sequential sandbox
  * commitReveal clicks (X fills budget, then O). Place → `commitPlace`;
- * query/guess → `commitQuery` / `commitGuess`.
+ * query/guess/eliminate → `commitQuery` / `commitGuess` / `commitEliminate`.
  */
 export function seatCommitFromJoint(
 	joint: KernelAction,
@@ -329,6 +332,15 @@ export function seatCommitFromJoint(
 			id
 		};
 	}
+	if (joint.type === "simultaneousEliminate") {
+		if (index !== 0) return null;
+		const id = player === 0 ? joint.eliminations.X : joint.eliminations.O;
+		return {
+			type: "commitEliminate",
+			player: playerOf(player),
+			id
+		};
+	}
 	return null;
 }
 
@@ -356,7 +368,8 @@ export function jointSeatBudget(joint: KernelAction): number {
 
 /**
  * Active seat under commitReveal (X fills entirely, then O — matches stepPly).
- * Pass `deduction: true` for commitQuery/commitGuess rounds (one commit/seat).
+ * Pass `deduction: true` for commitQuery/commitGuess/commitEliminate rounds
+ * (one commit/seat).
  */
 export function activeCommitSeat(
 	state: GameState,

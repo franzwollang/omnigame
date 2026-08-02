@@ -589,7 +589,7 @@ export default function GamePage() {
 								enableSimultaneous &&
 								(agentKind === "mcts" || agentKind === "uct")
 									? enableCommitRevealDeductionJoint
-										? "Under commitReveal simultaneous deduction, MCTS/UCT search fresh-round joint query/guess plans (sequential commitQuery/commitGuess)"
+										? "Under commitReveal simultaneous deduction, MCTS/UCT search fresh-round joint query/guess/eliminate plans (sequential commitQuery/commitGuess/commitEliminate)"
 										: "Under simultaneous, MCTS/UCT search joint place/move/query/guess/eliminate (open) or commitReveal fresh-round place/deduction plans"
 									: "Play one kernel legal action from the selected agent"
 							}
@@ -605,7 +605,7 @@ export default function GamePage() {
 								{agentKind === "greedy"
 									? "Greedy skips lookahead under simultaneous (single place/move/query/guess is a no-op until joint)."
 									: enableCommitRevealDeductionJoint
-										? "MCTS/UCT: commitReveal deduction fresh-round joint query/guess plan search (sequential commitQuery/commitGuess)."
+										? "MCTS/UCT: commitReveal deduction fresh-round joint query/guess/eliminate plan search (sequential commitQuery/commitGuess/commitEliminate)."
 										: "MCTS/UCT: joint place/move/query/guess/eliminate search under open simultaneous (incl. multi-action place); commitReveal fresh-round joint place or deduction plan search (sequential commits)."}
 							</p>
 						)}

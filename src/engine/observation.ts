@@ -58,7 +58,8 @@ export type PlayerObservation = {
 					value?: boolean;
 					clauses?: Array<{ trait: string; value: boolean }>;
 			  }
-			| { kind: "guess"; id: string };
+			| { kind: "guess"; id: string }
+			| { kind: "eliminate"; id: string };
 	};
 };
 
@@ -229,7 +230,9 @@ export function observe(
 					}
 				: ownCommit?.kind === "guess"
 					? { kind: "guess" as const, id: ownCommit.id }
-					: undefined;
+					: ownCommit?.kind === "eliminate"
+						? { kind: "eliminate" as const, id: ownCommit.id }
+						: undefined;
 		return {
 			player,
 			cells: emptyCells(size),
