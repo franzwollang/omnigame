@@ -80,11 +80,21 @@ export const zConfig = z
 					.optional(),
 				/**
 				 * Ordered in-turn action types before handoff
-				 * (place→move, place→fire, or place→move→fire). Distinct from
-				 * actionsPerTurn (N copies of one action type).
+				 * (place→move / place→fire / place→move→fire / move→fire, or
+				 * deduction query→eliminate / query→guess / query→eliminate→guess).
+				 * Distinct from actionsPerTurn (N copies of one action type).
 				 */
 				phases: z
-					.array(z.enum(["place", "move", "fire"]))
+					.array(
+						z.enum([
+							"place",
+							"move",
+							"fire",
+							"query",
+							"eliminate",
+							"guess"
+						])
+					)
 					.min(2)
 					.max(3)
 					.optional()
@@ -103,8 +113,8 @@ export const zConfig = z
 		rng: z.object({ seed: z.number() }).strict(),
 		input: z
 			.object({
-				// move = piece relocation; cell/column/row = placement
-				mode: z.enum(["cell", "column", "row", "move"])
+				// move = piece relocation; cell/column/row = placement; deduction = query/guess
+				mode: z.enum(["cell", "column", "row", "move", "deduction"])
 			})
 			.strict()
 			.default({ mode: "cell" as const }),
@@ -112,15 +122,28 @@ export const zConfig = z
 		 * Piece movement; required when input.mode = "move".
 		 * orthogonal | diagonal | king on rectangle with sliding `range` 1..8
 		 * (blocker-aware ray walk; range 1 = adjacent only).
-		 * hex_offset / graph use topology neighbors (orthogonal, range 1 only).
-		 * Capture-by-replacement still deferred.
+		 * `capture: "replace"` — move onto enemy clears occupant then lands
+		 * (rectangle | hex_offset | graph + move input; path empty except
+		 * destination). Simultaneous + replace: joint uses vacated-origin path
+		 * checks (same as no-replace joint slides) so a fleeing blocker clears
+		 * the ray; stationary enemies stay visible and still require replace.
+		 * Ordered uses sequential capture apply (priority can capture before
+		 * prey flees). Works with sliding `range > 1` on rectangle, hex_offset
+		 * (cube-axis rays), and graph (edge chain-walk or hop-ball BFS).
+		 * Ordered simultaneous + range > 1 uses sequential path revalidation.
+		 * graph path mode: `graphReach` = `chain` (default; unique-forward
+		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
+		 * at junctions — distinct from fog hop distance).
 		 */
 		movement: z
 			.object({
 				adjacency: z
 					.enum(["orthogonal", "diagonal", "king"])
 					.default("orthogonal"),
-				range: z.number().int().min(1).max(8).default(1)
+				range: z.number().int().min(1).max(8).default(1),
+				capture: z.enum(["none", "replace"]).default("none"),
+				/** Graph-only: chain-walk (default) or hop-ball BFS. */
+				graphReach: z.enum(["chain", "hop"]).optional()
 			})
 			.strict()
 			.optional(),
@@ -182,7 +205,9 @@ export const zConfig = z
 			.default({ mode: "direct" as const, overflow: "reject" as const }),
 		observation: z
 			.object({
-				mode: z.enum(["full", "hit_miss", "fog"]).default("full"),
+				mode: z
+					.enum(["full", "hit_miss", "fog", "deduction"])
+					.default("full"),
 				/** Vision radius when mode = fog (ignored otherwise). */
 				radius: z.number().int().min(0).max(32).default(1),
 				/** Rectangle distance metric for fog; hex uses cube, graph uses BFS. */
@@ -205,6 +230,44 @@ export const zConfig = z
 			})
 			.strict()
 			.optional(),
+		/**
+		 * Deduction / Guess Who-lite: shared public roster + traits; each seat
+		 * gets a secret character. Query yes/no traits; guess to win.
+		 * When autoEliminate is false, query only records the answer — players
+		 * commit hypothesis via `{ type: "eliminate", id }` (README Commit).
+		 */
+		deduction: z
+			.object({
+				roster: z
+					.array(
+						z
+							.object({
+								id: z.string().min(1),
+								traits: z.record(z.string(), z.boolean())
+							})
+							.strict()
+					)
+					.min(2)
+					.max(12),
+				traits: z.array(z.string().min(1)).min(1).max(6),
+				wrongGuess: z.enum(["lose", "end_turn"]).default("lose"),
+				/** When true (default), query auto-prunes inconsistent candidates. */
+				autoEliminate: z.boolean().default(true),
+				/**
+				 * Query atom shape: single trait=value, compound AND
+				 * ("glasses and hat?"), or compound OR ("glasses or hat?").
+				 * Default single keeps Guess Who Lite. Clause count for
+				 * and/or is `compoundArity` (default 2).
+				 */
+				queryShape: z.enum(["single", "and", "or"]).default("single"),
+				/**
+				 * Exact clause count for queryShape and|or (default 2).
+				 * Ignored when queryShape is single. Must be ≤ traits.length.
+				 */
+				compoundArity: z.number().int().min(2).max(6).default(2)
+			})
+			.strict()
+			.optional(),
 		objective: z
 			.object({
 				mode: z
@@ -214,6 +277,7 @@ export const zConfig = z
 						"connect_or_destroy",
 						"reach_row",
 						"area_control",
+						"identify_secret",
 						"none"
 					])
 					.default("n_in_a_row"),
@@ -228,7 +292,7 @@ export const zConfig = z
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
-		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / none
+		// Required for n_in_a_row / connect_or_destroy; unused for destroy_hidden / reach_row / area_control / identify_secret / none
 		win: z
 			.object({
 				length: z.number().int().min(3),
@@ -294,6 +358,12 @@ export const zConfig = z
 			cfg.placement.gravity?.enabled === true;
 		const hitMiss = cfg.observation.mode === "hit_miss";
 		const fog = cfg.observation.mode === "fog";
+		const deductionInput = cfg.input.mode === "deduction";
+		const deductionObs = cfg.observation.mode === "deduction";
+		const identifySecret = cfg.objective.mode === "identify_secret";
+		const hasDeductionBlock = cfg.deduction !== undefined;
+		const deductionActive =
+			deductionInput || deductionObs || identifySecret || hasDeductionBlock;
 		const destroyHidden = cfg.objective.mode === "destroy_hidden";
 		const connectOrDestroy = cfg.objective.mode === "connect_or_destroy";
 		const reachRow = cfg.objective.mode === "reach_row";
@@ -309,6 +379,249 @@ export const zConfig = z
 		const hexBoard = cfg.grid.topology === "hex_offset";
 		const graphBoard = cfg.grid.topology === "graph";
 		const needsHitMiss = destroyHidden || connectOrDestroy;
+
+		// Deduction / Guess Who-lite: input + observation + objective + block lockstep
+		if (deductionActive) {
+			if (!deductionInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["input", "mode"],
+					message:
+						"deduction requires input.mode = 'deduction' (lockstep with observation/objective/deduction block)"
+				});
+			}
+			if (!deductionObs) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"deduction requires observation.mode = 'deduction' (lockstep with input/objective/deduction block)"
+				});
+			}
+			if (!identifySecret) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "mode"],
+					message:
+						"deduction requires objective.mode = 'identify_secret' (lockstep with input/observation/deduction block)"
+				});
+			}
+			if (!hasDeductionBlock) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["deduction"],
+					message: "deduction requires a deduction block (roster + traits)"
+				});
+			}
+			if (cfg.win !== undefined) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["win"],
+					message: "deduction / identify_secret does not use win"
+				});
+			}
+			if (cfg.movement) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement"],
+					message: "deduction is incompatible with movement"
+				});
+			}
+			if (cfg.fleet) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["fleet"],
+					message: "deduction is incompatible with fleet"
+				});
+			}
+			if (hitMiss || fog) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["observation", "mode"],
+					message:
+						"deduction is incompatible with hit_miss / fog observation"
+				});
+			}
+			if (simultaneous) {
+				// Simultaneous deduction: joint query/guess; single or compound.
+				const shape = cfg.deduction?.queryShape ?? "single";
+				if (shape !== "single" && shape !== "and" && shape !== "or") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "queryShape"],
+						message:
+							"simultaneous deduction requires queryShape = 'single' | 'and' | 'or'"
+					});
+				}
+				if (cfg.deduction?.autoEliminate === false) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "autoEliminate"],
+						message:
+							"simultaneous deduction requires autoEliminate = true (manual eliminate deferred)"
+					});
+				}
+				if (inTurnPhases) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "phases"],
+						message:
+							"simultaneous deduction is incompatible with turn.phases"
+					});
+				}
+				if (cfg.turn.commitReveal === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "commitReveal"],
+						message:
+							"simultaneous deduction is incompatible with commitReveal"
+					});
+				}
+				if (
+					cfg.turn.resolveOrder !== undefined &&
+					cfg.turn.resolveOrder !== "joint"
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "resolveOrder"],
+						message:
+							"simultaneous deduction requires resolveOrder = 'joint' (ordered deferred)"
+					});
+				}
+			}
+			if (manualTick) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "schedule"],
+					message: "deduction is incompatible with manual_tick"
+				});
+			}
+			if (cfg.turn.commitReveal === true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "commitReveal"],
+					message: "deduction is incompatible with commitReveal"
+				});
+			}
+			if (inTurnPhases) {
+				const phases = cfg.turn.phases!;
+				const allDeductionPhases = phases.every(
+					(p) =>
+						p === "query" || p === "eliminate" || p === "guess"
+				);
+				if (!allDeductionPhases) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "phases"],
+						message:
+							"deduction turn.phases must be query/eliminate/guess only (cannot mix with place/move/fire)"
+					});
+				}
+			}
+			if (multiStep) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["turn", "actionsPerTurn"],
+					message: "deduction requires actionsPerTurn = 1"
+				});
+			}
+			if (delayedPlace) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement", "delayTurns"],
+					message: "deduction is incompatible with delayTurns"
+				});
+			}
+			if (gravityImplied || Boolean(cfg.placement.capture?.enabled)) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["placement"],
+					message:
+						"deduction is incompatible with gravity / placement.capture"
+				});
+			}
+			if (hexBoard || graphBoard) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "topology"],
+					message: "deduction requires topology = 'rectangle'"
+				});
+			}
+			if (cfg.initial.length > 0) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["initial"],
+					message: "deduction is incompatible with initial seeds"
+				});
+			}
+			if (cfg.grid.wrap) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["grid", "wrap"],
+					message: "deduction is incompatible with grid.wrap"
+				});
+			}
+			if (cfg.deduction) {
+				const traitKeys = cfg.deduction.traits;
+				const traitSet = new Set(traitKeys);
+				if (traitSet.size !== traitKeys.length) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "traits"],
+						message: "deduction.traits entries must be unique"
+					});
+				}
+				if (
+					((cfg.deduction.queryShape ?? "single") === "and" ||
+						(cfg.deduction.queryShape ?? "single") === "or") &&
+					traitKeys.length < 2
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "queryShape"],
+						message:
+							"deduction.queryShape 'and'/'or' requires at least 2 traits"
+					});
+				}
+				if (
+					((cfg.deduction.queryShape ?? "single") === "and" ||
+						(cfg.deduction.queryShape ?? "single") === "or") &&
+					(cfg.deduction.compoundArity ?? 2) > traitKeys.length
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction", "compoundArity"],
+						message:
+							"deduction.compoundArity must be ≤ deduction.traits.length"
+					});
+				}
+				const ids = new Set<string>();
+				for (let i = 0; i < cfg.deduction.roster.length; i++) {
+					const entry = cfg.deduction.roster[i]!;
+					if (ids.has(entry.id)) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["deduction", "roster", i, "id"],
+							message: "deduction.roster ids must be unique"
+						});
+					}
+					ids.add(entry.id);
+					const keys = Object.keys(entry.traits);
+					const keySet = new Set(keys);
+					if (
+						keys.length !== traitKeys.length ||
+						!traitKeys.every((t) => keySet.has(t))
+					) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["deduction", "roster", i, "traits"],
+							message:
+								"every roster entry must have exactly the keys in deduction.traits"
+						});
+					}
+				}
+			}
+		}
 		// Toroidal wrap: rectangle + hex_offset; graph uses explicit edges instead
 		if (
 			cfg.grid.wrap &&
@@ -416,14 +729,7 @@ export const zConfig = z
 							"hex_offset move requires movement.adjacency = 'orthogonal' (diagonal/king deferred)"
 					});
 				}
-				if (cfg.movement && cfg.movement.range !== 1) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement", "range"],
-						message:
-							"hex_offset move requires movement.range = 1 (sliding deferred)"
-					});
-				}
+				// hex_offset sliding range 1..8 on cube axes (M21)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
@@ -492,14 +798,8 @@ export const zConfig = z
 							"graph move requires movement.adjacency = 'orthogonal' (uses explicit edges)"
 					});
 				}
-				if (cfg.movement && cfg.movement.range !== 1) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement", "range"],
-						message:
-							"graph move requires movement.range = 1 (sliding deferred)"
-					});
-				}
+				// graph chain-walk sliding range 1..8 (M22); replace unlocked (M27);
+				// hop-ball BFS via movement.graphReach = "hop" (M31)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
@@ -655,17 +955,28 @@ export const zConfig = z
 			});
 		}
 
-		// Simultaneous joint place (cell + n-in-a-row) or joint move (move + reach_row)
+		// Simultaneous joint place / move / deduction (query+guess)
 		if (simultaneous) {
 			const simMove = moveInput;
 			const simPlace = cfg.input.mode === "cell";
-			if (!simMove && !simPlace) {
+			const simDeduction = deductionInput && identifySecret;
+			if (!simMove && !simPlace && !simDeduction) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["input", "mode"],
 					message:
-						"simultaneous requires input.mode = 'cell' (joint place) or 'move' (joint move)"
+						"simultaneous requires input.mode = 'cell' (joint place), 'move' (joint move), or 'deduction' (joint query/guess)"
 				});
+			}
+			if (simDeduction) {
+				if (!deductionObs || !hasDeductionBlock) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["deduction"],
+						message:
+							"simultaneous deduction requires observation.mode = 'deduction' and a deduction block"
+					});
+				}
 			}
 			if (simPlace) {
 				if (cfg.objective.mode !== "n_in_a_row") {
@@ -704,16 +1015,9 @@ export const zConfig = z
 							"simultaneous move is incompatible with commitReveal (deferred)"
 					});
 				}
-				// Apply-time path revalidation for ordered/joint sliding is not
-				// implemented; forbid range > 1 under simultaneous until it is.
-				if ((cfg.movement?.range ?? 1) > 1) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement", "range"],
-						message:
-							"simultaneous move requires movement.range = 1 (sliding path integrity deferred)"
-					});
-				}
+				// Joint simultaneous sliding / replace: vacated-origin paths
+				// (stationary enemies stay; fleers clear the ray).
+				// Ordered simultaneous: sequential path / capture revalidation.
 			}
 			if (hitMiss) {
 				ctx.addIssue({
@@ -923,16 +1227,40 @@ export const zConfig = z
 			}
 		}
 
-		// In-turn phase sequence (place→move / place→fire / place→move→fire)
+		// In-turn phase sequence (board place/move/fire or deduction query/eliminate/guess)
 		if (inTurnPhases) {
 			const phases = cfg.turn.phases!;
 			const hasMove = phases.includes("move");
 			const hasFire = phases.includes("fire");
+			const hasPlace = phases.includes("place");
+			const hasQuery = phases.includes("query");
+			const hasEliminate = phases.includes("eliminate");
+			const hasGuessPhase = phases.includes("guess");
+			const isDeductionPhases =
+				hasQuery || hasEliminate || hasGuessPhase;
+			const isBoardPhases = hasPlace || hasMove || hasFire;
 			const isTriple =
 				phases.length === 3 &&
 				phases[0] === "place" &&
 				phases[1] === "move" &&
 				phases[2] === "fire";
+			const isMoveFire =
+				phases.length === 2 &&
+				phases[0] === "move" &&
+				phases[1] === "fire";
+			const isQueryEliminate =
+				phases.length === 2 &&
+				phases[0] === "query" &&
+				phases[1] === "eliminate";
+			const isQueryGuess =
+				phases.length === 2 &&
+				phases[0] === "query" &&
+				phases[1] === "guess";
+			const isQueryEliminateGuess =
+				phases.length === 3 &&
+				phases[0] === "query" &&
+				phases[1] === "eliminate" &&
+				phases[2] === "guess";
 			if (cfg.turn.schedule !== "alternating") {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -964,147 +1292,233 @@ export const zConfig = z
 						"turn.phases is incompatible with simultaneous / commitReveal"
 				});
 			}
-			if (phases[0] !== "place") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["turn", "phases"],
-					message: "turn.phases must start with 'place'"
-				});
-			}
-			if (!hasMove && !hasFire) {
+			if (isDeductionPhases && isBoardPhases) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
 					message:
-						"turn.phases must include 'move' or 'fire' after place (e.g. ['place','move'], ['place','fire'], or ['place','move','fire'])"
+						"turn.phases cannot mix board actions (place/move/fire) with deduction actions (query/eliminate/guess)"
 				});
-			}
-			if (hasMove && hasFire && !isTriple) {
+			} else if (
+				isDeductionPhases &&
+				!isQueryEliminate &&
+				!isQueryGuess &&
+				!isQueryEliminateGuess
+			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
 					message:
-						"turn.phases with both move and fire must be exactly ['place','move','fire']"
+						"deduction turn.phases must be ['query','eliminate'], ['query','guess'], or ['query','eliminate','guess']"
 				});
-			}
-			if (isTriple) {
-				if (!connectOrDestroy) {
+			} else if (isDeductionPhases) {
+				if (!hasDeductionBlock) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
-						path: ["objective", "mode"],
+						path: ["deduction"],
 						message:
-							"turn.phases place→move→fire requires objective.mode = 'connect_or_destroy' (dual end: n-in-a-row or sink fleet)"
+							"deduction turn.phases requires a deduction block"
 					});
 				}
-				if (!hitMiss) {
+				if (cfg.input.mode !== "deduction") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
-						path: ["observation", "mode"],
+						path: ["input", "mode"],
 						message:
-							"turn.phases place→move→fire requires observation.mode = 'hit_miss'"
+							"deduction turn.phases requires input.mode = 'deduction'"
 					});
 				}
-				if (!cfg.movement) {
+				if (hasEliminate && cfg.deduction?.autoEliminate !== false) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
-						path: ["movement"],
-						message: "turn.phases place→move→fire requires a movement block"
-					});
-				}
-				if (!cfg.win) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["win"],
+						path: ["deduction", "autoEliminate"],
 						message:
-							"turn.phases place→move→fire requires a win block (connect leg)"
+							"turn.phases with 'eliminate' requires deduction.autoEliminate = false"
 					});
 				}
 			} else {
-				if (hasMove && cfg.objective.mode !== "n_in_a_row") {
+				if (phases[0] !== "place" && !isMoveFire) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
-						path: ["objective", "mode"],
+						path: ["turn", "phases"],
 						message:
-							"turn.phases with 'move' requires objective.mode = 'n_in_a_row'"
+							"turn.phases must start with 'place', or be exactly ['move','fire']"
 					});
 				}
-				if (hasFire && !hitMiss) {
+				if (!hasMove && !hasFire) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "phases"],
+						message:
+							"turn.phases must include 'move' or 'fire' (e.g. ['place','move'], ['place','fire'], ['place','move','fire'], or ['move','fire'])"
+					});
+				}
+				if (hasMove && hasFire && !isTriple && !isMoveFire) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "phases"],
+						message:
+							"turn.phases with both move and fire must be ['place','move','fire'] or ['move','fire']"
+					});
+				}
+				if (isTriple) {
+					if (!connectOrDestroy) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["objective", "mode"],
+							message:
+								"turn.phases place→move→fire requires objective.mode = 'connect_or_destroy' (dual end: n-in-a-row or sink fleet)"
+						});
+					}
+					if (!hitMiss) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["observation", "mode"],
+							message:
+								"turn.phases place→move→fire requires observation.mode = 'hit_miss'"
+						});
+					}
+					if (!cfg.movement) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["movement"],
+							message:
+								"turn.phases place→move→fire requires a movement block"
+						});
+					}
+					if (!cfg.win) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["win"],
+							message:
+								"turn.phases place→move→fire requires a win block (connect leg)"
+						});
+					}
+				} else if (isMoveFire) {
+					if (!hitMiss) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["observation", "mode"],
+							message:
+								"turn.phases move→fire requires observation.mode = 'hit_miss'"
+						});
+					}
+					if (cfg.objective.mode !== "destroy_hidden") {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["objective", "mode"],
+							message:
+								"turn.phases move→fire requires objective.mode = 'destroy_hidden'"
+						});
+					}
+					if (!cfg.movement) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["movement"],
+							message:
+								"turn.phases move→fire requires a movement block"
+						});
+					}
+					const publicSeeds = (cfg.initial ?? []).filter(
+						(p) => (p.visibility ?? "public") === "public"
+					);
+					if (publicSeeds.length === 0) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["initial"],
+							message:
+								"turn.phases move→fire requires public initial seeds (movable spotters); fleets stay owner-hidden"
+						});
+					}
+				} else {
+					if (hasMove && cfg.objective.mode !== "n_in_a_row") {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["objective", "mode"],
+							message:
+								"turn.phases with 'move' requires objective.mode = 'n_in_a_row'"
+						});
+					}
+					if (hasFire && !hitMiss) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["observation", "mode"],
+							message:
+								"turn.phases with 'fire' requires observation.mode = 'hit_miss'"
+						});
+					}
+					if (hasFire && cfg.objective.mode !== "destroy_hidden") {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["objective", "mode"],
+							message:
+								"turn.phases with 'fire' requires objective.mode = 'destroy_hidden'"
+						});
+					}
+					if (hasMove && !cfg.movement) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["movement"],
+							message:
+								"turn.phases with 'move' requires a movement block"
+						});
+					}
+					if (hasFire && cfg.movement) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["movement"],
+							message:
+								"turn.phases place→fire does not use a movement block"
+						});
+					}
+					if (hasMove && hitMiss) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["observation", "mode"],
+							message:
+								"turn.phases place→move is incompatible with hit_miss observation"
+						});
+					}
+				}
+				if (cfg.input.mode !== "cell") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["input", "mode"],
+						message:
+							"turn.phases requires input.mode = 'cell' (place/fire phases); move phase uses movement"
+					});
+				}
+				if (gravityImplied || captureEnabled) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["placement"],
+						message:
+							"turn.phases requires direct placement without capture/gravity"
+					});
+				}
+				if (fog) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["observation", "mode"],
+						message: "turn.phases is incompatible with fog observation"
+					});
+				}
+				if (cfg.fleet) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["fleet"],
 						message:
-							"turn.phases with 'fire' requires observation.mode = 'hit_miss'"
+							"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire / place→move→fire / move→fire)"
 					});
 				}
-				if (hasFire && cfg.objective.mode !== "destroy_hidden") {
+				if (hexBoard || graphBoard) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
-						path: ["objective", "mode"],
+						path: ["grid", "topology"],
 						message:
-							"turn.phases with 'fire' requires objective.mode = 'destroy_hidden'"
+							"turn.phases foothold requires topology = 'rectangle' (hex/graph deferred)"
 					});
 				}
-				if (hasMove && !cfg.movement) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement"],
-						message: "turn.phases with 'move' requires a movement block"
-					});
-				}
-				if (hasFire && cfg.movement) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement"],
-						message: "turn.phases place→fire does not use a movement block"
-					});
-				}
-				if (hasMove && hitMiss) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["observation", "mode"],
-						message:
-							"turn.phases place→move is incompatible with hit_miss observation"
-					});
-				}
-			}
-			if (cfg.input.mode !== "cell") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["input", "mode"],
-					message:
-						"turn.phases requires input.mode = 'cell' (place/fire phases); move phase uses movement"
-				});
-			}
-			if (gravityImplied || captureEnabled) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["placement"],
-					message:
-						"turn.phases requires direct placement without capture/gravity"
-				});
-			}
-			if (fog) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["observation", "mode"],
-					message: "turn.phases is incompatible with fog observation"
-				});
-			}
-			if (cfg.fleet) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["fleet"],
-					message:
-						"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire / place→move→fire)"
-				});
-			}
-			if (hexBoard || graphBoard) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["grid", "topology"],
-					message:
-						"turn.phases foothold requires topology = 'rectangle' (hex/graph deferred)"
-				});
 			}
 		}
 
@@ -1209,6 +1623,58 @@ export const zConfig = z
 				});
 			}
 		}
+
+		// Capture-by-replacement: rectangle | hex_offset | graph + move
+		if (cfg.movement?.capture === "replace") {
+			if (!moveInput) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'replace' requires input.mode = 'move'"
+				});
+			}
+			if (
+				cfg.grid.topology !== "rectangle" &&
+				cfg.grid.topology !== "hex_offset" &&
+				cfg.grid.topology !== "graph"
+			) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'replace' requires rectangle, hex_offset, or graph topology"
+				});
+			}
+			if (captureEnabled) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "capture"],
+					message:
+						"movement.capture = 'replace' is incompatible with placement.capture"
+				});
+			}
+		}
+
+		// Graph hop-ball: movement.graphReach = "hop" is graph-only
+		if (cfg.movement?.graphReach === "hop") {
+			if (cfg.grid.topology !== "graph") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "graphReach"],
+					message:
+						"movement.graphReach = 'hop' requires grid.topology = 'graph'"
+				});
+			}
+			if (!moveInput && !(cfg.turn.phases ?? []).includes("move")) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "graphReach"],
+					message:
+						"movement.graphReach = 'hop' requires input.mode = 'move' or a turn phase that includes move"
+				});
+			}
+		}
 		if (reachRow) {
 			const targets = cfg.objective.targetRows;
 			if (!targets) {
@@ -1288,7 +1754,8 @@ export const zConfig = z
 			});
 		}
 
-		if (hitMiss !== needsHitMiss) {
+		// Deduction observation/objective must not force destroy_hidden pairing
+		if (!deductionObs && !identifySecret && hitMiss !== needsHitMiss) {
 			ctx.addIssue({
 				code: z.ZodIssueCode.custom,
 				path: hitMiss ? ["objective", "mode"] : ["observation", "mode"],

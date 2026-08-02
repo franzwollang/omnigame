@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-08-02T06:45-00:00",
+  "turn": 60,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M32",
+    "issue": "next-missing-mechanism",
+    "goal": "simultaneous compound deduction landed; hand off next seam or P4"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced M8–M31 from 3636 onto c888",
+    "Landed M32 simultaneous queryShape and|or + And Lite preset",
+    "489 green; joint UCT / commitReveal still deferred"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "fire→move is recombination; compound×simultaneous was smallest kernel seam"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: commitReveal/joint UCT/manual eliminate, or P4 CI/semantics"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick next seam (sim-deduction ext / fire→move) or P4",
   "blockers": []
 }
