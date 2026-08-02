@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T09:45-00:00",
-  "turn": 70,
+  "updated_at": "2026-08-02T10:20-00:00",
+  "turn": 71,
   "focus": {
-    "milestone": "M41",
-    "issue": "semantics-doc-refresh",
-    "goal": "CI landed; hand off semantics refresh or next seam"
+    "milestone": "M42",
+    "issue": "next-missing-mechanism",
+    "goal": "Semantics refreshed; hand off genuine P3 seam"
   },
   "recent": [
-    "Synced M40 tip 2d9a onto beb7",
-    "Rejected fire→move / multi-slide as recombinations",
-    "Landed M41 CI workflow (Node 20.19 + pnpm 10.5.2)"
+    "Synced M41 tip beb7 onto de5b",
+    "Rejected stale main P1; trust MEMORIES over main scratchpad",
+    "Landed M42 semantics-doc-refresh (docs/semantics.md ↔ kernel)"
   ],
   "discoveries": [
-    "Main lagged tip; always merge latest progression branch first"
+    "Single-action simultaneous sliding allowed; multi-action move still range=1"
   ],
   "open_threads": [
-    "Next: P4 semantics-doc-refresh or genuine P3 seam (not recombinations)"
+    "Next: smallest P3 seam; reject fire→move / queryShape:not without anchor"
   ],
-  "next_step": "Refresh docs/semantics.md vs kernel events, or pick new seam",
+  "next_step": "Pick smallest genuine next-missing-mechanism seam (not recombination)",
   "blockers": []
 }

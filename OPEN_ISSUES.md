@@ -2,9 +2,9 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (P4 tooling-ci closed). Do not ask
-which fork — pick the smallest new seam under `next-missing-mechanism`, or
-finish **P4 semantics-doc-refresh**.
+**Marathon rule:** Work **P3** `next-missing-mechanism` (P4 tooling-ci and
+semantics-doc-refresh closed). Do not ask which fork — pick the smallest new
+seam; reject recombinations without an anchor.
 
 ---
 
@@ -14,7 +14,8 @@ finish **P4 semantics-doc-refresh**.
 
 CommitReveal + multi-action simultaneous move (`actionsPerTurn > 1` under
 `commitReveal` move / Hidden Double Simultaneous Step Race) landed as M40.
-P4 tooling-ci landed (`.github/workflows/ci.yml`).
+P4 tooling-ci landed (`.github/workflows/ci.yml`). P4 semantics-doc-refresh
+landed (M42 — `docs/semantics.md` synced to kernel events/state/phases).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -31,32 +32,6 @@ e.g.:
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
-
-### P4 — semantics-doc-refresh
-
-**Problem:** `docs/semantics.md` still uses pre-simultaneous event vocabulary.
-
-**Acceptance:**
-
-- [ ] Sync compact draft with current kernel events/state/phases (incl.
-      `pieceCaptured`, `queryAnswered` / `guessResult` / `candidateEliminated`,
-      simultaneous, phases incl. move→fire + deduction query→eliminate, joint
-      + ordered sliding, joint + ordered simultaneous replace, simultaneous
-      slide+replace, joint replace vacated-origin hybrid, joint UCT under open
-      + multi-action + commitReveal simultaneous, **joint UCT under open
-      simultaneous deduction**, **simultaneous deduction manual eliminate /
-      simultaneousEliminate**, **commitReveal deduction joint UCT**,
-      **commitEliminate / commitReveal + manual eliminate**, **commitMove /
-      commitReveal under simultaneous move**, **multi-action simultaneous
-      move / actionsPerTurn under open simultaneous move**, **commitReveal +
-      multi-action simultaneous move / Hidden Double Simultaneous Step Race**,
-      hex cube-axis sliding, graph chain-walk sliding, graph hop-ball
-      (`graphReach`), hex + graph replace capture, Guess Who manual eliminate /
-      `autoEliminate`, trait-conjunction `queryShape: and`, trait-disjunction
-      `queryShape: or`, `compoundArity` / 3-clause AND, deduction in-turn
-      phases, simultaneous deduction joint query/guess, simultaneous compound
-      deduction, simultaneous deduction commitReveal / `commitQuery` /
-      `commitGuess` / `commitEliminate`)
 
 ---
 
@@ -85,3 +60,4 @@ move. **Hidden Double Simultaneous Step Race** covers commitReveal +
 BFS. Open simultaneous deduction joint UCT covers agent search over
 query/guess(/eliminate) cartesian (fire→move still open if an anchor appears).
 CI green gate: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
+Semantics draft: `docs/semantics.md` (M42 refresh).

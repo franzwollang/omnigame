@@ -2,8 +2,7 @@
 
 Roadmap and coordination only. Concrete open work lives in `OPEN_ISSUES.md`.
 Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
-(stale vs kernel — refresh tracked). Historical notes: `docs/scratchpad.md`
-(not a backlog).
+(synced M42). Historical notes: `docs/scratchpad.md` (not a backlog).
 
 ## Status board
 
@@ -58,10 +57,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M39 | Next missing mechanism (multi-action simultaneous move) | `done` |
 | M40 | Next missing mechanism (commitReveal multi-action move) | `done` |
 | M41 | Tooling CI (GitHub Actions typecheck + test) | `done` |
+| M42 | Semantics doc refresh (`docs/semantics.md` ↔ kernel) | `done` |
 
-**Optimizing for this marathon:** M41 CI workflow landed. Pick **P3
-next-missing-mechanism** (e.g. fire→move only with anchor) or **P4
-semantics-doc-refresh** — without asking which fork.
+**Optimizing for this marathon:** M42 semantics refresh landed. Pick **P3
+next-missing-mechanism** (smallest new seam; reject recombinations without
+anchor) — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -88,10 +88,10 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Task selection (no user ask)
 
-1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M41 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M40) — smallest new seam — or
-   P4 semantics-doc-refresh.  
+1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
+   (P0–P2 / M8–M42 closed).  
+2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
+   recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
 4. After each landed item: update OPEN_ISSUES (resolve + log), PLANNING status,
@@ -173,8 +173,9 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** full Go; semantics doc refresh; fire→move reorder (only with
-anchor). CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
+**Not yet:** full Go; fire→move reorder (only with anchor); realtime
+scheduler. CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
+Semantics: `docs/semantics.md` (M42).
 
 ## Phase 2 exit criteria
 
@@ -579,6 +580,19 @@ anchor). CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
 - Steps: `pnpm install --frozen-lockfile` → `pnpm typecheck` → `pnpm test` —
   **done**
 - Local green gate: 571 tests — **done**
+
+### M42 — Semantics doc refresh
+
+- Rewrite `docs/semantics.md` against current kernel vocabulary — **done**
+- Cover GameEvent union, GameState fields, KernelEvent transcript
+  (`pieceCaptured`, `queryAnswered`, `guessResult`, `candidateEliminated`, …)
+  — **done**
+- Cover simultaneous / commitReveal / phases / deduction / movement
+  (slide+replace, hex/graph, hop) / joint UCT notes — **done**
+- Correct simultaneous×sliding: single-action allowed; multi-action move
+  still range=1 / no replace — **done**
+- Resolve OPEN_ISSUES `semantics-doc-refresh`; hand off P3
+  `next-missing-mechanism` — **done**
 
 ## Sequencing notes
 
