@@ -1568,7 +1568,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Cube-axis step race on odd-r hex with capture-by-replacement: move onto an enemy cell to remove it, then land. Unlocks movement.capture = replace on hex_offset — rectangle Replace Race cannot express hex attrition; graph replace remains deferred.",
+			"Cube-axis step race on odd-r hex with capture-by-replacement: move onto an enemy cell to remove it, then land. Unlocks movement.capture = replace on hex_offset — rectangle Replace Race cannot express hex attrition; graph replace is Graph Replace Race.",
 		config: {
 			metadata: { name: "Hex Replace Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
@@ -1601,6 +1601,82 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				// Odd-r: (1,2) is a cube-axis neighbor of (0,2) — capture lands and wins.
 				{ row: 1, col: 2, player: "X", visibility: "public" },
 				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"graph-replace-race": definePreset({
+		id: "graph-replace-race",
+		name: "Graph Replace Race",
+		tags: [
+			"move",
+			"capture",
+			"replace",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Chain-walk step race on two parallel graph lanes with capture-by-replacement: move onto an enemy node to remove it, then land. Unlocks movement.capture = replace on graph — rectangle/hex Replace Race cannot express graph-edge attrition.",
+		config: {
+			metadata: { name: "Graph Replace Race", version: 1 },
+			grid: {
+				width: 2,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Lane 0: X one edge from O on the target row — capture lands and wins.
+				{ row: 1, col: 0, player: "X", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
 			]
 		}
 	}),

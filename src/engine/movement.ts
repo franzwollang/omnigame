@@ -4,8 +4,8 @@
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
  * (path empty except destination). Hex_offset: orthogonal cube-axis slides
  * (range 1..8, same blocker/replace rules). Graph: orthogonal chain-walk
- * along explicit edges (range 1..8; no turning at junctions; no replace —
- * schema-deferred).
+ * along explicit edges (range 1..8; no turning at junctions; same
+ * blocker/replace rules as rectangle/hex).
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -157,17 +157,21 @@ function slideHexDestinations(
 /**
  * Graph chain-walk slides: for each first edge from `from`, walk forward
  * along the unique non-backtrack neighbor up to `range`. Empty cells along
- * the chain are destinations. Occupied cells block (no replace on graph).
- * Junctions (|forward| ≠ 1) stop the chain — no turning mid-slide. Range 1
- * degenerates to empty neighbors. Distinct from fog hop-ball BFS.
+ * the chain are destinations. With `capture: "replace"`, the first enemy
+ * within range is also legal (path empty except that destination); own
+ * pieces block without landing. Junctions (|forward| ≠ 1) stop the chain —
+ * no turning mid-slide. Range 1 degenerates to empty (or enemy) neighbors.
+ * Distinct from fog hop-ball BFS.
  */
 function slideGraphDestinations(
 	grid: Grid,
 	from: Position,
 	config: MovementConfig,
-	graph: GraphTopologyData
+	graph: GraphTopologyData,
+	mover: Player
 ): Position[] {
 	const range = Math.max(1, Math.floor(config.range));
+	const replace = config.capture === "replace";
 	const out: Position[] = [];
 	const seen = new Set<string>();
 
@@ -179,7 +183,16 @@ function slideGraphDestinations(
 			const key = posKey(cur);
 			if (pathSeen.has(key)) break;
 			pathSeen.add(key);
-			if (getCell(grid, cur) !== null) break;
+			const occ = getCell(grid, cur);
+			if (occ !== null) {
+				if (replace && occ !== mover && (occ === "X" || occ === "O")) {
+					if (!seen.has(key)) {
+						seen.add(key);
+						out.push(cur);
+					}
+				}
+				break;
+			}
 			if (!seen.has(key)) {
 				seen.add(key);
 				out.push(cur);
@@ -267,9 +280,9 @@ export function legalDestinations(
 	const { wrap, topology, graph } = opts;
 
 	if (topology === "graph") {
-		// Chain-walk slides along explicit edges; replace deferred (schema).
+		// Chain-walk slides along explicit edges (same blocker/replace as rect/hex).
 		if (config.adjacency !== "orthogonal" || !graph) return [];
-		return slideGraphDestinations(grid, from, config, graph);
+		return slideGraphDestinations(grid, from, config, graph, mover);
 	}
 
 	if (topology === "hex_offset") {

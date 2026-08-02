@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M26 hex replace capture closed).
+**Marathon rule:** Work **P3 → P4** in order (M27 graph replace capture closed).
 Do not ask which fork — pick the smallest new seam under
 `next-missing-mechanism`, then P4 tooling/docs.
 
@@ -12,13 +12,12 @@ Do not ask which fork — pick the smallest new seam under
 
 ### P3 — next-missing-mechanism
 
-Hex replace capture (`movement.capture = replace` on `hex_offset` + Hex
-Replace Race) landed as M26. Graph replace remains deferred.
+Graph replace capture (`movement.capture = replace` on `graph` + Graph
+Replace Race) landed as M27. Topology parity for replace is complete
+(rectangle | hex_offset | graph).
 
 Pick the smallest remaining new seam that existing primitives cannot express, e.g.:
 
-- Graph `capture: replace` (chain-walk landing on enemy — only if a new seam
-  forces it)
 - Further phase sequences beyond place→* and move→fire (only if a new seam appears)
 - Hop-ball graph range (distinct from chain-walk — only if a game needs it)
 - Deduction + simultaneous / phases / 3+ clause AND (only if forced)
@@ -42,8 +41,8 @@ exhaust `references/` or recombine covered primitives).
       simultaneous, phases incl. move→fire, joint + ordered sliding, joint +
       ordered simultaneous replace, simultaneous slide+replace, joint replace
       vacated-origin hybrid, joint UCT under open + multi-action + commitReveal
-      simultaneous, hex cube-axis sliding, graph chain-walk sliding, hex
-      replace capture, Guess Who manual eliminate / `autoEliminate`,
+      simultaneous, hex cube-axis sliding, graph chain-walk sliding, hex +
+      graph replace capture, Guess Who manual eliminate / `autoEliminate`,
       trait-conjunction `queryShape: and`, trait-disjunction `queryShape: or`)
 
 ---
@@ -59,4 +58,4 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite +
 Commit Lite + And Lite + Or Lite cover query/guess + hypothesis eliminate +
 2-clause AND/OR (simultaneous deduction / 3+ clause AND / richer phases /
-graph replace still open).
+hop-ball still open).

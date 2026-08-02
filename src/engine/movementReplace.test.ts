@@ -322,6 +322,136 @@ describe("Hex Replace Race (movement.capture = replace on hex_offset)", () => {
 	});
 });
 
+describe("Graph Replace Race (movement.capture = replace on graph)", () => {
+	it("validates and compiles the graph-replace-race preset", () => {
+		const cfg = examplePresets["graph-replace-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.inputMode).toBe("move");
+		expect(gameConfig.movement?.capture).toBe("replace");
+		expect(gameConfig.objectiveMode).toBe("reach_row");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(getCell(state.grid, { row: 1, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("O");
+		const legal = kernel.legalActions(state, 0);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 1 &&
+					a.from.col === 0 &&
+					a.to.row === 0 &&
+					a.to.col === 0
+			)
+		).toBe(true);
+	});
+
+	it("lists enemy graph neighbors as legal destinations under replace", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-replace-race"].config
+		);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 1, col: 0 };
+		expect(
+			canMove(state.grid, from, { row: 0, col: 0 }, "X", REPLACE, board)
+		).toBe(true);
+		expect(
+			legalDestinations(state.grid, from, REPLACE, board).some(
+				(p) => p.row === 0 && p.col === 0
+			)
+		).toBe(true);
+	});
+
+	it("X captures O on target row and wins (transcript + pieceCaptured)", () => {
+		const cfg = examplePresets["graph-replace-race"].config;
+		const { kernel } = compileConfig(cfg);
+		const action: Extract<KernelAction, { type: "move" }> = {
+			type: "move",
+			from: { row: 1, col: 0 },
+			to: { row: 0, col: 0 }
+		};
+		let state = kernel.initialState(cfg.rng.seed);
+		const result = kernel.stepSync(state, action);
+		expect(
+			result.events.some(
+				(e) =>
+					e.type === "pieceCaptured" &&
+					e.position.row === 0 &&
+					e.position.col === 0 &&
+					e.captured === "O" &&
+					e.by === "X"
+			)
+		).toBe(true);
+		expect(result.events.some((e) => e.type === "terminal")).toBe(true);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(state.grid, { row: 1, col: 0 })).toBeNull();
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+	});
+
+	it("replays the graph capture win faithfully", () => {
+		const cfg = examplePresets["graph-replace-race"].config;
+		const { gameConfig } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{ type: "move", from: { row: 1, col: 0 }, to: { row: 0, col: 0 } }
+		];
+		const replay = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 0 })).toBe("X");
+	});
+
+	it("sliding graph replace lands on first enemy along a chain", () => {
+		const base = examplePresets["graph-slide-race"].config;
+		const cfg = {
+			...base,
+			movement: {
+				adjacency: "orthogonal" as const,
+				range: 4 as const,
+				capture: "replace" as const
+			},
+			initial: [
+				{ row: 4, col: 0, player: "X" as const, visibility: "public" as const },
+				{ row: 0, col: 0, player: "O" as const, visibility: "public" as const }
+			]
+		};
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { gameConfig } = compileConfig(cfg);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 0 };
+		expect(
+			canMove(
+				state.grid,
+				from,
+				{ row: 0, col: 0 },
+				"X",
+				SLIDE_REPLACE,
+				board
+			)
+		).toBe(true);
+		// Mid-chain own piece blocks without landing past it.
+		const blocked = {
+			...state.grid,
+			cells: setCell(state.grid, { row: 2, col: 0 }, "X")
+		};
+		expect(
+			canMove(blocked, from, { row: 0, col: 0 }, "X", SLIDE_REPLACE, board)
+		).toBe(false);
+	});
+});
+
 describe("movement.capture schema / validateConfig", () => {
 	it("accepts capture none|replace on rectangle move configs", () => {
 		const base = examplePresets["step-race"].config;
@@ -368,8 +498,8 @@ describe("movement.capture schema / validateConfig", () => {
 		expect(ok.success).toBe(true);
 	});
 
-	it("rejects replace on graph topology", () => {
-		const bad = zConfig.safeParse({
+	it("accepts replace on graph topology", () => {
+		const ok = zConfig.safeParse({
 			...examplePresets["graph-slide-race"].config,
 			movement: {
 				adjacency: "orthogonal",
@@ -377,7 +507,7 @@ describe("movement.capture schema / validateConfig", () => {
 				capture: "replace"
 			}
 		});
-		expect(bad.success).toBe(false);
+		expect(ok.success).toBe(true);
 	});
 
 	it("rejects replace with placement.capture", () => {

@@ -66,8 +66,11 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	const phasesNeedMove = Array.isArray(phases) && phases.includes("move");
 	const showMovement = inputMode === "move" || phasesNeedMove;
 	const hexOrGraph = topology === "hex_offset" || topology === "graph";
+	// Replace unlocked on rectangle | hex_offset | graph (M27).
 	const replaceTopologyOk =
-		topology === "rectangle" || topology === "hex_offset";
+		topology === "rectangle" ||
+		topology === "hex_offset" ||
+		topology === "graph";
 	// Rectangle / hex cube-axis / graph chain-walk slides unlocked (range 1..8).
 	const rangeMax = 8;
 
@@ -170,15 +173,6 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<Select
 											onValueChange={(v) => {
 												field.onChange(v);
-												// Replace is rectangle | hex only — clear on graph.
-												if (
-													v === "graph" &&
-													form.getValues("movement.capture") === "replace"
-												) {
-													form.setValue("movement.capture", "none", {
-														shouldDirty: true
-													});
-												}
 											}}
 											value={field.value ?? "rectangle"}
 										>
@@ -580,8 +574,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										blockers clear; stationary targets stay); ordered
 										simultaneous sliding revalidates the second seat
 										after the first. Replace capture is rectangle |
-										hex_offset + move (graph deferred); ordered
-										simultaneous replace uses sequential apply.
+										hex_offset | graph + move; ordered simultaneous
+										replace uses sequential apply.
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
@@ -691,10 +685,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												<p className="text-xs text-muted-foreground">
 													Replace: land on an enemy cell to remove it
 													(path must be empty except destination).
-													Rectangle or hex_offset + move input;
+													Rectangle, hex_offset, or graph + move input;
 													simultaneous OK (joint or ordered, any
-													range); graph deferred; not
-													placement.capture.
+													range); not placement.capture.
 												</p>
 												<FormMessage />
 											</FormItem>

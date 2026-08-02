@@ -1,23 +1,22 @@
 {
-  "updated_at": "2026-08-02T04:45-00:00",
-  "turn": 52,
+  "updated_at": "2026-08-02T05:20-00:00",
+  "turn": 53,
   "focus": {
-    "milestone": "M26",
+    "milestone": "M27",
     "issue": "next-missing-mechanism",
-    "goal": "Hex replace capture landed; hand off next seam or P4"
+    "goal": "Graph replace capture landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M25 from efd3 onto 6ac1",
-    "Landed M26 hex replace + hex-replace-race",
-    "444 green after typecheck+test"
+    "Synced M8–M26 from 6ac1 onto 860a",
+    "Landed M27 graph replace + graph-replace-race",
+    "Ready for typecheck + test green gate"
   ],
   "discoveries": [
-    "slideHexDestinations already had replace; schema/form were the gate",
-    "Odd-r same column ≠ cube-axis ray (use NW/NE for slide replace)"
+    "slideGraphDestinations needed replace branch (unlike hex which had it)"
   ],
   "open_threads": [
-    "Next: graph replace, richer phases, 3+ AND, or P4 CI/semantics"
+    "Next: richer phases, 3+ AND, hop-ball, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (graph replace/phases/3+AND) or P4 CI/semantics",
+  "next_step": "Pick next seam (phases/3+AND/hop-ball) or P4 CI/semantics",
   "blockers": []
 }

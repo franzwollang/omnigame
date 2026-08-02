@@ -54,6 +54,7 @@ These are built from the same shared schema and operators.
 - **Graph Slide Race** (`graph` edge chain-walk `movement.range > 1` + reach_row)
 - **Replace Race** (`movement.capture = replace` — move onto enemy clears then lands)
 - **Hex Replace Race** (`hex_offset` + `capture: replace` — cube-axis attrition)
+- **Graph Replace Race** (`graph` + `capture: replace` — chain-walk attrition)
 - **Guess Who Lite** (deduction query/guess + identify_secret)
 - **Guess Who Commit Lite** (`autoEliminate: false` + eliminate + end_turn wrong guess)
 - **Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction queries)
@@ -172,8 +173,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   path/capture); hex_offset uses cube-axis slides (orthogonal, range 1..8) with
   the same replace rules — Hex Step Race / **Hex Slide Race** / **Hex Replace
   Race** / Simultaneous Hex Step Race; graph uses edge chain-walk slides
-  (orthogonal, range 1..8; no junction turns; replace deferred) —
-  Simultaneous Graph Step Race / **Graph Slide Race**
+  (orthogonal, range 1..8; no junction turns; same replace rules) —
+  Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Replace Race**
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace capture (`movement.capture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / And / Or); `none` (open-ended / tick demos)
@@ -185,7 +186,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
-machines, graph replace capture, simultaneous deduction /
+machines, hop-ball graph range, simultaneous deduction /
 3+ clause AND, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
@@ -442,15 +443,16 @@ commitReveal / Hidden Simultaneous TTT (M20), hex cube-axis sliding / Hex
 Slide Race (M21), graph chain-walk sliding / Graph Slide Race (M22), Guess Who
 manual commit / Guess Who Commit Lite (M23), Guess Who trait-conjunction
 queries / Guess Who And Lite (M24), Guess Who trait-disjunction queries /
-Guess Who Or Lite (M25), hex replace capture / Hex Replace Race (M26).
+Guess Who Or Lite (M25), hex replace capture / Hex Replace Race (M26),
+graph replace capture / Graph Replace Race (M27).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  graph replace, richer phases, 3+ clause AND) or P4 CI / semantics refresh
-- Deferred: full Go rules; hop-ball graph range; graph replace; CI
-  workflows; `docs/semantics.md` refresh vs current kernel events;
-  simultaneous deduction / 3+ clause AND
+  richer phases, 3+ clause AND, hop-ball) or P4 CI / semantics refresh
+- Deferred: full Go rules; hop-ball graph range; CI workflows;
+  `docs/semantics.md` refresh vs current kernel events; simultaneous
+  deduction / 3+ clause AND
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

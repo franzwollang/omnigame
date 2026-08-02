@@ -113,16 +113,16 @@ export const zConfig = z
 		 * orthogonal | diagonal | king on rectangle with sliding `range` 1..8
 		 * (blocker-aware ray walk; range 1 = adjacent only).
 		 * `capture: "replace"` — move onto enemy clears occupant then lands
-		 * (rectangle | hex_offset + move input; path empty except destination;
-		 * graph replace deferred). Simultaneous + replace: joint uses
-		 * vacated-origin path checks (same as no-replace joint slides) so a
-		 * fleeing blocker clears the ray; stationary enemies stay visible and
-		 * still require replace. Ordered uses sequential capture apply
-		 * (priority can capture before prey flees). Works with sliding
-		 * `range > 1` on rectangle and hex_offset (cube-axis rays). Ordered
-		 * simultaneous + range > 1 uses sequential path revalidation. graph uses
+		 * (rectangle | hex_offset | graph + move input; path empty except
+		 * destination). Simultaneous + replace: joint uses vacated-origin path
+		 * checks (same as no-replace joint slides) so a fleeing blocker clears
+		 * the ray; stationary enemies stay visible and still require replace.
+		 * Ordered uses sequential capture apply (priority can capture before
+		 * prey flees). Works with sliding `range > 1` on rectangle, hex_offset
+		 * (cube-axis rays), and graph (edge chain-walk). Ordered simultaneous
+		 * + range > 1 uses sequential path revalidation. graph uses
 		 * topology-neighbor chain-walk (orthogonal, range 1..8; no turning at
-		 * junctions; no replace).
+		 * junctions; same replace rules).
 		 */
 		movement: z
 			.object({
@@ -719,7 +719,7 @@ export const zConfig = z
 							"graph move requires movement.adjacency = 'orthogonal' (uses explicit edges)"
 					});
 				}
-				// graph chain-walk sliding range 1..8 (M22); replace still rect-only
+				// graph chain-walk sliding range 1..8 (M22); replace unlocked (M27)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
@@ -1463,7 +1463,7 @@ export const zConfig = z
 			}
 		}
 
-		// Capture-by-replacement: rectangle | hex_offset move (graph deferred)
+		// Capture-by-replacement: rectangle | hex_offset | graph + move
 		if (cfg.movement?.capture === "replace") {
 			if (!moveInput) {
 				ctx.addIssue({
@@ -1475,13 +1475,14 @@ export const zConfig = z
 			}
 			if (
 				cfg.grid.topology !== "rectangle" &&
-				cfg.grid.topology !== "hex_offset"
+				cfg.grid.topology !== "hex_offset" &&
+				cfg.grid.topology !== "graph"
 			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["movement", "capture"],
 					message:
-						"movement.capture = 'replace' requires rectangle or hex_offset topology (graph deferred)"
+						"movement.capture = 'replace' requires rectangle, hex_offset, or graph topology"
 				});
 			}
 			if (captureEnabled) {
