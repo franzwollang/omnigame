@@ -68,3 +68,4 @@
 {"ts":"2026-08-02T02:26-00:00","focus":"M19 multi-action joint UCT","summary":"Synced 8bb5; extended joint enumeration + dual-act cursor for actionsPerTurn>1; tests pending","next":"Green gate then mark M19 done; hand off commitReveal or P4"}
 {"ts":"2026-08-02T02:28-00:00","focus":"M19 multi-action joint UCT","summary":"Landed multi-action joint UCT/MCTS; typecheck + 390 tests green","next":"Pick commitReveal joint search or P4 CI/semantics"}
 {"ts":"2026-08-02T02:50-00:00","focus":"M20 commitReveal joint UCT","summary":"Synced bada; landed commitReveal joint search in jointLegal/UCT/MCTS + tests; green pending","next":"Green gate then mark M20 done; hand off next seam or P4"}
+{"ts":"2026-08-02T02:55-00:00","focus":"M20 commitReveal joint UCT","summary":"Landed commitReveal joint UCT/MCTS; typecheck + 396 tests green","next":"Pick hex/graph sliding, richer phases/Guess Who, or P4 CI/semantics"}
