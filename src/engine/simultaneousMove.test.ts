@@ -19,7 +19,7 @@ describe("schema: simultaneous move", () => {
 		expect(ok.success).toBe(true);
 	});
 
-	it("accepts hex/graph simultaneous move; rejects commitReveal and multi-action", () => {
+	it("accepts hex/graph simultaneous move and commitReveal; accepts multi-action open move", () => {
 		expect(
 			zConfig.safeParse(examplePresets["simultaneous-hex-step-race"].config)
 				.success
@@ -34,13 +34,13 @@ describe("schema: simultaneous move", () => {
 			...base,
 			turn: { mode: "turn", schedule: "simultaneous", commitReveal: true }
 		});
-		expect(hidden.success).toBe(false);
+		expect(hidden.success).toBe(true);
 
 		const multi = zConfig.safeParse({
 			...base,
 			turn: { mode: "turn", schedule: "simultaneous", actionsPerTurn: 2 }
 		});
-		expect(multi.success).toBe(false);
+		expect(multi.success).toBe(true);
 
 		const hexDiag = zConfig.safeParse({
 			...examplePresets["simultaneous-hex-step-race"].config,
