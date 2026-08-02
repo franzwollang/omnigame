@@ -173,9 +173,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, richer multi-phase
-machines, simultaneous slide+replace capture, joint simultaneous search, richer Guess
-Who commit/hypothesis beyond query+guess MVP, and a larger set of reusable
-operators/constraints.
+machines, joint simultaneous search, richer Guess Who commit/hypothesis beyond
+query+guess MVP, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -414,12 +413,14 @@ Replace Race (M9), Guess Who Lite query+guess / `identify_secret` (M10), joint
 simultaneous sliding / Simultaneous Slide Race (M11), ordered simultaneous
 sliding / Ordered Simultaneous Slide Race (M12), joint simultaneous replace /
 Simultaneous Replace Race (M13), ordered simultaneous replace / Ordered
-Simultaneous Replace Race (M14).
+Simultaneous Replace Race (M14), simultaneous slide+replace / Simultaneous +
+Ordered Slide Replace Race (M15).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  slide+replace, richer phases, joint UCT) or P4 CI / semantics
+  richer phases, joint UCT, vacated-origin hybrid for joint replace paths) or
+  P4 CI / semantics
 - Deferred: full Go rules; hex/graph `range > 1` unless a new seam forces it; CI
   workflows; `docs/semantics.md` refresh vs current kernel events; richer Guess
   Who commit/hypothesis beyond query+guess

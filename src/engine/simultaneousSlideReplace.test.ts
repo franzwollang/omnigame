@@ -70,10 +70,30 @@ describe("canJointSimultaneousMoves slide+replace real-board", () => {
 		const cfg = {
 			...examplePresets["simultaneous-slide-replace-race"].config,
 			initial: [
-				{ row: 4, col: 2, player: "X" as const, visibility: "public" as const },
-				{ row: 0, col: 2, player: "O" as const, visibility: "public" as const },
-				{ row: 2, col: 2, player: "O" as const, visibility: "public" as const },
-				{ row: 0, col: 0, player: "O" as const, visibility: "public" as const }
+				{
+					row: 4,
+					col: 2,
+					player: "X" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 0,
+					col: 2,
+					player: "O" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 2,
+					col: 2,
+					player: "O" as const,
+					visibility: "public" as const
+				},
+				{
+					row: 0,
+					col: 0,
+					player: "O" as const,
+					visibility: "public" as const
+				}
 			]
 		};
 		const { kernel } = compileConfig(cfg);
@@ -132,7 +152,7 @@ describe("canOrderedSimultaneousMoves slide+replace", () => {
 });
 
 describe("Simultaneous Slide Replace Race", () => {
-	it("compiles and lists the slide-capture joint as legal for X", () => {
+	it("compiles with joint resolve + slide replace", () => {
 		const cfg = examplePresets["simultaneous-slide-replace-race"].config;
 		const { kernel, gameConfig } = compileConfig(cfg);
 		expect(gameConfig.movement?.capture).toBe("replace");
@@ -141,16 +161,7 @@ describe("Simultaneous Slide Replace Race", () => {
 		const state = kernel.initialState(cfg.rng.seed);
 		expect(getCell(state.grid, { row: 4, col: 2 })).toBe("X");
 		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("O");
-		const legals = kernel.legalActions(state, "X");
-		const capture = legals.find(
-			(a) =>
-				a.type === "simultaneousMove" &&
-				a.moves.X.from.row === 4 &&
-				a.moves.X.from.col === 2 &&
-				a.moves.X.to.row === 0 &&
-				a.moves.X.to.col === 2
-		);
-		expect(capture).toBeDefined();
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("O");
 	});
 
 	it("joint slide capture emits pieceCaptured and X wins reach_row", () => {
@@ -163,14 +174,11 @@ describe("Simultaneous Slide Replace Race", () => {
 				O: { from: { row: 0, col: 0 }, to: { row: 1, col: 0 } }
 			}
 		};
-		const state = kernel.initialState(cfg.rng.seed);
-		const { state: next, events } = kernel.step(state, action);
-		expect(getCell(next.grid, { row: 0, col: 2 })).toBe("X");
-		expect(getCell(next.grid, { row: 1, col: 0 })).toBe("O");
-		expect(next.status).toBe("won");
-		expect(next.winner).toBe("X");
+		let state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
+		const result = kernel.stepSync(state, action);
 		expect(
-			events.some(
+			result.events.some(
 				(e) =>
 					e.type === "pieceCaptured" &&
 					e.captured === "O" &&
@@ -179,23 +187,32 @@ describe("Simultaneous Slide Replace Race", () => {
 					e.position.col === 2
 			)
 		).toBe(true);
+		expect(result.events.some((e) => e.type === "terminal")).toBe(true);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 4, col: 2 })).toBeNull();
+		expect(getCell(state.grid, { row: 1, col: 0 })).toBe("O");
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
 	});
 
 	it("replays the capture transcript deterministically", () => {
 		const cfg = examplePresets["simultaneous-slide-replace-race"].config;
-		const { kernel, gameConfig } = compileConfig(cfg);
-		const action: KernelAction = {
-			type: "simultaneousMove",
-			moves: {
-				X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
-				O: { from: { row: 0, col: 0 }, to: { row: 1, col: 0 } }
+		const { gameConfig } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousMove",
+				moves: {
+					X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+					O: { from: { row: 0, col: 0 }, to: { row: 1, col: 0 } }
+				}
 			}
-		};
-		const live = kernel.step(kernel.initialState(cfg.rng.seed), action).state;
-		const replayed = replayActions(gameConfig, cfg.rng.seed, [action]);
-		expect(replayed.status).toBe(live.status);
-		expect(replayed.winner).toBe(live.winner);
-		expect(getCell(replayed.grid, { row: 0, col: 2 })).toBe("X");
+		];
+		const replay = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 1, col: 0 })).toBe("O");
 	});
 });
 
@@ -223,19 +240,20 @@ describe("Ordered Simultaneous Slide Replace Race", () => {
 				O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
 			}
 		};
-		const { state: next, events } = kernel.step(
-			kernel.initialState(cfg.rng.seed),
-			action
-		);
-		expect(getCell(next.grid, { row: 0, col: 2 })).toBe("X");
-		expect(getCell(next.grid, { row: 0, col: 1 })).toBe(null);
-		expect(next.status).toBe("won");
-		expect(next.winner).toBe("X");
+		let state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
+		const result = kernel.stepSync(state, action);
 		expect(
-			events.some(
-				(e) => e.type === "pieceCaptured" && e.by === "X" && e.captured === "O"
+			result.events.some(
+				(e) =>
+					e.type === "pieceCaptured" && e.by === "X" && e.captured === "O"
 			)
 		).toBe(true);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 1 })).toBeNull();
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
 	});
 
 	it("o_first: O flees then X slides onto vacated cell (no pieceCaptured)", () => {
@@ -255,32 +273,34 @@ describe("Ordered Simultaneous Slide Replace Race", () => {
 				O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
 			}
 		};
-		const { state: next, events } = kernel.step(
-			kernel.initialState(cfg.rng.seed),
-			action
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.explainAction(state, 0, action).legal).toBe(true);
+		const result = kernel.stepSync(state, action);
+		expect(result.events.some((e) => e.type === "pieceCaptured")).toBe(
+			false
 		);
-		expect(getCell(next.grid, { row: 0, col: 2 })).toBe("X");
-		expect(getCell(next.grid, { row: 0, col: 1 })).toBe("O");
-		expect(next.status).toBe("won");
-		expect(next.winner).toBe("X");
-		expect(events.some((e) => e.type === "pieceCaptured")).toBe(false);
+		expect(getCell(result.nextState.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(result.nextState.grid, { row: 0, col: 1 })).toBe("O");
+		expect(result.nextState.status).toBe("won");
+		expect(result.nextState.winner).toBe("X");
 	});
 
 	it("replays x_first capture transcript", () => {
 		const cfg =
 			examplePresets["ordered-simultaneous-slide-replace-race"].config;
-		const { kernel, gameConfig } = compileConfig(cfg);
-		const action: KernelAction = {
-			type: "simultaneousMove",
-			moves: {
-				X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
-				O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+		const { gameConfig } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{
+				type: "simultaneousMove",
+				moves: {
+					X: { from: { row: 4, col: 2 }, to: { row: 0, col: 2 } },
+					O: { from: { row: 0, col: 2 }, to: { row: 0, col: 1 } }
+				}
 			}
-		};
-		const live = kernel.step(kernel.initialState(cfg.rng.seed), action).state;
-		const replayed = replayActions(gameConfig, cfg.rng.seed, [action]);
-		expect(replayed.status).toBe(live.status);
-		expect(replayed.winner).toBe(live.winner);
-		expect(getCell(replayed.grid, { row: 0, col: 2 })).toBe("X");
+		];
+		const replay = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 2 })).toBe("X");
 	});
 });
