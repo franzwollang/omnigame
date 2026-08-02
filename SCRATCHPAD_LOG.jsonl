@@ -64,4 +64,4 @@
 {"ts":"2026-08-02T01:24-00:00","focus":"M16 move→fire phases","summary":"Synced 7034; landed move→fire + Move & Fire Lite; typecheck + 374 tests green","next":"Pick next seam (joint UCT / vacated hybrid) or P4 CI/semantics"}
 {"ts":"2026-08-02T01:45-00:00","focus":"M17 joint replace hybrid","summary":"Synced 7ab6; landed vacated-origin hybrid + flee-race preset; tests pending green gate","next":"Pick next seam (joint UCT) or P4 CI/semantics"}
 {"ts":"2026-08-02T01:50-00:00","focus":"M17 joint replace hybrid","summary":"Vacated-origin for joint+replace (no dest-restore); flee-race preset; typecheck + 379 tests green","next":"Pick next seam (joint UCT) or P4 CI/semantics"}
-{"ts":"2026-08-02T02:05-00:00","focus":"M18 joint UCT simultaneous","summary":"Synced 0916; landed joint UCT/MCTS + tests; typecheck/test pending","next":"Pick next seam or P4 CI/semantics"}
+{"ts":"2026-08-02T02:05-00:00","focus":"M18 joint UCT simultaneous","summary":"Synced 0916; landed joint UCT/MCTS + tests; typecheck + 385 tests green","next":"Pick next seam or P4 CI/semantics"}
