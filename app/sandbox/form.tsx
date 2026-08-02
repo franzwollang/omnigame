@@ -25,7 +25,56 @@ type Props<T extends FieldValues> = {
 	form: any; // RHF useFormReturn for nested Config; kept as any to avoid type noise
 };
 
+type PhaseKey = "none" | "place,move" | "place,fire" | "place,move,fire";
+
+const PHASE_OPTIONS: { value: PhaseKey; label: string }[] = [
+	{ value: "none", label: "none (single action type)" },
+	{ value: "place,move", label: "place → move" },
+	{ value: "place,fire", label: "place → fire" },
+	{ value: "place,move,fire", label: "place → move → fire" }
+];
+
+function phasesToKey(phases: unknown): PhaseKey {
+	if (!Array.isArray(phases) || phases.length === 0) return "none";
+	const key = phases.join(",");
+	if (
+		key === "place,move" ||
+		key === "place,fire" ||
+		key === "place,move,fire"
+	) {
+		return key;
+	}
+	return "none";
+}
+
+function keyToPhases(key: PhaseKey): ("place" | "move" | "fire")[] | undefined {
+	if (key === "none") return undefined;
+	return key.split(",") as ("place" | "move" | "fire")[];
+}
+
 export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
+	const inputMode = form.watch("input.mode") as string | undefined;
+	const topology = (form.watch("grid.topology") as string | undefined) ?? "rectangle";
+	const schedule =
+		(form.watch("turn.schedule") as string | undefined) ?? "alternating";
+	const phases = form.watch("turn.phases") as string[] | undefined;
+	const phasesNeedMove = Array.isArray(phases) && phases.includes("move");
+	const showMovement = inputMode === "move" || phasesNeedMove;
+	const hexOrGraph = topology === "hex_offset" || topology === "graph";
+	const simultaneousMove = schedule === "simultaneous" && inputMode === "move";
+	const rangeMax = hexOrGraph ? 1 : 8;
+
+	const ensureMovement = () => {
+		const current = form.getValues("movement");
+		if (!current) {
+			form.setValue(
+				"movement",
+				{ adjacency: "orthogonal", range: 1, capture: "none" },
+				{ shouldDirty: true }
+			);
+		}
+	};
+
 	return (
 		<div className="flex flex-col flex-1 min-h-0">
 			<ScrollArea className="h-full min-h-0 rounded-md border">
@@ -35,6 +84,23 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 							className="flex flex-col gap-4 w-full"
 							onSubmit={(e) => e.preventDefault()}
 						>
+							<div className="rounded-md border border-dashed p-3 space-y-1">
+								<p className="text-sm font-medium">Form coverage</p>
+								<p className="text-xs text-muted-foreground">
+									This form covers common knobs (grid, turn schedule/budget,
+									movement, phases, placement, win, observation). It does not
+									cover the full schema.
+								</p>
+								<p className="text-xs text-muted-foreground">
+									JSON or presets required for:{" "}
+									<span className="font-medium text-foreground">
+										scheduler, grid.nodes/edges, initial seeds, placements,
+										placement.capture, fleet ship geometry beyond lengths,
+										deduction.*, identify_secret
+									</span>
+									.
+								</p>
+							</div>
 							<FormField
 								control={form.control}
 								name="metadata.name"
@@ -202,8 +268,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								joint move, commitReveal for hidden simultaneous,
 								resolveOrder for ordered same-cell priority,
 								actionsPerTurn for multi-step, delayTurns for queued
-								places, or phases for place→move / place→fire /
-								place→move→fire within a turn.
+								places. In-turn phases (place→move / place→fire /
+								place→move→fire) use the Phases control below.
 							</p>
 							<FormField
 								control={form.control}
@@ -346,7 +412,53 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<p className="text-xs text-muted-foreground">
 											&gt;1 = multi-step under alternating, or multi-action
 											rounds under simultaneous (rectangle | hex_offset |
-											graph + cell + n-in-a-row).
+											graph + cell + n-in-a-row). Incompatible with
+											turn.phases.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.phases"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Phases (in-turn)</FormLabel>
+										<FormControl>
+											<Select
+												value={phasesToKey(field.value)}
+												onValueChange={(v) => {
+													const key = v as PhaseKey;
+													const next = keyToPhases(key);
+													field.onChange(next);
+													if (next?.includes("move")) {
+														ensureMovement();
+													}
+													if (key === "place,fire") {
+														form.setValue("movement", undefined, {
+															shouldDirty: true
+														});
+													}
+												}}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="none" />
+												</SelectTrigger>
+												<SelectContent>
+													{PHASE_OPTIONS.map((opt) => (
+														<SelectItem key={opt.value} value={opt.value}>
+															{opt.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Alternating only; sequences place then move and/or
+											fire within one turn. Needs matching objective /
+											observation (see schema errors). Distinct from
+											actionsPerTurn.
 										</p>
 										<FormMessage />
 									</FormItem>
@@ -415,7 +527,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<FormControl>
 												<Select
 													value={field.value}
-													onValueChange={field.onChange}
+													onValueChange={(v) => {
+														field.onChange(v);
+														if (v === "move") ensureMovement();
+													}}
 												>
 													<SelectTrigger>
 														<SelectValue placeholder="Select mode" />
@@ -433,6 +548,138 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									)}
 								/>
 							</div>
+
+							{showMovement && (
+								<div className="space-y-2">
+									<p className="text-sm font-medium">Movement</p>
+									<p className="text-xs text-muted-foreground">
+										Required for input.mode = move and for phases that
+										include move. Diagonal/king and range &gt; 1 are
+										rectangle-only; joint simultaneous sliding uses
+										vacated-origin paths; ordered simultaneous sliding
+										revalidates the second seat after the first. Replace
+										capture is rectangle + alternating move only.
+									</p>
+									<div className="grid grid-cols-2 gap-4">
+										<FormField
+											control={form.control}
+											name="movement.adjacency"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Adjacency</FormLabel>
+													<FormControl>
+														<Select
+															value={field.value ?? "orthogonal"}
+															onValueChange={(v) => {
+																ensureMovement();
+																field.onChange(v);
+															}}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="orthogonal" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="orthogonal">
+																	orthogonal
+																</SelectItem>
+																<SelectItem
+																	value="diagonal"
+																	disabled={hexOrGraph}
+																>
+																	diagonal (rect)
+																</SelectItem>
+																<SelectItem
+																	value="king"
+																	disabled={hexOrGraph}
+																>
+																	king (rect)
+																</SelectItem>
+															</SelectContent>
+														</Select>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="movement.range"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Range</FormLabel>
+													<FormControl>
+														<Input
+															type="number"
+															min={1}
+															max={rangeMax}
+															value={field.value ?? 1}
+															onChange={(e) => {
+																ensureMovement();
+																const n = Number(e.target.value);
+																const clamped = Number.isFinite(n)
+																	? Math.min(
+																			rangeMax,
+																			Math.max(1, Math.trunc(n))
+																		)
+																	: 1;
+																field.onChange(clamped);
+															}}
+														/>
+													</FormControl>
+													<p className="text-xs text-muted-foreground">
+														1 = adjacent step; 2–8 = sliding ray on
+														rectangle (stops at occupied / edge).
+														{rangeMax === 1
+															? " Locked to 1 for hex/graph."
+															: ""}
+													</p>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									</div>
+									<FormField
+										control={form.control}
+										name="movement.capture"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Capture</FormLabel>
+												<FormControl>
+													<Select
+														value={field.value ?? "none"}
+														onValueChange={(v) => {
+															ensureMovement();
+															field.onChange(v);
+														}}
+														disabled={
+															hexOrGraph ||
+															simultaneousMove ||
+															inputMode !== "move"
+														}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="none" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="none">none</SelectItem>
+															<SelectItem value="replace">
+																replace (onto enemy)
+															</SelectItem>
+														</SelectContent>
+													</Select>
+												</FormControl>
+												<p className="text-xs text-muted-foreground">
+													Replace: land on an enemy cell to remove it
+													(path must be empty except destination).
+													Rectangle + move input only; not simultaneous
+													or placement.capture.
+												</p>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								</div>
+							)}
 
 							<div className="space-y-2">
 								<p className="text-sm font-medium">Observation / objective</p>
