@@ -1,6 +1,6 @@
 {
-  "updated_at": "2026-08-02T01:10-00:00",
-  "turn": 39,
+  "updated_at": "2026-08-02T01:15-00:00",
+  "turn": 40,
   "focus": {
     "milestone": "M15",
     "issue": "next-missing-mechanism",
@@ -9,7 +9,7 @@
   "recent": [
     "Synced M8–M14 from 855b onto 7034",
     "M15: simultaneous slide+replace + Slide Replace Race presets",
-    "Schema unlock range>1 replace under simultaneous"
+    "Green gate: typecheck + 366 tests"
   ],
   "discoveries": [
     "Joint replace slides use real-board (paths clear pre-round)",
