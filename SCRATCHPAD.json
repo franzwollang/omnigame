@@ -1,22 +1,22 @@
 {
-  "updated_at": "2026-08-02T05:46-00:00",
-  "turn": 57,
+  "updated_at": "2026-08-02T06:10-00:00",
+  "turn": 58,
   "focus": {
-    "milestone": "M29",
+    "milestone": "M30",
     "issue": "next-missing-mechanism",
-    "goal": "deduction query→eliminate phases landed; hand off next seam or P4"
+    "goal": "simultaneous deduction joint query/guess landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M28 from 9fbb onto 7ddb",
-    "Landed M29 query→eliminate phases + Commit Phases Lite",
-    "467 green after ScheduleInTurnPhases CellsWritable-only"
+    "Synced M8–M29 from 7ddb onto 7dce",
+    "Landed M30 simultaneousQuery/Guess + Simultaneous Guess Who Lite",
+    "475 green; ScheduleSimultaneous CellsWritable-only for deduction"
   ],
   "discoveries": [
-    "ScheduleInTurnPhases must not require ResolvedCell for deduction phases"
+    "ScheduleSimultaneous must not require ResolvedCell for deduction"
   ],
   "open_threads": [
-    "Next: hop-ball, simultaneous deduction, fire→move, or P4 CI/semantics"
+    "Next: hop-ball, fire→move, sim-deduction UCT/compound, or P4 CI/semantics"
   ],
-  "next_step": "Pick next seam (hop-ball/simultaneous deduction/fire→move) or P4",
+  "next_step": "Pick next seam (hop-ball/fire→move/sim-deduction ext) or P4",
   "blockers": []
 }
