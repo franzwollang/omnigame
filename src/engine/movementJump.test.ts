@@ -218,7 +218,7 @@ describe("Jump Race (movement.capture = jump)", () => {
 });
 
 describe("movement.capture = jump schema / validateConfig", () => {
-	it("rejects jump on hex_offset", () => {
+	it("accepts jump on hex_offset with orthogonal adjacency", () => {
 		const cfg = {
 			...examplePresets["jump-race"].config,
 			grid: {
@@ -227,6 +227,19 @@ describe("movement.capture = jump schema / validateConfig", () => {
 				topology: "hex_offset" as const,
 				wrap: false
 			},
+			movement: {
+				adjacency: "orthogonal" as const,
+				range: 1,
+				capture: "jump" as const
+			}
+		};
+		expect(validateConfig(cfg).ok).toBe(true);
+		expect(zConfig.safeParse(cfg).success).toBe(true);
+	});
+
+	it("rejects jump on graph", () => {
+		const cfg = {
+			...examplePresets["graph-replace-race"].config,
 			movement: {
 				adjacency: "orthogonal" as const,
 				range: 1,
@@ -450,5 +463,213 @@ describe("Mandatory Jump Race (movement.mustCapture)", () => {
 		expect(result.events.some((e) => e.type === "ignored")).toBe(false);
 		expect(getCell(result.nextState.grid, { row: 3, col: 3 })).toBe("X");
 		expect(result.nextState.currentPlayer).toBe("O");
+	});
+});
+
+const HEX_JUMP: MovementConfig = {
+	adjacency: "orthogonal",
+	range: 1,
+	capture: "jump"
+};
+
+const HEX_BOARD = { topology: "hex_offset" as const, wrap: false };
+
+describe("hex jump capture helpers", () => {
+	it("lists cube-axis leap landings over an adjacent enemy", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["hex-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 2 };
+		expect(getCell(state.grid, from)).toBe("X");
+		expect(getCell(state.grid, { row: 3, col: 1 })).toBe("O");
+		const dests = jumpDestinations(
+			state.grid,
+			from,
+			HEX_JUMP,
+			HEX_BOARD,
+			"X"
+		);
+		expect(dests).toEqual([{ row: 2, col: 1 }]);
+		expect(
+			jumpMid(from, { row: 2, col: 1 }, HEX_JUMP, HEX_BOARD, state.grid)
+		).toEqual({ row: 3, col: 1 });
+		expect(
+			isJumpCapture(
+				state.grid,
+				from,
+				{ row: 2, col: 1 },
+				"X",
+				HEX_JUMP,
+				HEX_BOARD
+			)
+		).toBe(true);
+	});
+
+	it("unions quiet hex neighbors with jump landings", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["hex-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 2 };
+		const dests = legalDestinations(state.grid, from, HEX_JUMP, HEX_BOARD);
+		expect(dests).toEqual(
+			expect.arrayContaining([
+				{ row: 2, col: 1 },
+				{ row: 4, col: 3 },
+				{ row: 3, col: 2 },
+				{ row: 4, col: 1 }
+			])
+		);
+		expect(
+			canMove(state.grid, from, { row: 2, col: 1 }, "X", HEX_JUMP, HEX_BOARD)
+		).toBe(true);
+		// Cannot land on the enemy (replace-style).
+		expect(
+			canMove(state.grid, from, { row: 3, col: 1 }, "X", HEX_JUMP, HEX_BOARD)
+		).toBe(false);
+	});
+
+	it("rejects jumping over empty or own piece on hex", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["hex-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 2 };
+		// Empty mid toward (4,4): mid (4,3) empty — not a jump.
+		expect(
+			isJumpCapture(
+				state.grid,
+				from,
+				{ row: 4, col: 4 },
+				"X",
+				HEX_JUMP,
+				HEX_BOARD
+			)
+		).toBe(false);
+		const withOwn = {
+			...state.grid,
+			cells: setCell(state.grid, { row: 3, col: 1 }, "X")
+		};
+		expect(
+			isJumpCapture(
+				withOwn,
+				from,
+				{ row: 2, col: 1 },
+				"X",
+				HEX_JUMP,
+				HEX_BOARD
+			)
+		).toBe(false);
+	});
+});
+
+describe("Hex Jump Race (movement.capture = jump on hex_offset)", () => {
+	it("validates and compiles the hex-jump-race preset", () => {
+		const cfg = examplePresets["hex-jump-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const parsed = zConfig.safeParse(cfg);
+		expect(parsed.success).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.movement?.capture).toBe("jump");
+		expect(gameConfig.movement?.adjacency).toBe("orthogonal");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(getCell(state.grid, { row: 4, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 3, col: 1 })).toBe("O");
+		const legal = kernel.legalActions(state, 0);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 4 &&
+					a.from.col === 2 &&
+					a.to.row === 2 &&
+					a.to.col === 1
+			)
+		).toBe(true);
+	});
+
+	it("single hex jump clears mid, emits pieceCaptured, continues chain", () => {
+		const cfg = examplePresets["hex-jump-race"].config;
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const jump: KernelAction = {
+			type: "move",
+			from: { row: 4, col: 2 },
+			to: { row: 2, col: 1 }
+		};
+		const result = kernel.stepSync(state, jump);
+		expect(result.events.some((e) => e.type === "ignored")).toBe(false);
+		expect(
+			result.events.some(
+				(e) =>
+					e.type === "pieceCaptured" &&
+					e.position.row === 3 &&
+					e.position.col === 1 &&
+					e.captured === "O" &&
+					e.by === "X"
+			)
+		).toBe(true);
+		expect(getCell(result.nextState.grid, { row: 4, col: 2 })).toBe(null);
+		expect(getCell(result.nextState.grid, { row: 3, col: 1 })).toBe(null);
+		expect(getCell(result.nextState.grid, { row: 2, col: 1 })).toBe("X");
+		expect(result.nextState.currentPlayer).toBe("X");
+		expect(result.nextState.mustContinueFrom).toEqual({ row: 2, col: 1 });
+		const chainLegal = kernel.legalActions(result.nextState, 0);
+		expect(
+			chainLegal.every(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 2 &&
+					a.from.col === 1
+			)
+		).toBe(true);
+		expect(
+			chainLegal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 0
+			)
+		).toBe(true);
+	});
+
+	it("hex chain second jump wins reach_row (transcript + replay)", () => {
+		const cfg = examplePresets["hex-jump-race"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const actions: KernelAction[] = [
+			{ type: "move", from: { row: 4, col: 2 }, to: { row: 2, col: 1 } },
+			{ type: "move", from: { row: 2, col: 1 }, to: { row: 0, col: 0 } }
+		];
+		let cur = state;
+		const events: Array<{ type: string }> = [];
+		for (const action of actions) {
+			const step = kernel.stepSync(cur, action);
+			events.push(...step.events);
+			cur = step.nextState;
+		}
+		expect(cur.status).toBe("won");
+		expect(cur.winner).toBe("X");
+		expect(cur.mustContinueFrom).toBeUndefined();
+		expect(
+			events.filter((e) => e.type === "pieceCaptured")
+		).toHaveLength(2);
+		expect(getCell(cur.grid, { row: 0, col: 0 })).toBe("X");
+		expect(getCell(cur.grid, { row: 1, col: 0 })).toBe(null);
+
+		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replayed.finalState.status).toBe("won");
+		expect(replayed.finalState.winner).toBe("X");
+		expect(getCell(replayed.finalState.grid, { row: 0, col: 0 })).toBe("X");
+	});
+
+	it("hasAnyJumpCapture sees hex leaps", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["hex-jump-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		expect(
+			hasAnyJumpCapture(state.grid, "X", HEX_JUMP, HEX_BOARD)
+		).toBe(true);
 	});
 });

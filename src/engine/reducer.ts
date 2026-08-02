@@ -1897,7 +1897,7 @@ function handleMove(
 		movement,
 		board
 	);
-	const mid = jumping ? jumpMid(from, to, movement) : null;
+	const mid = jumping ? jumpMid(from, to, movement, board, state.grid) : null;
 
 	let cells = setCell(state.grid, from, null);
 	if (mid) {

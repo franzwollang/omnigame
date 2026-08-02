@@ -602,7 +602,13 @@ function applyStep(
 		actor !== "simultaneous" &&
 		(actor === "X" || actor === "O")
 	) {
-		const mid = jumpMid(action.from, action.to, config.movement);
+		const mid = jumpMid(
+			action.from,
+			action.to,
+			config.movement,
+			movementBoardFrom(config),
+			state.grid
+		);
 		if (mid) {
 			const prior = getCell(state.grid, mid);
 			if (

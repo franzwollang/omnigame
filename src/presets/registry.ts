@@ -1665,6 +1665,59 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"hex-jump-race": definePreset({
+		id: "hex-jump-race",
+		name: "Hex Jump Race",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"chain",
+			"reach-row",
+			"hex",
+			"topology",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Cube-axis jump race on odd-r hex: leap over an adjacent enemy along a cube direction to the empty cell beyond. Further jumps from the landing keep the same seat (mustContinueFrom). Unlocks movement.capture = jump on hex_offset — rectangle Jump Race cannot express hex leap-over geometry; graph jump remains deferred.",
+		config: {
+			metadata: { name: "Hex Jump Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "jump" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hex-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Cube-axis chain (q:0,r:-1): X(4,2) → jump O(3,1) → (2,1) → jump O(1,0) → (0,0) wins.
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "O", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"mandatory-jump-race": definePreset({
 		id: "mandatory-jump-race",
 		name: "Mandatory Jump Race",

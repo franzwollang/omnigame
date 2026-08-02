@@ -3,15 +3,16 @@
  * Rectangle: orthogonal | diagonal | king with sliding range 1..8 (blocker-
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
  * (path empty except destination). Optional `capture: "jump"` leaps over an
- * adjacent enemy to the empty cell beyond (rectangle foothold; quiet moves
- * stay range 1). Optional `mustCapture: true` (jump only) forbids quiet moves
- * at turn start when any jump exists for the acting seat (Checkers-lite
+ * adjacent enemy to the empty cell beyond (rectangle | hex_offset; quiet
+ * moves stay range 1). Optional `mustCapture: true` (jump only) forbids quiet
+ * moves at turn start when any jump exists for the acting seat (Checkers-lite
  * mandatory capture; mid-chain still uses `mustContinueFrom`). Hex_offset:
- * orthogonal cube-axis slides (range 1..8, same blocker/replace rules).
+ * orthogonal cube-axis slides (range 1..8, same blocker/replace rules) and
+ * cube-axis jump (enemy mid + empty land two hops along one cube dir).
  * Graph: orthogonal chain-walk along explicit edges
  * (range 1..8; no turning at junctions) **or** hop-ball BFS within range
  * (`graphReach: "hop"`; may turn at junctions) — same blocker/replace rules
- * as rectangle/hex. Jump capture is rectangle-only (not hex/graph).
+ * as rectangle/hex. Jump capture is not yet on graph.
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -20,6 +21,8 @@ import {
 	neighbors,
 	stepHex,
 	CUBE_NEIGHBOR_DIRS,
+	offsetToCube,
+	cubeToOffset,
 	type GridTopology,
 	type GraphTopologyData
 } from "@/engine/topology";
@@ -37,7 +40,7 @@ export type MovementConfig = {
 	range: number;
 	/**
 	 * Capture geometry. `replace` = land on enemy. `jump` = leap over adjacent
-	 * enemy to empty cell beyond (rectangle only). Default none.
+	 * enemy to empty cell beyond (rectangle | hex_offset). Default none.
 	 */
 	capture?: MovementCapture;
 	/**
@@ -102,14 +105,43 @@ function posKey(p: Position): string {
 }
 
 /**
- * Mid cell for a 2-step jump along one adjacency ray. Returns null when
- * `to` is not exactly two steps from `from` on a single adjacency delta.
+ * Mid cell for a 2-step jump along one adjacency ray (rectangle) or one
+ * cube axis (hex_offset). Returns null when `to` is not exactly two steps
+ * from `from` on a single direction. Pass `wrapOrBoard` + `grid` for hex
+ * (and wrap-aware mid); rectangle still uses raw deltas when board omitted.
  */
 export function jumpMid(
 	from: Position,
 	to: Position,
-	config: MovementConfig
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false,
+	grid?: Grid
 ): Position | null {
+	const opts = boardOpts(wrapOrBoard);
+	if (opts.topology === "graph") return null;
+	if (opts.topology === "hex_offset") {
+		if (config.adjacency !== "orthogonal") return null;
+		for (const d of CUBE_NEIGHBOR_DIRS) {
+			if (grid) {
+				const mid = stepHex(grid, from, d, opts.wrap);
+				if (!mid) continue;
+				const land = stepHex(grid, mid, d, opts.wrap);
+				if (land && land.row === to.row && land.col === to.col) {
+					return mid;
+				}
+			} else {
+				const c = offsetToCube(from);
+				const midCube = { q: c.q + d.q, r: c.r + d.r };
+				const mid = cubeToOffset(midCube);
+				const land = cubeToOffset({
+					q: midCube.q + d.q,
+					r: midCube.r + d.r
+				});
+				if (land.row === to.row && land.col === to.col) return mid;
+			}
+		}
+		return null;
+	}
 	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
 		if (to.row === from.row + 2 * dr && to.col === from.col + 2 * dc) {
 			return { row: from.row + dr, col: from.col + dc };
@@ -120,8 +152,8 @@ export function jumpMid(
 
 /**
  * Landing cells reachable by jumping over exactly one enemy to an empty
- * square (rectangle adjacency rays). Distinct from replace (land on enemy)
- * and hop-ball (BFS through empties).
+ * square (rectangle adjacency rays or hex cube-axis double steps). Distinct
+ * from replace (land on enemy) and hop-ball (BFS through empties).
  */
 export function jumpDestinations(
 	grid: Grid,
@@ -132,10 +164,27 @@ export function jumpDestinations(
 ): Position[] {
 	if (!inBounds(grid, from)) return [];
 	const opts = boardOpts(wrapOrBoard);
-	if (opts.topology !== "rectangle") return [];
+	if (opts.topology === "graph") return [];
 	const piece = mover ?? getCell(grid, from);
 	if (piece !== "X" && piece !== "O") return [];
 	const out: Position[] = [];
+
+	if (opts.topology === "hex_offset") {
+		if (config.adjacency !== "orthogonal") return [];
+		for (const d of CUBE_NEIGHBOR_DIRS) {
+			const mid = stepHex(grid, from, d, opts.wrap);
+			if (!mid) continue;
+			const occ = getCell(grid, mid);
+			if (occ === null || occ === piece || (occ !== "X" && occ !== "O")) {
+				continue;
+			}
+			const land = stepHex(grid, mid, d, opts.wrap);
+			if (!land || getCell(grid, land) !== null) continue;
+			out.push(land);
+		}
+		return out;
+	}
+
 	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
 		const mid = step(grid, from, { row: dr, col: dc }, opts.wrap);
 		if (!mid) continue;
@@ -160,15 +209,18 @@ export function isJumpCapture(
 	wrapOrBoard: boolean | MovementBoard = false
 ): boolean {
 	if (config.capture !== "jump") return false;
-	const mid = jumpMid(from, to, config);
+	const opts = boardOpts(wrapOrBoard);
+	if (opts.topology === "graph") return false;
+	if (opts.topology !== "rectangle" && opts.topology !== "hex_offset") {
+		return false;
+	}
+	const mid = jumpMid(from, to, config, wrapOrBoard, grid);
 	if (!mid || !inBounds(grid, mid) || !inBounds(grid, to)) return false;
 	const occ = getCell(grid, mid);
 	if (occ === null || occ === player || (occ !== "X" && occ !== "O")) {
 		return false;
 	}
 	if (getCell(grid, to) !== null) return false;
-	const opts = boardOpts(wrapOrBoard);
-	if (opts.topology !== "rectangle") return false;
 	return jumpDestinations(grid, from, config, wrapOrBoard, player).some(
 		(p) => p.row === to.row && p.col === to.col
 	);
@@ -186,7 +238,9 @@ export function hasAnyJumpCapture(
 ): boolean {
 	if (config.capture !== "jump") return false;
 	const opts = boardOpts(wrapOrBoard);
-	if (opts.topology !== "rectangle") return false;
+	if (opts.topology !== "rectangle" && opts.topology !== "hex_offset") {
+		return false;
+	}
 	for (let row = 0; row < grid.height; row++) {
 		for (let col = 0; col < grid.width; col++) {
 			const from = { row, col };
@@ -447,7 +501,7 @@ export function legalDestinations(
 
 	if (topology === "graph") {
 		// Chain-walk (default) or hop-ball BFS; same blocker/replace as rect/hex.
-		// Jump capture is rectangle-only.
+		// Jump capture on graph is deferred.
 		if (config.capture === "jump") return [];
 		if (config.adjacency !== "orthogonal" || !graph) return [];
 		if (config.graphReach === "hop") {
@@ -459,7 +513,26 @@ export function legalDestinations(
 	if (topology === "hex_offset") {
 		// Cube-axis slides with the same blocker / replace rules as rectangle.
 		if (config.adjacency !== "orthogonal") return [];
-		if (config.capture === "jump") return [];
+		if (config.capture === "jump") {
+			const quiet = slideHexDestinations(
+				grid,
+				from,
+				{ ...config, capture: "none", range: 1 },
+				wrap,
+				mover
+			);
+			const jumps = jumpDestinations(grid, from, config, opts, mover);
+			const seen = new Set(quiet.map(posKey));
+			const out = [...quiet];
+			for (const j of jumps) {
+				const k = posKey(j);
+				if (!seen.has(k)) {
+					seen.add(k);
+					out.push(j);
+				}
+			}
+			return out;
+		}
 		return slideHexDestinations(grid, from, config, wrap, mover);
 	}
 

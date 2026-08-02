@@ -139,11 +139,12 @@ export const zConfig = z
 		 * (cube-axis rays), and graph (edge chain-walk or hop-ball BFS).
 		 * Ordered simultaneous + range > 1 uses sequential path revalidation.
 		 * `capture: "jump"` — leap over an adjacent enemy to the empty cell
-		 * beyond (rectangle + alternating only; quiet moves stay range 1).
-		 * After a jump, further jumps from the landing cell keep the same
-		 * seat (`mustContinueFrom` chain). Optional `mustCapture: true`
-		 * forbids quiet moves at turn start when any jump exists (Checkers-lite
-		 * mandatory capture). Distinct from replace and hop-ball.
+		 * beyond (rectangle | hex_offset + alternating only; quiet moves stay
+		 * range 1; hex uses cube-axis double steps). After a jump, further
+		 * jumps from the landing cell keep the same seat (`mustContinueFrom`
+		 * chain). Optional `mustCapture: true` forbids quiet moves at turn
+		 * start when any jump exists (Checkers-lite mandatory capture).
+		 * Distinct from replace and hop-ball. Graph jump deferred.
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -2073,7 +2074,7 @@ export const zConfig = z
 			}
 		}
 
-		// Jump capture / multi-jump chains: rectangle + alternating foothold
+		// Jump capture / multi-jump chains: rectangle | hex_offset + alternating
 		if (cfg.movement?.capture === "jump") {
 			if (!moveInput) {
 				ctx.addIssue({
@@ -2083,12 +2084,15 @@ export const zConfig = z
 						"movement.capture = 'jump' requires input.mode = 'move'"
 				});
 			}
-			if (cfg.grid.topology !== "rectangle") {
+			if (
+				cfg.grid.topology !== "rectangle" &&
+				cfg.grid.topology !== "hex_offset"
+			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["movement", "capture"],
 					message:
-						"movement.capture = 'jump' requires grid.topology = 'rectangle' (hex/graph deferred)"
+						"movement.capture = 'jump' requires grid.topology = 'rectangle' or 'hex_offset' (graph deferred)"
 				});
 			}
 			if (captureEnabled) {
