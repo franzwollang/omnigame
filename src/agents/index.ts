@@ -4,6 +4,13 @@ export { createGreedyAgent } from "@/agents/greedy";
 export { createTinyMctsAgent } from "@/agents/mcts";
 export { createUctAgent, actionKey } from "@/agents/uct";
 export { createHuntAgent, pickHuntFireAction } from "@/agents/hunt";
+export {
+	canSearchJointActions,
+	enumerateJointLegalActions,
+	jointSeatBudget,
+	orderedDistinctPlaceTuples,
+	seatComponentFromJoint
+} from "@/agents/jointLegal";
 
 import type { Seed } from "@/engine/kernel";
 import type { Agent, AgentKind } from "@/agents/types";

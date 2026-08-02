@@ -543,8 +543,18 @@ export default function GamePage() {
 							<option value="random">random</option>
 							<option value="greedy">greedy</option>
 							<option value="hunt">hunt</option>
-							<option value="mcts">mcts</option>
-							<option value="uct">uct</option>
+							<option value="mcts">
+								mcts
+								{enableSimultaneous
+									? " (joint search; random if commitReveal)"
+									: ""}
+							</option>
+							<option value="uct">
+								uct
+								{enableSimultaneous
+									? " (joint search; random if commitReveal)"
+									: ""}
+							</option>
 						</select>
 						<Button
 							variant="outline"
@@ -555,11 +565,26 @@ export default function GamePage() {
 								legalActionsList.length === 0
 							}
 							onClick={stepAgent}
-							title="Play one kernel legal action from the selected agent"
+							title={
+								enableSimultaneous &&
+								(agentKind === "mcts" || agentKind === "uct")
+									? "Under open simultaneous, MCTS/UCT search joint place/move actions including multi-action rounds (commitReveal still random per seat)"
+									: "Play one kernel legal action from the selected agent"
+							}
 						>
 							Agent step
 						</Button>
 					</div>
+					{enableSimultaneous &&
+						(agentKind === "mcts" ||
+							agentKind === "uct" ||
+							agentKind === "greedy") && (
+							<p className="mt-1 font-mono text-xs text-muted-foreground">
+								{agentKind === "greedy"
+									? "Greedy skips lookahead under simultaneous (single place/move is a no-op until joint)."
+									: "MCTS/UCT: joint place/move search under open simultaneous (incl. multi-action); commitReveal still random per seat."}
+							</p>
+						)}
 					{enableTick && (
 						<p className="mt-1 font-mono text-xs text-muted-foreground">
 							Life Lite: place cells, then Tick for B3/S23 step
@@ -741,7 +766,11 @@ export default function GamePage() {
 							? popOutRow
 							: undefined
 					}
-					inputMode={currentConfig?.input.mode ?? "cell"}
+					inputMode={
+						currentConfig?.input.mode === "deduction"
+							? "cell"
+							: (currentConfig?.input.mode ?? "cell")
+					}
 					topology={currentConfig?.grid.topology ?? "rectangle"}
 					graph={engineConfig.graph}
 					highlightCells={highlightCells}
