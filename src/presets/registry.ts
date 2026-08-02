@@ -1420,6 +1420,59 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"move-fire-lite": definePreset({
+		id: "move-fire-lite",
+		name: "Move & Fire Lite",
+		tags: [
+			"phases",
+			"move",
+			"fire",
+			"hit-miss",
+			"5x5",
+			"destroy-hidden",
+			"mechanism"
+		],
+		description:
+			"Each turn: move your public spotter one step, then fire one shot. Fixed hidden fleets; sink to win. Unlocks turn.phases starting with move (no place) — not place→fire or place→move→fire.",
+		config: {
+			metadata: { name: "Move & Fire Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "alternating",
+				phases: ["move", "fire"]
+			},
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			movement: { adjacency: "orthogonal", range: 1 },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "hit_miss" },
+			objective: { mode: "destroy_hidden" },
+			tokens: [
+				{
+					id: "x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "X", visibility: "owner" },
+				{ row: 0, col: 1, player: "X", visibility: "owner" },
+				{ row: 4, col: 3, player: "O", visibility: "owner" },
+				{ row: 4, col: 4, player: "O", visibility: "owner" }
+			]
+		}
+	}),
 	"step-race": definePreset({
 		id: "step-race",
 		name: "Step Race",

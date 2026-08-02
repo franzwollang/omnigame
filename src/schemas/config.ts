@@ -80,8 +80,8 @@ export const zConfig = z
 					.optional(),
 				/**
 				 * Ordered in-turn action types before handoff
-				 * (place→move, place→fire, or place→move→fire). Distinct from
-				 * actionsPerTurn (N copies of one action type).
+				 * (place→move, place→fire, place→move→fire, or move→fire).
+				 * Distinct from actionsPerTurn (N copies of one action type).
 				 */
 				phases: z
 					.array(z.enum(["place", "move", "fire"]))
@@ -1128,7 +1128,7 @@ export const zConfig = z
 			}
 		}
 
-		// In-turn phase sequence (place→move / place→fire / place→move→fire)
+		// In-turn phase sequence (place→move / place→fire / place→move→fire / move→fire)
 		if (inTurnPhases) {
 			const phases = cfg.turn.phases!;
 			const hasMove = phases.includes("move");
@@ -1138,6 +1138,10 @@ export const zConfig = z
 				phases[0] === "place" &&
 				phases[1] === "move" &&
 				phases[2] === "fire";
+			const isMoveFire =
+				phases.length === 2 &&
+				phases[0] === "move" &&
+				phases[1] === "fire";
 			if (cfg.turn.schedule !== "alternating") {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -1169,11 +1173,12 @@ export const zConfig = z
 						"turn.phases is incompatible with simultaneous / commitReveal"
 				});
 			}
-			if (phases[0] !== "place") {
+			if (phases[0] !== "place" && !isMoveFire) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
-					message: "turn.phases must start with 'place'"
+					message:
+						"turn.phases must start with 'place', or be exactly ['move','fire']"
 				});
 			}
 			if (!hasMove && !hasFire) {
@@ -1181,15 +1186,15 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
 					message:
-						"turn.phases must include 'move' or 'fire' after place (e.g. ['place','move'], ['place','fire'], or ['place','move','fire'])"
+						"turn.phases must include 'move' or 'fire' (e.g. ['place','move'], ['place','fire'], ['place','move','fire'], or ['move','fire'])"
 				});
 			}
-			if (hasMove && hasFire && !isTriple) {
+			if (hasMove && hasFire && !isTriple && !isMoveFire) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "phases"],
 					message:
-						"turn.phases with both move and fire must be exactly ['place','move','fire']"
+						"turn.phases with both move and fire must be ['place','move','fire'] or ['move','fire']"
 				});
 			}
 			if (isTriple) {
@@ -1222,6 +1227,41 @@ export const zConfig = z
 						path: ["win"],
 						message:
 							"turn.phases place→move→fire requires a win block (connect leg)"
+					});
+				}
+			} else if (isMoveFire) {
+				if (!hitMiss) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["observation", "mode"],
+						message:
+							"turn.phases move→fire requires observation.mode = 'hit_miss'"
+					});
+				}
+				if (cfg.objective.mode !== "destroy_hidden") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["objective", "mode"],
+						message:
+							"turn.phases move→fire requires objective.mode = 'destroy_hidden'"
+					});
+				}
+				if (!cfg.movement) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement"],
+						message: "turn.phases move→fire requires a movement block"
+					});
+				}
+				const publicSeeds = (cfg.initial ?? []).filter(
+					(p) => (p.visibility ?? "public") === "public"
+				);
+				if (publicSeeds.length === 0) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["initial"],
+						message:
+							"turn.phases move→fire requires public initial seeds (movable spotters); fleets stay owner-hidden"
 					});
 				}
 			} else {
@@ -1300,7 +1340,7 @@ export const zConfig = z
 					code: z.ZodIssueCode.custom,
 					path: ["fleet"],
 					message:
-						"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire / place→move→fire)"
+						"turn.phases is incompatible with fleet placement (use seeded initial ships for place→fire / place→move→fire / move→fire)"
 				});
 			}
 			if (hexBoard || graphBoard) {

@@ -25,13 +25,19 @@ type Props<T extends FieldValues> = {
 	form: any; // RHF useFormReturn for nested Config; kept as any to avoid type noise
 };
 
-type PhaseKey = "none" | "place,move" | "place,fire" | "place,move,fire";
+type PhaseKey =
+	| "none"
+	| "place,move"
+	| "place,fire"
+	| "place,move,fire"
+	| "move,fire";
 
 const PHASE_OPTIONS: { value: PhaseKey; label: string }[] = [
 	{ value: "none", label: "none (single action type)" },
 	{ value: "place,move", label: "place → move" },
 	{ value: "place,fire", label: "place → fire" },
-	{ value: "place,move,fire", label: "place → move → fire" }
+	{ value: "place,move,fire", label: "place → move → fire" },
+	{ value: "move,fire", label: "move → fire" }
 ];
 
 function phasesToKey(phases: unknown): PhaseKey {
@@ -40,7 +46,8 @@ function phasesToKey(phases: unknown): PhaseKey {
 	if (
 		key === "place,move" ||
 		key === "place,fire" ||
-		key === "place,move,fire"
+		key === "place,move,fire" ||
+		key === "move,fire"
 	) {
 		return key;
 	}
@@ -270,7 +277,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								resolveOrder for ordered same-cell priority,
 								actionsPerTurn for multi-step, delayTurns for queued
 								places. In-turn phases (place→move / place→fire /
-								place→move→fire) use the Phases control below.
+								place→move→fire / move→fire) use the Phases control
+								below.
 							</p>
 							<FormField
 								control={form.control}

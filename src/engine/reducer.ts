@@ -139,9 +139,9 @@ export type GameConfig = {
 	 */
 	resolveOrder?: "joint" | "x_first" | "o_first";
 	/**
-	 * Ordered in-turn action types (place→move, place→fire, or
-	 * place→move→fire) before handoff. When set, GameState.turnPhaseIndex
-	 * tracks the active phase.
+	 * Ordered in-turn action types (place→move, place→fire,
+	 * place→move→fire, or move→fire) before handoff. When set,
+	 * GameState.turnPhaseIndex tracks the active phase.
 	 */
 	turnPhases?: Array<"place" | "move" | "fire">;
 	scheduler?: SchedulerConfig;
