@@ -25,7 +25,7 @@ type Props = {
 	onActivateRow?: (row: number) => void;
 	onPopOutColumn?: (col: number) => void;
 	onPopOutRow?: (row: number) => void;
-	inputMode?: "cell" | "column" | "row" | "move";
+	inputMode?: "cell" | "column" | "row" | "move" | "flip" | "deduction";
 	enablePopOutButtons?: boolean;
 	/** Which board edge hosts pop-out buttons (exit side). */
 	popOutSide?: "top" | "bottom" | "left" | "right";
@@ -580,7 +580,7 @@ export default function SandboxCanvas({
 		loader.setCrossOrigin("anonymous");
 
 		cells.forEach((value, index) => {
-			if (!value) return;
+			if (value == null) return;
 			const row = Math.floor(index / gridWidth);
 			const col = index % gridWidth;
 			const { x, y } = cellWorldPos(
@@ -642,8 +642,114 @@ export default function SandboxCanvas({
 				marksGroup.add(dot);
 				return;
 			}
+			if (value === "mine") {
+				const geo = new THREE.CircleGeometry(cellSize * 0.22, 16);
+				const mat = new THREE.MeshBasicMaterial({ color: 0x1f2937 });
+				const mesh = new THREE.Mesh(geo, mat);
+				mesh.position.set(x, y, 0.001);
+				marksGroup.add(mesh);
+				return;
+			}
+			// Memory Flip pair marks (`mem:0` ..) → token label by index / id
+			if (typeof value === "string" && value.startsWith("mem:")) {
+				const pairIdx = Number(value.slice(4));
+				const memToken =
+					tokenById.get(`pair-${pairIdx}`) ??
+					(Number.isInteger(pairIdx) ? tokens[pairIdx] : undefined);
+				const label =
+					memToken?.label ??
+					(Number.isInteger(pairIdx) ? String.fromCharCode(65 + (pairIdx % 26)) : "?");
+				if (memToken?.asset?.type === "image") {
+					let tex = textureCacheRef.current.get(memToken.asset.url);
+					if (!tex) {
+						tex = loader.load(memToken.asset.url);
+						textureCacheRef.current.set(memToken.asset.url, tex);
+					}
+					const mat = new THREE.MeshBasicMaterial({
+						map: tex,
+						transparent: true
+					});
+					const geo = new THREE.PlaneGeometry(cellSize * 0.8, cellSize * 0.8);
+					const sprite = new THREE.Mesh(geo, mat);
+					sprite.position.set(x, y, 0.001);
+					marksGroup.add(sprite);
+					return;
+				}
+				const canvas = document.createElement("canvas");
+				canvas.width = 128;
+				canvas.height = 128;
+				const ctx = canvas.getContext("2d");
+				if (ctx) {
+					ctx.fillStyle = "#0f172a";
+					ctx.font = "bold 64px sans-serif";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.fillText(label, 64, 64);
+					const tex = new THREE.CanvasTexture(canvas);
+					const mat = new THREE.MeshBasicMaterial({
+						map: tex,
+						transparent: true
+					});
+					const geo = new THREE.PlaneGeometry(cellSize * 0.7, cellSize * 0.7);
+					const mesh = new THREE.Mesh(geo, mat);
+					mesh.position.set(x, y, 0.001);
+					marksGroup.add(mesh);
+				}
+				return;
+			}
+			if (typeof value === "number") {
+				if (value === 0) {
+					// Open empty cell: light fill (no digit)
+					const geo = new THREE.PlaneGeometry(
+						cellSize * 0.85,
+						cellSize * 0.85
+					);
+					const mat = new THREE.MeshBasicMaterial({
+						color: 0xe2e8f0,
+						transparent: true,
+						opacity: 0.55
+					});
+					const mesh = new THREE.Mesh(geo, mat);
+					mesh.position.set(x, y, 0.0005);
+					marksGroup.add(mesh);
+					return;
+				}
+				const canvas = document.createElement("canvas");
+				canvas.width = 128;
+				canvas.height = 128;
+				const ctx = canvas.getContext("2d");
+				if (ctx) {
+					const colors = [
+						"#000000",
+						"#2563eb",
+						"#16a34a",
+						"#dc2626",
+						"#7c3aed",
+						"#b45309",
+						"#0891b2",
+						"#111827",
+						"#6b7280"
+					];
+					ctx.fillStyle = colors[value] ?? "#111827";
+					ctx.font = "bold 72px sans-serif";
+					ctx.textAlign = "center";
+					ctx.textBaseline = "middle";
+					ctx.fillText(String(value), 64, 64);
+					const tex = new THREE.CanvasTexture(canvas);
+					const mat = new THREE.MeshBasicMaterial({
+						map: tex,
+						transparent: true
+					});
+					const geo = new THREE.PlaneGeometry(cellSize * 0.7, cellSize * 0.7);
+					const mesh = new THREE.Mesh(geo, mat);
+					mesh.position.set(x, y, 0.001);
+					marksGroup.add(mesh);
+				}
+				return;
+			}
 
 			// If a token is assigned to this player, render its image/label
+			if (value !== "X" && value !== "O") return;
 			const token = tokenForPlayer(value);
 			if (token && token.asset?.type === "image") {
 				let tex = textureCacheRef.current.get(token.asset.url);

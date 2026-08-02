@@ -25,7 +25,90 @@ type Props<T extends FieldValues> = {
 	form: any; // RHF useFormReturn for nested Config; kept as any to avoid type noise
 };
 
+type PhaseKey =
+	| "none"
+	| "place,move"
+	| "place,fire"
+	| "place,move,fire"
+	| "move,fire"
+	| "query,eliminate"
+	| "query,guess"
+	| "query,eliminate,guess";
+
+const PHASE_OPTIONS: { value: PhaseKey; label: string }[] = [
+	{ value: "none", label: "none (single action type)" },
+	{ value: "place,move", label: "place → move" },
+	{ value: "place,fire", label: "place → fire" },
+	{ value: "place,move,fire", label: "place → move → fire" },
+	{ value: "move,fire", label: "move → fire" },
+	{ value: "query,eliminate", label: "query → eliminate" },
+	{ value: "query,guess", label: "query → guess" },
+	{ value: "query,eliminate,guess", label: "query → eliminate → guess" }
+];
+
+function phasesToKey(phases: unknown): PhaseKey {
+	if (!Array.isArray(phases) || phases.length === 0) return "none";
+	const key = phases.join(",");
+	if (
+		key === "place,move" ||
+		key === "place,fire" ||
+		key === "place,move,fire" ||
+		key === "move,fire" ||
+		key === "query,eliminate" ||
+		key === "query,guess" ||
+		key === "query,eliminate,guess"
+	) {
+		return key;
+	}
+	return "none";
+}
+
+function keyToPhases(
+	key: PhaseKey
+):
+	| ("place" | "move" | "fire" | "query" | "eliminate" | "guess")[]
+	| undefined {
+	if (key === "none") return undefined;
+	return key.split(",") as (
+		| "place"
+		| "move"
+		| "fire"
+		| "query"
+		| "eliminate"
+		| "guess"
+	)[];
+}
+
 export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
+	const inputMode = form.watch("input.mode") as string | undefined;
+	const topology = (form.watch("grid.topology") as string | undefined) ?? "rectangle";
+	const phases = form.watch("turn.phases") as string[] | undefined;
+	const phasesNeedMove = Array.isArray(phases) && phases.includes("move");
+	const showMovement = inputMode === "move" || phasesNeedMove;
+	const hexOrGraph = topology === "hex_offset" || topology === "graph";
+	// Replace unlocked on rectangle | hex_offset | graph (M27).
+	const replaceTopologyOk =
+		topology === "rectangle" ||
+		topology === "hex_offset" ||
+		topology === "graph";
+	const jumpTopologyOk =
+		topology === "rectangle" || topology === "hex_offset";
+	const schedule = (form.watch("turn.schedule") as string | undefined) ?? "alternating";
+	const captureValue = form.watch("movement.capture") as string | undefined;
+	// Rectangle / hex cube-axis / graph chain-walk slides unlocked (range 1..8).
+	const rangeMax = captureValue === "jump" ? 1 : 8;
+
+	const ensureMovement = () => {
+		const current = form.getValues("movement");
+		if (!current) {
+			form.setValue(
+				"movement",
+				{ adjacency: "orthogonal", range: 1, capture: "none" },
+				{ shouldDirty: true }
+			);
+		}
+	};
+
 	return (
 		<div className="flex flex-col flex-1 min-h-0">
 			<ScrollArea className="h-full min-h-0 rounded-md border">
@@ -35,6 +118,24 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 							className="flex flex-col gap-4 w-full"
 							onSubmit={(e) => e.preventDefault()}
 						>
+							<div className="rounded-md border border-dashed p-3 space-y-1">
+								<p className="text-sm font-medium">Form coverage</p>
+								<p className="text-xs text-muted-foreground">
+									This form covers common knobs (grid, turn schedule/budget,
+									movement, phases, placement, win, observation). It does not
+									cover the full schema.
+								</p>
+								<p className="text-xs text-muted-foreground">
+									JSON or presets required for:{" "}
+									<span className="font-medium text-foreground">
+										scheduler, grid.nodes/edges, initial seeds, placements,
+										placement.capture, fleet ship geometry beyond lengths,
+										deduction.*, identify_secret, hazards (count /
+										firstRevealSafe — use JSON or Minesweeper Lite)
+									</span>
+									.
+								</p>
+							</div>
 							<FormField
 								control={form.control}
 								name="metadata.name"
@@ -95,7 +196,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<FormItem>
 										<FormLabel>Topology</FormLabel>
 										<Select
-											onValueChange={field.onChange}
+											onValueChange={(v) => {
+												field.onChange(v);
+											}}
 											value={field.value ?? "rectangle"}
 										>
 											<FormControl>
@@ -202,8 +305,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 								joint move, commitReveal for hidden simultaneous,
 								resolveOrder for ordered same-cell priority,
 								actionsPerTurn for multi-step, delayTurns for queued
-								places, or phases for place→move / place→fire /
-								place→move→fire within a turn.
+								places. In-turn phases (place→move / place→fire /
+								place→move→fire / move→fire / query→eliminate) use
+								the Phases control below.
 							</p>
 							<FormField
 								control={form.control}
@@ -346,7 +450,56 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										<p className="text-xs text-muted-foreground">
 											&gt;1 = multi-step under alternating, or multi-action
 											rounds under simultaneous (rectangle | hex_offset |
-											graph + cell + n-in-a-row).
+											graph + cell + n-in-a-row). Incompatible with
+											turn.phases.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+							<FormField
+								control={form.control}
+								name="turn.phases"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Phases (in-turn)</FormLabel>
+										<FormControl>
+											<Select
+												value={phasesToKey(field.value)}
+												onValueChange={(v) => {
+													const key = v as PhaseKey;
+													const next = keyToPhases(key);
+													field.onChange(next);
+													if (next?.includes("move")) {
+														ensureMovement();
+													}
+													if (key === "place,fire") {
+														form.setValue("movement", undefined, {
+															shouldDirty: true
+														});
+													}
+												}}
+											>
+												<SelectTrigger>
+													<SelectValue placeholder="none" />
+												</SelectTrigger>
+												<SelectContent>
+													{PHASE_OPTIONS.map((opt) => (
+														<SelectItem key={opt.value} value={opt.value}>
+															{opt.label}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Alternating only; board sequences place then
+											move and/or fire, or move→fire; deduction
+											sequences query→eliminate / query→guess /
+											query→eliminate→guess (autoEliminate false when
+											eliminate is present). Needs matching
+											objective / observation (see schema errors).
+											Distinct from actionsPerTurn.
 										</p>
 										<FormMessage />
 									</FormItem>
@@ -415,7 +568,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<FormControl>
 												<Select
 													value={field.value}
-													onValueChange={field.onChange}
+													onValueChange={(v) => {
+														field.onChange(v);
+														if (v === "move") ensureMovement();
+													}}
 												>
 													<SelectTrigger>
 														<SelectValue placeholder="Select mode" />
@@ -425,6 +581,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="column">column</SelectItem>
 														<SelectItem value="row">row</SelectItem>
 														<SelectItem value="move">move</SelectItem>
+														<SelectItem value="flip">flip</SelectItem>
+														<SelectItem value="deduction">
+															deduction
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
@@ -433,6 +593,231 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									)}
 								/>
 							</div>
+
+							{showMovement && (
+								<div className="space-y-2">
+									<p className="text-sm font-medium">Movement</p>
+									<p className="text-xs text-muted-foreground">
+										Required for input.mode = move and for phases that
+										include move. Diagonal/king are rectangle-only;
+										range &gt; 1 slides on rectangle, hex cube axes, or
+										graph edge chains (or hop-ball BFS when graphReach =
+										hop). Joint simultaneous sliding uses vacated-origin
+										paths (incl. replace — fleeing blockers clear;
+										stationary targets stay); ordered simultaneous
+										sliding revalidates the second seat after the first.
+										Replace capture is rectangle | hex_offset | graph +
+										move; ordered simultaneous replace uses sequential
+										apply.
+									</p>
+									<div className="grid grid-cols-2 gap-4">
+										<FormField
+											control={form.control}
+											name="movement.adjacency"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Adjacency</FormLabel>
+													<FormControl>
+														<Select
+															value={field.value ?? "orthogonal"}
+															onValueChange={(v) => {
+																ensureMovement();
+																field.onChange(v);
+															}}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="orthogonal" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="orthogonal">
+																	orthogonal
+																</SelectItem>
+																<SelectItem
+																	value="diagonal"
+																	disabled={hexOrGraph}
+																>
+																	diagonal (rect)
+																</SelectItem>
+																<SelectItem
+																	value="king"
+																	disabled={hexOrGraph}
+																>
+																	king (rect)
+																</SelectItem>
+															</SelectContent>
+														</Select>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="movement.range"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Range</FormLabel>
+													<FormControl>
+														<Input
+															type="number"
+															min={1}
+															max={rangeMax}
+															value={field.value ?? 1}
+															onChange={(e) => {
+																ensureMovement();
+																const n = Number(e.target.value);
+																const clamped = Number.isFinite(n)
+																	? Math.min(
+																			rangeMax,
+																			Math.max(1, Math.trunc(n))
+																		)
+																	: 1;
+																field.onChange(clamped);
+															}}
+														/>
+													</FormControl>
+													<p className="text-xs text-muted-foreground">
+														1 = adjacent step; 2–8 = sliding / hop on
+														rectangle deltas, hex cube axes, or graph
+														(chain stops at junction; hop may turn).
+													</p>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									</div>
+									{topology === "graph" && (
+										<FormField
+											control={form.control}
+											name="movement.graphReach"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Graph reach</FormLabel>
+													<FormControl>
+														<Select
+															value={field.value ?? "chain"}
+															onValueChange={(v) => {
+																ensureMovement();
+																field.onChange(v);
+															}}
+														>
+															<SelectTrigger>
+																<SelectValue placeholder="chain" />
+															</SelectTrigger>
+															<SelectContent>
+																<SelectItem value="chain">
+																	chain (no junction turns)
+																</SelectItem>
+																<SelectItem value="hop">
+																	hop (BFS, may turn)
+																</SelectItem>
+															</SelectContent>
+														</Select>
+													</FormControl>
+													<p className="text-xs text-muted-foreground">
+														chain = unique-forward edge walk (Graph
+														Slide Race). hop = BFS within range —
+														may turn at junctions (Graph Hop Race).
+													</p>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									)}
+									<FormField
+										control={form.control}
+										name="movement.capture"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Capture</FormLabel>
+												<FormControl>
+													<Select
+														value={field.value ?? "none"}
+														onValueChange={(v) => {
+															ensureMovement();
+															field.onChange(v);
+															if (v === "jump") {
+																form.setValue("movement.range", 1, {
+																	shouldDirty: true
+																});
+															} else {
+																form.setValue(
+																	"movement.mustCapture",
+																	undefined,
+																	{ shouldDirty: true }
+																);
+															}
+														}}
+														disabled={
+															inputMode !== "move" ||
+															(!replaceTopologyOk && !jumpTopologyOk)
+														}
+													>
+														<SelectTrigger>
+															<SelectValue placeholder="none" />
+														</SelectTrigger>
+														<SelectContent>
+															<SelectItem value="none">none</SelectItem>
+															<SelectItem
+																value="replace"
+																disabled={!replaceTopologyOk}
+															>
+																replace (onto enemy)
+															</SelectItem>
+															<SelectItem
+																value="jump"
+																disabled={
+																	!jumpTopologyOk ||
+																	schedule === "simultaneous"
+																}
+															>
+																jump (over enemy, land 2 away)
+															</SelectItem>
+														</SelectContent>
+													</Select>
+												</FormControl>
+												<p className="text-xs text-muted-foreground">
+													Replace: land on an enemy cell to remove it
+													(path empty except destination; rectangle |
+													hex | graph). Jump: leap over an adjacent
+													enemy to the empty cell beyond (rectangle |
+													hex cube-axis + alternating; further jumps
+													keep the same seat). Not placement.capture.
+												</p>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									{captureValue === "jump" && (
+										<FormField
+											control={form.control}
+											name="movement.mustCapture"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Must capture</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															When any jump exists for the acting seat,
+															quiet (non-jump) moves are illegal at turn
+															start. Mid-chain jumps still use
+															mustContinueFrom.
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) => {
+																ensureMovement();
+																field.onChange(v);
+															}}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+									)}
+								</div>
+							)}
 
 							<div className="space-y-2">
 								<p className="text-sm font-medium">Observation / objective</p>
@@ -454,12 +839,23 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="full">full</SelectItem>
 														<SelectItem value="hit_miss">hit_miss</SelectItem>
 														<SelectItem value="fog">fog</SelectItem>
+														<SelectItem value="flood_reveal">
+															flood_reveal
+														</SelectItem>
+														<SelectItem value="memory_flip">
+															memory_flip
+														</SelectItem>
+														<SelectItem value="deduction">
+															deduction
+														</SelectItem>
 													</SelectContent>
 												</Select>
 											</FormControl>
 											<p className="text-xs text-muted-foreground">
 												hit_miss = Battleship-lite; fog = radius vision around
-												own pieces.
+												own pieces; flood_reveal = Minesweeper-lite region
+												reveal (needs hazards + clear_hazards); memory_flip =
+												pair matching (needs memory + match_pairs + flip).
 											</p>
 											<FormMessage />
 										</FormItem>
@@ -598,6 +994,15 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 														<SelectItem value="area_control">
 															area_control
 														</SelectItem>
+														<SelectItem value="clear_hazards">
+															clear_hazards
+														</SelectItem>
+														<SelectItem value="match_pairs">
+															match_pairs
+														</SelectItem>
+														<SelectItem value="identify_secret">
+															identify_secret
+														</SelectItem>
 														<SelectItem value="none">none</SelectItem>
 													</SelectContent>
 												</Select>
@@ -605,7 +1010,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<p className="text-xs text-muted-foreground">
 												destroy_hidden↔hit_miss; connect_or_destroy↔
 												place→move→fire + hit_miss; reach_row↔move;
-												area_control↔liberties; none↔tick.
+												area_control↔liberties; clear_hazards↔flood_reveal;
+												match_pairs↔memory_flip; identify_secret↔deduction;
+												none↔tick.
 											</p>
 											<FormMessage />
 										</FormItem>
