@@ -1554,6 +1554,56 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"hex-replace-race": definePreset({
+		id: "hex-replace-race",
+		name: "Hex Replace Race",
+		tags: [
+			"move",
+			"capture",
+			"replace",
+			"reach-row",
+			"hex",
+			"topology",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Cube-axis step race on odd-r hex with capture-by-replacement: move onto an enemy cell to remove it, then land. Unlocks movement.capture = replace on hex_offset — rectangle Replace Race cannot express hex attrition; graph replace remains deferred.",
+		config: {
+			metadata: { name: "Hex Replace Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "orthogonal", range: 1, capture: "replace" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hex-hunter-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-hunter-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Odd-r: (1,2) is a cube-axis neighbor of (0,2) — capture lands and wins.
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"guess-who-lite": definePreset({
 		id: "guess-who-lite",
 		name: "Guess Who Lite",

@@ -4,8 +4,8 @@
  * aware ray walk). Optional `capture: "replace"` allows landing on an enemy
  * (path empty except destination). Hex_offset: orthogonal cube-axis slides
  * (range 1..8, same blocker/replace rules). Graph: orthogonal chain-walk
- * along explicit edges (range 1..8; no turning at junctions; replace remains
- * rectangle-only via schema).
+ * along explicit edges (range 1..8; no turning at junctions; no replace —
+ * schema-deferred).
  */
 import type { Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -267,13 +267,13 @@ export function legalDestinations(
 	const { wrap, topology, graph } = opts;
 
 	if (topology === "graph") {
-		// Chain-walk slides along explicit edges; replace remains rectangle-only.
+		// Chain-walk slides along explicit edges; replace deferred (schema).
 		if (config.adjacency !== "orthogonal" || !graph) return [];
 		return slideGraphDestinations(grid, from, config, graph);
 	}
 
 	if (topology === "hex_offset") {
-		// Cube-axis slides; replace remains rectangle-only via schema.
+		// Cube-axis slides with the same blocker / replace rules as rectangle.
 		if (config.adjacency !== "orthogonal") return [];
 		return slideHexDestinations(grid, from, config, wrap, mover);
 	}

@@ -62,14 +62,12 @@ function keyToPhases(key: PhaseKey): ("place" | "move" | "fire")[] | undefined {
 export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 	const inputMode = form.watch("input.mode") as string | undefined;
 	const topology = (form.watch("grid.topology") as string | undefined) ?? "rectangle";
-	const schedule =
-		(form.watch("turn.schedule") as string | undefined) ?? "alternating";
 	const phases = form.watch("turn.phases") as string[] | undefined;
 	const phasesNeedMove = Array.isArray(phases) && phases.includes("move");
 	const showMovement = inputMode === "move" || phasesNeedMove;
 	const hexOrGraph = topology === "hex_offset" || topology === "graph";
-	const simultaneousMove = schedule === "simultaneous" && inputMode === "move";
-	const orderedReplaceOk = simultaneousMove && !hexOrGraph;
+	const replaceTopologyOk =
+		topology === "rectangle" || topology === "hex_offset";
 	// Rectangle / hex cube-axis / graph chain-walk slides unlocked (range 1..8).
 	const rangeMax = 8;
 
@@ -170,7 +168,18 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<FormItem>
 										<FormLabel>Topology</FormLabel>
 										<Select
-											onValueChange={field.onChange}
+											onValueChange={(v) => {
+												field.onChange(v);
+												// Replace is rectangle | hex only — clear on graph.
+												if (
+													v === "graph" &&
+													form.getValues("movement.capture") === "replace"
+												) {
+													form.setValue("movement.capture", "none", {
+														shouldDirty: true
+													});
+												}
+											}}
 											value={field.value ?? "rectangle"}
 										>
 											<FormControl>
@@ -564,14 +573,15 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									<p className="text-sm font-medium">Movement</p>
 									<p className="text-xs text-muted-foreground">
 										Required for input.mode = move and for phases that
-										include move. Diagonal/king and range &gt; 1 are
-										rectangle-only; joint simultaneous sliding uses
+										include move. Diagonal/king are rectangle-only;
+										range &gt; 1 slides on rectangle, hex cube axes, or
+										graph edge chains. Joint simultaneous sliding uses
 										vacated-origin paths (incl. replace — fleeing
 										blockers clear; stationary targets stay); ordered
 										simultaneous sliding revalidates the second seat
-										after the first. Replace capture is rectangle +
-										move; ordered simultaneous replace uses sequential
-										apply.
+										after the first. Replace capture is rectangle |
+										hex_offset + move (graph deferred); ordered
+										simultaneous replace uses sequential apply.
 									</p>
 									<div className="grid grid-cols-2 gap-4">
 										<FormField
@@ -664,9 +674,7 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 															field.onChange(v);
 														}}
 														disabled={
-															hexOrGraph ||
-															(simultaneousMove && !orderedReplaceOk) ||
-															inputMode !== "move"
+															!replaceTopologyOk || inputMode !== "move"
 														}
 													>
 														<SelectTrigger>
@@ -683,8 +691,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												<p className="text-xs text-muted-foreground">
 													Replace: land on an enemy cell to remove it
 													(path must be empty except destination).
-													Rectangle + move input; simultaneous OK
-													(joint or ordered, any range); not
+													Rectangle or hex_offset + move input;
+													simultaneous OK (joint or ordered, any
+													range); graph deferred; not
 													placement.capture.
 												</p>
 												<FormMessage />

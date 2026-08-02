@@ -196,6 +196,132 @@ describe("Replace Race (movement.capture = replace)", () => {
 	});
 });
 
+describe("Hex Replace Race (movement.capture = replace on hex_offset)", () => {
+	const HEX_BOARD = { topology: "hex_offset" as const };
+
+	it("validates and compiles the hex-replace-race preset", () => {
+		const cfg = examplePresets["hex-replace-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.inputMode).toBe("move");
+		expect(gameConfig.movement?.capture).toBe("replace");
+		expect(gameConfig.objectiveMode).toBe("reach_row");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(getCell(state.grid, { row: 1, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("O");
+		const legal = kernel.legalActions(state, 0);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" &&
+					a.from.row === 1 &&
+					a.from.col === 2 &&
+					a.to.row === 0 &&
+					a.to.col === 2
+			)
+		).toBe(true);
+	});
+
+	it("lists enemy hex neighbors as legal destinations under replace", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["hex-replace-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const from = { row: 1, col: 2 };
+		expect(
+			canMove(state.grid, from, { row: 0, col: 2 }, "X", REPLACE, HEX_BOARD)
+		).toBe(true);
+		expect(
+			legalDestinations(state.grid, from, REPLACE, HEX_BOARD).some(
+				(p) => p.row === 0 && p.col === 2
+			)
+		).toBe(true);
+	});
+
+	it("X captures O on target row and wins (transcript + pieceCaptured)", () => {
+		const cfg = examplePresets["hex-replace-race"].config;
+		const { kernel } = compileConfig(cfg);
+		const action: Extract<KernelAction, { type: "move" }> = {
+			type: "move",
+			from: { row: 1, col: 2 },
+			to: { row: 0, col: 2 }
+		};
+		let state = kernel.initialState(cfg.rng.seed);
+		const result = kernel.stepSync(state, action);
+		expect(
+			result.events.some(
+				(e) =>
+					e.type === "pieceCaptured" &&
+					e.position.row === 0 &&
+					e.position.col === 2 &&
+					e.captured === "O" &&
+					e.by === "X"
+			)
+		).toBe(true);
+		expect(result.events.some((e) => e.type === "terminal")).toBe(true);
+		state = result.nextState;
+		expect(getCell(state.grid, { row: 0, col: 2 })).toBe("X");
+		expect(getCell(state.grid, { row: 1, col: 2 })).toBeNull();
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+	});
+
+	it("replays the hex capture win faithfully", () => {
+		const cfg = examplePresets["hex-replace-race"].config;
+		const { gameConfig } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{ type: "move", from: { row: 1, col: 2 }, to: { row: 0, col: 2 } }
+		];
+		const replay = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+		expect(getCell(replay.finalState.grid, { row: 0, col: 2 })).toBe("X");
+	});
+
+	it("sliding hex replace lands on first enemy along a cube-axis ray", () => {
+		const base = examplePresets["hex-slide-race"].config;
+		const cfg = {
+			...base,
+			movement: {
+				adjacency: "orthogonal" as const,
+				range: 4 as const,
+				capture: "replace" as const
+			},
+			initial: [
+				// NW cube-axis from (4,2): (3,1)(2,1)(1,0) then O at (0,0).
+				{ row: 4, col: 2, player: "X" as const, visibility: "public" as const },
+				{ row: 0, col: 0, player: "O" as const, visibility: "public" as const }
+			]
+		};
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { gameConfig } = compileConfig(cfg);
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 2 };
+		expect(
+			canMove(
+				state.grid,
+				from,
+				{ row: 0, col: 0 },
+				"X",
+				SLIDE_REPLACE,
+				HEX_BOARD
+			)
+		).toBe(true);
+		// Same offset column is not a cube-axis ray.
+		expect(
+			canMove(
+				state.grid,
+				from,
+				{ row: 0, col: 2 },
+				"X",
+				SLIDE_REPLACE,
+				HEX_BOARD
+			)
+		).toBe(false);
+	});
+});
+
 describe("movement.capture schema / validateConfig", () => {
 	it("accepts capture none|replace on rectangle move configs", () => {
 		const base = examplePresets["step-race"].config;
@@ -230,9 +356,21 @@ describe("movement.capture schema / validateConfig", () => {
 		expect(bad.success).toBe(false);
 	});
 
-	it("rejects replace on hex topology", () => {
-		const bad = zConfig.safeParse({
+	it("accepts replace on hex topology", () => {
+		const ok = zConfig.safeParse({
 			...examplePresets["hex-step-race"].config,
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "replace"
+			}
+		});
+		expect(ok.success).toBe(true);
+	});
+
+	it("rejects replace on graph topology", () => {
+		const bad = zConfig.safeParse({
+			...examplePresets["graph-step-race"].config,
 			movement: {
 				adjacency: "orthogonal",
 				range: 1,
