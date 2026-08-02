@@ -1,18 +1,18 @@
 {
-  "updated_at": "2026-08-02T08:30-00:00",
-  "turn": 65,
+  "updated_at": "2026-08-02T08:50-00:00",
+  "turn": 66,
   "focus": {
-    "milestone": "M37",
+    "milestone": "M38",
     "issue": "next-missing-mechanism",
-    "goal": "commitEliminate landed; hand off next seam or P4"
+    "goal": "commitMove landed; hand off next seam or P4"
   },
   "recent": [
-    "Synced M8–M36 from bf8b onto aaa9",
     "Landed M37 commitEliminate + Hidden Simultaneous Guess Who Commit Lite",
-    "539 green; fire→move still deferred without anchor"
+    "Landed M38 commitMove + Hidden Simultaneous Step Race",
+    "549 green; fire→move still deferred without anchor"
   ],
   "discoveries": [
-    "handleCommitQuery autoEliminate guard blocked manual hidden queries"
+    "Schema previously forbade simultaneous move × commitReveal"
   ],
   "open_threads": [
     "Next: fire→move only with anchor, or P4 CI/semantics"

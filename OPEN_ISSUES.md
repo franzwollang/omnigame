@@ -2,7 +2,7 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P3 → P4** in order (M37 commitEliminate closed). Do
+**Marathon rule:** Work **P3 → P4** in order (M38 commitMove closed). Do
 not ask which fork — pick the smallest new seam under `next-missing-mechanism`,
 then P4 tooling/docs.
 
@@ -12,9 +12,8 @@ then P4 tooling/docs.
 
 ### P3 — next-missing-mechanism
 
-CommitReveal + manual eliminate (`commitEliminate`) landed as M37. Hidden
-Simultaneous Guess Who Commit Lite agents search 48 kind-matched reveal joints
-(query/guess/eliminate) and emit sequential commits from a cached plan.
+CommitReveal under simultaneous move (`commitMove` / Hidden Simultaneous Step
+Race) landed as M38.
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -46,7 +45,8 @@ exhaust `references/` or recombine covered primitives).
       + multi-action + commitReveal simultaneous, **joint UCT under open
       simultaneous deduction**, **simultaneous deduction manual eliminate /
       simultaneousEliminate**, **commitReveal deduction joint UCT**,
-      **commitEliminate / commitReveal + manual eliminate**, hex cube-axis
+      **commitEliminate / commitReveal + manual eliminate**, **commitMove /
+      commitReveal under simultaneous move**, hex cube-axis
       sliding, graph chain-walk sliding, graph hop-ball (`graphReach`), hex +
       graph replace capture, Guess Who manual eliminate / `autoEliminate`,
       trait-conjunction `queryShape: and`, trait-disjunction `queryShape: or`,
@@ -74,6 +74,8 @@ eliminate + same-turn query→eliminate + 2-clause AND/OR + N-clause AND via
 `compoundArity` + joint simultaneous query/guess + joint simultaneous manual
 eliminate + joint simultaneous compound AND + hidden commitReveal under
 simultaneous deduction + commitReveal deduction joint UCT + **commitReveal +
-manual eliminate (`commitEliminate`)**. Graph Hop Race covers hop-ball BFS.
-Open simultaneous deduction joint UCT covers agent search over
-query/guess(/eliminate) cartesian (fire→move still open if an anchor appears).
+manual eliminate (`commitEliminate`)**. **Hidden Simultaneous Step Race**
+covers commitReveal under simultaneous move / `commitMove`. Graph Hop Race
+covers hop-ball BFS. Open simultaneous deduction joint UCT covers agent search
+over query/guess(/eliminate) cartesian (fire→move still open if an anchor
+appears).

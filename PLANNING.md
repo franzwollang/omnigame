@@ -54,8 +54,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M35 | Next missing mechanism (simultaneous deduction manual eliminate) | `done` |
 | M36 | Next missing mechanism (commitReveal deduction joint UCT) | `done` |
 | M37 | Next missing mechanism (commitEliminate / commitReveal manual eliminate) | `done` |
+| M38 | Next missing mechanism (commitMove / commitReveal simultaneous move) | `done` |
 
-**Optimizing for this marathon:** M37 commitEliminate closed. Pick **P3
+**Optimizing for this marathon:** M38 commitMove closed. Pick **P3
 next-missing-mechanism** (e.g. fire→move only with anchor) or **P4** CI /
 semantics refresh — without asking which fork.
 
@@ -72,7 +73,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥539** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥549** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -85,8 +86,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M37 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M37) — smallest new seam — or
+   (P0–P2 / M8–M38 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M38) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -144,7 +145,7 @@ observation (hit/miss + fog + **deduction**), fleet placement, Move
 (orthogonal/diagonal/king + sliding range on rectangle **and hex_offset cube
 axes** + **graph edge chain-walk**; replace on rectangle | hex_offset | **graph**), tick/Life, simultaneous
 place/move/deduction (incl. ordered, hidden commit-reveal for place **and
-deduction**, multi-action, **joint + ordered
+move** **and deduction**, multi-action, **joint + ordered
 sliding**, **joint query/guess** + **joint compound query**), multi-step turns, delayed place/gravity, in-turn phases (place→move /
 place→fire / place→move→fire + `connect_or_destroy` / **move→fire** / query→eliminate), **query +
 guess / identify_secret** + **manual eliminate** (`autoEliminate: false`) +
@@ -158,7 +159,7 @@ Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**,
 **Guess Who And3 Lite**, **Simultaneous Guess Who Lite**, **Simultaneous Guess Who
 Commit Lite**, **Simultaneous Guess Who And Lite**,
-**Hidden Simultaneous Guess Who Lite**, **Hidden Simultaneous Guess Who Commit Lite**, Simultaneous Step Race, Place Move & Fire Lite, Move & Fire
+**Hidden Simultaneous Guess Who Lite**, **Hidden Simultaneous Guess Who Commit Lite**, Simultaneous Step Race, **Hidden Simultaneous Step Race**, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
@@ -517,6 +518,23 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
   539 green — **done**
 - Out of scope: fire→move; simultaneous `turn.phases`; compound commitReveal
   eliminate demo
+
+### M38 — CommitMove (commitReveal under simultaneous move)
+
+- Schema: allow `commitReveal` under simultaneous move; keep
+  `actionsPerTurn > 1` forbidden — **done**
+- State/events: `committedMoves` + `commitMove`; reducer `handleCommitMove` →
+  `handleSimultaneousMove` (clears commits) — **done**
+- Kernel: legals/explain/isNoop/stepPly/equality/highlight for `commitMove`;
+  observation overlays own destination — **done**
+- Agents: `isFreshCommitRound` + `enumerateCommitRevealJoints` map
+  `commitMove` → open move; `seatCommitFromJoint` for `simultaneousMove`;
+  UCT fingerprint includes `committedMoves` — **done**
+- Sandbox: commitReveal+move emits `commitMove`; seat from `committedMoves` —
+  **done**
+- Preset `hidden-simultaneous-step-race` + tests; 549 green — **done**
+- Out of scope: multi-action simultaneous move; commitReveal + replace/slide
+  variants; fire→move
 
 ## Sequencing notes
 

@@ -89,3 +89,4 @@
 {"ts":"2026-08-02T07:50-00:00","focus":"M35 simultaneous deduction manual eliminate","summary":"Landed simultaneousEliminate + Simultaneous Guess Who Commit Lite; synced from 0127 tip","next":"Pick commitReveal deduction joint UCT or P4"}
 {"ts":"2026-08-02T08:05-00:00","focus":"M36 commitReveal deduction joint UCT","summary":"Landed fresh-round joint query/guess plan search + sequential commit cache; synced from da8d tip","next":"Pick fire→move with anchor, commitEliminate, or P4"}
 {"ts":"2026-08-02T08:30-00:00","focus":"M37 commitEliminate","summary":"Landed commitReveal+manual eliminate + Hidden Simultaneous Guess Who Commit Lite; synced from bf8b tip","next":"Pick fire→move with anchor or P4 CI/semantics"}
+{"ts":"2026-08-02T08:50-00:00","focus":"M38 commitMove","summary":"Landed commitReveal under simultaneous move + Hidden Simultaneous Step Race; 549 green","next":"Pick fire→move with anchor or P4 CI/semantics"}
