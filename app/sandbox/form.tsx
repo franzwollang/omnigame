@@ -464,10 +464,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											</Select>
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
-											Alternating only; sequences place then move and/or
-											fire within one turn. Needs matching objective /
-											observation (see schema errors). Distinct from
-											actionsPerTurn.
+											Alternating only; sequences place then move
+											and/or fire, or move→fire (no place) within one
+											turn. Needs matching objective / observation
+											(see schema errors). Distinct from actionsPerTurn.
 										</p>
 										<FormMessage />
 									</FormItem>
