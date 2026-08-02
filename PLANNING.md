@@ -52,11 +52,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M33 | Next missing mechanism (simultaneous deduction commitReveal) | `done` |
 | M34 | Next missing mechanism (joint UCT under simultaneous deduction) | `done` |
 | M35 | Next missing mechanism (simultaneous deduction manual eliminate) | `done` |
+| M36 | Next missing mechanism (commitReveal deduction joint UCT) | `done` |
 
-**Optimizing for this marathon:** M35 simultaneous deduction manual eliminate
-closed. Pick **P3 next-missing-mechanism** (e.g. commitReveal deduction joint
-UCT, fire→move only with anchor) or **P4** CI / semantics refresh — without
-asking which fork.
+**Optimizing for this marathon:** M36 commitReveal deduction joint UCT closed.
+Pick **P3 next-missing-mechanism** (e.g. fire→move only with anchor,
+commitEliminate) or **P4** CI / semantics refresh — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -71,7 +71,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥519** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥525** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -84,8 +84,8 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3 → P4** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M35 closed).  
-2. Start **P3** `next-missing-mechanism` (post-M35) — smallest new seam — or
+   (P0–P2 / M8–M36 closed).  
+2. Start **P3** `next-missing-mechanism` (post-M36) — smallest new seam — or
    P4 CI / semantics.  
 3. If blocked on environment only, fix tooling and continue — do not invent
    parallel roadmaps.  
@@ -169,7 +169,7 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; CI workflows; semantics doc refresh; fire→move reorder;
-commitReveal deduction joint UCT.
+commitEliminate under commitReveal.
 
 ## Phase 2 exit criteria
 
@@ -450,8 +450,9 @@ commitReveal deduction joint UCT.
   CellsWritable-only — **done**
 - Preset `hidden-simultaneous-guess-who-lite` + transcript/replay tests —
   **done**
-- Out of scope: joint UCT over commitReveal query cartesian; manual eliminate;
-  compound commitReveal demo (schema already allows)
+- Out of scope: compound commitReveal demo (schema already allows); manual
+  eliminate under commitReveal (`commitEliminate`)
+- Out of scope closed by M36: joint UCT over commitReveal query cartesian
 
 ### M34 — Joint UCT under simultaneous deduction
 
@@ -467,8 +468,8 @@ commitReveal deduction joint UCT.
   **done**
 - Tests: enum counts, dual-act consistency, immediate winning guess, short
   playout; 505 green — **done**
-- Out of scope: commitReveal deduction joint UCT; fire→move
 - Out of scope closed by M35: manual eliminate under simultaneous
+- Out of scope closed by M36: commitReveal deduction joint UCT
 
 ### M35 — Simultaneous deduction manual eliminate
 
@@ -481,7 +482,21 @@ commitReveal deduction joint UCT.
 - Preset `simultaneous-guess-who-commit-lite` + schema/kernel/GameIR/agent
   tests; 519 green — **done**
 - Out of scope: commitReveal + manual eliminate; simultaneous `turn.phases`;
-  commitReveal deduction joint UCT; fire→move
+  fire→move
+- Out of scope closed by M36: commitReveal deduction joint UCT
+
+### M36 — CommitReveal deduction joint UCT
+
+- `canSearchCommitRevealJoint` + `isFreshCommitRound` honor
+  `committedDeduction`; `enumerateCommitRevealJoints` maps
+  commitQuery/Guess → simultaneousQuery/Guess (32 joints) — **done**
+- `seatCommitFromJoint` emits `commitQuery` / `commitGuess`; UCT + MCTS
+  fresh-round plan cache (same round fingerprint as place) — **done**
+- `activeCommitSeat({ deduction })` for mid-round tree nodes; sandbox Agent
+  labels joint search under hidden deduction — **done**
+- Tests: enum counts, partial-commit disable, coordinated sequential commits,
+  immediate winning commitGuess (UCT+MCTS), short playout; 525 green — **done**
+- Out of scope: commitEliminate / commitReveal + manual eliminate; fire→move
 
 ## Sequencing notes
 

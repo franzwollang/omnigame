@@ -195,7 +195,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder,
-commitReveal deduction joint UCT, and a larger set of reusable
+commitEliminate under commitReveal, and a larger set of reusable
 operators/constraints.
 
 ## Technical vision (expanded)
@@ -470,16 +470,16 @@ Simultaneous Guess Who Lite (M30), graph hop-ball range / Graph Hop Race (M31),
 simultaneous compound deduction / Simultaneous Guess Who And Lite (M32),
 simultaneous deduction commitReveal / Hidden Simultaneous Guess Who Lite (M33),
 joint UCT/MCTS under open simultaneous deduction (M34), simultaneous deduction
-manual eliminate / Simultaneous Guess Who Commit Lite (M35).
+manual eliminate / Simultaneous Guess Who Commit Lite (M35), commitReveal
+deduction joint UCT / Hidden Simultaneous Guess Who Lite plan search (M36).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor, commitReveal deduction joint UCT) or P4 CI /
-  semantics refresh
+  fire→move only with anchor, commitEliminate) or P4 CI / semantics refresh
 - Deferred: full Go rules; CI workflows; `docs/semantics.md` refresh vs current
-  kernel events; fire→move reorder; commitReveal deduction joint UCT
-
+  kernel events; fire→move reorder; commitReveal + manual eliminate
+  (`commitEliminate`)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 
