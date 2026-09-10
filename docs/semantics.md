@@ -322,14 +322,19 @@ edge + seki exempt; distinct from pyramid-4 / square-4 / T1/L / L4 so skew bulky
 eyes stay contrastable);
 optional `objective.l4NakadeDeath` removes interior groups bordering an L4
 (tetromino L/J) nakade big-eye that would have <2 true eyes after an opponent
-vital fill (after optional twistedNakadeDeath, before netDeath; edge + seki
-exempt; distinct from twisted-4 / pyramid-4 / square-4 / T1 / bent-3 so L/J
-bulky eyes stay contrastable);
+vital fill (after optional twistedNakadeDeath, before straight4NakadeDeath /
+netDeath; edge + seki exempt; distinct from twisted-4 / pyramid-4 / square-4 /
+T1 / bent-3 / straight-4 so L/J bulky eyes stay contrastable);
+optional `objective.straight4NakadeDeath` removes interior groups bordering a
+straight-4 (I-tetromino) nakade big-eye that would have <2 true eyes after an
+opponent vital fill (after optional l4NakadeDeath, before netDeath; edge + seki
+exempt; distinct from L4 / twisted / pyramid / square / T1 / bent-3 so the last
+free tetromino stays contrastable);
 optional `objective.netDeath`
 removes groups force-capturable by an attacker-sente tight net / geta (root
 exactly 3 liberties; every escape has a finishing reply; after nakadeDeath /
 lNakadeDeath / squareNakadeDeath / pyramidNakadeDeath / twistedNakadeDeath /
-l4NakadeDeath,
+l4NakadeDeath / straight4NakadeDeath,
 before looseNetDeath /
 senteLadderDeath / ladderDeath; edge
 does not save); optional `objective.looseNetDeath` removes

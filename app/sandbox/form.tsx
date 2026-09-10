@@ -1369,6 +1369,78 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										/>
 										<FormField
 											control={form.control}
+											name="objective.twistedNakadeDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Twisted-nakade death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove interior groups bordering a twisted-4
+															(Z/S) nakade big-eye after a vital-fill eye
+															check (objective.twistedNakadeDeath).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="objective.l4NakadeDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>L4-nakade death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove interior groups bordering an L4
+															(tetromino L/J) nakade big-eye after a
+															vital-fill eye check (objective.l4NakadeDeath).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="objective.straight4NakadeDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Straight-4 nakade death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove interior groups bordering a straight-4
+															(I-tetromino) nakade big-eye after a vital-fill
+															eye check (objective.straight4NakadeDeath).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
 											name="objective.netDeath"
 											render={({ field }) => (
 												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">

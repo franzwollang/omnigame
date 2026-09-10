@@ -6407,6 +6407,96 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			})()
 		}
 	}),
+	"go-lite-straight4-nakade": definePreset({
+		id: "go-lite-straight4-nakade",
+		name: "Go Lite Straight-4-Nakade",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"nakade",
+			"straight4-nakade",
+			"benson",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with straight-4 (I-tetromino) nakade removal at scoring (objective.straight4NakadeDeath). Seeded interior X shell on 7×8 with one true eye + closed I corridor (Benson-alive; T1/L/square/pyramid/twisted/L4 nakadeDeath miss; chase family miss) plus living edge O: without the flag (or with bensonLife / prior nakade flags) double-pass awards X; with straight4NakadeDeath X is cleared → O wins. Unlocks the last free tetromino big-eye death beyond L4/twisted/pyramid/square/T1/L / Benson / chase family.",
+		config: {
+			metadata: { name: "Go Lite Straight-4-Nakade", version: 1 },
+			grid: { width: 7, height: 8, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", straight4NakadeDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				// Interior X shell (rows/cols 1–6 on 7×8): true eye at (2,4);
+				// closed straight-4 corridor at (2,2)/(3,2)/(4,2)/(5,2)
+				// (vital = canonical 2nd cell (3,2)). One true eye (dead under
+				// deadStones) but Benson-alive via eye + I; T1/L/square/
+				// pyramid/twisted/L4 miss (I is 1×4, not 2×3/3×2 or length 3).
+				const empties = new Set([
+					"2,4",
+					"2,2",
+					"3,2",
+					"4,2",
+					"5,2"
+				]);
+				for (let row = 1; row <= 6; row++) {
+					for (let col = 1; col <= 5; col++) {
+						if (!empties.has(`${row},${col}`)) {
+							stones.push({
+								row,
+								col,
+								player: "X",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				for (let row = 0; row < 8; row++) {
+					for (let col = 0; col < 7; col++) {
+						if (row === 0 || row === 7 || col === 0 || col === 6) {
+							stones.push({
+								row,
+								col,
+								player: "O",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				return stones;
+			})()
+		}
+	}),
 	"go-lite-net": definePreset({
 		id: "go-lite-net",
 		name: "Go Lite Net",

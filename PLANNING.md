@@ -106,8 +106,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M88 | Next missing mechanism (Go Lite Pyramid-Nakade / objective.pyramidNakadeDeath) | `done` |
 | M89 | Next missing mechanism (Go Lite Twisted-Nakade / objective.twistedNakadeDeath) | `done` |
 | M90 | Next missing mechanism (Go Lite L4-Nakade / objective.l4NakadeDeath) | `done` |
+| M91 | Next missing mechanism (Go Lite Straight-4-Nakade / objective.straight4NakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M90 Go Lite L4-Nakade landed. Pick **P3
+**Optimizing for this marathon:** M91 Go Lite Straight-4-Nakade landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
@@ -126,7 +127,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥927** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥935** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -259,7 +260,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
 expressible vs ladder/net/sente/approach/nakade family on lite boards);
 hex-graph simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler. Go Lite L4-Nakade landed (M90). Go Lite
+anchor); realtime scheduler. Go Lite Straight-4-Nakade landed (M91). Go Lite
+L4-Nakade landed (M90). Go Lite
 Twisted-Nakade landed (M89). Go Lite Pyramid-Nakade landed (M88). Go Lite
 Square-Nakade landed (M87). Go Lite
 L-Nakade landed (M86). Hidden Double
@@ -1456,6 +1458,23 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Out of scope: straight-4 / bulky-5 tables; throw-in / connect-and-die;
   hex/graph nakade ports; realtime
 - Green gate: ≥927 + new cases — **done**
+
+### M91 — Go Lite Straight-4-Nakade / straight-4 (I-tetromino)
+
+- Schema: `objective.straight4NakadeDeath` boolean (area_control-only); distinct
+  from T1 / bent-3 / square-4 / pyramid-4 / twisted-4 / L4 so the last free
+  tetromino stays contrastable — **done**
+- Kernel: `isStraight4NakadeVulnerableRegion` (filled 1×4 / 4×1 bbox; vital =
+  canonical 2nd cell) + `findStraight4NakadeDeadCells` /
+  `removeStraight4NakadeDeadStones`; `areaOutcome` after optional
+  l4NakadeDeath, before netDeath — **done**
+- Preset `go-lite-straight4-nakade` (7×8 O-ring + interior X shell; eye + I
+  corridor; Benson-alive / T1-miss / L-miss / square-miss / pyramid-miss /
+  twisted-miss / L4-miss / chase-miss; flag → O) + schema / uniqueness /
+  transcript / replay / contrast tests — **done**
+- Out of scope: bulky-5 tables; throw-in / connect-and-die; hex/graph nakade
+  ports; realtime
+- Green gate: ≥931 + new cases — **done**
 
 ## Sequencing notes
 
