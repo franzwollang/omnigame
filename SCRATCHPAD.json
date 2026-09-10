@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T13:08:28Z",
-  "turn": 121,
+  "updated_at": "2026-09-10T13:16:00Z",
+  "turn": 122,
   "focus": {
-    "milestone": "M91",
+    "milestone": "M92",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Straight-4-Nakade landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Bulky-5-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 0242 M90 tip onto cursor/next-task-progression-5903",
-    "Prior 7x7 I-4 miss was geometry; 7x8 shell is Benson-alive + unique",
-    "Landed M91 objective.straight4NakadeDeath + go-lite-straight4-nakade"
+    "Synced from 5903 M91 tip onto cursor/next-task-progression-1ee4",
+    "Landed M92 objective.bulky5NakadeDeath + go-lite-bulky5-nakade",
+    "P-pentomino unique on same 7x7 shell; vital = unique deg-3"
   ],
   "discoveries": [
-    "Straight-4 needs height>=8 O-ring; 7x7 closed X empties max 3x3",
-    "Vital = canonical 2nd cell on sorted 1x4/4x1 line"
+    "Bulky-5 = 2x3/3x2 bbox missing one corner (U = edge-middle hole)",
+    "Plus/X-pentomino needs >=9x9 for eye + plus"
   ],
   "open_threads": [
-    "Next: bulky-5 if unique on larger board, or realtime (not topology ports)"
+    "Next: plusNakadeDeath on 9x9, or realtime (not topology ports)"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M91",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M92",
   "blockers": []
 }

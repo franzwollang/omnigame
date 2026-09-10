@@ -107,12 +107,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M89 | Next missing mechanism (Go Lite Twisted-Nakade / objective.twistedNakadeDeath) | `done` |
 | M90 | Next missing mechanism (Go Lite L4-Nakade / objective.l4NakadeDeath) | `done` |
 | M91 | Next missing mechanism (Go Lite Straight-4-Nakade / objective.straight4NakadeDeath) | `done` |
+| M92 | Next missing mechanism (Go Lite Bulky-5-Nakade / objective.bulky5NakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M91 Go Lite Straight-4-Nakade landed. Pick **P3
+**Optimizing for this marathon:** M92 Go Lite Bulky-5-Nakade landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
-with ladder/nakade family).
+with ladder/nakade family); plus/X-pentomino nakade (needs ≥9×9).
 
 ## Marathon runbook (cloud agents)
 
@@ -260,7 +261,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
 expressible vs ladder/net/sente/approach/nakade family on lite boards);
 hex-graph simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler. Go Lite Straight-4-Nakade landed (M91). Go Lite
+anchor); realtime scheduler; plus/X-pentomino nakade (needs ≥9×9). Go Lite
+Bulky-5-Nakade landed (M92). Go Lite Straight-4-Nakade landed (M91). Go Lite
 L4-Nakade landed (M90). Go Lite
 Twisted-Nakade landed (M89). Go Lite Pyramid-Nakade landed (M88). Go Lite
 Square-Nakade landed (M87). Go Lite
@@ -1475,6 +1477,23 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Out of scope: bulky-5 tables; throw-in / connect-and-die; hex/graph nakade
   ports; realtime
 - Green gate: ≥931 + new cases — **done**
+
+### M92 — Go Lite Bulky-5-Nakade / bulky-5 (P-pentomino)
+
+- Schema: `objective.bulky5NakadeDeath` boolean (area_control-only); distinct
+  from tetromino nakade tables so the first pentomino big-eye stays
+  contrastable — **done**
+- Kernel: `isBulky5NakadeVulnerableRegion` (2×3 / 3×2 bbox missing one corner;
+  vital = unique deg-3) + `findBulky5NakadeDeadCells` /
+  `removeBulky5NakadeDeadStones`; `areaOutcome` after optional
+  straight4NakadeDeath, before netDeath — **done**
+- Preset `go-lite-bulky5-nakade` (7×7 O-ring + interior X shell; eye + P
+  corridor; Benson-alive / T1-miss / L-miss / square-miss / pyramid-miss /
+  twisted-miss / L4-miss / straight-4-miss / chase-miss; flag → O) + schema /
+  uniqueness / transcript / replay / contrast tests — **done**
+- Out of scope: plus/X-pentomino (needs ≥9×9); throw-in / connect-and-die;
+  hex/graph nakade ports; realtime
+- Green gate: ≥935 + new cases — **done**
 
 ## Sequencing notes
 

@@ -100,6 +100,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 			config.objective.l4NakadeDeath === true ? true : undefined,
 		straight4NakadeDeath:
 			config.objective.straight4NakadeDeath === true ? true : undefined,
+		bulky5NakadeDeath:
+			config.objective.bulky5NakadeDeath === true ? true : undefined,
 		netDeath: config.objective.netDeath === true ? true : undefined,
 		looseNetDeath:
 			config.objective.looseNetDeath === true ? true : undefined,
@@ -238,6 +240,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	twistedNakadeDeath: undefined,
 	l4NakadeDeath: undefined,
 	straight4NakadeDeath: undefined,
+	bulky5NakadeDeath: undefined,
 	netDeath: undefined,
 	looseNetDeath: undefined,
 	senteLadderDeath: undefined,
