@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T10:20+00:00",
+  "turn": 110,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M80",
+    "issue": "next-missing-mechanism",
+    "goal": "Go Lite Approach Net landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 9419 M79 tip onto cursor/next-task-progression-cab2",
+    "Landed M80 approachNetDeath + go-lite-approach-net",
+    "Open loose cage: drop O@(1,4); approach completes loose net"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Approach = non-liberty place that makes net/loose-net true",
+    "loose-drop-1,4 + O@(3,6) flips X→O on clearance without sibling flags"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: throw-in/snapback, connect-and-die, simultaneous jump, realtime"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M80",
   "blockers": []
 }
