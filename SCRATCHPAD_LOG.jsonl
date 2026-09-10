@@ -143,3 +143,4 @@
 {"ts":"2026-09-10T12:10+00:00","focus":"M87 square-nakade","summary":"Landed objective.squareNakadeDeath + go-lite-square-nakade preset","next":"Pick next genuine P3 seam after M87"}
 {"ts":"2026-09-10T12:20+00:00","focus":"M88 pyramidNakadeDeath","summary":"Landed Go Lite Pyramid-Nakade after M87 sync; unique T-shape vital-fill","next":"Pick next genuine P3 seam after M88"}
 {"ts":"2026-09-10T12:40+00:00","focus":"M89 twisted-nakade","summary":"Landed twisted-4 Z/S nakade death + preset; hand off next P3 seam","next":"Pick smallest genuine next-missing-mechanism after M89"}
+{"ts":"2026-09-10T12:55+00:00","focus":"M90 l4NakadeDeath","summary":"Landed Go Lite L4-Nakade after M89 tip sync","next":"Pick next genuine P3 seam (not topology/recombination)"}

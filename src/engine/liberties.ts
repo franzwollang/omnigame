@@ -727,7 +727,8 @@ export function isSquareNakadeVulnerableRegion(
  * Pyramid-4 (T) nakade: exactly four empties forming a T — three colinear
  * base cells plus one stem orthogonal from the middle; vital = unique
  * degree-3 junction. Distinct from square-4 / T1 / L so shapes stay
- * contrastable (M88). Twisted-4 (Z/S) is M89 `twistedNakadeDeath`.
+ * contrastable (M88). Twisted-4 (Z/S) is M89 `twistedNakadeDeath`; L4
+ * (same-side bbox holes) is M90 `l4NakadeDeath`.
  */
 export function isPyramidNakadeVulnerableRegion(
 	regionCells: Position[]
@@ -758,7 +759,7 @@ export function isPyramidNakadeVulnerableRegion(
  * whose two missing cells are opposite corners (skew tetromino); vital =
  * canonical degree-2 cell (lexicographically smaller). Distinct from
  * square-4 / pyramid-4 / L4 (same-side bbox holes) / T1 so shapes stay
- * contrastable (M89).
+ * contrastable (M89). L4 is M90 `l4NakadeDeath`.
  */
 export function isTwistedNakadeVulnerableRegion(
 	regionCells: Position[]
@@ -790,8 +791,67 @@ export function isTwistedNakadeVulnerableRegion(
 	if (missing.length !== 2) return null;
 	const a = missing[0]!;
 	const b = missing[1]!;
-	// Opposite-corner holes ⇒ Z/S; same-row/col holes ⇒ L/J (deferred).
+	// Opposite-corner holes ⇒ Z/S; same-row/col holes ⇒ L/J (`l4NakadeDeath`).
 	if (a.row === b.row || a.col === b.col) return null;
+
+	const ortho = (p: Position, q: Position) =>
+		Math.abs(p.row - q.row) + Math.abs(p.col - q.col) === 1;
+	const degrees = regionCells.map((p, i) =>
+		regionCells.reduce(
+			(d, q, j) => (i !== j && ortho(p, q) ? d + 1 : d),
+			0
+		)
+	);
+	if (degrees.some((d) => d === 0 || d > 2)) return null;
+	if (degrees.filter((d) => d === 1).length !== 2) return null;
+	if (degrees.filter((d) => d === 2).length !== 2) return null;
+	const elbows = degrees
+		.map((d, i) => (d === 2 ? regionCells[i]! : null))
+		.filter((p): p is Position => p != null)
+		.sort((p, q) => p.row - q.row || p.col - q.col);
+	return { vital: elbows[0]! };
+}
+
+/**
+ * L4 (tetromino L/J) nakade: exactly four empties in a 2×3 / 3×2 bbox whose
+ * two missing cells share a row or column (same-side holes); vital =
+ * canonical degree-2 cell (lexicographically smaller). Distinct from
+ * twisted-4 (opposite-corner Z/S) / square-4 / pyramid-4 / bent-3 so shapes
+ * stay contrastable (M90).
+ */
+export function isL4NakadeVulnerableRegion(
+	regionCells: Position[]
+): { vital: Position } | null {
+	if (regionCells.length !== 4) return null;
+	if (isSquareNakadeVulnerableRegion(regionCells)) return null;
+	if (isPyramidNakadeVulnerableRegion(regionCells)) return null;
+	if (isTwistedNakadeVulnerableRegion(regionCells)) return null;
+	let minR = Infinity;
+	let maxR = -Infinity;
+	let minC = Infinity;
+	let maxC = -Infinity;
+	const keys = new Set<string>();
+	for (const p of regionCells) {
+		if (p.row < minR) minR = p.row;
+		if (p.row > maxR) maxR = p.row;
+		if (p.col < minC) minC = p.col;
+		if (p.col > maxC) maxC = p.col;
+		keys.add(`${p.row},${p.col}`);
+	}
+	const h = maxR - minR;
+	const w = maxC - minC;
+	if (!((h === 1 && w === 2) || (h === 2 && w === 1))) return null;
+	const missing: Position[] = [];
+	for (let r = minR; r <= maxR; r++) {
+		for (let c = minC; c <= maxC; c++) {
+			if (!keys.has(`${r},${c}`)) missing.push({ row: r, col: c });
+		}
+	}
+	if (missing.length !== 2) return null;
+	const a = missing[0]!;
+	const b = missing[1]!;
+	// Same-row/col holes ⇒ L/J; opposite-corner holes ⇒ Z/S (twisted).
+	if (a.row !== b.row && a.col !== b.col) return null;
 
 	const ortho = (p: Position, q: Position) =>
 		Math.abs(p.row - q.row) + Math.abs(p.col - q.col) === 1;
@@ -1294,6 +1354,104 @@ export function removeTwistedNakadeDeadStones(
 	graph?: GraphTopologyData
 ): Grid {
 	const dead = findTwistedNakadeDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
+ * Interior groups that border an L4 (tetromino L/J) nakade big-eye and would
+ * have fewer than 2 true eyes after an opponent vital fill are dead at
+ * scoring (M90). Same exemptions as T1/L/square/pyramid/twisted nakade
+ * (edge + seki). Contrastable with twisted/pyramid/square/T1/L and chase.
+ */
+export function findL4NakadeDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const dead: Position[] = [];
+	const deadGroupIds = new Set<number>();
+
+	for (const color of ["X", "O"] as const) {
+		const colorGroups = groups.filter((g) => g.color === color);
+		if (colorGroups.length === 0) continue;
+		const stoneToGroup = new Map<string, number>();
+		for (const g of colorGroups) {
+			for (const p of g.stones) stoneToGroup.set(keyOf(p), g.id);
+		}
+		const regions = findColorOnlyEmptyRegions(
+			grid,
+			color,
+			stoneToGroup,
+			wrap,
+			topology,
+			graph
+		);
+		const attacker: Player = color === "X" ? "O" : "X";
+
+		for (const region of regions) {
+			const nakade = isL4NakadeVulnerableRegion(region.cells);
+			if (!nakade) continue;
+			const sim = simulateLibertyPlace(
+				grid,
+				nakade.vital,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			const nextGrid: Grid = { ...grid, cells: sim.cells };
+
+			for (const gid of Array.from(region.adjacentGroupIds)) {
+				if (deadGroupIds.has(gid)) continue;
+				const g = colorGroups.find((x) => x.id === gid);
+				if (!g) continue;
+				if (sekiIds.has(g.id)) continue;
+				if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+
+				const rem = g.stones.filter((p) => getCell(nextGrid, p) === color);
+				if (rem.length === 0) {
+					deadGroupIds.add(gid);
+					for (const p of g.stones) dead.push(p);
+					continue;
+				}
+				const eyes = countTrueEyes(
+					nextGrid,
+					rem,
+					color,
+					wrap,
+					topology,
+					graph
+				);
+				if (eyes >= 2) continue;
+				deadGroupIds.add(gid);
+				for (const p of g.stones) dead.push(p);
+			}
+		}
+	}
+	return dead;
+}
+
+/** Clear L4-nakade-dead stones from a grid copy (M90). */
+export function removeL4NakadeDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findL4NakadeDeadCells(grid, wrap, topology, graph);
 	if (dead.length === 0) return grid;
 	let cells = grid.cells;
 	for (const p of dead) {
@@ -2271,12 +2429,14 @@ export function scoreArea(
  * true, the same path for pyramid-4 (T) big-eyes runs after optional
  * squareNakadeDeath and before twistedNakadeDeath / netDeath (M88). When
  * `twistedNakadeDeath` is true, the same path for twisted-4 (Z/S) big-eyes
- * runs after optional pyramidNakadeDeath and before netDeath (M89). When
- * `netDeath` is true, groups force-capturable by an attacker-sente tight net
- * / geta (exactly 3 root liberties; every escape has a finishing reply) are
- * removed after optional nakadeDeath / lNakadeDeath / squareNakadeDeath /
- * pyramidNakadeDeath / twistedNakadeDeath and before looseNetDeath /
- * senteLadderDeath / ladderDeath (M77). When
+ * runs after optional pyramidNakadeDeath and before l4NakadeDeath / netDeath
+ * (M89). When `l4NakadeDeath` is true, the same path for L4 (tetromino L/J)
+ * big-eyes runs after optional twistedNakadeDeath and before netDeath (M90).
+ * When `netDeath` is true, groups force-capturable by an attacker-sente tight
+ * net / geta (exactly 3 root liberties; every escape has a finishing reply)
+ * are removed after optional nakadeDeath / lNakadeDeath / squareNakadeDeath /
+ * pyramidNakadeDeath / twistedNakadeDeath / l4NakadeDeath and before
+ * looseNetDeath / senteLadderDeath / ladderDeath (M77). When
  * `looseNetDeath` is true, the same search with exactly 4 root liberties
  * runs after netDeath and before senteLadderDeath / ladderDeath (M78). When
  * `senteLadderDeath` is true, multi-stone groups with exactly 3 root
@@ -2312,7 +2472,8 @@ export function areaOutcome(
 	lNakadeDeath: boolean = false,
 	squareNakadeDeath: boolean = false,
 	pyramidNakadeDeath: boolean = false,
-	twistedNakadeDeath: boolean = false
+	twistedNakadeDeath: boolean = false,
+	l4NakadeDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -2340,6 +2501,9 @@ export function areaOutcome(
 	}
 	if (twistedNakadeDeath) {
 		scored = removeTwistedNakadeDeadStones(scored, wrap, topology, graph);
+	}
+	if (l4NakadeDeath) {
+		scored = removeL4NakadeDeadStones(scored, wrap, topology, graph);
 	}
 	if (netDeath) {
 		scored = removeNetDeadStones(scored, wrap, topology, graph);
