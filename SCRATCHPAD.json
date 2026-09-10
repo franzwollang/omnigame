@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T13:08:28Z",
+  "turn": 121,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M91",
+    "issue": "next-missing-mechanism",
+    "goal": "Go Lite Straight-4-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 0242 M90 tip onto cursor/next-task-progression-5903",
+    "Prior 7x7 I-4 miss was geometry; 7x8 shell is Benson-alive + unique",
+    "Landed M91 objective.straight4NakadeDeath + go-lite-straight4-nakade"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Straight-4 needs height>=8 O-ring; 7x7 closed X empties max 3x3",
+    "Vital = canonical 2nd cell on sorted 1x4/4x1 line"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: bulky-5 if unique on larger board, or realtime (not topology ports)"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M91",
   "blockers": []
 }

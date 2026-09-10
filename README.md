@@ -50,10 +50,76 @@ These are built from the same shared schema and operators.
 - **Step Race** (orthogonal `Move` + reach_row objective)
 - **Diagonal Step Race** (`movement.adjacency = diagonal` ferz step + reach_row)
 - **Slide Race** (`movement.range > 1` blocker-aware orthogonal slide + reach_row)
+- **Hex Slide Race** (`hex_offset` cube-axis `movement.range > 1` + reach_row)
+- **Graph Slide Race** (`graph` edge chain-walk `movement.range > 1` + reach_row)
+- **Graph Hop Race** (`movement.graphReach = hop` — BFS within range; may turn at junctions)
+- **Replace Race** (`movement.capture = replace` — move onto enemy clears then lands)
+- **Hex Replace Race** (`hex_offset` + `capture: replace` — cube-axis attrition)
+- **Graph Replace Race** (`graph` + `capture: replace` — chain-walk attrition)
+- **Jump Race** (`movement.capture = jump` — leap over enemy + mustContinueFrom chains)
+- **Simultaneous Jump Race** (joint simultaneous × jump — single-hop mid clear)
+- **Double Simultaneous Jump Race** (`actionsPerTurn > 1` × simultaneous jump — multi-hop rounds without mustContinueFrom)
+- **Ordered Simultaneous Jump Race** (ordered simultaneous × jump — sequential mid clear / capture-before-flee)
+- **Hidden Simultaneous Jump Race** (`commitReveal` × simultaneous jump — blind mid-flee abort)
+- **Hidden Double Simultaneous Jump Race** (`commitReveal` + `actionsPerTurn > 1` × jump — private double-hop then reveal)
+- **Hex Jump Race** (`hex_offset` + `capture: jump` — cube-axis leap-over chains)
+- **Graph Jump Race** (`graph` + `capture: jump` — 2-edge leap-over chains)
+- **Mandatory Jump Race** (`mustCapture` — quiet moves illegal when any jump exists)
+- **Mandatory Longest Jump Lite** (`mustLongestCapture` — only max-length jump chains)
+- **Crowned Kings Jump Lite** (`movement.promotion` — crown on reach row; king adjacency)
+- **Hex Crowned Jump Lite** (`hex_offset` + `promotion` — cube-axis crown + crownedRange)
+- **Graph Crowned Jump Lite** (`graph` + `promotion` — edge chain-walk crown + crownedRange)
+- **Graph Hub Crowned Jump Lite** (`promotion.targetNodes` — hub vs same-row decoy)
+- **Forward Men Jump Lite** (`menForwardOnly` — uncrowned advance toward promo side only)
+- **Hex Forward Men Jump Lite** (`hex_offset` + `menForwardOnly` — cube-axis forward row filter)
+- **Graph Forward Men Jump Lite** (`graph` + `menForwardOnly` — edge-distance toward promo row)
+- **Graph Hub Forward Men Jump Lite** (`targetNodes` + `menForwardOnly` — hub-distance forward)
+- **Flying Kings Jump Lite** (`crownedRange` — crowned quiet slides longer than men)
+- **Flying Capture Jump Lite** (`crownedFlyingCapture` — crowned long-range leap capture)
+- **Hex Flying Capture Jump Lite** (`hex_offset` + `crownedFlyingCapture` — cube-axis flying leap)
+- **Graph Flying Capture Jump Lite** (`graph` + `crownedFlyingCapture` — chain-walk flying leap)
+- **Minesweeper Lite** (`flood_reveal` + `clear_hazards` + seeded mines)
+- **Hex Minesweeper Lite** (`hex_offset` + `flood_reveal` — cube-axis-6 hazard adjacency)
+- **Graph Minesweeper Lite** (`graph` + `flood_reveal` — explicit-edge hazard adjacency)
+- **Memory Flip Lite** (`memory_flip` + `flip` + `match_pairs` — pair matching)
+- **Guess Who Lite** (deduction query/guess + identify_secret)
+- **Guess Who Commit Lite** (`autoEliminate: false` + eliminate + end_turn wrong guess)
+- **Guess Who And Lite** (`queryShape: and` — 2-clause trait conjunction queries)
+- **Guess Who Or Lite** (`queryShape: or` — 2-clause trait disjunction queries)
+- **Guess Who And3 Lite** (`compoundArity: 3` — 3-clause trait conjunction)
+- **Guess Who Commit Phases Lite** (`turn.phases: ["query","eliminate"]` same-turn commit)
+- **Simultaneous Guess Who Lite** (joint simultaneous query/guess + identify_secret)
+- **Simultaneous Guess Who Commit Lite** (`autoEliminate: false` + joint eliminate under simultaneous)
+- **Simultaneous Guess Who And Lite** (joint simultaneous 2-clause AND queries)
+- **Hidden Simultaneous Guess Who Lite** (`commitReveal` under simultaneous deduction)
+- **Hidden Simultaneous Guess Who Commit Lite** (`commitReveal` + `autoEliminate: false` + `commitEliminate`)
 - **Life Lite** (manual `tick` + Conway B3/S23 scheduler)
 - **Hex Connect Lite** (odd-r `hex_offset` topology + n-in-a-row)
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
 - **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
+- **Go Lite Komi** (second-player `objective.komi` offset at area scoring)
+- **Go Lite Seki** (`objective.seki` shared-life territory exclusion at scoring)
+- **Go Lite Dead Stones** (`objective.deadStones` pass-alive lite corpse removal at scoring)
+- **Go Lite Benson** (`objective.bensonLife` vital-region unconditional life at scoring)
+- **Go Lite Dame Fill** (`objective.dameFill` damezukai-lite endgame; dame-only places after first pass)
+- **Go Lite Mark Dead** (`objective.markDead` interactive dead-stone marking after two-pass)
+- **Go Lite Mark Dead Resume** (`objective.markDeadResume` + `rejectMarks` dispute→resume)
+- **Go Lite Ladders** (`objective.ladderDeath` attacker-sente ladder / atari-run removal at scoring)
+- **Go Lite Territory Prisoners** (`objective.territoryPrisoners` Japanese-style territory + prisoners scoring)
+- **Go Lite Semeai** (`objective.semeaiDeath` capturing-race liberty comparison at scoring)
+- **Go Lite Nakade** (`objective.nakadeDeath` T1 3-straight big-eye vital-fill removal at scoring)
+- **Go Lite L-Nakade** (`objective.lNakadeDeath` bent-3 big-eye vital-fill removal at scoring)
+- **Go Lite Square-Nakade** (`objective.squareNakadeDeath` square-4 / 2×2 bulky big-eye vital-fill removal at scoring)
+- **Go Lite Pyramid-Nakade** (`objective.pyramidNakadeDeath` pyramid-4 / T bulky big-eye vital-fill removal at scoring)
+- **Go Lite Twisted-Nakade** (`objective.twistedNakadeDeath` twisted-4 / Z-S bulky big-eye vital-fill removal at scoring)
+- **Go Lite L4-Nakade** (`objective.l4NakadeDeath` L4 / tetromino L-J bulky big-eye vital-fill removal at scoring)
+- **Go Lite Straight-4-Nakade** (`objective.straight4NakadeDeath` straight-4 / I-tetromino bulky big-eye vital-fill removal at scoring)
+- **Go Lite Net** (`objective.netDeath` attacker-sente net / geta removal at scoring)
+- **Go Lite Loose Net** (`objective.looseNetDeath` attacker-sente loose net / 4-lib geta removal at scoring)
+- **Go Lite Sente Ladder** (`objective.senteLadderDeath` attacker-first 3-lib → ladder collapse at scoring)
+- **Go Lite Approach Net** (`objective.approachNetDeath` non-liberty approach → net/loose-net collapse at scoring)
+- **Hex Go Lite** (same on hex_offset — six cube-axis liberties)
+- **Graph Go Lite** (same on graph — liberties follow explicit undirected edges)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
 - **Go Lite Situational Superko** (situational superko — forbids repeating a prior board+side-to-move)
 - **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
@@ -72,7 +138,23 @@ These are built from the same shared schema and operators.
 - **Place & Move Lite** (`turn.phases: ["place","move"]` in-turn action sequence)
 - **Place & Fire Lite** (`turn.phases: ["place","fire"]` + hit/miss sink)
 - **Place, Move & Fire Lite** (`turn.phases: ["place","move","fire"]` + `connect_or_destroy`)
+- **Move & Fire Lite** (`turn.phases: ["move","fire"]` — reposition spotter then fire; no place)
 - **Simultaneous Step Race** (`simultaneous` + `move` joint resolve; same-destination conflict)
+- **Double Simultaneous Step Race** (`actionsPerTurn = 2` under open simultaneous move; chained steps)
+- **Hidden Simultaneous Step Race** (`commitReveal` under simultaneous move; private `commitMove` then reveal)
+- **Hidden Double Simultaneous Step Race** (`commitReveal` + `actionsPerTurn = 2` under simultaneous move; private chained commits then reveal)
+- **Simultaneous Slide Race** (`simultaneous` + `movement.range > 1`; vacated-origin path checks)
+- **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
+- **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
+- **Simultaneous Jump Race** (`simultaneous` + `capture: jump`; single-hop mid clear + pieceCaptured)
+- **Double Simultaneous Jump Race** (`actionsPerTurn = 2` + `capture: jump`; same-piece double-hop mid clears)
+- **Ordered Simultaneous Jump Race** (`resolveOrder` + `capture: jump`; sequential mid clear + capture-before-flee)
+- **Hidden Simultaneous Jump Race** (`commitReveal` + `capture: jump`; private commitMove then reveal; blind mid-flee aborts)
+- **Hidden Double Simultaneous Jump Race** (`commitReveal` + `actionsPerTurn = 2` + `capture: jump`; private chained hops then reveal; blind mid-flee aborts)
+- **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
+- **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; vacated-origin hybrid)
+- **Simultaneous Slide Replace Flee Race** (joint slide through fleeing blocker on the ray)
+- **Ordered Simultaneous Slide Replace Race** (`resolveOrder` + slide+replace; sequential path/capture)
 
 In the sandbox, click **Browse presets** (or press **⌘/Ctrl+K**) to load one.
 
@@ -99,16 +181,17 @@ Format via the “Format” button or ⌘/Ctrl+F. Colors/theme adapt to light/da
 (although no toggle added yet), and editor scroll position is preserved on format.
 
 The form syncs two-ways with the JSON editor for many knobs (`metadata`, `grid`,
-`turn` schedule/budget/delay, placement, win, …). **JSON/presets only (for now):**
-`movement.adjacency` / `movement.range`, and `turn.phases` — see
-`OPEN_ISSUES.md` `sandbox-form-honesty`.
+`turn` schedule/budget/delay/**phases**, **movement**, placement, win, …). A
+dashed “Form coverage” callout in the Form tab lists remaining JSON/preset-only
+fields (`scheduler`, graph `nodes`/`edges`, `initial`, `placements`,
+`placement.capture`, …).
 
 ## Scripts
 
 - `pnpm run dev` — Next.js sandbox
 - `pnpm run build` / `start` — production
 - `pnpm run typecheck` / `lint`
-- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥289 tests)
+- `pnpm test` / `test:watch` — Vitest (engine transcripts; expect ≥602 tests)
 - Green gate: `pnpm install && pnpm typecheck && pnpm test`
 
 Open work and marathon queue: `OPEN_ISSUES.md` / `PLANNING.md` (not this README).
@@ -129,7 +212,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   graph (`graph` with `nodes`/`edges`); `grid.wrap` toroidal adjacency for
   **rectangle** and **hex_offset** (graph wrap = explicit edges); Toroidal TTT +
   Toroidal Hex Connect Lite presets
-- **Inputs**: cell-click, column-activation, row-activation, and piece move (`input.mode = "cell" | "column" | "row" | "move"`)
+- **Inputs**: cell-click, column-activation, row-activation, piece move, and
+  deduction query/guess (`input.mode = "cell" | "column" | "row" | "move" | "deduction" | "flip"`)
 - **Placement**:
   - direct placement (`placement.mode = "direct"`)
   - gravity placement **down | up | left | right** (`placement.mode = "gravity"`, `gravity.direction`; column ↔ vertical, row ↔ horizontal)
@@ -140,22 +224,68 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Movement**: piece steps/slides via `{ type: "move", from, to }` with
   `movement.adjacency` = `orthogonal` | `diagonal` | `king` and sliding
   `movement.range` 1..8 on rectangle (Step Race / Diagonal Step Race /
-  Slide Race / Simultaneous Step Race); hex_offset / graph
-  use topology neighbors (orthogonal, range 1) — Hex Step Race / Simultaneous Hex/Graph
-  Step Race
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous on rectangle | hex_offset | graph (Double-Place Simultaneous TTT / Hex / Graph); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move on rectangle | hex_offset | graph (Simultaneous Step Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority (Ordered Simultaneous TTT); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite)
-- **Effects**: optional capture toggles (Capture / Flip Demo)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), or `fog` (radius around own pieces + `visible[]` mask); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite presets
+  Slide Race / Simultaneous Step Race / **Simultaneous Slide Race** / **Ordered
+  Simultaneous Slide Race**); joint simultaneous slides use vacated-origin path
+  checks; ordered simultaneous slides revalidate the second seat after the first;
+  `movement.capture = replace` moves onto an enemy cell (path empty except
+  destination) — Replace Race / **Simultaneous Replace Race** (joint range 1;
+  vacated-origin paths; stationary replace still required) /
+  **Ordered Simultaneous Replace Race** (sequential capture apply; priority can
+  capture before prey flees) / **Simultaneous Slide Replace Race** (joint
+  slide+replace; path-through-fleeing) / **Simultaneous Slide Replace
+  Flee Race** (demo of slide through a vacating blocker) / **Ordered
+  Simultaneous Slide Replace Race** (ordered slide+replace; sequential
+  path/capture); hex_offset uses cube-axis slides (orthogonal, range 1..8) with
+  the same replace rules — Hex Step Race / **Hex Slide Race** / **Hex Replace
+  Race** / Simultaneous Hex Step Race; graph uses edge chain-walk slides
+  (orthogonal, range 1..8; no junction turns; same replace rules) **or**
+  hop-ball BFS (`movement.graphReach = hop`; may turn at junctions) —
+  Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Hop Race** /
+  **Graph Replace Race**; jump capture (rectangle | hex_offset | graph;
+  alternating chains or simultaneous single-/multi-hop) — **Jump Race** /
+  **Simultaneous Jump Race** / **Double Simultaneous Jump Race** / **Ordered Simultaneous Jump Race** / **Hidden Simultaneous Jump Race** / **Hidden Double Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
+  **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump
+  exists; incompatible with `graphReach: hop`); **Mandatory Longest Jump Lite**
+  (`mustLongestCapture` keeps only max-length jump chains); optional
+  `movement.promotion` (rectangle | hex_offset | graph jump) —
+  **Crowned Kings Jump Lite**
+  (Transform lite: land on `targetRows` → `X+`/`O+`; crowned uses
+  `crownedAdjacency`) / **Hex Crowned Jump Lite** (hex_offset + orthogonal
+  crownedAdjacency + `crownedRange`) / **Graph Crowned Jump Lite** (graph +
+  orthogonal crownedAdjacency + `crownedRange` chain-walk via `targetRows`) /
+  **Graph Hub Crowned Jump Lite** (`targetNodes` hub vs same-row decoy) /
+  **Forward Men Jump Lite** (`menForwardOnly`: uncrowned
+  advance toward promotion side only; crowned unrestricted) / **Hex Forward
+  Men Jump Lite** (hex_offset cube-axis lands filtered by offset-row sign) /
+  **Graph Forward Men Jump Lite** (graph edge-distance decrease toward
+  promo row) / **Graph Hub Forward Men Jump Lite** (`targetNodes` +
+  `menForwardOnly`: hub-distance forward; same-row decoy blocked) /
+  **Flying Kings
+  Jump Lite** (`crownedRange`: crowned quiet slides longer than men; jump
+  leaps unchanged) / **Flying Capture Jump Lite** (`crownedFlyingCapture`:
+  crowned ray leap with empty approach + long land within `crownedRange`) /
+  **Hex Flying Capture Jump Lite** (hex_offset cube-axis flying leap) /
+  **Graph Flying Capture Jump Lite** (graph chain-walk flying leap)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous place (Double-Place Simultaneous TTT / Hex / Graph) **or open simultaneous move** (Double Simultaneous Step Race; range 1, no replace) **or commitReveal simultaneous move** (Hidden Double Simultaneous Step Race); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Step Race** / **Hidden Double Simultaneous Step Race** / **Hidden Simultaneous Jump Race** / **Hidden Double Simultaneous Jump Race** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
+- **Effects**: optional capture toggles (Capture / Flip Demo); move replace /
+  jump capture (`movement.capture`; optional `mustCapture` /
+  `mustLongestCapture` for jump);
+  optional promotion (`movement.promotion` — Transform on reach row **or**
+  graph `targetNodes`; optional
+  `menForwardOnly` (rectangle | hex_offset | graph; targetRows or
+  graph targetNodes) / `crownedRange` /
+  `crownedFlyingCapture`)
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3 / Simultaneous / Simultaneous And / **Hidden Simultaneous** / **Hidden Simultaneous Commit**); `clear_hazards` (Minesweeper Lite / **Hex Minesweeper Lite** / **Graph Minesweeper Lite**); `match_pairs` (Memory Flip Lite); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), `deduction` (public roster + own eliminations / last query / pending commit), `flood_reveal` (shared hazard counts + flood open on rectangle Chebyshev-8, **hex cube-axis-6**, or **graph explicit edges**), or `memory_flip` (shared face-up / matched pair marks); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Minesweeper Lite** / **Hex Minesweeper Lite** / **Graph Minesweeper Lite** / **Memory Flip Lite** / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who Commit Phases Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** / **Simultaneous Guess Who Lite** / **Simultaneous Guess Who Commit Lite** / **Simultaneous Guess Who And Lite** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite** presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
 - **Agents**: `src/agents/` — kernel-only bots (`legalActions` + `stepSync` + `observe`), including hunt (hit/miss) and UCT tree search
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
-What’s **roadmap**, not fully realized yet: full Go rules, capture-by-replacement
-piece tables, richer multi-phase machines, and a larger set of reusable
-operators/constraints.
+What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder
+(only with anchor), realtime scheduler,
+and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
 
@@ -236,8 +366,9 @@ Turn logic is declarative:
 - N players
 - schedule: alternating, simultaneous place or move (`resolveOrder` joint | x_first | o_first; `actionsPerTurn` multi-action place rounds), or multi-step alternating
 - phases: in-turn `turn.phases` (place→move, place→fire, place→move→fire with
-  `connect_or_destroy`); game-long fleet placement → combat; hex-graph phase
-  lifts still expanding
+  `connect_or_destroy`, move→fire, or deduction query→eliminate /
+  query→guess / query→eliminate→guess); game-long fleet placement → combat;
+  hex-graph phase lifts still expanding
 - action points / per-turn budgets
 
 ### 6) Observation primitive (high leverage; optional early, core later)
@@ -332,7 +463,21 @@ The goal is to converge on a “complete-ish” primitive set by implementing a 
 - **Battleship-lite**: hidden placement, hit/miss observation, sink objective  
   Stresses: partial info + connectivity constraints + phases
 - **Guess Who-like**: predicate queries over an attribute set  
-  Stresses: query operator + hypothesis/commit actions + race objective
+  Stresses: query operator + hypothesis/commit actions + race objective  
+  **Landed (MVP):** Guess Who Lite — `deduction` input/observation,
+  `identify_secret`, query + guess; **Guess Who Commit Lite** —
+  `autoEliminate: false` + `{ type: "eliminate" }` (manual hypothesis commit);
+  **Guess Who Commit Phases Lite** — `turn.phases: ["query","eliminate"]`
+  (same-turn ask then flip); **Guess Who And Lite** — `queryShape: and`
+  (2-clause trait conjunction); **Guess Who Or Lite** — `queryShape: or`
+  (2-clause trait disjunction); **Guess Who And3 Lite** — `compoundArity: 3`
+  (3-clause conjunction); **Simultaneous Guess Who Lite** — joint
+  `simultaneousQuery` / `simultaneousGuess` under `schedule = simultaneous`;
+  **Simultaneous Guess Who And Lite** — joint compound AND under simultaneous;
+  **Hidden Simultaneous Guess Who Lite** — `commitReveal` + `commitQuery` /
+  `commitGuess` (private commits then joint reveal); **Hidden Simultaneous
+  Guess Who Commit Lite** — `commitReveal` + `autoEliminate: false` +
+  `commitEliminate` (manual prune under hidden commits)
 - **Go-lite / territory fill**: place + adjacency/liberty constraints + area scoring (simplified)  
   Stresses: stepping + constraints + scoring
 
@@ -354,10 +499,24 @@ Don’t commit to heavy theory early, but keep the seam clean:
 Baseline agents (enough to prove the ABI):
 
 - random legal
-- greedy 1-ply (win / block / heuristics)
+- greedy 1-ply (win / block / heuristics; under `simultaneous`, skips
+  lookahead because a single seat action is a no-op until joint resolve)
 - hunt (hit/miss observe → target after hits, parity search)
 - tiny flat MCTS
 - UCT tree search (UCB1 + optional tree reuse)
+
+**Simultaneous search:** Under open `turn.schedule = simultaneous` (place,
+move, or deduction; any `actionsPerTurn` for place, including multi-action
+rounds), MCTS and UCT search the joint action cartesian
+(`simultaneousPlace` / `simultaneousMove` / kind-matched `simultaneousQuery` /
+`simultaneousGuess`) and cache the decision so sandbox dual-/multi-`act` stays
+consistent. Under `commitReveal` **place** / **move**, they search fresh-round reveal
+joints (same cartesian, evaluated via `simultaneousPlace` / `simultaneousMove`) and
+cache sequential `commitPlace` / `commitMove` emissions so sandbox X-then-O clicks
+stay on one plan. Mid-round commits without a cached plan fall back to per-seat
+search. CommitReveal **deduction** also searches fresh-round kind-matched
+query/guess/eliminate joints (`commitQuery` / `commitGuess` / `commitEliminate`).
+Greedy still skips lookahead under simultaneous.
 
 ## Suggested module structure (directional)
 
@@ -381,12 +540,110 @@ liberties/ko/superko, simultaneous / multi-step / delayed / in-turn phases, libr
 explorer, debug overlays, baseline agents. Details: README status section +
 `PLANNING.md`.
 
+**Landed (Phase 2 so far):** composition honesty (M8), capture-by-replacement /
+Replace Race (M9), Guess Who Lite query+guess / `identify_secret` (M10), joint
+simultaneous sliding / Simultaneous Slide Race (M11), ordered simultaneous
+sliding / Ordered Simultaneous Slide Race (M12), joint simultaneous replace /
+Simultaneous Replace Race (M13), ordered simultaneous replace / Ordered
+Simultaneous Replace Race (M14), simultaneous slide+replace / Simultaneous +
+Ordered Slide Replace Race (M15), move→fire in-turn phases / Move & Fire Lite
+(M16), vacated-origin hybrid for joint replace paths / Simultaneous Slide
+Replace Flee Race (M17), joint UCT/MCTS under open simultaneous (M18), joint
+UCT/MCTS under multi-action simultaneous (M19), joint UCT/MCTS under
+commitReveal / Hidden Simultaneous TTT (M20), hex cube-axis sliding / Hex
+Slide Race (M21), graph chain-walk sliding / Graph Slide Race (M22), Guess Who
+manual commit / Guess Who Commit Lite (M23), Guess Who trait-conjunction
+queries / Guess Who And Lite (M24), Guess Who trait-disjunction queries /
+Guess Who Or Lite (M25), hex replace capture / Hex Replace Race (M26),
+graph replace capture / Graph Replace Race (M27), compoundArity /
+Guess Who And3 Lite (M28), deduction query→eliminate phases /
+Guess Who Commit Phases Lite (M29), simultaneous deduction joint query/guess /
+Simultaneous Guess Who Lite (M30), graph hop-ball range / Graph Hop Race (M31),
+simultaneous compound deduction / Simultaneous Guess Who And Lite (M32),
+simultaneous deduction commitReveal / Hidden Simultaneous Guess Who Lite (M33),
+joint UCT/MCTS under open simultaneous deduction (M34), simultaneous deduction
+manual eliminate / Simultaneous Guess Who Commit Lite (M35), commitReveal
+deduction joint UCT / Hidden Simultaneous Guess Who Lite plan search (M36),
+commitEliminate / Hidden Simultaneous Guess Who Commit Lite (M37),
+commitMove / Hidden Simultaneous Step Race (M38), multi-action simultaneous
+move / Double Simultaneous Step Race (M39), commitReveal multi-action
+simultaneous move / Hidden Double Simultaneous Step Race (M40), jump capture /
+multi-jump chains / Jump Race (M43), flood-fill region reveal /
+Minesweeper Lite (M44), mandatory jump-at-turn-start / Mandatory Jump Race
+(M45), memory flip / tile pair-matching / Memory Flip Lite (M46), hex jump
+capture / Hex Jump Race (M47), graph jump capture / Graph Jump Race (M48),
+crowned promotion / Crowned Kings Jump Lite (M49), forward-only men /
+Forward Men Jump Lite (M50), longest mandatory capture /
+Mandatory Longest Jump Lite (M51), flying kings / crowned quiet range /
+Flying Kings Jump Lite (M52), hex flood_reveal / Hex Minesweeper Lite (M53),
+graph flood_reveal / Graph Minesweeper Lite (M54), flying jump capture /
+Flying Capture Jump Lite (M55), hex liberties / Hex Go Lite (M56),
+graph liberties / Graph Go Lite (M57), hex promotion / Hex Crowned Jump Lite
+(M58), graph promotion / Graph Crowned Jump Lite (M59), hub `targetNodes`
+promotion / Graph Hub Crowned Jump Lite (M60), hex flying capture /
+Hex Flying Capture Jump Lite (M61), graph flying capture /
+Graph Flying Capture Jump Lite (M62), hex forward-only men /
+Hex Forward Men Jump Lite (M63), graph forward-only men /
+Graph Forward Men Jump Lite (M64), hub-graph forward-only men /
+Graph Hub Forward Men Jump Lite (M65), Go Lite Komi / `objective.komi` (M66),
+Go Lite Seki / `objective.seki` (M67), Go Lite Dead Stones /
+`objective.deadStones` (M68), Go Lite Benson / `objective.bensonLife` (M69),
+Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
+`objective.markDead` (M71), Go Lite Mark Dead Resume /
+`objective.markDeadResume` (M72), Go Lite Ladders /
+`objective.ladderDeath` (M73), Go Lite Territory Prisoners /
+`objective.territoryPrisoners` (M74), Go Lite Semeai /
+`objective.semeaiDeath` (M75), Go Lite Nakade /
+`objective.nakadeDeath` (M76), Go Lite Net /
+`objective.netDeath` (M77), Go Lite Loose Net /
+`objective.looseNetDeath` (M78), Go Lite Sente Ladder /
+`objective.senteLadderDeath` (M79), Go Lite Approach Net /
+`objective.approachNetDeath` (M80), Simultaneous Jump Race (M81),
+Ordered Simultaneous Jump Race (M82), Hidden Simultaneous Jump Race (M83),
+Double Simultaneous Jump Race (M84), Hidden Double Simultaneous Jump Race (M85),
+Go Lite L-Nakade / `objective.lNakadeDeath` (M86), Go Lite Square-Nakade /
+`objective.squareNakadeDeath` (M87), Go Lite Pyramid-Nakade /
+`objective.pyramidNakadeDeath` (M88), Go Lite Twisted-Nakade /
+`objective.twistedNakadeDeath` (M89), Go Lite L4-Nakade /
+`objective.l4NakadeDeath` (M90), Go Lite Straight-4-Nakade /
+`objective.straight4NakadeDeath` (M91).
+
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
-- Composition honesty: form movement/phases, simultaneous agent-search quality
-- **Next mechanism (default):** capture-by-replacement on move
-- Deferred: Guess Who-like query operator; full Go rules; hex/graph `range > 1`;
-  apply-time simultaneous sliding; CI workflows
+- **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
+  fuller Go remainder if uniquely expressible; realtime scheduler; reject
+  recombinations and topology ports)
+- Deferred: fuller Go rules (straight-4-nakade landed as M91; L4-nakade as M90;
+  twisted-nakade as M89;
+  pyramid-nakade as M88; square-nakade as M87; L-nakade as M86;
+  approach net as M80;
+  sente ladder as M79; loose net as M78; net as M77; nakade as M76; semeai as
+  M75; territory+prisoners as M74; ladders as M73;
+  mark-dead resume as M72; mark-dead as M71;
+  dame fill as M70; Benson as M69); realtime scheduler;
+  fire→move reorder (recombination without anchor); hex-graph simultaneous
+  jump ports; throw-in / connect-and-die
+  (not unique vs ladder family on lite boards); memory bonus-turn-on-match /
+  custom decks
+- CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
+- Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
+  mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
+  promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
+  crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54;
+  crownedFlyingCapture in M55; hex liberties in M56; graph liberties in M57;
+  hex promotion in M58; graph promotion in M59; hub targetNodes in M60;
+  hex crownedFlyingCapture in M61; graph crownedFlyingCapture in M62;
+  hex menForwardOnly in M63; graph menForwardOnly in M64; hub
+  targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
+  deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
+  markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
+  semeaiDeath in M75; nakadeDeath in M76; netDeath in M77; looseNetDeath in
+  M78; senteLadderDeath in M79; approachNetDeath in M80; simultaneous jump in
+  M81; ordered simultaneous jump in M82; commitReveal simultaneous jump in
+  M83; multi-action simultaneous jump in M84; commitReveal multi-action
+  jump in M85; lNakadeDeath in M86; squareNakadeDeath in M87;
+  pyramidNakadeDeath in M88; twistedNakadeDeath in M89; l4NakadeDeath in M90;
+  straight4NakadeDeath in M91)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
