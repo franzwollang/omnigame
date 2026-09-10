@@ -46,6 +46,7 @@ import {
 	canMove,
 	effectiveMovement,
 	hasAnyJumpCapture,
+	isJumpCapture,
 	isMaximalJumpContinuation,
 	isMaximalJumpStart,
 	jumpDestinations,
@@ -740,6 +741,56 @@ function applyStep(
 		}
 	}
 
+	if (
+		action.type === "simultaneousMove" &&
+		config.movement?.capture === "jump"
+	) {
+		// M81 joint simultaneous jump: pieceCaptured at mid when prey did not flee.
+		const resolveOrder = config.resolveOrder ?? "joint";
+		const moves = {
+			X: asMoveList(action.moves.X)[0]!,
+			O: asMoveList(action.moves.O)[0]!
+		};
+		if (resolveOrder === "joint") {
+			const movement = config.movement;
+			const board = movementBoardFrom(config);
+			for (const seat of ["X", "O"] as const) {
+				const m = moves[seat];
+				if (
+					!isJumpCapture(
+						state.grid,
+						m.from,
+						m.to,
+						seat,
+						movement,
+						board
+					)
+				) {
+					continue;
+				}
+				const mid = jumpMid(m.from, m.to, movement, board, state.grid);
+				if (!mid) continue;
+				const prior = getCell(state.grid, mid);
+				if (prior !== "X" && prior !== "O") continue;
+				if (prior === seat) continue;
+				const opp = prior;
+				const oppMove = moves[opp];
+				const oppFled =
+					oppMove.from.row === mid.row &&
+					oppMove.from.col === mid.col;
+				if (oppFled) continue;
+				if (getCell(nextState.grid, mid) !== null) continue;
+				if (getCell(nextState.grid, m.to) !== seat) continue;
+				events.push({
+					type: "pieceCaptured",
+					position: mid,
+					captured: prior,
+					by: seat
+				});
+			}
+		}
+	}
+
 	if (action.type === "query") {
 		const lq = nextState.deduction?.lastQuery;
 		if (lq) {
@@ -1250,7 +1301,20 @@ function collectLegalActions(
 				config.graph
 			)) {
 				if (cellOwner(getCell(state.grid, from)) !== acting) continue;
-				for (const to of legalDestinations(state.grid, from, movement, board)) {
+				const forceJumps =
+					movement.capture === "jump" &&
+					movement.mustCapture === true &&
+					hasAnyJumpCapture(state.grid, acting, movement, board);
+				const dests = forceJumps
+					? jumpDestinations(
+							state.grid,
+							from,
+							movement,
+							board,
+							acting
+						)
+					: legalDestinations(state.grid, from, movement, board);
+				for (const to of dests) {
 					if (canMove(state.grid, from, to, acting, movement, board)) {
 						actions.push({ type: "move", from, to });
 					}

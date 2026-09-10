@@ -96,12 +96,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M78 | Next missing mechanism (Go Lite Loose Net / objective.looseNetDeath) | `done` |
 | M79 | Next missing mechanism (Go Lite Sente Ladder / objective.senteLadderDeath) | `done` |
 | M80 | Next missing mechanism (Go Lite Approach Net / objective.approachNetDeath) | `done` |
+| M81 | Next missing mechanism (joint simultaneous jump / single-hop) | `done` |
 
-**Optimizing for this marathon:** M80 Go Lite Approach Net
-(`objective.approachNetDeath`) landed. Pick **P3 next-missing-mechanism**
-(smallest new seam; reject recombinations without anchor) — without asking
-which fork. Large deferred: simultaneous jump / realtime / fuller Go remainder
-beyond approach nets (throw-in / connect-and-die).
+**Optimizing for this marathon:** M81 Simultaneous Jump Race landed. Pick
+**P3 next-missing-mechanism** (smallest new seam; reject recombinations
+without anchor) — without asking which fork. Large deferred: ordered /
+commitReveal / multi-action / hex-graph simultaneous jump; realtime; fuller
+Go remainder (throw-in / connect-and-die — entangled with ladder family).
 
 ## Marathon runbook (cloud agents)
 
@@ -241,11 +242,12 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond approach net (M80; e.g. throw-in /
-connect-and-die); fire→move
+**Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
+expressible vs ladder/net/sente/approach on lite boards); ordered /
+commitReveal / multi-action / hex-graph simultaneous jump; fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Approach Net landed
-(M80). Go Lite Sente Ladder landed
+anchor); realtime scheduler. Go Lite Approach Net landed
+(M80). Simultaneous Jump Race landed (M81). Go Lite Sente Ladder landed
 (M79). Go Lite Loose Net landed (M78). Go Lite Net landed
 (M77). Go Lite Nakade landed
 (M76). Go Lite Semeai landed
@@ -1264,6 +1266,24 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Out of scope: throw-in / snapback / connect-and-die; hex/graph approach-net
   presets; simultaneous jump; realtime
 - Green gate: ≥852 + new cases — **done**
+
+### M81 — Joint simultaneous jump (single-hop)
+
+- Schema: allow `schedule = simultaneous` + `movement.capture = jump` on
+  rectangle + joint resolve; forbid ordered / commitReveal / multi-action /
+  mustLongestCapture / promotion / hex-graph under simultaneous jump — **done**
+- Kernel: `applySimultaneousMovePair` clears jump mids; `pieceCaptured` at mid
+  when prey does not flee; per-seat `mustCapture` in simultaneous legal gen;
+  no `mustContinueFrom` after simultaneous round — **done**
+- Contracts: `jumpChainsAlternatingOnly` + `simultaneousJumpSingleHopOnly`;
+  `jointJumpClearsMidSingleHop` — **done**
+- Preset `simultaneous-jump-race` (diagonal; X jumps mid → target row; O quiet
+  step; raw contrasts vs alternating jump / simultaneous replace) + unit /
+  schema / transcript / replay tests — **done**
+- Out of scope: ordered simultaneous jump; commitReveal + jump; multi-action
+  simultaneous jump; mustLongestCapture / chains under simultaneous;
+  hex/graph simultaneous jump ports; throw-in / connect-and-die; realtime
+- Green gate: ≥865 + new cases — **done**
 
 ## Sequencing notes
 

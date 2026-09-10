@@ -57,6 +57,7 @@ These are built from the same shared schema and operators.
 - **Hex Replace Race** (`hex_offset` + `capture: replace` — cube-axis attrition)
 - **Graph Replace Race** (`graph` + `capture: replace` — chain-walk attrition)
 - **Jump Race** (`movement.capture = jump` — leap over enemy + mustContinueFrom chains)
+- **Simultaneous Jump Race** (joint simultaneous × jump — single-hop mid clear)
 - **Hex Jump Race** (`hex_offset` + `capture: jump` — cube-axis leap-over chains)
 - **Graph Jump Race** (`graph` + `capture: jump` — 2-edge leap-over chains)
 - **Mandatory Jump Race** (`mustCapture` — quiet moves illegal when any jump exists)
@@ -135,6 +136,7 @@ These are built from the same shared schema and operators.
 - **Simultaneous Slide Race** (`simultaneous` + `movement.range > 1`; vacated-origin path checks)
 - **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
 - **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
+- **Simultaneous Jump Race** (`simultaneous` + `capture: jump`; single-hop mid clear + pieceCaptured)
 - **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
 - **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; vacated-origin hybrid)
 - **Simultaneous Slide Replace Flee Race** (joint slide through fleeing blocker on the ray)
@@ -225,8 +227,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   (orthogonal, range 1..8; no junction turns; same replace rules) **or**
   hop-ball BFS (`movement.graphReach = hop`; may turn at junctions) —
   Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Hop Race** /
-  **Graph Replace Race**; jump capture (rectangle | hex_offset | graph +
-  alternating) — **Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
+  **Graph Replace Race**; jump capture (rectangle | hex_offset | graph;
+  alternating chains or simultaneous single-hop) — **Jump Race** /
+  **Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
   **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump
   exists; incompatible with `graphReach: hop`); **Mandatory Longest Jump Lite**
   (`mustLongestCapture` keeps only max-length jump chains); optional
@@ -586,16 +589,18 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fuller Go remainder beyond approach nets; throw-in / connect-and-die;
-  fire→move only with anchor; realtime scheduler; simultaneous jump; reject
-  recombinations)
+  ordered/commitReveal/multi-action simultaneous jump follow-ons; fuller Go
+  remainder if uniquely expressible; fire→move only with anchor; realtime
+  scheduler; reject recombinations)
 - Deferred: fuller Go rules (approach net landed as M80; sente ladder as M79;
   loose net as M78; net as M77; nakade as M76; semeai as M75;
   territory+prisoners as M74; ladders as M73;
   mark-dead resume as M72; mark-dead as M71;
   dame fill as M70; Benson as M69); realtime scheduler;
-  fire→move reorder (recombination without anchor); simultaneous jump;
-  memory bonus-turn-on-match / custom decks
+  fire→move reorder (recombination without anchor); ordered / commitReveal /
+  multi-action / hex-graph simultaneous jump; throw-in / connect-and-die
+  (not unique vs ladder family on lite boards); memory bonus-turn-on-match /
+  custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
   mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
@@ -609,7 +614,8 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
   deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
   markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
   semeaiDeath in M75; nakadeDeath in M76; netDeath in M77; looseNetDeath in
-  M78; senteLadderDeath in M79; approachNetDeath in M80)
+  M78; senteLadderDeath in M79; approachNetDeath in M80; simultaneous jump in
+  M81)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

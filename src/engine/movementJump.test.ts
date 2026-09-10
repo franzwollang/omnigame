@@ -264,9 +264,14 @@ describe("movement.capture = jump schema / validateConfig", () => {
 		expect(zConfig.safeParse(cfg).success).toBe(false);
 	});
 
-	it("rejects jump under simultaneous", () => {
+	it("allows jump under simultaneous on rectangle (M81)", () => {
+		const cfg = examplePresets["simultaneous-jump-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+	});
+
+	it("rejects jump under simultaneous on hex", () => {
 		const cfg = {
-			...examplePresets["jump-race"].config,
+			...examplePresets["hex-jump-race"].config,
 			turn: { mode: "turn" as const, schedule: "simultaneous" as const }
 		};
 		expect(validateConfig(cfg).ok).toBe(false);

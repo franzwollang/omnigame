@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T10:20+00:00",
-  "turn": 110,
+  "updated_at": "2026-09-10T10:50+00:00",
+  "turn": 111,
   "focus": {
-    "milestone": "M80",
+    "milestone": "M81",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Approach Net landed; hand off next genuine P3 seam"
+    "goal": "Simultaneous Jump Race landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 9419 M79 tip onto cursor/next-task-progression-cab2",
-    "Landed M80 approachNetDeath + go-lite-approach-net",
-    "Open loose cage: drop O@(1,4); approach completes loose net"
+    "Synced from cab2 M80 tip onto cursor/next-task-progression-a8a3",
+    "Throw-in/CAD probe: no unique board vs ladder/net/sente/approach",
+    "Landed M81 simultaneous jump + simultaneous-jump-race"
   ],
   "discoveries": [
-    "Approach = non-liberty place that makes net/loose-net true",
-    "loose-drop-1,4 + O@(3,6) flips X→O on clearance without sibling flags"
+    "Ladder already models snapback continuations for ≤2-lib groups",
+    "Simultaneous×jump seam = mid-clear apply + events, not schema alone"
   ],
   "open_threads": [
-    "Next: throw-in/snapback, connect-and-die, simultaneous jump, realtime"
+    "Next: ordered/commitReveal/multi-action jump, or unique Go L&D, or realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M80",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M81",
   "blockers": []
 }

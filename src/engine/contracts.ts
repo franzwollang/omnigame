@@ -140,7 +140,8 @@ export const Contracts = {
 			"mustContinueFromRestrictsLegality",
 			"mustCaptureForbidsQuietWhenJumpExists",
 			"mustLongestCapturePrunesShorterChains",
-			"alternatingOnlyNoSimultaneous"
+			"jumpChainsAlternatingOnly",
+			"simultaneousJumpSingleHopOnly"
 		]
 	}),
 	MovementPromotion: (): FeatureContract => ({
@@ -473,7 +474,8 @@ export const Contracts = {
 			"jointMovePerRound",
 			"sameDestinationConflictNeitherOrFirst",
 			"jointSlidePathsOnVacatedOrigins",
-			"jointReplaceCaptureRealBoardLegality"
+			"jointReplaceCaptureRealBoardLegality",
+			"jointJumpClearsMidSingleHop"
 		]
 	}),
 	/**

@@ -1617,6 +1617,8 @@ export type SimultaneousMovePair = MovePair;
  * Joint replace: after vacating both chosen origins, landing overwrites any
  * remaining occupant (stationary enemy capture); a fleeing opponent whose
  * origin is the landing cell leaves an empty square.
+ * Joint jump (M81): clear jump mids when pre-round mid holds an enemy that
+ * did not flee; single-hop only (no mustContinueFrom).
  * Ordered replace: enemy destinations may be overwritten; same-dest still
  * gives the cell to the first seat (second does not capture the fresh lander).
  * Priority capture of a fleeing piece leaves second unable to apply.
@@ -1625,7 +1627,9 @@ function applySimultaneousMovePair(
 	grid: Grid,
 	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
 	resolveOrder: "joint" | "x_first" | "o_first",
-	capture: "none" | "replace" | "jump" = "none"
+	capture: "none" | "replace" | "jump" = "none",
+	movement?: MovementConfig,
+	board?: ReturnType<typeof movementBoardFrom>
 ): { grid: Grid; conflict: boolean; applied: { X: boolean; O: boolean } } {
 	const sameDest = positionsEqual(moves.X.to, moves.O.to);
 
@@ -1636,6 +1640,33 @@ function applySimultaneousMovePair(
 		// Atomic: clear both origins, then land both destinations (overwrite OK).
 		let cells = setCell(grid, moves.X.from, null);
 		cells = setCell({ ...grid, cells }, moves.O.from, null);
+		if (capture === "jump" && movement) {
+			const wrapOrBoard = board ?? false;
+			for (const seat of ["X", "O"] as const) {
+				const m = moves[seat];
+				if (
+					!isJumpCapture(
+						grid,
+						m.from,
+						m.to,
+						seat,
+						movement,
+						wrapOrBoard
+					)
+				) {
+					continue;
+				}
+				const mid = jumpMid(m.from, m.to, movement, wrapOrBoard, grid);
+				if (!mid) continue;
+				const opp: Player = seat === "X" ? "O" : "X";
+				const oppMove = moves[opp];
+				const fled =
+					oppMove.from.row === mid.row &&
+					oppMove.from.col === mid.col;
+				if (fled) continue;
+				cells = setCell({ ...grid, cells }, mid, null);
+			}
+		}
 		cells = setCell({ ...grid, cells }, moves.X.to, "X");
 		cells = setCell({ ...grid, cells }, moves.O.to, "O");
 		return {
@@ -1678,11 +1709,12 @@ function applySimultaneousMovePair(
  * is revalidated on the post-prior-step board so same-piece chains work.
  * Joint resolve validates on a vacated-origin board (sliding path integrity,
  * including joint + replace: fleeing blockers clear the ray; stationary
- * capture targets remain). Ordered resolve validates first seat pre-round,
- * then second after simulating the first (sequential path / capture
- * revalidation). Same destination under joint → neither; ordered → first seat
- * wins the cell when both claim it. Ordered replace may overwrite enemies;
- * priority can capture before prey flees.
+ * capture targets remain). Jump (M81): mid cleared on apply when the prey
+ * does not flee; single-hop only (no mustContinueFrom). Ordered resolve
+ * validates first seat pre-round, then second after simulating the first
+ * (sequential path / capture revalidation). Same destination under joint →
+ * neither; ordered → first seat wins the cell when both claim it. Ordered
+ * replace may overwrite enemies; priority can capture before prey flees.
  * After each sub-step, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(
@@ -1743,7 +1775,9 @@ function handleSimultaneousMove(
 			workingGrid,
 			pair,
 			resolveOrder,
-			movement.capture ?? "none"
+			movement.capture ?? "none",
+			movement,
+			board
 		);
 		workingGrid = applied.grid;
 

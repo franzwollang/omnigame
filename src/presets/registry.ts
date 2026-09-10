@@ -3909,6 +3909,56 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"simultaneous-jump-race": definePreset({
+		id: "simultaneous-jump-race",
+		name: "Simultaneous Jump Race",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"reach-row",
+			"simultaneous",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Joint simultaneous diagonal jump: X leaps over a stationary O mid to the target row while O steps a second piece. Single-hop per round (no mustContinueFrom chains). Unlocks simultaneous × jump — alternating Jump Race keeps multi-jump chains; Simultaneous Replace Race lands on the enemy rather than leaping over.",
+		config: {
+			metadata: { name: "Simultaneous Jump Race", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn", schedule: "simultaneous" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "diagonal", range: 1, capture: "jump" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "sim-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "sim-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(2,0) jumps mid O(1,1) → land (0,2) wins; O runner (4,4) quiet steps.
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"ordered-simultaneous-replace-race": definePreset({
 		id: "ordered-simultaneous-replace-race",
 		name: "Ordered Simultaneous Replace Race",

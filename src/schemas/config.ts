@@ -139,17 +139,19 @@ export const zConfig = z
 		 * (cube-axis rays), and graph (edge chain-walk or hop-ball BFS).
 		 * Ordered simultaneous + range > 1 uses sequential path revalidation.
 		 * `capture: "jump"` — leap over an adjacent enemy to the empty cell
-		 * beyond (rectangle | hex_offset | graph + alternating only; quiet
-		 * moves stay range 1; hex uses cube-axis double steps; graph uses a
-		 * 2-edge leap over an enemy mid node). After a jump, further jumps
-		 * from the landing cell keep the same seat (`mustContinueFrom`
-		 * chain). Optional `mustCapture: true` forbids quiet moves at turn
+		 * beyond (rectangle | hex_offset | graph; quiet moves stay range 1;
+		 * hex uses cube-axis double steps; graph uses a 2-edge leap over an
+		 * enemy mid node). Under alternating, further jumps from the landing
+		 * keep the same seat (`mustContinueFrom` chain). Under simultaneous
+		 * (rectangle + joint, single-hop only), both seats move once per
+		 * round with mid cleared on apply — no `mustContinueFrom` chains.
+		 * Optional `mustCapture: true` forbids quiet moves at turn/round
 		 * start when any jump exists (Checkers-lite mandatory capture).
 		 * Optional `mustLongestCapture: true` (requires `mustCapture`) keeps
 		 * only jumps that begin / continue a maximum-length capture chain
-		 * (Draughts longest-chain rule). Distinct from replace and hop-ball.
-		 * Incompatible with `graphReach: "hop"` (jump has fixed 2-edge
-		 * semantics).
+		 * (Draughts longest-chain rule; alternating only). Distinct from
+		 * replace and hop-ball. Incompatible with `graphReach: "hop"` (jump
+		 * has fixed 2-edge semantics).
 		 * Optional `promotion`: Transform lite — uncrowned pieces that land
 		 * on `targetRows[seat]` (or graph `targetNodes[seat]` `"row,col"`)
 		 * become crowned (`X+`/`O+`) and thereafter use `crownedAdjacency`
@@ -2537,12 +2539,50 @@ export const zConfig = z
 				});
 			}
 			if (cfg.turn.schedule === "simultaneous") {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["movement", "capture"],
-					message:
-						"movement.capture = 'jump' is incompatible with simultaneous (alternating only)"
-				});
+				// M81: joint simultaneous single-hop jump on rectangle only.
+				if (cfg.grid.topology !== "rectangle") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "capture"],
+						message:
+							"simultaneous jump requires grid.topology = 'rectangle' (hex/graph deferred)"
+					});
+				}
+				if (
+					cfg.turn.resolveOrder != null &&
+					cfg.turn.resolveOrder !== "joint"
+				) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "resolveOrder"],
+						message:
+							"simultaneous jump requires resolveOrder = 'joint' (ordered deferred)"
+					});
+				}
+				if (cfg.turn.commitReveal === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["turn", "commitReveal"],
+						message:
+							"simultaneous jump is incompatible with commitReveal (deferred)"
+					});
+				}
+				if (cfg.movement.mustLongestCapture === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "mustLongestCapture"],
+						message:
+							"mustLongestCapture is incompatible with simultaneous jump (chains deferred)"
+					});
+				}
+				if (cfg.movement.promotion) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "promotion"],
+						message:
+							"promotion is incompatible with simultaneous jump (deferred)"
+					});
+				}
 			}
 			if (cfg.turn.schedule === "manual_tick") {
 				ctx.addIssue({
