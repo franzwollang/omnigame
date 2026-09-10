@@ -63,14 +63,14 @@ describe("movement.promotion schema", () => {
 		expect(parsed.success).toBe(false);
 	});
 
-	it("rejects promotion on hex_offset", () => {
-		const base = structuredClone(examplePresets["hex-jump-race"].config);
+	it("rejects hex promotion with crownedAdjacency king", () => {
+		const base = structuredClone(
+			examplePresets["hex-crowned-jump-lite"].config
+		);
 		base.movement = {
-			adjacency: "orthogonal",
-			range: 1,
-			capture: "jump",
+			...base.movement!,
 			promotion: {
-				targetRows: { X: 1, O: 3 },
+				...base.movement!.promotion!,
 				crownedAdjacency: "king"
 			}
 		};

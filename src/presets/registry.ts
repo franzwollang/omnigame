@@ -1811,6 +1811,74 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"hex-crowned-jump-lite": definePreset({
+		id: "hex-crowned-jump-lite",
+		name: "Hex Crowned Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"crowned-range",
+			"reach-row",
+			"hex",
+			"topology",
+			"6x6",
+			"mechanism"
+		],
+		description:
+			"Cube-axis jump race on odd-r hex with Transform-lite promotion: land on promo row 2 to crown (X+/O+), then quiet-slide with crownedRange 2 to win row 0 — men stay range 1. mustCapture forces the opening leap that promotes (promo row ≠ win row). Unlocks movement.promotion on hex_offset — rectangle Crowned / Flying Kings cannot express hex post-crown movement; Hex Jump Race jumps without transforming piece type.",
+		config: {
+			metadata: { name: "Hex Crowned Jump Lite", version: 1 },
+			grid: { width: 6, height: 6, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					// Promo row ≠ win row so a crowned 2-step cube slide is playable.
+					targetRows: { X: 2, O: 3 },
+					crownedAdjacency: "orthogonal",
+					crownedRange: 2
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 5 }
+			},
+			tokens: [
+				{
+					id: "hex-crowned-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-crowned-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,2) mustCapture-jumps O(3,1)→(2,1): promotes to X+.
+				// Men / crownedRange=1 from (2,1) only reach row 1; crownedRange=2
+				// reaches (0,0) or (0,2) for the win after O's quiet reply.
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 5, col: 5, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"graph-jump-race": definePreset({
 		id: "graph-jump-race",
 		name: "Graph Jump Race",

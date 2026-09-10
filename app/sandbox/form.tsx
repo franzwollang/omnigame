@@ -865,7 +865,8 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												movement.promotion
 											</code>{" "}
-											in JSON (rectangle jump only) — land on{" "}
+											in JSON (rectangle | hex_offset jump; graph
+											deferred) — land on{" "}
 											<code className="text-[11px]">
 												targetRows[seat]
 											</code>{" "}
@@ -873,12 +874,14 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												crownedAdjacency
 											</code>{" "}
-											(default king) and optional{" "}
+											(default king on rectangle; orthogonal required
+											on hex) and optional{" "}
 											<code className="text-[11px]">
 												crownedRange
 											</code>{" "}
 											for quiet slides longer than men (Flying Kings
-											Jump Lite) and optional{" "}
+											Jump Lite / Hex Crowned Jump Lite). Rectangle-only
+											optional{" "}
 											<code className="text-[11px]">
 												crownedFlyingCapture
 											</code>{" "}
@@ -887,10 +890,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												menForwardOnly
 											</code>{" "}
-											restricts uncrowned quiet/jump moves to the
-											forward row-delta (see Forward Men Jump Lite).
-											Crowned Kings Jump Lite covers promotion without
-											the forward filter or flying range.
+											(rectangle) restricts uncrowned quiet/jump moves
+											to the forward row-delta (see Forward Men Jump
+											Lite). Hex Crowned Jump Lite covers promotion on
+											hex_offset; Crowned Kings Jump Lite covers
+											rectangle promotion without the forward filter or
+											flying range.
 										</p>
 									)}
 								</div>

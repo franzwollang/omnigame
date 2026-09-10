@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T03:55+00:00",
-  "turn": 87,
+  "updated_at": "2026-09-10T04:10+00:00",
+  "turn": 88,
   "focus": {
-    "milestone": "M57",
+    "milestone": "M58",
     "issue": "next-missing-mechanism",
-    "goal": "graph liberties landed; hand off next genuine P3 seam"
+    "goal": "hex promotion landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from d41d M56 tip onto cursor/next-task-progression-1903",
-    "Landed M57 Graph Go Lite / explicit-edge liberties on graph",
-    "Schema foothold + libertyNeighbors graph; scoreArea skips inactive"
+    "Synced from 1903 M57 tip onto cursor/next-task-progression-99f6",
+    "Landed M58 Hex Crowned Jump Lite / promotion on hex_offset",
+    "Schema: hex orthogonal crownedAdjacency; forbid menForward/flying"
   ],
   "discoveries": [
-    "Hub degree-3 bridge: orthosurrounds leave two graph liberties",
-    "scoreArea must iterate graph.active or inactive cells inflate territory"
+    "Default crownedAdjacency king yields [] legalDests on hex",
+    "Hex promo demo needs crownedRange>1 (adjacency already orthogonal)"
   ],
   "open_threads": [
-    "Next: full Go, realtime, hex-graph promo; reject recombinations"
+    "Next: full Go, realtime, graph promo; reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M57",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M58",
   "blockers": []
 }

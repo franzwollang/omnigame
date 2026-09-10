@@ -111,3 +111,4 @@
 {"ts":"2026-09-10T03:29-00:00","focus":"M55 flying jump capture","summary":"Landed crownedFlyingCapture + Flying Capture Jump Lite; hand off next P3 seam","next":"Pick smallest genuine next-missing-mechanism after M55"}
 {"ts":"2026-09-10T03:45+00:00","focus":"M56 hex liberties","summary":"Landed Hex Go Lite after syncing M55 tip; hand off next P3 seam","next":"pick graph Go / full Go / realtime / hex-graph promo if new seam"}
 {"ts":"2026-09-10T03:55+00:00","focus":"M57 graph liberties","summary":"Landed Graph Go Lite — explicit-edge liberties + area scoring on graph","next":"Pick next genuine P3 seam after M57"}
+{"ts":"2026-09-10T04:10+00:00","focus":"M58 hex promotion","summary":"Landed movement.promotion on hex_offset + Hex Crowned Jump Lite; hand off next P3 seam","next":"Pick smallest genuine next-missing-mechanism after M58"}

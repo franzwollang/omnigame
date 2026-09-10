@@ -152,9 +152,12 @@ export const zConfig = z
 		 * semantics).
 		 * Optional `promotion`: Transform lite — uncrowned pieces that land
 		 * on `targetRows[seat]` become crowned (`X+`/`O+`) and thereafter use
-		 * `crownedAdjacency` (default king). Optional `menForwardOnly` restricts
-		 * uncrowned quiet/jump moves to the forward row-delta toward the seat's
-		 * promotion side (crowned unrestricted). Rectangle + jump only for v1.
+		 * `crownedAdjacency` (default king on rectangle; orthogonal required
+		 * on hex). Optional `menForwardOnly` restricts uncrowned quiet/jump
+		 * moves to the forward row-delta toward the seat's promotion side
+		 * (crowned unrestricted; rectangle only). Rectangle | hex_offset +
+		 * jump for v1 (graph deferred; hex forbids menForwardOnly /
+		 * crownedFlyingCapture).
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -2281,7 +2284,9 @@ export const zConfig = z
 			}
 		}
 
-		// Piece promotion / crowned kings (Transform lite): rectangle jump only
+		// Piece promotion / crowned kings (Transform lite): rectangle | hex_offset
+		// jump (graph deferred). Hex: orthogonal crowned adjacency only; no
+		// menForwardOnly / crownedFlyingCapture (rectangle Draughts-lite).
 		if (cfg.movement?.promotion) {
 			if (cfg.movement.capture !== "jump") {
 				ctx.addIssue({
@@ -2298,13 +2303,44 @@ export const zConfig = z
 					message: "movement.promotion requires input.mode = 'move'"
 				});
 			}
-			if (cfg.grid.topology !== "rectangle") {
+			if (
+				cfg.grid.topology !== "rectangle" &&
+				cfg.grid.topology !== "hex_offset"
+			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["movement", "promotion"],
 					message:
-						"movement.promotion requires grid.topology = 'rectangle' (hex/graph deferred)"
+						"movement.promotion requires grid.topology = 'rectangle' | 'hex_offset' (graph deferred)"
 				});
+			}
+			if (cfg.grid.topology === "hex_offset") {
+				const crownedAdj =
+					cfg.movement.promotion.crownedAdjacency ?? "king";
+				if (crownedAdj !== "orthogonal") {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "promotion", "crownedAdjacency"],
+						message:
+							"hex_offset promotion requires crownedAdjacency = 'orthogonal' (diagonal/king deferred on hex)"
+					});
+				}
+				if (cfg.movement.promotion.menForwardOnly === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "promotion", "menForwardOnly"],
+						message:
+							"hex_offset promotion is incompatible with menForwardOnly (rectangle only)"
+					});
+				}
+				if (cfg.movement.promotion.crownedFlyingCapture === true) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "promotion", "crownedFlyingCapture"],
+						message:
+							"hex_offset promotion is incompatible with crownedFlyingCapture (rectangle only)"
+					});
+				}
 			}
 			if (captureEnabled) {
 				ctx.addIssue({
