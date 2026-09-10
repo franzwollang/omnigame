@@ -101,6 +101,7 @@ These are built from the same shared schema and operators.
 - **Go Lite Mark Dead Resume** (`objective.markDeadResume` + `rejectMarks` dispute→resume)
 - **Go Lite Ladders** (`objective.ladderDeath` attacker-sente ladder / atari-run removal at scoring)
 - **Go Lite Territory Prisoners** (`objective.territoryPrisoners` Japanese-style territory + prisoners scoring)
+- **Go Lite Semeai** (`objective.semeaiDeath` capturing-race liberty comparison at scoring)
 - **Hex Go Lite** (same on hex_offset — six cube-axis liberties)
 - **Graph Go Lite** (same on graph — liberties follow explicit undirected edges)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
@@ -569,7 +570,8 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.markDead` (M71), Go Lite Mark Dead Resume /
 `objective.markDeadResume` (M72), Go Lite Ladders /
 `objective.ladderDeath` (M73), Go Lite Territory Prisoners /
-`objective.territoryPrisoners` (M74).
+`objective.territoryPrisoners` (M74), Go Lite Semeai /
+`objective.semeaiDeath` (M75).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
@@ -592,7 +594,8 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
   hex menForwardOnly in M63; graph menForwardOnly in M64; hub
   targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
   deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
-  markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74)
+  markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
+  semeaiDeath in M75)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

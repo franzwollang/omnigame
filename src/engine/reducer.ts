@@ -221,6 +221,11 @@ export type GameConfig = {
 	 * instead of stones + territory (M74).
 	 */
 	territoryPrisoners?: boolean;
+	/**
+	 * When true, two-pass area scoring removes groups that lose a capturing
+	 * race (semeai) against a higher-liberty opponent sharing a liberty (M75).
+	 */
+	semeaiDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1234,7 +1239,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.bensonLife === true,
 				config.ladderDeath === true,
 				config.territoryPrisoners === true,
-				state.prisoners ?? { X: 0, O: 0 }
+				state.prisoners ?? { X: 0, O: 0 },
+				config.semeaiDeath === true
 			);
 			return {
 				...state,
@@ -1258,7 +1264,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.bensonLife === true,
 			config.ladderDeath === true,
 			config.territoryPrisoners === true,
-			state.prisoners ?? { X: 0, O: 0 }
+			state.prisoners ?? { X: 0, O: 0 },
+			config.semeaiDeath === true
 		);
 		return {
 			...state,

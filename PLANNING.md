@@ -90,13 +90,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M72 | Next missing mechanism (Go Lite Mark Dead Resume / objective.markDeadResume) | `done` |
 | M73 | Next missing mechanism (Go Lite Ladders / objective.ladderDeath) | `done` |
 | M74 | Next missing mechanism (Go Lite Territory Prisoners / objective.territoryPrisoners) | `done` |
+| M75 | Next missing mechanism (Go Lite Semeai / objective.semeaiDeath) | `done` |
 
-**Optimizing for this marathon:** M74 Go Lite Territory Prisoners
-(`objective.territoryPrisoners`) landed. Pick **P3
-next-missing-mechanism** (smallest new seam; reject recombinations without
-anchor) — without asking which fork. Large deferred: simultaneous jump /
-realtime / fuller Go remainder beyond territory+prisoners (deeper semantic
-L&D / nakade / semeai).
+**Optimizing for this marathon:** M75 Go Lite Semeai (`objective.semeaiDeath`)
+landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
+recombinations without anchor) — without asking which fork. Large deferred:
+simultaneous jump / realtime / fuller Go remainder beyond semeai (nakade /
+nets / deeper L&D).
 
 ## Marathon runbook (cloud agents)
 
@@ -111,7 +111,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥828** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥832** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -236,10 +236,11 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond territory+prisoners (M74; e.g. deeper
-semantic L&D / nakade / semeai); fire→move
+**Not yet:** fuller Go remainder beyond semeai (M75; e.g. nakade / nets /
+deeper L&D); fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Territory Prisoners
+anchor); realtime scheduler; simultaneous jump. Go Lite Semeai landed
+(M75). Go Lite Territory Prisoners
 landed (M74). Go Lite Ladders landed
 (M73). Go Lite Mark Dead Resume
 landed (M72). Go Lite Mark Dead landed
@@ -273,7 +274,8 @@ M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
 deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
-markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74).
+markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
+semeaiDeath in M75).
 
 ## Phase 2 exit criteria
 
@@ -1152,9 +1154,23 @@ markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74).
   double-pass; area awards X → territory+prisoners awards O) + unit / schema /
   transcript / replay tests — **done**
 - Out of scope: full Japanese rules (group tax / root scoring / disputes);
-  nakade / semeai / nets; hex/graph territoryPrisoners presets; simultaneous
+  nakade / nets; hex/graph territoryPrisoners presets; simultaneous
   jump; realtime
 - Green gate: ≥828 + new cases — **done**
+
+### M75 — Go Lite Semeai / `objective.semeaiDeath`
+
+- Schema: optional `objective.semeaiDeath` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `findSemeaiDeadCells` / `removeSemeaiDeadStones` — group dies when it
+  shares ≥1 liberty with an opposing group that has strictly more liberties;
+  equal counts kept; `areaOutcome` applies after Benson/deadStones and before
+  ladderDeath; normalize + form switch — **done**
+- Preset `go-lite-semeai` (X race 3 libs vs O 4; living X mass; raw → X, with
+  flag → O) + unit / schema / transcript / replay / contrast tests — **done**
+- Out of scope: full L&D / nakade / nets / multi-group race trees; hex/graph
+  semeai presets; simultaneous jump; realtime
+- Green gate: ≥832 + new cases — **done**
 
 ## Sequencing notes
 

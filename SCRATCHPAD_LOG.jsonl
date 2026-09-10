@@ -128,3 +128,4 @@
 {"ts":"2026-09-10T07:45+00:00","focus":"M72 Go Lite Mark Dead Resume","summary":"Landed objective.markDeadResume + rejectMarks + go-lite-mark-dead-resume; dispute exits marking without scoring","next":"Pick next genuine P3 seam after M72"}
 {"ts":"2026-09-10T08:03:36Z","focus":"M73 ladderDeath","summary":"Landed objective.ladderDeath + go-lite-ladders; draw→O on edge atari seed","next":"Pick next genuine P3 seam after M73"}
 {"ts":"2026-09-10T08:20+00:00","focus":"M74 territoryPrisoners","summary":"Landed Japanese-style territory+prisoners scoring + go-lite-territory-prisoners","next":"Pick smallest genuine next-missing-mechanism after M74"}
+{"ts":"2026-09-10T08:31:39Z","focus":"M75 Go Lite Semeai","summary":"landed objective.semeaiDeath + go-lite-semeai preset","next":"pick next P3 seam after M75"}

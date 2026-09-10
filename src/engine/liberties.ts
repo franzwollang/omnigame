@@ -935,6 +935,59 @@ export function removeLadderDeadStones(
 }
 
 /**
+ * Capturing-race (semeai) lite (M75): a group is dead when it shares ≥1 liberty
+ * with an opposing group that has strictly more liberties. Equal counts against
+ * all shared opponents keep both sides (seki-like). Unlike ladderDeath, this is
+ * a static inter-group liberty comparison — groups with >2 liberties can still
+ * lose. Unlike seki, unequal races are not treated as mutual life.
+ */
+export function findSemeaiDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const dead: Position[] = [];
+	for (const g of groups) {
+		let maxOpp = 0;
+		let shares = false;
+		for (const h of groups) {
+			if (h.color === g.color) continue;
+			let share = false;
+			for (const lib of Array.from(g.liberties)) {
+				if (h.liberties.has(lib)) {
+					share = true;
+					break;
+				}
+			}
+			if (!share) continue;
+			shares = true;
+			if (h.liberties.size > maxOpp) maxOpp = h.liberties.size;
+		}
+		if (!shares || g.liberties.size >= maxOpp) continue;
+		for (const p of g.stones) dead.push(p);
+	}
+	return dead;
+}
+
+/** Clear semeai-dead stones from a grid copy (M75). */
+export function removeSemeaiDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findSemeaiDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
  * Remove stones whose keys appear in `markedKeys` (`row,col`). Used when
  * interactive dead-stone marking confirms (two passes in markingPhase).
  */
@@ -1114,6 +1167,9 @@ export function scoreArea(
  * When `ladderDeath` is true, attacker-sente ladder / atari-run groups are
  * removed after optional Benson/deadStones clearance (M73; edge runners
  * included — the seam M68/M69 intentionally keep).
+ * When `semeaiDeath` is true, groups that lose a capturing race against a
+ * higher-liberty opponent sharing a liberty are removed after optional
+ * Benson/deadStones and before ladderDeath (M75).
  * When `territoryPrisoners` is true, score is territory + prisoners (Japanese
  * lite) instead of stones + territory (M74); `prisoners` tallies captures in
  * play.
@@ -1129,7 +1185,8 @@ export function areaOutcome(
 	bensonLife: boolean = false,
 	ladderDeath: boolean = false,
 	territoryPrisoners: boolean = false,
-	prisoners: AreaScore = { X: 0, O: 0 }
+	prisoners: AreaScore = { X: 0, O: 0 },
+	semeaiDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -1140,6 +1197,9 @@ export function areaOutcome(
 		: deadStones
 			? removeDeadStones(grid, wrap, topology, graph)
 			: grid;
+	if (semeaiDeath) {
+		scored = removeSemeaiDeadStones(scored, wrap, topology, graph);
+	}
 	if (ladderDeath) {
 		scored = removeLadderDeadStones(scored, wrap, topology, graph);
 	}

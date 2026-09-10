@@ -277,7 +277,10 @@ before counting; optional `objective.bensonLife` removes interior groups that
 are not Benson-unconditionally alive — vital-region fixed point; supersedes
 `deadStones` when both are set; optional `objective.ladderDeath` removes
 attacker-sente ladder / atari-run groups after optional Benson/deadStones —
-edge foothold does not save runners; optional `objective.territoryPrisoners`
+edge foothold does not save runners; optional `objective.semeaiDeath` removes
+groups that lose a capturing race against a higher-liberty opponent sharing a
+liberty (after Benson/deadStones, before ladderDeath; equal counts kept);
+optional `objective.territoryPrisoners`
 scores empty territory + stones captured in play instead of stones +
 territory (Japanese lite); optional `objective.dameFill` enters a
 damezukai-lite endgame on the first pass while dame remain — only dame places

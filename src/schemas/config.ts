@@ -495,7 +495,16 @@ export const zConfig = z
 				 * instead of Chinese-style area (stones + territory). Default /
 				 * omit = area scoring.
 				 */
-				territoryPrisoners: z.boolean().optional()
+				territoryPrisoners: z.boolean().optional(),
+				/**
+				 * When true, groups that lose a capturing-race (semeai) against an
+				 * opposing group that shares ≥1 liberty are removed before
+				 * two-pass scoring (after optional Benson/deadStones; before
+				 * ladderDeath). Equal liberty counts against all shared
+				 * opponents are kept (seki-like). Default / omit = leave
+				 * fighting groups on the board.
+				 */
+				semeaiDeath: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1364,6 +1373,16 @@ export const zConfig = z
 				path: ["objective", "territoryPrisoners"],
 				message:
 					"objective.territoryPrisoners requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Capturing-race (semeai) removal is area_control-only.
+		if (cfg.objective.semeaiDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "semeaiDeath"],
+				message:
+					"objective.semeaiDeath requires objective.mode = 'area_control'"
 			});
 		}
 

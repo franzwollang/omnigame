@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T08:20+00:00",
-  "turn": 104,
+  "updated_at": "2026-09-10T08:35+00:00",
+  "turn": 105,
   "focus": {
-    "milestone": "M74",
+    "milestone": "M75",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Territory Prisoners landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Semeai landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 5b0c M73 tip onto cursor/next-task-progression-3324",
-    "Landed M74 territoryPrisoners + go-lite-territory-prisoners",
-    "O captures 3-stone atari: area→X, territory+prisoners→O"
+    "Synced from 3324 M74 tip onto cursor/next-task-progression-5cfd",
+    "Landed M75 semeaiDeath + go-lite-semeai",
+    "X race 3 libs vs O 4: raw→X, semeai→O; ladder/eyes skip"
   ],
   "discoveries": [
-    "scoreTerritory reuses scoreArea empty flood without stone loop",
-    "Prisoners tallied on liberty capture for all area_control games"
+    "Pairwise share+strict liberty compare; >2 libs escapes ladderDeath",
+    "O seal under race isolates living X without shared dame"
   ],
   "open_threads": [
-    "Next: deeper L&D (semeai/nakade), simultaneous jump, realtime"
+    "Next: nakade/nets, simultaneous jump, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M74",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M75",
   "blockers": []
 }

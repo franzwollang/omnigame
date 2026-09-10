@@ -5446,6 +5446,102 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-semeai": definePreset({
+		id: "go-lite-semeai",
+		name: "Go Lite Semeai",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"semeai",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with capturing-race (semeai) removal at scoring (objective.semeaiDeath). Seeded race: X group with 3 liberties vs O with 4 (shared corridor + private); living X mass below an O seal. Without the flag double-pass awards X on area; with semeaiDeath the race X group is cleared → O wins. Unlocks inter-group liberty comparison beyond seki / ladders / static eyes.",
+		config: {
+			metadata: { name: "Go Lite Semeai", version: 1 },
+			grid: { width: 9, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", semeaiDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Race X (3 libs: 1,1 / 1,2 / 1,3) vs O (4 libs: shared 1,3 + private 1,5–1,7)
+				{ row: 0, col: 0, player: "X", visibility: "public" },
+				{ row: 0, col: 1, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 3, player: "X", visibility: "public" },
+				{ row: 0, col: 4, player: "O", visibility: "public" },
+				{ row: 0, col: 5, player: "O", visibility: "public" },
+				{ row: 0, col: 6, player: "O", visibility: "public" },
+				{ row: 0, col: 7, player: "O", visibility: "public" },
+				{ row: 0, col: 8, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "X", visibility: "public" },
+				{ row: 1, col: 4, player: "O", visibility: "public" },
+				{ row: 1, col: 8, player: "O", visibility: "public" },
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "X", visibility: "public" },
+				{ row: 2, col: 4, player: "O", visibility: "public" },
+				{ row: 2, col: 5, player: "O", visibility: "public" },
+				{ row: 2, col: 6, player: "O", visibility: "public" },
+				{ row: 2, col: 7, player: "O", visibility: "public" },
+				{ row: 2, col: 8, player: "O", visibility: "public" },
+				// O seal under race (joins race O; isolates living mass)
+				{ row: 3, col: 0, player: "O", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 3, col: 2, player: "O", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" },
+				{ row: 3, col: 4, player: "O", visibility: "public" },
+				{ row: 3, col: 5, player: "O", visibility: "public" },
+				{ row: 3, col: 6, player: "O", visibility: "public" },
+				{ row: 3, col: 7, player: "O", visibility: "public" },
+				{ row: 3, col: 8, player: "O", visibility: "public" },
+				// Living X mass (raw area lead; not in the race)
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 4, col: 1, player: "X", visibility: "public" },
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 4, col: 3, player: "X", visibility: "public" },
+				{ row: 4, col: 4, player: "X", visibility: "public" },
+				{ row: 4, col: 5, player: "X", visibility: "public" },
+				{ row: 4, col: 6, player: "X", visibility: "public" },
+				{ row: 4, col: 7, player: "X", visibility: "public" },
+				{ row: 4, col: 8, player: "X", visibility: "public" },
+				{ row: 5, col: 0, player: "X", visibility: "public" },
+				{ row: 5, col: 1, player: "X", visibility: "public" },
+				{ row: 5, col: 2, player: "X", visibility: "public" },
+				{ row: 5, col: 3, player: "X", visibility: "public" },
+				{ row: 5, col: 4, player: "X", visibility: "public" },
+				{ row: 5, col: 5, player: "X", visibility: "public" },
+				{ row: 5, col: 6, player: "X", visibility: "public" },
+				{ row: 5, col: 7, player: "X", visibility: "public" },
+				{ row: 5, col: 8, player: "X", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

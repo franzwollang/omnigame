@@ -86,6 +86,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		ladderDeath: config.objective.ladderDeath === true ? true : undefined,
 		territoryPrisoners:
 			config.objective.territoryPrisoners === true ? true : undefined,
+		semeaiDeath: config.objective.semeaiDeath === true ? true : undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -209,6 +210,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	markDeadResume: undefined,
 	ladderDeath: undefined,
 	territoryPrisoners: undefined,
+	semeaiDeath: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,
