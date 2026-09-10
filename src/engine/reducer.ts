@@ -7,16 +7,22 @@ import type {
 	Player,
 	CellValue,
 	Grid,
-	PendingPlace
+	PendingPlace,
+	DeductionCharacter,
+	QueryEvent
 } from "./types";
 import {
+	asMoveList,
 	asPlacementList,
 	getCell,
 	isCellPending,
+	listHasMove,
 	listHasPosition,
+	movesEqual,
 	positionsEqual,
 	setCell,
-	toIndex
+	toIndex,
+	type MovePair
 } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
 import { applyCaptureIfAny } from "@/engine/capture";
@@ -24,8 +30,11 @@ import {
 	applyLibertyCapture,
 	areaOutcome,
 	boardPositionHash,
+	findDameCells,
+	findGroup,
 	isLegalLibertyPlace,
 	koPointFromCapture,
+	removeMarkedDeadStones,
 	situationHash,
 	usesSuperkoHistory,
 	type KoRule
@@ -40,10 +49,22 @@ import {
 	type FleetConfig
 } from "@/engine/fleet";
 import {
+	canJointSimultaneousMoves,
+	canOrderedSimultaneousMoves,
 	canMove,
+	effectiveMovement,
+	hasAnyJumpCapture,
+	isJumpCapture,
+	isMaximalJumpContinuation,
+	isMaximalJumpStart,
+	jumpDestinations,
+	jumpMid,
+	landsOnPromotionTarget,
 	movementBoardFrom,
+	applySoloMovesCaptureAware,
 	type MovementConfig
 } from "@/engine/movement";
+import { isCrowned, promote } from "@/engine/pieces";
 import {
 	applyLifeStep,
 	type SchedulerConfig
@@ -54,6 +75,34 @@ import {
 	type GridTopology
 } from "@/engine/topology";
 import { getCell as readCell } from "@/engine/types";
+import {
+	answerQuery,
+	answerQueryConjunction,
+	answerQueryDisjunction,
+	assignSecrets,
+	canEliminate,
+	eliminateAfterQuery,
+	eliminateAfterQueryConjunction,
+	eliminateAfterQueryDisjunction,
+	isGuessCorrect,
+	validCompoundClauses
+} from "@/engine/deduction";
+import {
+	allSafeRevealed,
+	applyReveals,
+	floodRevealRegion,
+	placeHazards
+} from "@/engine/hazards";
+import {
+	allPairsMatched,
+	emptyMatched,
+	hidePositions,
+	isFaceDown,
+	listHasPosition as memoryListHasPosition,
+	markMatched,
+	memoryIndex,
+	shufflePairDeck
+} from "@/engine/memory";
 
 export type InitialSeed = {
 	row: number;
@@ -73,7 +122,7 @@ export type GameConfig = {
 	gridWrap?: boolean;
 	winLength: number;
 	adjacency: AdjacencyConfig;
-	inputMode?: "cell" | "column" | "row" | "move";
+	inputMode?: "cell" | "column" | "row" | "move" | "deduction" | "flip";
 	placementMode?: "direct" | "gravity";
 	/** Gravity settle axis. Vertical ↔ column input; horizontal ↔ row input. */
 	gravityDirection?: "down" | "up" | "left" | "right";
@@ -94,17 +143,184 @@ export type GameConfig = {
 	koRule?: KoRule;
 	/** Legacy alias: true when koRule is point or any superko. */
 	koEnabled?: boolean;
-	observationMode?: "full" | "hit_miss" | "fog";
+	observationMode?:
+		| "full"
+		| "hit_miss"
+		| "fog"
+		| "deduction"
+		| "flood_reveal"
+		| "memory_flip";
 	/** Fog-of-war radius (Chebyshev/Manhattan/hex/graph hops). Used when mode=fog. */
 	fogRadius?: number;
 	fogMetric?: "chebyshev" | "manhattan";
+	/** Hazard layout for flood_reveal / clear_hazards. */
+	hazards?: {
+		count: number;
+		firstRevealSafe?: boolean;
+	};
+	/** Memory Flip / tile pair-matching deck. */
+	memory?: {
+		pairCount: number;
+		bonusTurnOnMatch?: boolean;
+	};
 	objectiveMode?:
 		| "n_in_a_row"
 		| "destroy_hidden"
 		| "connect_or_destroy"
 		| "reach_row"
 		| "area_control"
+		| "identify_secret"
+		| "clear_hazards"
+		| "match_pairs"
 		| "none";
+	/**
+	 * Second-player (O) area-score compensation when objectiveMode is
+	 * area_control. Added at two-pass terminal scoring. Default 0.
+	 */
+	komi?: number;
+	/**
+	 * When true, two-pass area scoring treats shared-life (seki) empty
+	 * points as neutral territory. Default false.
+	 */
+	sekiScoring?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups with fewer
+	 * than 2 true eyes before counting (pass-alive lite). Default false.
+	 */
+	deadStones?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups that are not
+	 * Benson-unconditionally alive (vital-region fixed point). Supersedes
+	 * deadStones when both are set. Default false.
+	 */
+	bensonLife?: boolean;
+	/**
+	 * When true, the first pass while dame remain enters an endgame phase
+	 * where only dame intersections (plus pass) are legal; two consecutive
+	 * passes in that phase score (damezukai lite). Default false.
+	 */
+	dameFill?: boolean;
+	/**
+	 * When true, two consecutive passes enter a marking phase where players
+	 * alternately toggle opponent groups as dead; two consecutive passes in
+	 * that phase remove marked stones then score. Default false.
+	 */
+	markDead?: boolean;
+	/**
+	 * When true (requires markDead), `rejectMarks` exits marking without
+	 * scoring when any stones are marked — resume placement (dispute lite).
+	 */
+	markDeadResume?: boolean;
+	/**
+	 * When true, two-pass area scoring removes attacker-sente ladder /
+	 * atari-run groups after optional Benson/deadStones clearance (M73).
+	 */
+	ladderDeath?: boolean;
+	/**
+	 * When true, two-pass scoring uses territory + prisoners (Japanese lite)
+	 * instead of stones + territory (M74).
+	 */
+	territoryPrisoners?: boolean;
+	/**
+	 * When true, two-pass area scoring removes groups that lose a capturing
+	 * race (semeai) against a higher-liberty opponent sharing a liberty (M75).
+	 */
+	semeaiDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * T1 (3-straight) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill (M76).
+	 */
+	nakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * bent-3 (L) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional nakadeDeath and before
+	 * squareNakadeDeath / netDeath (M86).
+	 */
+	lNakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * square-4 (2×2) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional lNakadeDeath and before
+	 * pyramidNakadeDeath / netDeath (M87).
+	 */
+	squareNakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * pyramid-4 (T) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional squareNakadeDeath and before
+	 * twistedNakadeDeath / netDeath (M88).
+	 */
+	pyramidNakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * twisted-4 (Z/S) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional pyramidNakadeDeath and before
+	 * l4NakadeDeath / netDeath (M89).
+	 */
+	twistedNakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering an
+	 * L4 (tetromino L/J) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional twistedNakadeDeath and before
+	 * straight4NakadeDeath / netDeath (M90).
+	 */
+	l4NakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * straight-4 (I-tetromino) nakade big-eye that would have <2 true eyes
+	 * after an opponent vital fill — after optional l4NakadeDeath and before
+	 * bulky5NakadeDeath / netDeath (M91).
+	 */
+	straight4NakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * bulky-5 (P-pentomino) nakade big-eye that would have <2 true eyes after
+	 * an opponent vital fill — after optional straight4NakadeDeath and before
+	 * plusNakadeDeath / netDeath (M92).
+	 */
+	bulky5NakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * plus / X-pentomino nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional bulky5NakadeDeath and before
+	 * netDeath (M93).
+	 */
+	plusNakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes groups force-capturable by an
+	 * attacker-sente tight net / geta (exactly 3 root liberties; every escape
+	 * has a finishing reply) after optional nakadeDeath / lNakadeDeath /
+	 * squareNakadeDeath / pyramidNakadeDeath / twistedNakadeDeath /
+	 * l4NakadeDeath / straight4NakadeDeath / bulky5NakadeDeath /
+	 * plusNakadeDeath and before looseNetDeath / senteLadderDeath /
+	 * ladderDeath (M77).
+	 */
+	netDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes groups force-capturable by an
+	 * attacker-sente loose net (exactly 4 root liberties; same search as
+	 * netDeath) after optional netDeath and before senteLadderDeath /
+	 * ladderDeath (M78).
+	 */
+	looseNetDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes multi-stone groups with
+	 * exactly 3 root liberties that collapse to a ladder (or capture) under
+	 * one attacker liberty-fill — after optional looseNetDeath and before
+	 * approachNetDeath / ladderDeath (M79). Attacker-first polarity vs
+	 * defender-first netDeath. Single-stone 3-lib shapes omitted.
+	 */
+	senteLadderDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes multi-stone groups with
+	 * exactly 3 or 4 root liberties that become net/loose-net dead after one
+	 * non-liberty approach place — after optional senteLadderDeath and before
+	 * ladderDeath (M80). Distinct from liberty-fill sente ladders and from
+	 * defender-first nets that already succeed without the approach.
+	 */
+	approachNetDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -129,11 +345,14 @@ export type GameConfig = {
 	 */
 	resolveOrder?: "joint" | "x_first" | "o_first";
 	/**
-	 * Ordered in-turn action types (place→move, place→fire, or
-	 * place→move→fire) before handoff. When set, GameState.turnPhaseIndex
-	 * tracks the active phase.
+	 * Ordered in-turn action types (place→move / place→fire /
+	 * place→move→fire / move→fire, or deduction query→eliminate /
+	 * query→guess / query→eliminate→guess) before handoff. When set,
+	 * GameState.turnPhaseIndex tracks the active phase.
 	 */
-	turnPhases?: Array<"place" | "move" | "fire">;
+	turnPhases?: Array<
+		"place" | "move" | "fire" | "query" | "eliminate" | "guess"
+	>;
 	scheduler?: SchedulerConfig;
 	movement?: MovementConfig;
 	/** Home rows for reach_row objective (player → target row index). */
@@ -143,6 +362,20 @@ export type GameConfig = {
 	 * placement (place onto hidden) then transitions to combat (fire).
 	 */
 	fleet?: FleetConfig;
+	/** Seed for deduction secrets (from config.rng.seed). */
+	seed?: number;
+	/** Deduction / Guess Who-lite roster + traits. */
+	deduction?: {
+		roster: DeductionCharacter[];
+		traits: string[];
+		wrongGuess: "lose" | "end_turn";
+		/** When false, query answers without pruning; use eliminate actions. */
+		autoEliminate: boolean;
+		/** single (default), compound AND, or compound OR queries. */
+		queryShape: "single" | "and" | "or";
+		/** Exact clause count for and|or (default 2). */
+		compoundArity: number;
+	};
 	initial?: InitialSeed[];
 };
 
@@ -393,17 +626,83 @@ export function createInitialState(config: GameConfig): GameState {
 		winner: null,
 		moveCount: 0,
 		consecutivePasses: 0,
+		endgamePhase: false,
+		markingPhase: false,
+		markedDead: [],
 		koPoint: null,
 		phase: placement ? "placement" : "combat",
 		fleetProgress: placement ? initialFleetProgressMap() : undefined,
 		actionsRemaining: alternatingMultiStep ? actionsPerTurn : undefined,
 		turnPhaseIndex: inTurnPhases ? 0 : undefined
 	};
+	if ((config.objectiveMode ?? "n_in_a_row") === "area_control") {
+		base.prisoners = { X: 0, O: 0 };
+	}
 
 	const seeds = config.initial ?? [];
 	const hasOwner = seeds.some((p) => (p.visibility ?? "public") === "owner");
-	if (hasOwner || config.observationMode === "hit_miss" || placement) {
+	const floodReveal = config.observationMode === "flood_reveal";
+	const memoryFlip = config.observationMode === "memory_flip";
+	if (
+		hasOwner ||
+		config.observationMode === "hit_miss" ||
+		placement ||
+		floodReveal ||
+		memoryFlip
+	) {
 		base.hidden = emptyGrid(config.gridWidth, config.gridHeight);
+	}
+
+	if (floodReveal && config.hazards) {
+		const firstSafe = config.hazards.firstRevealSafe === true;
+		if (!firstSafe) {
+			const active =
+				(config.topology ?? "rectangle") === "graph"
+					? config.graph?.active
+					: undefined;
+			base.hidden = {
+				width: config.gridWidth,
+				height: config.gridHeight,
+				cells: placeHazards(
+					config.gridWidth,
+					config.gridHeight,
+					config.hazards.count,
+					config.seed ?? 0,
+					[],
+					active
+				)
+			};
+		}
+		// firstRevealSafe: defer mine placement until first reveal action
+	}
+
+	if (memoryFlip && config.memory) {
+		base.hidden = {
+			width: config.gridWidth,
+			height: config.gridHeight,
+			cells: shufflePairDeck(
+				config.gridWidth,
+				config.gridHeight,
+				config.memory.pairCount,
+				config.seed ?? 0
+			)
+		};
+		base.memory = {
+			faceUp: [],
+			matched: emptyMatched(config.gridWidth, config.gridHeight),
+			scores: { X: 0, O: 0 }
+		};
+	}
+
+	const deductionMode =
+		config.observationMode === "deduction" ||
+		config.inputMode === "deduction";
+	if (deductionMode && config.deduction) {
+		const rosterIds = config.deduction.roster.map((c) => c.id);
+		base.deduction = {
+			secret: assignSecrets(rosterIds, config.seed ?? 0),
+			eliminated: { X: [], O: [] }
+		};
 	}
 
 	if (seeds.length === 0) {
@@ -473,6 +772,16 @@ export function reduce(
 	event: GameEvent,
 	config: GameConfig
 ): GameState {
+	// Marking phase: only pass / markDead / rejectMarks / reset may mutate.
+	if (
+		state.markingPhase === true &&
+		event.type !== "pass" &&
+		event.type !== "markDead" &&
+		event.type !== "rejectMarks" &&
+		event.type !== "reset"
+	) {
+		return state;
+	}
 	switch (event.type) {
 		case "place":
 			return handlePlace(state, event.position, config);
@@ -480,6 +789,10 @@ export function reduce(
 			return handleMove(state, event.from, event.to, config);
 		case "fire":
 			return handleFire(state, event.position, config);
+		case "reveal":
+			return handleReveal(state, event.position, config);
+		case "flip":
+			return handleFlip(state, event.position, config);
 		case "activateColumn":
 			return handleActivateColumn(state, event.col, config);
 		case "activateRow":
@@ -492,12 +805,42 @@ export function reduce(
 			return handleTick(state, config);
 		case "pass":
 			return handlePass(state, config);
+		case "markDead":
+			return handleMarkDead(state, event.position, config);
+		case "rejectMarks":
+			return handleRejectMarks(state, config);
 		case "simultaneousPlace":
 			return handleSimultaneousPlace(state, event.placements, config);
 		case "simultaneousMove":
 			return handleSimultaneousMove(state, event.moves, config);
+		case "simultaneousQuery":
+			return handleSimultaneousQuery(state, event.queries, config);
+		case "simultaneousGuess":
+			return handleSimultaneousGuess(state, event.guesses, config);
+		case "simultaneousEliminate":
+			return handleSimultaneousEliminate(state, event.eliminations, config);
 		case "commitPlace":
 			return handleCommitPlace(state, event.player, event.position, config);
+		case "commitMove":
+			return handleCommitMove(
+				state,
+				event.player,
+				event.from,
+				event.to,
+				config
+			);
+		case "commitQuery":
+			return handleCommitQuery(state, event.player, event.query, config);
+		case "commitGuess":
+			return handleCommitGuess(state, event.player, event.id, config);
+		case "commitEliminate":
+			return handleCommitEliminate(state, event.player, event.id, config);
+		case "query":
+			return handleQuery(state, event, config);
+		case "guess":
+			return handleGuess(state, event.id, config);
+		case "eliminate":
+			return handleEliminate(state, event.id, config);
 		case "reset":
 			return createInitialState(config);
 		default:
@@ -505,17 +848,545 @@ export function reduce(
 	}
 }
 
+function isDeductionMode(config: GameConfig): boolean {
+	return (
+		(config.inputMode === "deduction" ||
+			config.observationMode === "deduction") &&
+		config.deduction != null
+	);
+}
+
+function handleQuery(
+	state: GameState,
+	event: QueryEvent,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	// Simultaneous games must use simultaneousQuery (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+
+	const shape = config.deduction.queryShape ?? "single";
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const autoEliminate = config.deduction.autoEliminate !== false;
+
+	let answer: boolean;
+	let lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
+	let eliminated: string[];
+
+	if (shape === "and" || shape === "or") {
+		const clauses = event.clauses;
+		const arity = config.deduction.compoundArity ?? 2;
+		if (
+			!clauses ||
+			!validCompoundClauses(clauses, config.deduction.traits, arity)
+		) {
+			return state;
+		}
+		// Reject single-atom fields on compound configs
+		if (event.trait !== undefined || event.value !== undefined) return state;
+
+		const op = shape;
+		answer =
+			op === "and"
+				? answerQueryConjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					)
+				: answerQueryDisjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					);
+		eliminated = autoEliminate
+			? op === "and"
+				? eliminateAfterQueryConjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+				: eliminateAfterQueryDisjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+			: state.deduction.eliminated[player];
+		lastQuery = {
+			by: player,
+			op,
+			clauses: clauses.map((c) => ({ trait: c.trait, value: c.value })),
+			answer
+		};
+	} else {
+		// single
+		if (event.clauses && event.clauses.length > 0) return state;
+		const trait = event.trait;
+		const value = event.value;
+		if (trait === undefined || value === undefined) return state;
+		if (!config.deduction.traits.includes(trait)) return state;
+
+		answer = answerQuery(
+			secretId,
+			config.deduction.roster,
+			trait,
+			value
+		);
+		eliminated = autoEliminate
+			? eliminateAfterQuery(
+					config.deduction.roster,
+					state.deduction.eliminated[player],
+					trait,
+					value,
+					answer
+				)
+			: state.deduction.eliminated[player];
+		lastQuery = { by: player, trait, value, answer };
+	}
+
+	const newMoveCount = state.moveCount + 1;
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				...state.deduction.eliminated,
+				[player]: eliminated
+			},
+			lastQuery
+		},
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+/**
+ * Resolve one seat's query (single-atom or compound) against the opponent secret.
+ * Does not advance turn / moveCount (caller owns joint bookkeeping).
+ */
+function resolveQueryForPlayer(
+	state: GameState,
+	player: Player,
+	event: QueryEvent,
+	config: GameConfig
+): {
+	ok: boolean;
+	eliminated: string[];
+	lastQuery: NonNullable<GameState["deduction"]>["lastQuery"];
+} | null {
+	if (!config.deduction || !state.deduction) return null;
+	const shape = config.deduction.queryShape ?? "single";
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const autoEliminate = config.deduction.autoEliminate !== false;
+
+	if (shape === "and" || shape === "or") {
+		const clauses = event.clauses;
+		const arity = config.deduction.compoundArity ?? 2;
+		if (
+			!clauses ||
+			!validCompoundClauses(clauses, config.deduction.traits, arity)
+		) {
+			return null;
+		}
+		if (event.trait !== undefined || event.value !== undefined) return null;
+
+		const answer =
+			shape === "and"
+				? answerQueryConjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					)
+				: answerQueryDisjunction(
+						secretId,
+						config.deduction.roster,
+						clauses
+					);
+		const eliminated = autoEliminate
+			? shape === "and"
+				? eliminateAfterQueryConjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+				: eliminateAfterQueryDisjunction(
+						config.deduction.roster,
+						state.deduction.eliminated[player],
+						clauses,
+						answer
+					)
+			: state.deduction.eliminated[player];
+		return {
+			ok: true,
+			eliminated,
+			lastQuery: {
+				by: player,
+				op: shape,
+				clauses: clauses.map((c) => ({ trait: c.trait, value: c.value })),
+				answer
+			}
+		};
+	}
+
+	if (event.clauses && event.clauses.length > 0) return null;
+	const trait = event.trait;
+	const value = event.value;
+	if (trait === undefined || value === undefined) return null;
+	if (!config.deduction.traits.includes(trait)) return null;
+
+	const answer = answerQuery(
+		secretId,
+		config.deduction.roster,
+		trait,
+		value
+	);
+	const eliminated = autoEliminate
+		? eliminateAfterQuery(
+				config.deduction.roster,
+				state.deduction.eliminated[player],
+				trait,
+				value,
+				answer
+			)
+		: state.deduction.eliminated[player];
+	return {
+		ok: true,
+		eliminated,
+		lastQuery: { by: player, trait, value, answer }
+	};
+}
+
+/** Joint simultaneous query: both seats ask; independent auto-prune. */
+function handleSimultaneousQuery(
+	state: GameState,
+	queries: { X: QueryEvent; O: QueryEvent },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	const shape = config.deduction.queryShape ?? "single";
+	if (shape !== "single" && shape !== "and" && shape !== "or") return state;
+
+	const x = resolveQueryForPlayer(state, "X", queries.X, config);
+	const o = resolveQueryForPlayer(state, "O", queries.O, config);
+	if (!x || !o) return state;
+
+	return {
+		...state,
+		moveCount: state.moveCount + 1,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				X: x.eliminated,
+				O: o.eliminated
+			},
+			lastQuery: undefined,
+			lastQueries: {
+				X: x.lastQuery,
+				O: o.lastQuery
+			}
+		}
+	};
+}
+
+/** Joint simultaneous guess: both identify; one correct → win; both → draw. */
+function handleSimultaneousGuess(
+	state: GameState,
+	guesses: { X: string; O: string },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(guesses.X) || !rosterIds.has(guesses.O)) return state;
+
+	const xCorrect = isGuessCorrect(state.deduction.secret.O, guesses.X);
+	const oCorrect = isGuessCorrect(state.deduction.secret.X, guesses.O);
+	const newMoveCount = state.moveCount + 1;
+
+	if (xCorrect && oCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "draw",
+			winner: null
+		};
+	}
+	if (xCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: "X"
+		};
+	}
+	if (oCorrect) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: "O"
+		};
+	}
+
+	// Both wrong: continue (wrongGuess lose would mutual-eliminate both seats).
+	return {
+		...state,
+		moveCount: newMoveCount
+	};
+}
+
+/** Joint simultaneous eliminate: both seats prune one candidate (manual mode). */
+function handleSimultaneousEliminate(
+	state: GameState,
+	eliminations: { X: string; O: string },
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if (config.deduction.autoEliminate !== false) return state;
+
+	const xAlready = state.deduction.eliminated.X;
+	const oAlready = state.deduction.eliminated.O;
+	if (!canEliminate(config.deduction.roster, xAlready, eliminations.X)) {
+		return state;
+	}
+	if (!canEliminate(config.deduction.roster, oAlready, eliminations.O)) {
+		return state;
+	}
+
+	return {
+		...state,
+		moveCount: state.moveCount + 1,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				X: [...xAlready, eliminations.X],
+				O: [...oAlready, eliminations.O]
+			}
+		}
+	};
+}
+
+function handleGuess(
+	state: GameState,
+	id: string,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	// Simultaneous games must use simultaneousGuess (joint resolve)
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const player = state.currentPlayer;
+	const opponent: Player = player === "X" ? "O" : "X";
+	const secretId = state.deduction.secret[opponent];
+	const correct = isGuessCorrect(secretId, id);
+	const newMoveCount = state.moveCount + 1;
+
+	if (correct) {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: player
+		};
+	}
+
+	if (config.deduction.wrongGuess === "lose") {
+		return {
+			...state,
+			moveCount: newMoveCount,
+			status: "won",
+			winner: opponent
+		};
+	}
+
+	// end_turn: handoff without win
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleEliminate(
+	state: GameState,
+	id: string,
+	config: GameConfig
+): GameState {
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	// Manual eliminate only when auto-prune is off (Commit(hypothesis) seam).
+	if (config.deduction.autoEliminate !== false) return state;
+	if ((config.turnSchedule ?? "alternating") === "simultaneous") return state;
+
+	const player = state.currentPlayer;
+	const already = state.deduction.eliminated[player];
+	if (!canEliminate(config.deduction.roster, already, id)) return state;
+
+	const newMoveCount = state.moveCount + 1;
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...state,
+		moveCount: newMoveCount,
+		deduction: {
+			...state.deduction,
+			eliminated: {
+				...state.deduction.eliminated,
+				[player]: [...already, id]
+			}
+		},
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
 function handlePass(state: GameState, config: GameConfig): GameState {
 	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
 	if (state.status !== "playing") return state;
 
-	const passes = (state.consecutivePasses ?? 0) + 1;
 	const newMoveCount = state.moveCount + 1;
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	const wrap = config.gridWrap === true;
+	const topology = config.topology ?? "rectangle";
+
+	// Damezukai lite: first pass while dame remain enters endgame without
+	// counting toward terminal two-pass; only dame places stay legal after.
+	// Skip while already in dead-stone marking (places are disabled there).
+	if (
+		config.dameFill === true &&
+		state.endgamePhase !== true &&
+		state.markingPhase !== true
+	) {
+		const dame = findDameCells(state.grid, wrap, topology, config.graph);
+		if (dame.length > 0) {
+			return {
+				...state,
+				endgamePhase: true,
+				currentPlayer: nextPlayer,
+				moveCount: newMoveCount,
+				consecutivePasses: 0
+			};
+		}
+	}
+
+	const passes = (state.consecutivePasses ?? 0) + 1;
 
 	if (passes >= 2) {
+		// Interactive marking: two passes enter marking instead of scoring.
+		if (config.markDead === true && state.markingPhase !== true) {
+			return {
+				...state,
+				markingPhase: true,
+				markedDead: state.markedDead ?? [],
+				currentPlayer: nextPlayer,
+				moveCount: newMoveCount,
+				consecutivePasses: 0
+			};
+		}
+
+		// Confirm marking: remove agreed corpses, then score.
+		if (state.markingPhase === true) {
+			const cleared = removeMarkedDeadStones(
+				state.grid,
+				state.markedDead ?? []
+			);
+			const { status, winner } = areaOutcome(
+				cleared,
+				wrap,
+				topology,
+				config.graph,
+				config.komi ?? 0,
+				config.sekiScoring === true,
+				config.deadStones === true,
+				config.bensonLife === true,
+				config.ladderDeath === true,
+				config.territoryPrisoners === true,
+				state.prisoners ?? { X: 0, O: 0 },
+				config.semeaiDeath === true,
+				config.nakadeDeath === true,
+				config.netDeath === true,
+				config.looseNetDeath === true,
+				config.senteLadderDeath === true,
+				config.approachNetDeath === true,
+				config.lNakadeDeath === true,
+				config.squareNakadeDeath === true,
+				config.pyramidNakadeDeath === true,
+				config.twistedNakadeDeath === true,
+				config.l4NakadeDeath === true,
+				config.straight4NakadeDeath === true,
+				config.bulky5NakadeDeath === true,
+				config.plusNakadeDeath === true
+			);
+			return {
+				...state,
+				grid: cleared,
+				status,
+				winner,
+				moveCount: newMoveCount,
+				consecutivePasses: passes,
+				markedDead: []
+			};
+		}
+
 		const { status, winner } = areaOutcome(
 			state.grid,
-			config.gridWrap === true
+			wrap,
+			topology,
+			config.graph,
+			config.komi ?? 0,
+			config.sekiScoring === true,
+			config.deadStones === true,
+			config.bensonLife === true,
+			config.ladderDeath === true,
+			config.territoryPrisoners === true,
+			state.prisoners ?? { X: 0, O: 0 },
+			config.semeaiDeath === true,
+			config.nakadeDeath === true,
+			config.netDeath === true,
+			config.looseNetDeath === true,
+			config.senteLadderDeath === true,
+			config.approachNetDeath === true,
+			config.lNakadeDeath === true,
+			config.squareNakadeDeath === true,
+			config.pyramidNakadeDeath === true,
+			config.twistedNakadeDeath === true,
+			config.l4NakadeDeath === true,
+			config.straight4NakadeDeath === true,
+			config.bulky5NakadeDeath === true,
+			config.plusNakadeDeath === true
 		);
 		return {
 			...state,
@@ -526,12 +1397,77 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 		};
 	}
 
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
 	return {
 		...state,
 		currentPlayer: nextPlayer,
 		moveCount: newMoveCount,
 		consecutivePasses: passes
+	};
+}
+
+function keyOfPos(pos: Position): string {
+	return `${pos.row},${pos.col}`;
+}
+
+function handleMarkDead(
+	state: GameState,
+	position: Position,
+	config: GameConfig
+): GameState {
+	if (config.markDead !== true) return state;
+	if (state.markingPhase !== true) return state;
+	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
+	if (state.status !== "playing") return state;
+
+	const occupant = getCell(state.grid, position);
+	const opponent: Player = state.currentPlayer === "X" ? "O" : "X";
+	if (occupant !== opponent) return state;
+
+	const wrap = config.gridWrap === true;
+	const topology = config.topology ?? "rectangle";
+	const group = findGroup(state.grid, position, wrap, topology, config.graph);
+	if (group.length === 0) return state;
+
+	const marked = new Set(state.markedDead ?? []);
+	const groupKeys = group.map(keyOfPos);
+	const allMarked = groupKeys.every((k) => marked.has(k));
+	if (allMarked) {
+		for (const k of groupKeys) marked.delete(k);
+	} else {
+		for (const k of groupKeys) marked.add(k);
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...state,
+		markedDead: Array.from(marked).sort(),
+		currentPlayer: nextPlayer,
+		moveCount: state.moveCount + 1,
+		consecutivePasses: 0
+	};
+}
+
+/**
+ * Dispute: exit marking without scoring when marks exist (markDeadResume).
+ * Rejecter keeps initiative; grid unchanged; endgamePhase preserved if set.
+ */
+function handleRejectMarks(
+	state: GameState,
+	config: GameConfig
+): GameState {
+	if (config.markDead !== true) return state;
+	if (config.markDeadResume !== true) return state;
+	if (state.markingPhase !== true) return state;
+	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
+	if (state.status !== "playing") return state;
+	if ((state.markedDead ?? []).length === 0) return state;
+
+	return {
+		...state,
+		markingPhase: false,
+		markedDead: [],
+		consecutivePasses: 0,
+		moveCount: state.moveCount + 1
 	};
 }
 
@@ -747,20 +1683,30 @@ function handleSimultaneousPlace(
 	};
 }
 
-export type SimultaneousMovePair = {
-	from: Position;
-	to: Position;
-};
+export type SimultaneousMovePair = MovePair;
 
 /**
  * Apply one simultaneous move pair onto `grid` (joint or ordered).
  * Same destination under joint → neither moves. Ordered applies first seat
  * then second against the updated board (second may become illegal).
+ * Joint replace: after vacating both chosen origins, landing overwrites any
+ * remaining occupant (stationary enemy capture); a fleeing opponent whose
+ * origin is the landing cell leaves an empty square.
+ * Joint jump (M81): clear jump mids when pre-round mid holds an enemy that
+ * did not flee; single-hop only (no mustContinueFrom).
+ * Ordered replace: enemy destinations may be overwritten; same-dest still
+ * gives the cell to the first seat (second does not capture the fresh lander).
+ * Priority capture of a fleeing piece leaves second unable to apply.
+ * Ordered jump (M82): sequential single-seat apply clears mid on jump (same
+ * as alternating); capture-before-flee skips the fleer when mid was cleared.
  */
 function applySimultaneousMovePair(
 	grid: Grid,
 	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
-	resolveOrder: "joint" | "x_first" | "o_first"
+	resolveOrder: "joint" | "x_first" | "o_first",
+	capture: "none" | "replace" | "jump" = "none",
+	movement?: MovementConfig,
+	board?: ReturnType<typeof movementBoardFrom>
 ): { grid: Grid; conflict: boolean; applied: { X: boolean; O: boolean } } {
 	const sameDest = positionsEqual(moves.X.to, moves.O.to);
 
@@ -768,9 +1714,36 @@ function applySimultaneousMovePair(
 		if (sameDest) {
 			return { grid, conflict: true, applied: { X: false, O: false } };
 		}
-		// Atomic: clear both origins, then land both destinations.
+		// Atomic: clear both origins, then land both destinations (overwrite OK).
 		let cells = setCell(grid, moves.X.from, null);
 		cells = setCell({ ...grid, cells }, moves.O.from, null);
+		if (capture === "jump" && movement) {
+			const wrapOrBoard = board ?? false;
+			for (const seat of ["X", "O"] as const) {
+				const m = moves[seat];
+				if (
+					!isJumpCapture(
+						grid,
+						m.from,
+						m.to,
+						seat,
+						movement,
+						wrapOrBoard
+					)
+				) {
+					continue;
+				}
+				const mid = jumpMid(m.from, m.to, movement, wrapOrBoard, grid);
+				if (!mid) continue;
+				const opp: Player = seat === "X" ? "O" : "X";
+				const oppMove = moves[opp];
+				const fled =
+					oppMove.from.row === mid.row &&
+					oppMove.from.col === mid.col;
+				if (fled) continue;
+				cells = setCell({ ...grid, cells }, mid, null);
+			}
+		}
 		cells = setCell({ ...grid, cells }, moves.X.to, "X");
 		cells = setCell({ ...grid, cells }, moves.O.to, "O");
 		return {
@@ -784,12 +1757,29 @@ function applySimultaneousMovePair(
 	const second: Player = first === "X" ? "O" : "X";
 	let next = grid;
 	const applied = { X: false, O: false };
+	const wrapOrBoard = board ?? false;
 
 	const tryApply = (seat: Player) => {
 		const m = moves[seat];
 		if (getCell(next, m.from) !== seat) return;
-		if (getCell(next, m.to) !== null) return;
+		const dest = getCell(next, m.to);
+		if (dest !== null) {
+			if (capture !== "replace") return;
+			if (dest === seat) return;
+			// Same-dest: first already claimed the cell — second does not capture.
+			if (sameDest && applied[first]) return;
+		}
 		let cells = setCell(next, m.from, null);
+		if (
+			capture === "jump" &&
+			movement &&
+			isJumpCapture(next, m.from, m.to, seat, movement, wrapOrBoard)
+		) {
+			const mid = jumpMid(m.from, m.to, movement, wrapOrBoard, next);
+			if (mid) {
+				cells = setCell({ ...next, cells }, mid, null);
+			}
+		}
 		cells = setCell({ ...next, cells }, m.to, seat);
 		next = { ...next, cells };
 		applied[seat] = true;
@@ -801,14 +1791,27 @@ function applySimultaneousMovePair(
 }
 
 /**
- * Simultaneous schedule + move input: both seats submit one {from,to}.
- * Each move validated with canMove on the pre-round board. Same destination
- * under joint → neither; ordered → first seat wins the cell when both claim it.
- * After resolve, reach_row (or n_in_a_row) win checks; mutual → draw.
+ * Simultaneous schedule + move input: both seats submit one {from,to} (scalar)
+ * or N moves each (`actionsPerTurn` > 1). Arrays apply indexed pairs as
+ * sequential sub-steps with win checks after each — unlike place, each index
+ * is revalidated on the post-prior-step board so same-piece chains work.
+ * Joint resolve validates on a vacated-origin board (sliding path integrity,
+ * including joint + replace: fleeing blockers clear the ray; stationary
+ * capture targets remain). Jump (M81 joint / M82 ordered): mid cleared on
+ * apply when the prey does not flee (ordered: sequential mid clear);
+ * single-hop only (no mustContinueFrom). Ordered resolve validates first
+ * seat pre-round, then second after simulating the first
+ * (sequential path / capture revalidation). Same destination under joint →
+ * neither; ordered → first seat wins the cell when both claim it. Ordered
+ * replace may overwrite enemies; priority can capture before prey flees.
+ * After each sub-step, reach_row (or n_in_a_row) win checks; mutual → draw.
  */
 function handleSimultaneousMove(
 	state: GameState,
-	moves: { X: SimultaneousMovePair; O: SimultaneousMovePair },
+	moves: {
+		X: SimultaneousMovePair | SimultaneousMovePair[];
+		O: SimultaneousMovePair | SimultaneousMovePair[];
+	},
 	config: GameConfig
 ): GameState {
 	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
@@ -820,86 +1823,147 @@ function handleSimultaneousMove(
 	const board = movementBoardFrom(config);
 	const wrap = board.wrap === true;
 	const resolveOrder = config.resolveOrder ?? "joint";
+	const budget = resolveActionsPerTurn(config);
+	const xs = asMoveList(moves.X);
+	const os = asMoveList(moves.O);
 
-	if (
-		!canMove(state.grid, moves.X.from, moves.X.to, "X", movement, board) ||
-		!canMove(state.grid, moves.O.from, moves.O.to, "O", movement, board)
-	) {
-		return state;
+	if (xs.length !== budget || os.length !== budget) return state;
+
+	// Within-seat duplicate {from,to} pairs are illegal for the whole joint.
+	for (let i = 0; i < xs.length; i++) {
+		for (let j = i + 1; j < xs.length; j++) {
+			if (movesEqual(xs[i]!, xs[j]!)) return state;
+		}
+	}
+	for (let i = 0; i < os.length; i++) {
+		for (let j = i + 1; j < os.length; j++) {
+			if (movesEqual(os[i]!, os[j]!)) return state;
+		}
 	}
 
-	const applied = applySimultaneousMovePair(state.grid, moves, resolveOrder);
-	const workingGrid = applied.grid;
-	const nextBase: GameState = {
+	let workingGrid = state.grid;
+	const clearedCommits = { committedMoves: undefined as undefined };
+
+	for (let i = 0; i < budget; i++) {
+		const pair = { X: xs[i]!, O: os[i]! };
+		const legal =
+			resolveOrder === "joint"
+				? canJointSimultaneousMoves(workingGrid, pair, movement, board)
+				: canOrderedSimultaneousMoves(
+						workingGrid,
+						pair,
+						movement,
+						resolveOrder,
+						board
+					);
+		if (!legal) {
+			// Open simultaneous never applies illegal joints (explain rejects).
+			// Under commitReveal, seats may both commit into an illegal joint
+			// blindly (e.g. jump vs mid-flee). Abort the reveal: clear the
+			// commit buffer so seats may re-commit; count a wasted round.
+			if (config.commitReveal && state.committedMoves) {
+				return {
+					...state,
+					committedMoves: undefined,
+					moveCount: state.moveCount + 1
+				};
+			}
+			return state;
+		}
+
+		const applied = applySimultaneousMovePair(
+			workingGrid,
+			pair,
+			resolveOrder,
+			movement.capture ?? "none",
+			movement,
+			board
+		);
+		workingGrid = applied.grid;
+
+		const nextBase: GameState = {
+			...state,
+			...clearedCommits,
+			grid: workingGrid,
+			moveCount: state.moveCount + 1
+		};
+
+		const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
+		if (!shouldCheckWin) {
+			if (i === budget - 1) return nextBase;
+			continue;
+		}
+
+		if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
+			const xTarget = config.targetRows?.X;
+			const oTarget = config.targetRows?.O;
+			const xWins =
+				applied.applied.X &&
+				xTarget != null &&
+				pair.X.to.row === xTarget &&
+				getCell(workingGrid, pair.X.to) === "X";
+			const oWins =
+				applied.applied.O &&
+				oTarget != null &&
+				pair.O.to.row === oTarget &&
+				getCell(workingGrid, pair.O.to) === "O";
+			if (xWins && oWins) {
+				return { ...nextBase, status: "draw", winner: null };
+			}
+			if (xWins) {
+				return { ...nextBase, status: "won", winner: "X" };
+			}
+			if (oWins) {
+				return { ...nextBase, status: "won", winner: "O" };
+			}
+			if (i === budget - 1) return nextBase;
+			continue;
+		}
+
+		if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
+			const topology = config.topology ?? "rectangle";
+			const xWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"X",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			const oWins = Boolean(
+				checkWinner(
+					workingGrid,
+					"O",
+					config.winLength,
+					config.adjacency,
+					topology,
+					config.graph,
+					wrap
+				)
+			);
+			if (xWins && oWins) {
+				return { ...nextBase, status: "draw", winner: null };
+			}
+			if (xWins) {
+				return { ...nextBase, status: "won", winner: "X" };
+			}
+			if (oWins) {
+				return { ...nextBase, status: "won", winner: "O" };
+			}
+		}
+
+		if (i === budget - 1) return nextBase;
+	}
+
+	return {
 		...state,
+		...clearedCommits,
 		grid: workingGrid,
 		moveCount: state.moveCount + 1
 	};
-
-	const shouldCheckWin = resolveOrder !== "joint" || !applied.conflict;
-	if (!shouldCheckWin) return nextBase;
-
-	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
-		const xTarget = config.targetRows?.X;
-		const oTarget = config.targetRows?.O;
-		const xWins =
-			applied.applied.X &&
-			xTarget != null &&
-			moves.X.to.row === xTarget &&
-			getCell(workingGrid, moves.X.to) === "X";
-		const oWins =
-			applied.applied.O &&
-			oTarget != null &&
-			moves.O.to.row === oTarget &&
-			getCell(workingGrid, moves.O.to) === "O";
-		if (xWins && oWins) {
-			return { ...nextBase, status: "draw", winner: null };
-		}
-		if (xWins) {
-			return { ...nextBase, status: "won", winner: "X" };
-		}
-		if (oWins) {
-			return { ...nextBase, status: "won", winner: "O" };
-		}
-		return nextBase;
-	}
-
-	if ((config.objectiveMode ?? "n_in_a_row") === "n_in_a_row") {
-		const topology = config.topology ?? "rectangle";
-		const xWins = Boolean(
-			checkWinner(
-				workingGrid,
-				"X",
-				config.winLength,
-				config.adjacency,
-				topology,
-				config.graph,
-				wrap
-			)
-		);
-		const oWins = Boolean(
-			checkWinner(
-				workingGrid,
-				"O",
-				config.winLength,
-				config.adjacency,
-				topology,
-				config.graph,
-				wrap
-			)
-		);
-		if (xWins && oWins) {
-			return { ...nextBase, status: "draw", winner: null };
-		}
-		if (xWins) {
-			return { ...nextBase, status: "won", winner: "X" };
-		}
-		if (oWins) {
-			return { ...nextBase, status: "won", winner: "O" };
-		}
-	}
-
-	return nextBase;
 }
 
 /**
@@ -959,6 +2023,218 @@ function handleCommitPlace(
 	};
 }
 
+/**
+ * Hidden simultaneous move: record a private {from,to} commit. When both seats
+ * have committed their full per-round budget (`actionsPerTurn`), reveal via
+ * handleSimultaneousMove (arrays for budget > 1; same-piece chains validated
+ * on a solo probe of prior commits).
+ */
+function handleCommitMove(
+	state: GameState,
+	player: Player,
+	from: Position,
+	to: Position,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (state.status !== "playing") return state;
+	if ((config.inputMode ?? "cell") !== "move") return state;
+	const movement = config.movement;
+	if (!movement) return state;
+
+	const board = movementBoardFrom(config);
+	const budget = resolveActionsPerTurn(config);
+	const prior = state.committedMoves ?? {};
+	const own = prior[player] ?? [];
+	if (own.length >= budget) return state;
+	const nextPair: MovePair = { from, to };
+	if (listHasMove(own, nextPair)) return state;
+
+	const probe = applySoloMovesCaptureAware(
+		state.grid,
+		player,
+		own,
+		movement,
+		board
+	);
+	if (!canMove(probe, from, to, player, movement, board)) return state;
+
+	const nextOwn = [...own, nextPair];
+	const nextCommits: Partial<Record<Player, MovePair[]>> = {
+		...prior,
+		[player]: nextOwn
+	};
+
+	const xList = nextCommits.X ?? [];
+	const oList = nextCommits.O ?? [];
+	if (xList.length === budget && oList.length === budget) {
+		return handleSimultaneousMove(
+			{ ...state, committedMoves: nextCommits },
+			{ X: xList, O: oList },
+			config
+		);
+	}
+
+	return {
+		...state,
+		committedMoves: nextCommits
+	};
+}
+
+/**
+ * Hidden simultaneous deduction: record a private query commit. When both
+ * seats have committed matching kinds, reveal via handleSimultaneousQuery.
+ */
+function handleCommitQuery(
+	state: GameState,
+	player: Player,
+	query: QueryEvent,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+
+	const prior = state.committedDeduction ?? {};
+	if (prior[player]) return state; // already committed this round
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const oppCommit = prior[opponent];
+	if (oppCommit && oppCommit.kind !== "query") return state; // kind mismatch
+
+	const nextCommits: Partial<Record<Player, NonNullable<GameState["committedDeduction"]>[Player]>> = {
+		...prior,
+		[player]: { kind: "query", query }
+	};
+
+	const x = nextCommits.X;
+	const o = nextCommits.O;
+	if (x?.kind === "query" && o?.kind === "query") {
+		const revealed = handleSimultaneousQuery(
+			{ ...state, committedDeduction: nextCommits },
+			{ X: x.query, O: o.query },
+			config
+		);
+		return { ...revealed, committedDeduction: undefined };
+	}
+
+	return {
+		...state,
+		committedDeduction: nextCommits
+	};
+}
+
+/**
+ * Hidden simultaneous deduction: record a private guess commit. When both
+ * seats have committed matching kinds, reveal via handleSimultaneousGuess.
+ */
+function handleCommitGuess(
+	state: GameState,
+	player: Player,
+	id: string,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const prior = state.committedDeduction ?? {};
+	if (prior[player]) return state;
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const oppCommit = prior[opponent];
+	if (oppCommit && oppCommit.kind !== "guess") return state;
+
+	const eliminated = new Set(state.deduction.eliminated[player] ?? []);
+	if (eliminated.has(id)) return state;
+
+	const nextCommits: Partial<Record<Player, NonNullable<GameState["committedDeduction"]>[Player]>> = {
+		...prior,
+		[player]: { kind: "guess", id }
+	};
+
+	const x = nextCommits.X;
+	const o = nextCommits.O;
+	if (x?.kind === "guess" && o?.kind === "guess") {
+		const revealed = handleSimultaneousGuess(
+			{ ...state, committedDeduction: nextCommits },
+			{ X: x.id, O: o.id },
+			config
+		);
+		return { ...revealed, committedDeduction: undefined };
+	}
+
+	return {
+		...state,
+		committedDeduction: nextCommits
+	};
+}
+
+/**
+ * Hidden simultaneous deduction: record a private eliminate commit. When both
+ * seats have committed matching kinds, reveal via handleSimultaneousEliminate.
+ */
+function handleCommitEliminate(
+	state: GameState,
+	player: Player,
+	id: string,
+	config: GameConfig
+): GameState {
+	if ((config.turnSchedule ?? "alternating") !== "simultaneous") return state;
+	if (!config.commitReveal) return state;
+	if (!isDeductionMode(config) || !config.deduction || !state.deduction) {
+		return state;
+	}
+	if (state.status !== "playing") return state;
+	if (config.deduction.autoEliminate !== false) return state;
+
+	const rosterIds = new Set(config.deduction.roster.map((c) => c.id));
+	if (!rosterIds.has(id)) return state;
+
+	const prior = state.committedDeduction ?? {};
+	if (prior[player]) return state;
+
+	const opponent: Player = player === "X" ? "O" : "X";
+	const oppCommit = prior[opponent];
+	if (oppCommit && oppCommit.kind !== "eliminate") return state;
+
+	const eliminated = new Set(state.deduction.eliminated[player] ?? []);
+	if (eliminated.has(id)) return state;
+
+	const nextCommits: Partial<
+		Record<Player, NonNullable<GameState["committedDeduction"]>[Player]>
+	> = {
+		...prior,
+		[player]: { kind: "eliminate", id }
+	};
+
+	const x = nextCommits.X;
+	const o = nextCommits.O;
+	if (x?.kind === "eliminate" && o?.kind === "eliminate") {
+		const revealed = handleSimultaneousEliminate(
+			{ ...state, committedDeduction: nextCommits },
+			{ X: x.id, O: o.id },
+			config
+		);
+		return { ...revealed, committedDeduction: undefined };
+	}
+
+	return {
+		...state,
+		committedDeduction: nextCommits
+	};
+}
+
 function handleMove(
 	state: GameState,
 	from: Position,
@@ -987,14 +2263,115 @@ function handleMove(
 		return state;
 	}
 
+	// Mid-chain: only jumps from mustContinueFrom are legal.
+	const chainFrom = state.mustContinueFrom;
+	if (chainFrom) {
+		if (from.row !== chainFrom.row || from.col !== chainFrom.col) {
+			return state;
+		}
+		if (
+			!isJumpCapture(
+				state.grid,
+				from,
+				to,
+				state.currentPlayer,
+				movement,
+				movementBoardFrom(config)
+			)
+		) {
+			return state;
+		}
+		if (
+			movement.mustLongestCapture === true &&
+			!isMaximalJumpContinuation(
+				state.grid,
+				from,
+				to,
+				state.currentPlayer,
+				movement,
+				movementBoardFrom(config)
+			)
+		) {
+			return state;
+		}
+	} else if (
+		movement.capture === "jump" &&
+		movement.mustCapture === true &&
+		!isJumpCapture(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		) &&
+		hasAnyJumpCapture(
+			state.grid,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		)
+	) {
+		// Turn-start mandatory capture: quiet moves illegal while any jump exists.
+		return state;
+	} else if (
+		movement.capture === "jump" &&
+		movement.mustLongestCapture === true &&
+		isJumpCapture(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		) &&
+		!isMaximalJumpStart(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		)
+	) {
+		// Turn-start longest-chain: shorter jump trees are illegal.
+		return state;
+	}
+
+	const board = movementBoardFrom(config);
+	const jumping = isJumpCapture(
+		state.grid,
+		from,
+		to,
+		state.currentPlayer,
+		movement,
+		board
+	);
+	const fromCell = getCell(state.grid, from);
+	const eff = effectiveMovement(movement, fromCell);
+	const mid = jumping ? jumpMid(from, to, eff, board, state.grid) : null;
+
+	const owner = state.currentPlayer;
+	let landMark: CellValue = isCrowned(fromCell)
+		? (promote(owner) ?? owner)
+		: owner;
+	const promo = movement.promotion;
+	if (promo && !isCrowned(landMark) && landsOnPromotionTarget(promo, owner, to)) {
+		landMark = promote(owner) ?? landMark;
+	}
+
 	let cells = setCell(state.grid, from, null);
-	cells = setCell({ ...state.grid, cells }, to, state.currentPlayer);
+	if (mid) {
+		cells = setCell({ ...state.grid, cells }, mid, null);
+	}
+	cells = setCell({ ...state.grid, cells }, to, landMark);
 	const newGrid = { ...state.grid, cells };
 	const newMoveCount = state.moveCount + 1;
 	const next: GameState = {
 		...state,
 		grid: newGrid,
-		moveCount: newMoveCount
+		moveCount: newMoveCount,
+		mustContinueFrom: undefined
 	};
 
 	if ((config.objectiveMode ?? "n_in_a_row") === "reach_row") {
@@ -1034,9 +2411,26 @@ function handleMove(
 		}
 	}
 
+	// Capture chain: further jumps from landing keep the same seat.
+	if (
+		jumping &&
+		movement.capture === "jump" &&
+		jumpDestinations(newGrid, to, movement, board, state.currentPlayer)
+			.length > 0
+	) {
+		return {
+			...next,
+			mustContinueFrom: to,
+			currentPlayer: state.currentPlayer,
+			actionsRemaining: state.actionsRemaining,
+			turnPhaseIndex: state.turnPhaseIndex
+		};
+	}
+
 	const turn = withPhaseOrTurnAdvanced(state, config);
 	return {
 		...next,
+		mustContinueFrom: undefined,
 		currentPlayer: turn.currentPlayer,
 		actionsRemaining: turn.actionsRemaining,
 		turnPhaseIndex: turn.turnPhaseIndex
@@ -1102,6 +2496,209 @@ function handleFire(
 		currentPlayer: turn.currentPlayer,
 		actionsRemaining: turn.actionsRemaining,
 		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleReveal(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): GameState {
+	if ((config.observationMode ?? "full") !== "flood_reveal") return state;
+	if (state.status !== "playing") return state;
+	if (!config.hazards) return state;
+	if (
+		pos.row < 0 ||
+		pos.row >= state.grid.height ||
+		pos.col < 0 ||
+		pos.col >= state.grid.width
+	) {
+		return state;
+	}
+	const topology = config.topology ?? "rectangle";
+	if (!isActivePosition(pos, topology, config.graph)) return state;
+	if (getCell(state.grid, pos) !== null) return state;
+
+	let hidden = state.hidden;
+	if (!hidden) {
+		hidden = emptyGrid(config.gridWidth, config.gridHeight);
+	}
+
+	const firstSafe =
+		config.hazards.firstRevealSafe === true && state.moveCount === 0;
+	const minesPlaced = hidden.cells.some((c) => c === "mine");
+	if (firstSafe || !minesPlaced) {
+		const active = topology === "graph" ? config.graph?.active : undefined;
+		hidden = {
+			width: config.gridWidth,
+			height: config.gridHeight,
+			cells: placeHazards(
+				config.gridWidth,
+				config.gridHeight,
+				config.hazards.count,
+				config.seed ?? 0,
+				firstSafe ? [pos] : [],
+				active
+			)
+		};
+	}
+
+	const opponent: Player = state.currentPlayer === "X" ? "O" : "X";
+	const newMoveCount = state.moveCount + 1;
+
+	if (getCell(hidden, pos) === "mine") {
+		const exploded = setCell(state.grid, pos, "mine");
+		return {
+			...state,
+			hidden,
+			grid: { ...state.grid, cells: exploded },
+			moveCount: newMoveCount,
+			status: "won",
+			winner: opponent
+		};
+	}
+
+	const flood = floodRevealRegion(
+		hidden,
+		state.grid,
+		pos,
+		topology,
+		config.graph
+	);
+	const cells = applyReveals(state.grid, flood);
+	const nextGrid = { ...state.grid, cells };
+	const next: GameState = {
+		...state,
+		hidden,
+		grid: nextGrid,
+		moveCount: newMoveCount
+	};
+	if (allSafeRevealed(hidden, nextGrid, topology, config.graph)) {
+		return { ...next, status: "draw", winner: null };
+	}
+	const turn = withPhaseOrTurnAdvanced(state, config);
+	return {
+		...next,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining,
+		turnPhaseIndex: turn.turnPhaseIndex
+	};
+}
+
+function handleFlip(
+	state: GameState,
+	pos: Position,
+	config: GameConfig
+): GameState {
+	if ((config.observationMode ?? "full") !== "memory_flip") return state;
+	if ((config.objectiveMode ?? "n_in_a_row") !== "match_pairs") return state;
+	if (!config.memory) return state;
+	if (state.status !== "playing") return state;
+	if (!state.hidden || !state.memory) return state;
+	if (
+		pos.row < 0 ||
+		pos.row >= state.grid.height ||
+		pos.col < 0 ||
+		pos.col >= state.grid.width
+	) {
+		return state;
+	}
+
+	const mem = state.memory;
+	if (mem.faceUp.length >= 2) return state;
+	if (memoryListHasPosition(mem.faceUp, pos)) return state;
+	if (!isFaceDown(state.grid, mem.matched, pos)) return state;
+
+	const symbol = getCell(state.hidden, pos);
+	if (memoryIndex(symbol) === null) return state;
+
+	const revealed = setCell(state.grid, pos, symbol);
+	const faceUp = [...mem.faceUp, pos];
+	const newMoveCount = state.moveCount + 1;
+
+	// First flip of the pair: stay on seat, spend one action.
+	if (faceUp.length < 2) {
+		const turn = withTurnAdvanced(state, config);
+		return {
+			...state,
+			grid: { ...state.grid, cells: revealed },
+			memory: { ...mem, faceUp },
+			moveCount: newMoveCount,
+			currentPlayer: turn.currentPlayer,
+			actionsRemaining: turn.actionsRemaining
+		};
+	}
+
+	const [a, b] = faceUp as [Position, Position];
+	const symA = getCell(state.hidden, a);
+	const symB = getCell(state.hidden, b);
+	const matched = symA !== null && symA === symB;
+
+	if (matched) {
+		const nextMatched = markMatched(mem.matched, [a, b], state.grid.width);
+		const scores = {
+			...mem.scores,
+			[state.currentPlayer]: mem.scores[state.currentPlayer] + 1
+		};
+		const nextMemory = {
+			faceUp: [] as Position[],
+			matched: nextMatched,
+			scores
+		};
+		const next: GameState = {
+			...state,
+			grid: { ...state.grid, cells: revealed },
+			memory: nextMemory,
+			moveCount: newMoveCount
+		};
+
+		if (allPairsMatched(nextMatched)) {
+			const winner =
+				scores.X > scores.O ? "X" : scores.O > scores.X ? "O" : null;
+			return {
+				...next,
+				status: winner ? "won" : "draw",
+				winner,
+				currentPlayer: state.currentPlayer,
+				actionsRemaining: resolveActionsPerTurn(config)
+			};
+		}
+
+		if (config.memory.bonusTurnOnMatch === true) {
+			return {
+				...next,
+				currentPlayer: state.currentPlayer,
+				actionsRemaining: resolveActionsPerTurn(config)
+			};
+		}
+
+		const turn = withTurnAdvanced(
+			{ ...state, actionsRemaining: 1 },
+			config
+		);
+		return {
+			...next,
+			currentPlayer: turn.currentPlayer,
+			actionsRemaining: turn.actionsRemaining
+		};
+	}
+
+	// Mismatch: re-hide both synchronously, then hand off.
+	const hiddenCells = hidePositions(
+		{ ...state.grid, cells: revealed },
+		[a, b]
+	);
+	const turn = withTurnAdvanced(
+		{ ...state, actionsRemaining: 1 },
+		config
+	);
+	return {
+		...state,
+		grid: { ...state.grid, cells: hiddenCells },
+		memory: { ...mem, faceUp: [] },
+		moveCount: newMoveCount,
+		currentPlayer: turn.currentPlayer,
+		actionsRemaining: turn.actionsRemaining
 	};
 }
 
@@ -1234,7 +2831,9 @@ function handlePlace(
 			!isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
 				koRule,
 				koPoint: state.koPoint,
-				positionHistory: state.positionHistory
+				positionHistory: state.positionHistory,
+				topology,
+				graph: config.graph
 			})
 		) {
 			return state;
@@ -1258,16 +2857,27 @@ function handlePlace(
 	let newCells = setCell(state.grid, pos, state.currentPlayer);
 	let nextKoPoint: Position | null = null;
 	let nextHistory = state.positionHistory;
+	let nextPrisoners = state.prisoners ?? { X: 0, O: 0 };
 	if (libertyMode) {
 		const capture = applyLibertyCapture(
 			{ ...state.grid, cells: newCells },
 			pos,
 			state.currentPlayer,
-			wrap
+			wrap,
+			topology,
+			config.graph
 		);
 		newCells = capture.cells;
 		nextKoPoint =
 			koRule === "point" ? koPointFromCapture(capture.removed) : null;
+		if (capture.removed.length > 0) {
+			const seat = state.currentPlayer;
+			nextPrisoners = {
+				X: nextPrisoners.X,
+				O: nextPrisoners.O,
+				[seat]: nextPrisoners[seat] + capture.removed.length
+			};
+		}
 	} else if (config.captureEnabled) {
 		newCells = applyCaptureIfAny(
 			{ ...state.grid, cells: newCells },
@@ -1296,7 +2906,8 @@ function handlePlace(
 			grid: newGrid,
 			moveCount: newMoveCount,
 			koPoint: nextKoPoint,
-			positionHistory: nextHistory
+			positionHistory: nextHistory,
+			...(libertyMode ? { prisoners: nextPrisoners } : {})
 		};
 	}
 
@@ -1310,7 +2921,8 @@ function handlePlace(
 			moveCount: newMoveCount,
 			consecutivePasses: 0,
 			koPoint: nextKoPoint,
-			positionHistory: nextHistory
+			positionHistory: nextHistory,
+			prisoners: nextPrisoners
 		};
 	}
 
