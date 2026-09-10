@@ -104,8 +104,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M86 | Next missing mechanism (Go Lite L-Nakade / objective.lNakadeDeath) | `done` |
 | M87 | Next missing mechanism (Go Lite Square-Nakade / objective.squareNakadeDeath) | `done` |
 | M88 | Next missing mechanism (Go Lite Pyramid-Nakade / objective.pyramidNakadeDeath) | `done` |
+| M89 | Next missing mechanism (Go Lite Twisted-Nakade / objective.twistedNakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M88 Go Lite Pyramid-Nakade landed. Pick **P3
+**Optimizing for this marathon:** M89 Go Lite Twisted-Nakade landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
@@ -124,7 +125,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥919** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥927** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -257,7 +258,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
 expressible vs ladder/net/sente/approach/nakade family on lite boards);
 hex-graph simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler. Go Lite Pyramid-Nakade landed (M88). Go Lite
+anchor); realtime scheduler. Go Lite Twisted-Nakade landed (M89). Go Lite
+Pyramid-Nakade landed (M88). Go Lite
 Square-Nakade landed (M87). Go Lite
 L-Nakade landed (M86). Hidden Double
 Simultaneous Jump Race landed
@@ -1419,6 +1421,23 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Out of scope: straight-4 / twisted-4 / bulky-5 tables; throw-in /
   connect-and-die; hex/graph nakade ports; realtime
 - Green gate: ≥923 + new cases — **done**
+
+### M89 — Go Lite Twisted-Nakade / twisted-4 (Z/S)
+
+- Schema: `objective.twistedNakadeDeath` boolean (area_control-only); distinct
+  from T1 / L / square-4 / pyramid-4 / L4 so skew bulky eyes stay
+  contrastable — **done**
+- Kernel: `isTwistedNakadeVulnerableRegion` (2×3/3×2 bbox with opposite-corner
+  holes; vital = canonical deg-2) + `findTwistedNakadeDeadCells` /
+  `removeTwistedNakadeDeadStones`; `areaOutcome` after optional
+  pyramidNakadeDeath, before netDeath — **done**
+- Preset `go-lite-twisted-nakade` (7×7 O-ring + interior X shell; eye + Z
+  corridor; Benson-alive / T1-miss / L-miss / square-miss / pyramid-miss /
+  chase-miss; flag → O) + schema / uniqueness / transcript / replay /
+  contrast tests — **done**
+- Out of scope: straight-4 / L4 / bulky-5 tables; throw-in / connect-and-die;
+  hex/graph nakade ports; realtime
+- Green gate: ≥927 + new cases — **done**
 
 ## Sequencing notes
 

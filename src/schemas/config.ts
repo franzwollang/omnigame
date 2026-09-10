@@ -545,21 +545,31 @@ export const zConfig = z
 				 * When true, interior groups bordering a pyramid-4 (T) nakade
 				 * big-eye that would have <2 true eyes after an opponent vital
 				 * fill are removed before two-pass scoring (after optional
-				 * squareNakadeDeath; before netDeath / looseNetDeath /
-				 * ladderDeath). Edge foothold + seki clusters kept. Distinct
-				 * from squareNakadeDeath (2×2) and 3-cell T1/L so T-shape
-				 * bulky eyes can be contrasted. Default / omit = leave
-				 * Benson/eye survivors.
+				 * squareNakadeDeath; before twistedNakadeDeath / netDeath /
+				 * looseNetDeath / ladderDeath). Edge foothold + seki clusters
+				 * kept. Distinct from squareNakadeDeath (2×2) and 3-cell T1/L
+				 * so T-shape bulky eyes can be contrasted. Default / omit =
+				 * leave Benson/eye survivors.
 				 */
 				pyramidNakadeDeath: z.boolean().optional(),
+				/**
+				 * When true, interior groups bordering a twisted-4 (Z/S) nakade
+				 * big-eye that would have <2 true eyes after an opponent vital
+				 * fill are removed before two-pass scoring (after optional
+				 * pyramidNakadeDeath; before netDeath / looseNetDeath /
+				 * ladderDeath). Edge foothold + seki clusters kept. Distinct
+				 * from pyramid-4 / square-4 / T1 / L so skew bulky eyes can be
+				 * contrasted. Default / omit = leave Benson/eye survivors.
+				 */
+				twistedNakadeDeath: z.boolean().optional(),
 				/**
 				 * When true, groups force-capturable by an attacker-sente net /
 				 * geta (root exactly 3 liberties; every defender liberty
 				 * extension has an attacker reply that captures, ladders, or
 				 * re-nets) are removed before two-pass scoring (after optional
 				 * nakadeDeath / lNakadeDeath / squareNakadeDeath /
-				 * pyramidNakadeDeath; before looseNetDeath / senteLadderDeath /
-				 * ladderDeath). Edge
+				 * pyramidNakadeDeath / twistedNakadeDeath; before
+				 * looseNetDeath / senteLadderDeath / ladderDeath). Edge
 				 * foothold does not save. Default / omit = leave multi-liberty
 				 * trapped groups on the board.
 				 */
@@ -1511,6 +1521,15 @@ export const zConfig = z
 				path: ["objective", "pyramidNakadeDeath"],
 				message:
 					"objective.pyramidNakadeDeath requires objective.mode = 'area_control'"
+			});
+		}
+		// Twisted-4 (Z/S) nakade removal is area_control-only.
+		if (cfg.objective.twistedNakadeDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "twistedNakadeDeath"],
+				message:
+					"objective.twistedNakadeDeath requires objective.mode = 'area_control'"
 			});
 		}
 

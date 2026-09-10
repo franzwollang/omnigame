@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T12:20+00:00",
-  "turn": 118,
+  "updated_at": "2026-09-10T12:40+00:00",
+  "turn": 119,
   "focus": {
-    "milestone": "M88",
+    "milestone": "M89",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Pyramid-Nakade landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Twisted-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 0dfa M87 tip onto cursor/next-task-progression-6d30",
-    "Probed T/straight/twisted/L4/bulky5; picked pyramid-4 (unique on 7×7)",
-    "Landed M88 objective.pyramidNakadeDeath + go-lite-pyramid-nakade"
+    "Synced from 6d30 M88 tip onto cursor/next-task-progression-277a",
+    "Probed straight-4/Z/L4/bulky5; picked twisted-4 (unique on 7×7)",
+    "Landed M89 objective.twistedNakadeDeath + go-lite-twisted-nakade"
   ],
   "discoveries": [
-    "Pyramid-4 T escapes T1/L/square + Benson + chase on unique board",
-    "7×7 T-up corridor (3,3)/(4,2)/(4,3)/(4,4); vital=junction (4,3)"
+    "Twisted-4 Z escapes T1/L/square/pyramid + Benson + chase on unique board",
+    "7×7 Z corridor (3,3)/(3,4)/(4,2)/(4,3); vital=deg-2 (3,3); L4 also unique"
   ],
   "open_threads": [
     "Next: unique Go L&D or realtime (not topology ports / recombinations)"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M88",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M89",
   "blockers": []
 }
