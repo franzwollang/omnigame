@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T05:20+00:00",
-  "turn": 93,
+  "updated_at": "2026-09-10T05:40+00:00",
+  "turn": 94,
   "focus": {
-    "milestone": "M63",
+    "milestone": "M64",
     "issue": "next-missing-mechanism",
-    "goal": "hex menForwardOnly landed; hand off next genuine P3 seam"
+    "goal": "graph menForwardOnly landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from de7c M62 tip onto cursor/next-task-progression-3c3b",
-    "Landed M63 Hex Forward Men Jump Lite / menForwardOnly on hex_offset",
-    "Schema: hex allowed; graph still forbidden; cube-axis row-sign filter"
+    "Synced from 3c3b M63 tip onto cursor/next-task-progression-30a6",
+    "Landed M64 Graph Forward Men Jump Lite / menForwardOnly on graph",
+    "Edge-distance toward targetRows; targetNodes hubs still deferred"
   ],
   "discoveries": [
-    "Opening X(4,2)→(2,1) promote; O(3,4)→(4,4) forward; X+ (0,0) wins",
-    "Same-row hex neighbors (dr=0) blocked; crowned retreat ignores filter"
+    "Bypass graph: row-down can increase edge dist when shortcut exists",
+    "Opening X(4,0)→(2,0) promote; O(4,1)→(3,1); X+ (0,0) wins"
   ],
   "open_threads": [
-    "Next: graph menForwardOnly, full Go, realtime, simultaneous jump"
+    "Next: targetNodes+menForwardOnly, full Go, realtime, simultaneous jump"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M63",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M64",
   "blockers": []
 }

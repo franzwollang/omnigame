@@ -2220,6 +2220,103 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"graph-forward-men-jump-lite": definePreset({
+		id: "graph-forward-men-jump-lite",
+		name: "Graph Forward Men Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"forward-only",
+			"men",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Lane-graph Checkers-lite forward-only men: uncrowned pieces may only quiet-move or jump when the land strictly decreases shortest-path edge distance to their promotion row (targetRows). After crowning, pieces ignore the filter and chain-walk with crownedRange 2 — including retreat. mustCapture forces the opening forward leap that promotes (promo row ≠ win row). Unlocks promotion.menForwardOnly on graph — rectangle/hex Forward Men use row-delta; Graph Crowned Jump Lite crowns without restricting men direction. targetNodes hubs + menForwardOnly remain deferred.",
+		config: {
+			metadata: { name: "Graph Forward Men Jump Lite", version: 1 },
+			grid: {
+				width: 2,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					// X advances toward row 2; O toward row 3 (edge-distance).
+					targetRows: { X: 2, O: 3 },
+					crownedAdjacency: "orthogonal",
+					crownedRange: 2,
+					menForwardOnly: true
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-forward-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-forward-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,0) mustCapture-jumps O(3,0)→(2,0): forward + promotes.
+				// Quiet retreat toward row 4 is illegal under menForwardOnly
+				// (edge distance to promo row 2 increases). Spare O at (4,1)
+				// has a forward reply (3,1) toward promo row 3. After O
+				// replies, X+ at (2,0) walks crownedRange 2 to (0,0) to win.
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "O", visibility: "public" },
+				{ row: 4, col: 1, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"graph-hub-crowned-jump-lite": definePreset({
 		id: "graph-hub-crowned-jump-lite",
 		name: "Graph Hub Crowned Jump Lite",

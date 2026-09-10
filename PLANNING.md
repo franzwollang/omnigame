@@ -79,9 +79,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M61 | Next missing mechanism (hex flying capture / Hex Flying Capture Jump Lite) | `done` |
 | M62 | Next missing mechanism (graph flying capture / Graph Flying Capture Jump Lite) | `done` |
 | M63 | Next missing mechanism (hex menForwardOnly / Hex Forward Men Jump Lite) | `done` |
+| M64 | Next missing mechanism (graph menForwardOnly / Graph Forward Men Jump Lite) | `done` |
 
-**Optimizing for this marathon:** M63 hex `menForwardOnly`
-(`Hex Forward Men Jump Lite`) landed. Pick **P3 next-missing-mechanism**
+**Optimizing for this marathon:** M64 graph `menForwardOnly`
+(`Graph Forward Men Jump Lite`) landed. Pick **P3 next-missing-mechanism**
 (smallest new seam; reject recombinations without anchor) — without asking
 which fork.
 
@@ -98,7 +99,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥758** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥775** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -221,7 +222,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; graph menForwardOnly (edge-distance forward geometry). Hex
+scheduler; `targetNodes` + menForwardOnly (hub-distance forward). Graph
+menForwardOnly landed (M64 Graph Forward Men Jump Lite). Hex
 menForwardOnly landed (M63 Hex Forward Men Jump Lite). Graph flying capture
 landed (M62 Graph Flying Capture Jump Lite). Hex flying
 capture landed (M61 Hex Flying Capture Jump Lite). Hub-graph promotion
@@ -243,7 +245,8 @@ M45; memory_flip in M46; hex jump in M47; graph jump in M48; promotion in
 M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
 hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
-crownedFlyingCapture in M62; hex menForwardOnly in M63).
+crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
+in M64).
 
 ## Phase 2 exit criteria
 
@@ -970,6 +973,20 @@ crownedFlyingCapture in M62; hex menForwardOnly in M63).
   movement / transcript / replay tests — **done**
 - Out of scope: graph menForwardOnly; simultaneous jump; full Go; realtime
 - Green gate: ≥764 tests — **done**
+
+### M64 — Graph menForwardOnly / Graph Forward Men Jump Lite
+
+- Schema: allow `menForwardOnly` on `graph` + jump promotion + `targetRows`
+  (`targetNodes` hubs still deferred) — **done**
+- Kernel: graph `legalDestinations` / `jumpDestinations` filter uncrowned
+  quiet ∪ jump lands by strict decrease in shortest-path edge distance to
+  any node on `targetRows[seat]` (`graphMinEdgeDistToPromoRow` /
+  `isForwardGraphStep`); crowned unrestricted — **done**
+- Preset `graph-forward-men-jump-lite` (Graph Forward Men Jump Lite) + schema /
+  movement / edge-distance≠row-delta / transcript / replay tests — **done**
+- Out of scope: targetNodes + menForwardOnly; simultaneous jump; full Go;
+  realtime
+- Green gate: ≥775 tests — **done**
 
 ## Sequencing notes
 

@@ -53,9 +53,24 @@ describe("hex promotion.menForwardOnly schema", () => {
 		}
 	});
 
-	it("still rejects graph promotion with menForwardOnly", () => {
+	it("accepts graph promotion with menForwardOnly + targetRows", () => {
 		const base = structuredClone(
 			examplePresets["graph-crowned-jump-lite"].config
+		);
+		base.movement = {
+			...base.movement!,
+			promotion: {
+				...base.movement!.promotion!,
+				menForwardOnly: true
+			}
+		};
+		const parsed = zConfig.safeParse(base);
+		expect(parsed.success).toBe(true);
+	});
+
+	it("still rejects graph targetNodes + menForwardOnly", () => {
+		const base = structuredClone(
+			examplePresets["graph-hub-crowned-jump-lite"].config
 		);
 		base.movement = {
 			...base.movement!,

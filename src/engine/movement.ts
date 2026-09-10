@@ -82,10 +82,11 @@ export type MovementPromotion = {
 	 */
 	crownedFlyingCapture?: boolean;
 	/**
-	 * When true, uncrowned men may only advance toward their promotion side
-	 * (row-delta sign from the two targetRows; hex uses the same offset-row
-	 * filter on cube-axis quiet/jump destinations). Crowned pieces unrestricted.
-	 * Requires `targetRows` (rectangle | hex_offset; graph deferred).
+	 * When true, uncrowned men may only advance toward their promotion side.
+	 * Rectangle | hex_offset: row-delta sign from the two targetRows (hex
+	 * filters cube-axis lands by offset-row). Graph: strict decrease in
+	 * shortest-path edge distance to any node on `targetRows[seat]`
+	 * (`targetNodes` hubs deferred). Crowned pieces unrestricted.
 	 */
 	menForwardOnly?: boolean;
 };
@@ -138,9 +139,10 @@ export type MovementConfig = {
 	 * promote on `targetRows[seat]` / graph `targetNodes`; crowned pieces use
 	 * `crownedAdjacency` and optional `crownedRange` /
 	 * `crownedFlyingCapture` (rectangle | hex_offset | graph). Optional
-	 * `menForwardOnly` (rectangle | hex_offset + targetRows) restricts
-	 * uncrowned quiet/jump row deltas. Hex/graph require crownedAdjacency =
-	 * orthogonal; graph forbids menForwardOnly.
+	 * `menForwardOnly` (rectangle | hex_offset | graph + targetRows)
+	 * restricts uncrowned quiet/jump: row-delta on rect/hex; edge-distance
+	 * toward the promo row on graph. Hex/graph require crownedAdjacency =
+	 * orthogonal; graph + targetNodes + menForwardOnly deferred.
 	 */
 	promotion?: MovementPromotion;
 };
@@ -206,6 +208,53 @@ export function isForwardRowDelta(
 }
 
 /**
+ * Shortest-path edge distance from `from` to any active graph node on
+ * `promoRow`. Infinity if unreachable / no promo-row nodes.
+ */
+export function graphMinEdgeDistToPromoRow(
+	from: Position,
+	promoRow: number,
+	graph: GraphTopologyData
+): number {
+	const start = posKey(from);
+	if (!graph.neighborsOf.has(start)) return Number.POSITIVE_INFINITY;
+	if (from.row === promoRow) return 0;
+	const queue: Array<{ key: string; dist: number }> = [
+		{ key: start, dist: 0 }
+	];
+	const seen = new Set<string>([start]);
+	while (queue.length > 0) {
+		const cur = queue.shift()!;
+		for (const n of graph.neighborsOf.get(cur.key) ?? []) {
+			const key = posKey(n);
+			if (seen.has(key)) continue;
+			const dist = cur.dist + 1;
+			if (n.row === promoRow) return dist;
+			seen.add(key);
+			queue.push({ key, dist });
+		}
+	}
+	return Number.POSITIVE_INFINITY;
+}
+
+/**
+ * Graph menForwardOnly: land must strictly decrease edge distance toward
+ * the seat's promotion row (lateral / retreat blocked).
+ */
+export function isForwardGraphStep(
+	from: Position,
+	to: Position,
+	seat: Player,
+	targetRows: { X: number; O: number },
+	graph: GraphTopologyData
+): boolean {
+	const promoRow = targetRows[seat];
+	const dFrom = graphMinEdgeDistToPromoRow(from, promoRow, graph);
+	const dTo = graphMinEdgeDistToPromoRow(to, promoRow, graph);
+	return dTo < dFrom;
+}
+
+/**
  * Adjacency ray deltas for a specific piece: crowned uses crownedAdjacency;
  * uncrowned with `menForwardOnly` keep only forward row-delta rays.
  */
@@ -229,20 +278,27 @@ export function pieceAdjacencyDeltas(
 }
 
 /**
- * Filter destinations to forward row steps for uncrowned menForwardOnly.
- * Shared by rectangle rays and hex cube-axis quiet/jump lands (offset row).
+ * Filter destinations for uncrowned menForwardOnly.
+ * Rectangle / hex: forward row-delta. Graph: strict edge-distance decrease
+ * toward `targetRows[seat]` (requires `graph`).
  */
 function filterMenForwardDestinations(
 	from: Position,
 	dests: Position[],
 	config: MovementConfig,
-	cellValue: CellValue
+	cellValue: CellValue,
+	graph?: GraphTopologyData
 ): Position[] {
 	if (config.promotion?.menForwardOnly !== true) return dests;
 	if (isCrowned(cellValue)) return dests;
 	const owner = cellOwner(cellValue);
 	if (owner === null || !config.promotion.targetRows) return dests;
 	const promoRows = config.promotion.targetRows;
+	if (graph) {
+		return dests.filter((to) =>
+			isForwardGraphStep(from, to, owner, promoRows, graph)
+		);
+	}
 	return dests.filter((to) =>
 		isForwardRowDelta(to.row - from.row, owner, promoRows)
 	);
@@ -530,7 +586,7 @@ export function jumpDestinations(
 				out.push(land);
 			}
 		}
-		return out;
+		return filterMenForwardDestinations(from, out, config, cell, opts.graph);
 	}
 
 	if (opts.topology === "hex_offset") {
@@ -1091,6 +1147,7 @@ export function legalDestinations(
 	if (topology === "graph") {
 		// Chain-walk (default) or hop-ball BFS; same blocker/replace as rect/hex.
 		// Jump: quiet slides (eff.range; crowned may use crownedRange) ∪ leaps.
+		// menForwardOnly: edge-distance toward targetRows[seat] on uncrowned.
 		if (eff.adjacency !== "orthogonal" || !graph) return [];
 		if (eff.capture === "jump") {
 			const quiet = slideGraphDestinations(
@@ -1110,12 +1167,24 @@ export function legalDestinations(
 					out.push(j);
 				}
 			}
-			return out;
+			return filterMenForwardDestinations(from, out, config, cell, graph);
 		}
 		if (eff.graphReach === "hop") {
-			return hopGraphDestinations(grid, from, eff, graph, mover);
+			return filterMenForwardDestinations(
+				from,
+				hopGraphDestinations(grid, from, eff, graph, mover),
+				config,
+				cell,
+				graph
+			);
 		}
-		return slideGraphDestinations(grid, from, eff, graph, mover);
+		return filterMenForwardDestinations(
+			from,
+			slideGraphDestinations(grid, from, eff, graph, mover),
+			config,
+			cell,
+			graph
+		);
 	}
 
 	if (topology === "hex_offset") {

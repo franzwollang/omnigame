@@ -44,9 +44,24 @@ describe("graph movement.promotion schema", () => {
 		}
 	});
 
-	it("rejects graph promotion with menForwardOnly", () => {
+	it("accepts graph promotion with menForwardOnly + targetRows", () => {
 		const base = structuredClone(
 			examplePresets["graph-crowned-jump-lite"].config
+		);
+		base.movement = {
+			...base.movement!,
+			promotion: {
+				...base.movement!.promotion!,
+				menForwardOnly: true
+			}
+		};
+		const parsed = zConfig.safeParse(base);
+		expect(parsed.success).toBe(true);
+	});
+
+	it("rejects graph targetNodes + menForwardOnly (hubs deferred)", () => {
+		const base = structuredClone(
+			examplePresets["graph-hub-crowned-jump-lite"].config
 		);
 		base.movement = {
 			...base.movement!,
