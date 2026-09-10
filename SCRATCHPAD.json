@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T12:40+00:00",
+  "turn": 119,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M89",
+    "issue": "next-missing-mechanism",
+    "goal": "Go Lite Twisted-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 6d30 M88 tip onto cursor/next-task-progression-277a",
+    "Probed straight-4/Z/L4/bulky5; picked twisted-4 (unique on 7×7)",
+    "Landed M89 objective.twistedNakadeDeath + go-lite-twisted-nakade"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Twisted-4 Z escapes T1/L/square/pyramid + Benson + chase on unique board",
+    "7×7 Z corridor (3,3)/(3,4)/(4,2)/(4,3); vital=deg-2 (3,3); L4 also unique"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: unique Go L&D or realtime (not topology ports / recombinations)"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M89",
   "blockers": []
 }
