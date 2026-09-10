@@ -17,6 +17,7 @@ import { playerIdOf, type KernelAction } from "@/engine/kernel";
 import { examplePresets } from "@/presets/registry";
 import { validateConfig } from "@/engine/validateConfig";
 import { replayActions } from "@/ir/gameIr";
+import { buildGraphTopologyData } from "@/engine/topology";
 
 function gridOf(width: number, height: number, cells: (string | null)[]): Grid {
 	return {
@@ -700,5 +701,395 @@ describe("createInitialState consecutivePasses + koPoint", () => {
 			situationHash(state.grid, state.currentPlayer)
 		]);
 		expect(state.positionHistory![0]).toContain("|X");
+	});
+});
+
+describe("Hex Go Lite (liberties on hex_offset)", () => {
+	/** Cube-axis neighbors of odd-r (1,1): six cells, two beyond von Neumann-4. */
+	const HEX_CENTER = { row: 1, col: 1 };
+	const HEX_LIBS_OF_CENTER = [
+		{ row: 0, col: 1 },
+		{ row: 0, col: 2 },
+		{ row: 1, col: 0 },
+		{ row: 1, col: 2 },
+		{ row: 2, col: 1 },
+		{ row: 2, col: 2 }
+	];
+	const ORTHO_LIBS_OF_CENTER = [
+		{ row: 0, col: 1 },
+		{ row: 1, col: 0 },
+		{ row: 1, col: 2 },
+		{ row: 2, col: 1 }
+	];
+
+	it("counts six cube-axis liberties on hex (four on rectangle)", () => {
+		let g = gridOf(5, 5, Array(25).fill(null));
+		g = { ...g, cells: setCell(g, HEX_CENTER, "X") };
+		const group = findGroup(g, HEX_CENTER, false, "hex_offset");
+		expect(countLiberties(g, group, false, "hex_offset")).toBe(6);
+		expect(countLiberties(g, group, false, "rectangle")).toBe(4);
+	});
+
+	it("four orthogonal surrounds do not capture on hex (still two hex liberties)", () => {
+		let g = gridOf(5, 5, Array(25).fill(null));
+		g = { ...g, cells: setCell(g, HEX_CENTER, "O") };
+		for (const p of ORTHO_LIBS_OF_CENTER.slice(0, 3)) {
+			g = { ...g, cells: setCell(g, p, "X") };
+		}
+		const last = ORTHO_LIBS_OF_CENTER[3]!;
+		const afterPlace = setCell(g, last, "X");
+		const rectCap = applyLibertyCapture(
+			{ ...g, cells: afterPlace },
+			last,
+			"X",
+			false,
+			"rectangle"
+		);
+		expect(getCell({ ...g, cells: rectCap.cells }, HEX_CENTER)).toBe(null);
+
+		const hexCap = applyLibertyCapture(
+			{ ...g, cells: afterPlace },
+			last,
+			"X",
+			false,
+			"hex_offset"
+		);
+		expect(getCell({ ...g, cells: hexCap.cells }, HEX_CENTER)).toBe("O");
+		expect(hexCap.removed).toEqual([]);
+	});
+
+	it("six cube-axis surrounds capture on hex", () => {
+		let g = gridOf(5, 5, Array(25).fill(null));
+		g = { ...g, cells: setCell(g, HEX_CENTER, "O") };
+		for (const p of HEX_LIBS_OF_CENTER.slice(0, 5)) {
+			g = { ...g, cells: setCell(g, p, "X") };
+		}
+		const last = HEX_LIBS_OF_CENTER[5]!;
+		expect(
+			isLegalLibertyPlace(g, last, "X", false, { topology: "hex_offset" })
+		).toBe(true);
+		const afterPlace = setCell(g, last, "X");
+		const after = applyLibertyCapture(
+			{ ...g, cells: afterPlace },
+			last,
+			"X",
+			false,
+			"hex_offset"
+		);
+		expect(getCell({ ...g, cells: after.cells }, HEX_CENTER)).toBe(null);
+		expect(after.removed).toEqual([HEX_CENTER]);
+	});
+
+	it("rejects suicide when all six hex liberties are filled", () => {
+		let g = gridOf(5, 5, Array(25).fill(null));
+		for (const p of HEX_LIBS_OF_CENTER) {
+			g = { ...g, cells: setCell(g, p, "O") };
+		}
+		expect(
+			isLegalLibertyPlace(g, HEX_CENTER, "X", false, {
+				topology: "hex_offset"
+			})
+		).toBe(false);
+	});
+
+	it("validates and compiles the hex-go-lite preset", () => {
+		const cfg = examplePresets["hex-go-lite"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.captureMode).toBe("liberties");
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects hex + flip capture (liberties foothold only)", () => {
+		const result = validateConfig({
+			metadata: { name: "bad-hex-flip", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 1 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "flip" },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "linear",
+					horizontal: true,
+					vertical: true,
+					backDiagonal: true,
+					forwardDiagonal: false
+				}
+			}
+		});
+		expect(result.ok).toBe(false);
+	});
+
+	it("kernel capture + pass-pass scoring replay on hex-go-lite", () => {
+		const cfg = structuredClone(examplePresets["hex-go-lite"].config);
+		// Seed O at center with five of six hex liberties filled by X
+		cfg.initial = [
+			{ row: 1, col: 1, player: "O", visibility: "public" },
+			{ row: 0, col: 1, player: "X", visibility: "public" },
+			{ row: 0, col: 2, player: "X", visibility: "public" },
+			{ row: 1, col: 0, player: "X", visibility: "public" },
+			{ row: 1, col: 2, player: "X", visibility: "public" },
+			{ row: 2, col: 1, player: "X", visibility: "public" }
+		];
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		const capture: KernelAction = {
+			type: "place",
+			position: { row: 2, col: 2 }
+		};
+		expect(
+			kernel.legalActions(state, 0).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 2 &&
+					a.position.col === 2
+			)
+		).toBe(true);
+		const applied = kernel.stepSync(state, capture);
+		expect(applied.events[0]?.type).toBe("actionApplied");
+		state = applied.nextState;
+		expect(getCell(state.grid, HEX_CENTER)).toBe(null);
+		expect(state.koPoint).toEqual(HEX_CENTER);
+
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status === "won" || state.status === "draw").toBe(true);
+
+		const replay = replayActions(gameConfig, [capture], cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(getCell(replay.finalState.grid, HEX_CENTER)).toBe(null);
+	});
+});
+
+describe("Graph Go Lite (liberties on graph)", () => {
+	/** Bridge graph hub (1,1): three edge neighbors — not four orthogonal. */
+	const HUB = { row: 1, col: 1 };
+	const GRAPH_LIBS_OF_HUB = [
+		{ row: 0, col: 1 },
+		{ row: 2, col: 0 },
+		{ row: 2, col: 2 }
+	];
+	const bridgeGraph = buildGraphTopologyData(
+		[
+			{ row: 0, col: 0 },
+			{ row: 0, col: 1 },
+			{ row: 0, col: 2 },
+			{ row: 1, col: 1 },
+			{ row: 2, col: 0 },
+			{ row: 2, col: 2 }
+		],
+		[
+			["0,0", "0,1"],
+			["0,1", "0,2"],
+			["0,1", "1,1"],
+			["1,1", "2,0"],
+			["1,1", "2,2"],
+			["2,0", "2,2"]
+		]
+	);
+
+	it("counts three graph-edge liberties at hub (four on rectangle)", () => {
+		let g = gridOf(3, 3, Array(9).fill(null));
+		g = { ...g, cells: setCell(g, HUB, "X") };
+		const group = findGroup(g, HUB, false, "graph", bridgeGraph);
+		expect(countLiberties(g, group, false, "graph", bridgeGraph)).toBe(3);
+		expect(countLiberties(g, group, false, "rectangle")).toBe(4);
+	});
+
+	it("orthogonal surrounds that are not edges do not capture on graph", () => {
+		let g = gridOf(3, 3, Array(9).fill(null));
+		g = { ...g, cells: setCell(g, HUB, "O") };
+		// Fill only the one shared ortho+graph liberty plus two inactive orthos
+		// — on graph, hub still has (2,0) and (2,2) free.
+		g = { ...g, cells: setCell(g, { row: 0, col: 1 }, "X") };
+		g = { ...g, cells: setCell(g, { row: 1, col: 0 }, "X") };
+		g = { ...g, cells: setCell(g, { row: 1, col: 2 }, "X") };
+		const last = { row: 2, col: 1 };
+		const afterPlace = setCell(g, last, "X");
+		const rectCap = applyLibertyCapture(
+			{ ...g, cells: afterPlace },
+			last,
+			"X",
+			false,
+			"rectangle"
+		);
+		expect(getCell({ ...g, cells: rectCap.cells }, HUB)).toBe(null);
+
+		const graphCap = applyLibertyCapture(
+			{ ...g, cells: afterPlace },
+			last,
+			"X",
+			false,
+			"graph",
+			bridgeGraph
+		);
+		expect(getCell({ ...g, cells: graphCap.cells }, HUB)).toBe("O");
+		expect(graphCap.removed).toEqual([]);
+	});
+
+	it("three graph-edge surrounds capture on graph", () => {
+		let g = gridOf(3, 3, Array(9).fill(null));
+		g = { ...g, cells: setCell(g, HUB, "O") };
+		for (const p of GRAPH_LIBS_OF_HUB.slice(0, 2)) {
+			g = { ...g, cells: setCell(g, p, "X") };
+		}
+		const last = GRAPH_LIBS_OF_HUB[2]!;
+		expect(
+			isLegalLibertyPlace(g, last, "X", false, {
+				topology: "graph",
+				graph: bridgeGraph
+			})
+		).toBe(true);
+		const afterPlace = setCell(g, last, "X");
+		const after = applyLibertyCapture(
+			{ ...g, cells: afterPlace },
+			last,
+			"X",
+			false,
+			"graph",
+			bridgeGraph
+		);
+		expect(getCell({ ...g, cells: after.cells }, HUB)).toBe(null);
+		expect(after.removed).toEqual([HUB]);
+	});
+
+	it("rejects suicide when all graph liberties are filled", () => {
+		// Leaf (0,0) has only one edge neighbor (0,1). Filling it with O that
+		// still has outward liberties makes (0,0) a pure suicide (no capture).
+		let g = gridOf(3, 3, Array(9).fill(null));
+		g = { ...g, cells: setCell(g, { row: 0, col: 1 }, "O") };
+		expect(
+			isLegalLibertyPlace(g, { row: 0, col: 0 }, "X", false, {
+				topology: "graph",
+				graph: bridgeGraph
+			})
+		).toBe(false);
+	});
+
+	it("scoreArea ignores inactive lattice cells on graph", () => {
+		let g = gridOf(3, 3, Array(9).fill(null));
+		g = { ...g, cells: setCell(g, { row: 0, col: 0 }, "X") };
+		g = { ...g, cells: setCell(g, { row: 0, col: 1 }, "X") };
+		g = { ...g, cells: setCell(g, { row: 0, col: 2 }, "X") };
+		// Inactive (1,0) left empty — must not inflate X territory on graph
+		const graphScore = scoreArea(g, false, "graph", bridgeGraph);
+		const rectScore = scoreArea(g, false, "rectangle");
+		expect(graphScore.X).toBeLessThan(rectScore.X);
+		expect(graphScore.X).toBeGreaterThanOrEqual(3);
+	});
+
+	it("validates and compiles the graph-go-lite preset", () => {
+		const cfg = examplePresets["graph-go-lite"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.captureMode).toBe("liberties");
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.graph?.active).toHaveLength(6);
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+		// Inactive lattice cells are not legal places
+		expect(
+			kernel.legalActions(state, 0).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 1 &&
+					a.position.col === 0
+			)
+		).toBe(false);
+	});
+
+	it("rejects graph + flip capture (liberties foothold only)", () => {
+		const result = validateConfig({
+			metadata: { name: "bad-graph-flip", version: 1 },
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0 },
+					{ row: 0, col: 1 },
+					{ row: 1, col: 1 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,1", "1,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 1 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "flip" },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "n_in_a_row" },
+			win: {
+				length: 3,
+				adjacency: {
+					mode: "composite",
+					horizontal: false,
+					vertical: false,
+					backDiagonal: false,
+					forwardDiagonal: false
+				}
+			}
+		});
+		expect(result.ok).toBe(false);
+	});
+
+	it("kernel capture + pass-pass scoring replay on graph-go-lite", () => {
+		const cfg = structuredClone(examplePresets["graph-go-lite"].config);
+		// Seed O at hub with two of three graph liberties filled by X
+		cfg.initial = [
+			{ row: 1, col: 1, player: "O", visibility: "public" },
+			{ row: 0, col: 1, player: "X", visibility: "public" },
+			{ row: 2, col: 0, player: "X", visibility: "public" }
+		];
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		const capture: KernelAction = {
+			type: "place",
+			position: { row: 2, col: 2 }
+		};
+		expect(
+			kernel.legalActions(state, 0).some(
+				(a) =>
+					a.type === "place" &&
+					a.position.row === 2 &&
+					a.position.col === 2
+			)
+		).toBe(true);
+		const applied = kernel.stepSync(state, capture);
+		expect(applied.events[0]?.type).toBe("actionApplied");
+		state = applied.nextState;
+		expect(getCell(state.grid, HUB)).toBe(null);
+		expect(state.koPoint).toEqual(HUB);
+
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status === "won" || state.status === "draw").toBe(true);
+
+		const replay = replayActions(gameConfig, [capture], cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(getCell(replay.finalState.grid, HUB)).toBe(null);
 	});
 });

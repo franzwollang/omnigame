@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T05:52+00:00",
+  "turn": 95,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M65",
+    "issue": "next-missing-mechanism",
+    "goal": "hub targetNodes+menForwardOnly landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 30a6 M64 tip onto cursor/next-task-progression-7eac",
+    "Landed M65 Graph Hub Forward Men Jump Lite / menForwardOnly+targetNodes",
+    "Hub-distance BFS; same-row decoy blocked; O hub on dangling lane"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Unreachable hub (Infinity) blocks all uncrowned steps — O needs lane hub",
+    "Row-mode allows decoy+hub; hub-mode only hub (1,1)→(2,0) lateral"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: full Go, realtime, simultaneous jump — reject recombinations"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M65",
   "blockers": []
 }
