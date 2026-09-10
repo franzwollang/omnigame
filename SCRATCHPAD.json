@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T11:10+00:00",
-  "turn": 112,
+  "updated_at": "2026-09-10T11:20+00:00",
+  "turn": 113,
   "focus": {
-    "milestone": "M82",
+    "milestone": "M83",
     "issue": "next-missing-mechanism",
-    "goal": "Ordered Simultaneous Jump Race landed; hand off next genuine P3 seam"
+    "goal": "Hidden Simultaneous Jump Race landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from a8a3 M81 tip onto cursor/next-task-progression-bbae",
-    "Landed M82 ordered simultaneous jump + ordered-simultaneous-jump-race",
-    "o_first flee-before-jump illegal (mid empty) — unlike replace dest land"
+    "Synced from bbae M82 tip onto cursor/next-task-progression-74d7",
+    "Landed M83 hidden simultaneous jump + hidden-simultaneous-jump-race",
+    "Blind mid-flee aborts reveal (clear commits + wasted round)"
   ],
   "discoveries": [
-    "Ordered jump mid-clear only in sequential tryApply — not joint branch",
-    "Capture-before-flee at mid is the unique ordered×jump seam vs replace"
+    "commitReveal×jump soft-locked on illegal joint until abort clears commits",
+    "pieceCaptured on reveal needs commitMove reconstruction (not only simultaneousMove)"
   ],
   "open_threads": [
-    "Next: commitReveal/multi-action jump, or unique Go L&D, or realtime"
+    "Next: multi-action simultaneous jump, or unique Go L&D, or realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M82",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M83",
   "blockers": []
 }

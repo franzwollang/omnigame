@@ -741,89 +741,136 @@ function applyStep(
 		}
 	}
 
-	if (
-		action.type === "simultaneousMove" &&
-		config.movement?.capture === "jump"
-	) {
-		// M81 joint / M82 ordered: pieceCaptured at mid when prey did not flee.
-		const resolveOrder = config.resolveOrder ?? "joint";
-		const moves = {
-			X: asMoveList(action.moves.X)[0]!,
-			O: asMoveList(action.moves.O)[0]!
-		};
-		const movement = config.movement;
-		const board = movementBoardFrom(config);
-		if (resolveOrder === "joint") {
-			for (const seat of ["X", "O"] as const) {
-				const m = moves[seat];
-				if (
-					!isJumpCapture(
-						state.grid,
+	if (config.movement?.capture === "jump") {
+		// M81 joint / M82 ordered / M83 commitReveal: pieceCaptured at mid
+		// when prey did not flee. Reveal-time commitMove reconstructs the
+		// joint pair from the pre-step commit buffer + this commit.
+		let moves: { X: MovePair; O: MovePair } | null = null;
+		if (action.type === "simultaneousMove") {
+			moves = {
+				X: asMoveList(action.moves.X)[0]!,
+				O: asMoveList(action.moves.O)[0]!
+			};
+		} else if (
+			action.type === "commitMove" &&
+			config.commitReveal === true &&
+			state.committedMoves &&
+			nextState.committedMoves === undefined &&
+			nextState.moveCount > state.moveCount
+		) {
+			const prior = state.committedMoves;
+			const revealing: MovePair = {
+				from: action.from,
+				to: action.to
+			};
+			const xList =
+				action.player === "X"
+					? [...(prior.X ?? []), revealing]
+					: (prior.X ?? []);
+			const oList =
+				action.player === "O"
+					? [...(prior.O ?? []), revealing]
+					: (prior.O ?? []);
+			if (xList.length > 0 && oList.length > 0) {
+				moves = { X: xList[0]!, O: oList[0]! };
+			}
+		}
+		if (moves) {
+			const resolveOrder = config.resolveOrder ?? "joint";
+			const movement = config.movement;
+			const board = movementBoardFrom(config);
+			if (resolveOrder === "joint") {
+				for (const seat of ["X", "O"] as const) {
+					const m = moves[seat];
+					if (
+						!isJumpCapture(
+							state.grid,
+							m.from,
+							m.to,
+							seat,
+							movement,
+							board
+						)
+					) {
+						continue;
+					}
+					const mid = jumpMid(
 						m.from,
 						m.to,
-						seat,
 						movement,
-						board
-					)
-				) {
-					continue;
+						board,
+						state.grid
+					);
+					if (!mid) continue;
+					const prior = getCell(state.grid, mid);
+					if (prior !== "X" && prior !== "O") continue;
+					if (prior === seat) continue;
+					const opp = prior;
+					const oppMove = moves[opp];
+					const oppFled =
+						oppMove.from.row === mid.row &&
+						oppMove.from.col === mid.col;
+					if (oppFled) continue;
+					if (getCell(nextState.grid, mid) !== null) continue;
+					if (getCell(nextState.grid, m.to) !== seat) continue;
+					events.push({
+						type: "pieceCaptured",
+						position: mid,
+						captured: prior,
+						by: seat
+					});
 				}
-				const mid = jumpMid(m.from, m.to, movement, board, state.grid);
-				if (!mid) continue;
-				const prior = getCell(state.grid, mid);
-				if (prior !== "X" && prior !== "O") continue;
-				if (prior === seat) continue;
-				const opp = prior;
-				const oppMove = moves[opp];
-				const oppFled =
-					oppMove.from.row === mid.row &&
-					oppMove.from.col === mid.col;
-				if (oppFled) continue;
-				if (getCell(nextState.grid, mid) !== null) continue;
-				if (getCell(nextState.grid, m.to) !== seat) continue;
-				events.push({
-					type: "pieceCaptured",
-					position: mid,
-					captured: prior,
-					by: seat
-				});
-			}
-		} else {
-			// Ordered: emit mid captures in apply order when a seat jumps.
-			const first: "X" | "O" = resolveOrder === "x_first" ? "X" : "O";
-			const second: "X" | "O" = first === "X" ? "O" : "X";
-			let sim = state.grid;
-			for (const seat of [first, second] as const) {
-				const m = moves[seat];
-				if (getCell(sim, m.from) !== seat) continue;
-				const dest = getCell(sim, m.to);
-				if (dest !== null) continue;
-				let midPos: Position | null = null;
-				if (
-					isJumpCapture(sim, m.from, m.to, seat, movement, board)
-				) {
-					midPos = jumpMid(m.from, m.to, movement, board, sim);
-					if (midPos) {
-						const prior = getCell(sim, midPos);
-						if (
-							(prior === "X" || prior === "O") &&
-							prior !== seat
-						) {
-							events.push({
-								type: "pieceCaptured",
-								position: midPos,
-								captured: prior,
-								by: seat
-							});
+			} else {
+				// Ordered: emit mid captures in apply order when a seat jumps.
+				const first: "X" | "O" =
+					resolveOrder === "x_first" ? "X" : "O";
+				const second: "X" | "O" = first === "X" ? "O" : "X";
+				let sim = state.grid;
+				for (const seat of [first, second] as const) {
+					const m = moves[seat];
+					if (getCell(sim, m.from) !== seat) continue;
+					const dest = getCell(sim, m.to);
+					if (dest !== null) continue;
+					let midPos: Position | null = null;
+					if (
+						isJumpCapture(
+							sim,
+							m.from,
+							m.to,
+							seat,
+							movement,
+							board
+						)
+					) {
+						midPos = jumpMid(
+							m.from,
+							m.to,
+							movement,
+							board,
+							sim
+						);
+						if (midPos) {
+							const priorCell = getCell(sim, midPos);
+							if (
+								(priorCell === "X" || priorCell === "O") &&
+								priorCell !== seat
+							) {
+								events.push({
+									type: "pieceCaptured",
+									position: midPos,
+									captured: priorCell,
+									by: seat
+								});
+							}
 						}
 					}
+					let cells = setCell(sim, m.from, null);
+					if (midPos) {
+						cells = setCell({ ...sim, cells }, midPos, null);
+					}
+					cells = setCell({ ...sim, cells }, m.to, seat);
+					sim = { ...sim, cells };
 				}
-				let cells = setCell(sim, m.from, null);
-				if (midPos) {
-					cells = setCell({ ...sim, cells }, midPos, null);
-				}
-				cells = setCell({ ...sim, cells }, m.to, seat);
-				sim = { ...sim, cells };
 			}
 		}
 	}
@@ -1306,18 +1353,26 @@ function collectLegalActions(
 				const own = state.committedMoves?.[acting] ?? [];
 				if (own.length >= budget) return [];
 				const probe = applySoloMoves(state.grid, acting, own);
+				const forceJumps =
+					movement.capture === "jump" &&
+					movement.mustCapture === true &&
+					hasAnyJumpCapture(probe, acting, movement, board);
 				for (const from of allActivePositions(
 					probe,
 					config.topology ?? "rectangle",
 					config.graph
 				)) {
 					if (cellOwner(getCell(probe, from)) !== acting) continue;
-					for (const to of legalDestinations(
-						probe,
-						from,
-						movement,
-						board
-					)) {
+					const dests = forceJumps
+						? jumpDestinations(
+								probe,
+								from,
+								movement,
+								board,
+								acting
+							)
+						: legalDestinations(probe, from, movement, board);
+					for (const to of dests) {
 						if (!canMove(probe, from, to, acting, movement, board)) {
 							continue;
 						}

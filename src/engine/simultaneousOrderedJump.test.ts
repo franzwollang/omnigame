@@ -34,7 +34,7 @@ describe("schema: ordered simultaneous jump (M82)", () => {
 		expect(getCell(state.grid, { row: 1, col: 1 })).toBe("O");
 	});
 
-	it("still rejects commitReveal under simultaneous jump", () => {
+	it("accepts commitReveal under simultaneous jump (M83)", () => {
 		const cfg = {
 			...examplePresets["ordered-simultaneous-jump-race"].config,
 			turn: {
@@ -42,6 +42,19 @@ describe("schema: ordered simultaneous jump (M82)", () => {
 				schedule: "simultaneous" as const,
 				resolveOrder: "x_first" as const,
 				commitReveal: true
+			}
+		};
+		expect(validateConfig(cfg).ok).toBe(true);
+	});
+
+	it("still rejects multi-action under simultaneous jump", () => {
+		const cfg = {
+			...examplePresets["ordered-simultaneous-jump-race"].config,
+			turn: {
+				mode: "turn" as const,
+				schedule: "simultaneous" as const,
+				resolveOrder: "x_first" as const,
+				actionsPerTurn: 2
 			}
 		};
 		expect(validateConfig(cfg).ok).toBe(false);

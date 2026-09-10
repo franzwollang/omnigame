@@ -1782,6 +1782,17 @@ function handleSimultaneousMove(
 						board
 					);
 		if (!legal) {
+			// Open simultaneous never applies illegal joints (explain rejects).
+			// Under commitReveal, seats may both commit into an illegal joint
+			// blindly (e.g. jump vs mid-flee). Abort the reveal: clear the
+			// commit buffer so seats may re-commit; count a wasted round.
+			if (config.commitReveal && state.committedMoves) {
+				return {
+					...state,
+					committedMoves: undefined,
+					moveCount: state.moveCount + 1
+				};
+			}
 			return state;
 		}
 

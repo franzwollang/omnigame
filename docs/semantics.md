@@ -132,7 +132,10 @@ detects via `isNoop`).
 
 Under commitReveal + simultaneous: per-seat private commits until budget full
 → auto-reveal as joint event. Deduction commits require matching kind
-(query×query, guess×guess, eliminate×eliminate).
+(query×query, guess×guess, eliminate×eliminate). Under commitReveal + jump
+(M83): reveal uses the same joint/ordered mid-clear rules as open simultaneous
+jump; a blind mid-flee that makes the joint illegal aborts the reveal (clears
+commits, board unchanged, wasted round) so seats are not soft-locked.
 
 ## 3. Features as Machine Slices
 

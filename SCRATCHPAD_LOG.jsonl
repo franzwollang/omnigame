@@ -136,3 +136,4 @@
 {"ts":"2026-09-10T10:20+00:00","focus":"M80 approachNetDeath","summary":"Landed Go Lite Approach Net (non-liberty approach → loose/net death)","next":"Pick next genuine P3 seam after M80"}
 {"ts":"2026-09-10T10:50+00:00","focus":"M81 simultaneous jump","summary":"Landed simultaneous-jump-race after throw-in/CAD uniqueness failure","next":"Pick next P3 seam after M81"}
 {"ts":"2026-09-10T11:10+00:00","focus":"M82 ordered simultaneous jump","summary":"Landed ordered-simultaneous-jump-race; sequential mid clear + capture-before-flee","next":"Pick smallest genuine next-missing-mechanism after M82"}
+{"ts":"2026-09-10T11:20+00:00","focus":"M83 hidden simultaneous jump","summary":"Landed hidden-simultaneous-jump-race; reveal abort on illegal joint mid-flee","next":"Pick smallest genuine next-missing-mechanism after M83"}

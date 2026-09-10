@@ -513,7 +513,8 @@ export const Contracts = {
 		hooks: ["validateInput", "applyEffects"],
 		invariants: [
 			"commitBeforeJointResolve",
-			"opponentCommitHiddenUntilReveal"
+			"opponentCommitHiddenUntilReveal",
+			"commitRevealJumpRevealsViaJointMidClear"
 		]
 	}),
 	/**

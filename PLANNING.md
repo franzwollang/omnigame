@@ -98,11 +98,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M80 | Next missing mechanism (Go Lite Approach Net / objective.approachNetDeath) | `done` |
 | M81 | Next missing mechanism (joint simultaneous jump / single-hop) | `done` |
 | M82 | Next missing mechanism (ordered simultaneous jump) | `done` |
+| M83 | Next missing mechanism (commitReveal simultaneous jump) | `done` |
 
-**Optimizing for this marathon:** M82 Ordered Simultaneous Jump Race landed.
+**Optimizing for this marathon:** M83 Hidden Simultaneous Jump Race landed.
 Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
-without anchor) — without asking which fork. Large deferred: commitReveal /
-multi-action / hex-graph simultaneous jump; realtime; fuller Go remainder
+without anchor) — without asking which fork. Large deferred: multi-action /
+hex-graph simultaneous jump; realtime; fuller Go remainder
 (throw-in / connect-and-die — entangled with ladder family).
 
 ## Marathon runbook (cloud agents)
@@ -118,7 +119,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥875** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥889** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -244,12 +245,13 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
-expressible vs ladder/net/sente/approach on lite boards); ordered /
-commitReveal / multi-action / hex-graph simultaneous jump; fire→move
+expressible vs ladder/net/sente/approach on lite boards); multi-action /
+hex-graph simultaneous jump; fire→move
 reorder (only with
-anchor); realtime scheduler. Go Lite Approach Net landed
-(M80). Simultaneous Jump Race landed (M81). Ordered Simultaneous Jump Race
-landed (M82). Go Lite Sente Ladder landed
+anchor); realtime scheduler. Hidden Simultaneous Jump Race landed
+(M83). Ordered Simultaneous Jump Race landed (M82). Simultaneous Jump Race
+landed (M81). Go Lite Approach Net landed
+(M80). Go Lite Sente Ladder landed
 (M79). Go Lite Loose Net landed (M78). Go Lite Net landed
 (M77). Go Lite Nakade landed
 (M76). Go Lite Semeai landed
@@ -1282,7 +1284,8 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Preset `simultaneous-jump-race` (diagonal; X jumps mid → target row; O quiet
   step; raw contrasts vs alternating jump / simultaneous replace) + unit /
   schema / transcript / replay tests — **done**
-- Out of scope: commitReveal + jump; multi-action simultaneous jump;
+- Out of scope closed by M83: commitReveal + jump
+- Out of scope: multi-action simultaneous jump;
   mustLongestCapture / chains under simultaneous; hex/graph simultaneous jump
   ports; throw-in / connect-and-die; realtime
 - Green gate: ≥875 + new cases — **done**
@@ -1301,9 +1304,28 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Preset `ordered-simultaneous-jump-race` (diagonal; x_first capture-before-flee
   at mid → win; o_first flee-before-jump illegal — unlike replace dest land)
   + schema / legality / transcript / replay tests — **done**
-- Out of scope: commitReveal + jump; multi-action simultaneous jump;
+- Out of scope: multi-action simultaneous jump;
   mustLongestCapture / chains under simultaneous; hex/graph simultaneous jump
   ports; throw-in / connect-and-die; realtime
+- Green gate: ≥875 + new cases — **done**
+
+### M83 — Hidden simultaneous jump (commitReveal)
+
+- Schema: lift commitReveal-forbid under simultaneous jump (rectangle
+  single-hop); keep multi-action / mustLongestCapture / promotion /
+  hex-graph deferred — **done**
+- Kernel: reveal routes through jump-aware `handleSimultaneousMove`; illegal
+  joint at reveal (blind mid-flee) clears commits + wasted round (no soft-lock);
+  commitMove legal gen honors `mustCapture`; `pieceCaptured` at mid on revealing
+  commitMove — **done**
+- Contracts: `commitRevealJumpRevealsViaJointMidClear` on `ScheduleCommitReveal`
+  — **done**
+- Preset `hidden-simultaneous-jump-race` (diagonal; private commitMove then
+  reveal; blind mid-flee aborts) + schema / legality / transcript / replay /
+  agent joint tests — **done**
+- Out of scope: multi-action simultaneous jump; mustLongestCapture / chains
+  under simultaneous; hex/graph simultaneous jump ports; throw-in /
+  connect-and-die; realtime
 - Green gate: ≥875 + new cases — **done**
 
 ## Sequencing notes
