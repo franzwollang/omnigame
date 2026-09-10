@@ -444,7 +444,14 @@ export const zConfig = z
 				 * are neutral at two-pass area scoring (not awarded as
 				 * territory). Default / omit = current Go Lite behavior.
 				 */
-				seki: z.boolean().optional()
+				seki: z.boolean().optional(),
+				/**
+				 * When true, interior groups with fewer than 2 true eyes are
+				 * removed before two-pass area scoring (pass-alive lite).
+				 * Edge-touching groups and seki clusters are kept. Default /
+				 * omit = leave all stones on the board at score.
+				 */
+				deadStones: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1214,6 +1221,16 @@ export const zConfig = z
 				code: z.ZodIssueCode.custom,
 				path: ["objective", "seki"],
 				message: "objective.seki requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Dead-stone removal is area_control-only (pass-alive lite at scoring).
+		if (cfg.objective.deadStones === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "deadStones"],
+				message:
+					"objective.deadStones requires objective.mode = 'area_control'"
 			});
 		}
 

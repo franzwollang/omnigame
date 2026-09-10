@@ -4,9 +4,13 @@ import {
 	applyLibertyCapture,
 	boardPositionHash,
 	countLiberties,
+	countTrueEyes,
+	enumerateGroups,
+	findDeadStoneCells,
 	findGroup,
 	isLegalLibertyPlace,
 	orthogonalNeighbors,
+	removeDeadStones,
 	scoreArea,
 	areaOutcome,
 	findSekiNeutralCells,
@@ -420,6 +424,140 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(replay.faithful).toBe(true);
 		expect(replay.finalState.status).toBe("draw");
 		expect(replay.finalState.winner).toBeNull();
+	});
+
+	it("validates and compiles the go-lite-dead-stones preset", () => {
+		const cfg = examplePresets["go-lite-dead-stones"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.deadStones).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.deadStones outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; deadStones?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", deadStones: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("findDeadStoneCells: interior <2-eye group removed; edge ring kept", () => {
+		// 7×7 O ring + interior X with center eye
+		const cells = Array(49).fill(null) as (string | null)[];
+		const put = (row: number, col: number, p: string) => {
+			cells[row * 7 + col] = p;
+		};
+		for (let row = 0; row < 7; row++) {
+			for (let col = 0; col < 7; col++) {
+				const onRing = row === 0 || row === 6 || col === 0 || col === 6;
+				if (onRing) put(row, col, "O");
+				else if (!(row === 3 && col === 3)) put(row, col, "X");
+			}
+		}
+		const g = gridOf(7, 7, cells);
+		expect(scoreArea(g)).toEqual({ X: 25, O: 24 });
+		const dead = findDeadStoneCells(g);
+		expect(dead.length).toBe(24);
+		expect(dead.every((p) => getCell(g, p) === "X")).toBe(true);
+		const cleared = removeDeadStones(g);
+		expect(scoreArea(cleared)).toEqual({ X: 0, O: 49 });
+		expect(areaOutcome(g).winner).toBe("X");
+		expect(
+			areaOutcome(g, false, "rectangle", undefined, 0, false, true)
+		).toEqual({
+			status: "won",
+			winner: "O",
+			score: { X: 0, O: 49 }
+		});
+	});
+
+	it("two-eyed interior group is not dead", () => {
+		// 7×7 O edge ring; interior X with true eyes at (2,2) and (2,4)
+		const cells = Array(49).fill(null) as (string | null)[];
+		const put = (row: number, col: number, p: string) => {
+			cells[row * 7 + col] = p;
+		};
+		for (let row = 0; row < 7; row++) {
+			for (let col = 0; col < 7; col++) {
+				const onRing = row === 0 || row === 6 || col === 0 || col === 6;
+				if (onRing) put(row, col, "O");
+			}
+		}
+		for (const [row, col] of [
+			[1, 1],
+			[1, 2],
+			[1, 3],
+			[1, 4],
+			[1, 5],
+			[2, 1],
+			[2, 3],
+			[2, 5],
+			[3, 1],
+			[3, 2],
+			[3, 3],
+			[3, 4],
+			[3, 5],
+			[4, 1],
+			[4, 2],
+			[4, 3],
+			[4, 4],
+			[4, 5],
+			[5, 1],
+			[5, 2],
+			[5, 3],
+			[5, 4],
+			[5, 5]
+		] as const) {
+			put(row, col, "X");
+		}
+		const alive = gridOf(7, 7, cells);
+		expect(
+			countTrueEyes(
+				alive,
+				enumerateGroups(alive).find((gr) => gr.color === "X")!.stones,
+				"X"
+			)
+		).toBe(2);
+		expect(findDeadStoneCells(alive).length).toBe(0);
+	});
+
+	it("go-lite-dead-stones: seeded double-pass O wins; without removal X wins; replay faithful", () => {
+		const cfg = examplePresets["go-lite-dead-stones"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const withoutDead = structuredClone(cfg);
+		withoutDead.objective = { mode: "area_control" };
+		const baseline = compileConfig(withoutDead);
+		let winState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			winState = baseline.kernel.stepSync(winState, action).nextState;
+		}
+		expect(winState.status).toBe("won");
+		expect(winState.winner).toBe("X");
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
 	});
 
 	it("rejects capture.ko without liberties mode", () => {

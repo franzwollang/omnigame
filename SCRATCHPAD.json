@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T06:25+00:00",
-  "turn": 97,
+  "updated_at": "2026-09-10T06:46+00:00",
+  "turn": 98,
   "focus": {
-    "milestone": "M67",
+    "milestone": "M68",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Seki landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Dead Stones landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from b6b1 M66 tip onto cursor/next-task-progression-af5a",
-    "Landed M67 Go Lite Seki / objective.seki + go-lite-seki preset",
-    "Seki eye neutral at scoring; seeded board X-win→draw"
+    "Synced from af5a M67 tip onto cursor/next-task-progression-a21e",
+    "Landed M68 Go Lite Dead Stones / objective.deadStones + preset",
+    "Interior <2-eye groups removed; thin O ring demo X→O flip"
   ],
   "discoveries": [
-    "Seki cluster: mixed liberty-share + <2 private libs/group",
-    "Mono-border eyes in seki are the scoring gap vs dame"
+    "Edge foothold keeps open-board groups from mass removal",
+    "Seki clusters exempt from dead-stone removal"
   ],
   "open_threads": [
-    "Next: dead stones, simultaneous jump, realtime — reject recombinations"
+    "Next: fuller Go life/death, simultaneous jump, realtime — reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M67 (prefer dead stones)",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M68",
   "blockers": []
 }

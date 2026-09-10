@@ -180,6 +180,11 @@ export type GameConfig = {
 	 * points as neutral territory. Default false.
 	 */
 	sekiScoring?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups with fewer
+	 * than 2 true eyes before counting (pass-alive lite). Default false.
+	 */
+	deadStones?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1126,7 +1131,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.topology ?? "rectangle",
 			config.graph,
 			config.komi ?? 0,
-			config.sekiScoring === true
+			config.sekiScoring === true,
+			config.deadStones === true
 		);
 		return {
 			...state,

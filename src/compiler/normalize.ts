@@ -77,6 +77,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 				? config.objective.komi
 				: undefined,
 		sekiScoring: config.objective.seki === true ? true : undefined,
+		deadStones: config.objective.deadStones === true ? true : undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -193,6 +194,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	objectiveMode: "n_in_a_row",
 	komi: undefined,
 	sekiScoring: undefined,
+	deadStones: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,

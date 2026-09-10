@@ -11,12 +11,12 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Go Lite Seki (`go-lite-seki` / `objective.seki` shared-life territory
-exclusion) landed as **M67**. Go Lite Komi closed as M66; hub-graph
-forward-only men as M65; graph forward-only men as M64; hex forward-only men
-as M63; graph flying capture as M62; hex flying capture as M61; hub-graph
-promotion as M60; graph promotion as M59; hex promotion as M58; graph
-liberties as M57; hex liberties as M56; flying jump capture as M55; graph
+Go Lite Dead Stones (`go-lite-dead-stones` / `objective.deadStones` pass-alive
+lite interior corpse removal) landed as **M68**. Go Lite Seki closed as M67;
+komi as M66; hub-graph forward-only men as M65; graph forward-only men as M64;
+hex forward-only men as M63; graph flying capture as M62; hex flying capture as
+M61; hub-graph promotion as M60; graph promotion as M59; hex promotion as M58;
+graph liberties as M57; hex liberties as M56; flying jump capture as M55; graph
 flood_reveal as M54; hex flood_reveal as M53; flying kings as M52; longest
 mandatory capture as M51; forward-only men as M50; crowned promotion as M49;
 graph jump as M48; hex jump as M47; memory flip as M46; mustCapture as M45;
@@ -26,7 +26,7 @@ already closed (M41–M42; semantics notes continue per mechanism).
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
-- Dead-stone / pass-alive removal before scoring (next Go slice after seki)
+- Full Go remainder beyond dead-stone lite (e.g. richer life/death / Benson)
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
 - Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
@@ -38,11 +38,10 @@ e.g.:
 - multi-action slide/replace under simultaneous (deferred composition; only if
   a new seam appears — not a recombination demo)
 - `queryShape: not` (reject unless nested AST / new pruning class)
-- Full Go rules (large; prefer smaller seams first — dead stones before full
-  bundle)
 - Realtime / continuous scheduler (large)
 - Simultaneous jump (large composition; deferred)
-- Hex/graph seki presets (topology ports — only if a new seam appears)
+- Hex/graph seki or dead-stone presets (topology ports — only if a new seam
+  appears)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -58,7 +57,7 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 ### deferred-mvp-anchors
 
 Full Go remains a candidate under `next-missing-mechanism` (komi M66 + seki
-M67 landed; dead stones still open). Guess Who Lite + Commit Lite + Commit
+M67 + dead-stone lite M68 landed; richer life/death still open). Guess Who Lite + Commit Lite + Commit
 Phases Lite + And Lite + Or Lite + And3 Lite + Simultaneous Guess Who Lite +
 Simultaneous Guess Who Commit Lite + Simultaneous Guess Who And Lite + Hidden
 Simultaneous Guess Who Lite + **Hidden Simultaneous Guess Who Commit Lite**
@@ -106,8 +105,10 @@ Minesweeper Lite** covers graph explicit-edge hazard adjacency (max degree ≤
 `hex_offset` (cube-axis-6). **Graph Go Lite** covers liberties + area_control
 on `graph` (explicit-edge). **Go Lite Komi** covers `objective.komi`
 second-player scoring offset. **Go Lite Seki** covers `objective.seki`
-shared-life territory exclusion. Open simultaneous deduction joint UCT covers
+shared-life territory exclusion. **Go Lite Dead Stones** covers
+`objective.deadStones` pass-alive lite interior corpse removal. Open
+simultaneous deduction joint UCT covers
 agent search over query/guess(/eliminate) cartesian (fire→move still open if
 an anchor appears). CI green gate: `.github/workflows/ci.yml` (Node 20.19 +
-pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M67
-seki).
+pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M68
+deadStones).

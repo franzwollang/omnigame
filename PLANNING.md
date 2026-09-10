@@ -83,11 +83,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M65 | Next missing mechanism (hub targetNodes + menForwardOnly / Graph Hub Forward Men Jump Lite) | `done` |
 | M66 | Next missing mechanism (Go Lite Komi / objective.komi) | `done` |
 | M67 | Next missing mechanism (Go Lite Seki / objective.seki) | `done` |
+| M68 | Next missing mechanism (Go Lite Dead Stones / objective.deadStones) | `done` |
 
-**Optimizing for this marathon:** M67 Go Lite Seki (`objective.seki`) landed.
-Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
-without anchor) — without asking which fork. Large deferred: simultaneous jump /
-realtime / full Go remainder (dead stones).
+**Optimizing for this marathon:** M68 Go Lite Dead Stones (`objective.deadStones`)
+landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
+recombinations without anchor) — without asking which fork. Large deferred:
+simultaneous jump / realtime / full Go remainder.
 
 ## Marathon runbook (cloud agents)
 
@@ -102,7 +103,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥788** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥798** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -227,8 +228,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** full Go (seki / dead-stone scoring); fire→move reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Komi landed (M66).
+**Not yet:** full Go remainder (richer life/death beyond M68 lite); fire→move
+reorder (only with
+anchor); realtime scheduler; simultaneous jump. Go Lite Dead Stones landed
+(M68). Go Lite Seki landed (M67). Go Lite Komi landed (M66).
 Graph hub menForwardOnly landed (M65 Graph Hub
 Forward Men Jump Lite). Graph menForwardOnly landed (M64 Graph Forward Men
 Jump Lite). Hex menForwardOnly landed (M63 Hex Forward Men Jump Lite). Graph
@@ -253,7 +256,8 @@ M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
 hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
-in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67).
+in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
+deadStones in M68).
 
 ## Phase 2 exit criteria
 
@@ -1032,6 +1036,20 @@ in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67).
 - Out of scope: dead-stone removal; hex/graph seki presets; groups with
   ≥2 private liberties; simultaneous jump; realtime
 - Green gate: ≥788 + new cases — **done**
+
+### M68 — Go Lite Dead Stones / `objective.deadStones`
+
+- Schema: optional `objective.deadStones` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `findDeadStoneCells` / `removeDeadStones` (interior groups with
+  fewer than 2 true eyes; edge foothold kept; seki clusters exempt);
+  `areaOutcome` threads flag; normalize pass-through — **done**
+- Preset `go-lite-dead-stones` (7×7 thin O ring + interior X; without removal
+  X wins, with removal O wins) + unit / schema / transcript / replay tests;
+  form switch under area_control — **done**
+- Out of scope: full Benson search; multi-eye shared sets beyond per-group
+  true eyes; hex/graph dead-stone presets; simultaneous jump; realtime
+- Green gate: ≥798 + new cases — **done**
 
 ## Sequencing notes
 

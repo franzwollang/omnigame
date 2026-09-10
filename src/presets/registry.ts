@@ -4966,6 +4966,78 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-dead-stones": definePreset({
+		id: "go-lite-dead-stones",
+		name: "Go Lite Dead Stones",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with pass-alive lite dead-stone removal (objective.deadStones). Seeded thin O ring + interior X: without removal X leads on area; with removal interior X (<2 true eyes, not on edge) is cleared → O wins. Unlocks scoring corpse removal — not full Go / Benson search.",
+		config: {
+			metadata: { name: "Go Lite Dead Stones", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", deadStones: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				for (let row = 0; row < 7; row++) {
+					for (let col = 0; col < 7; col++) {
+						const onRing =
+							row === 0 || row === 6 || col === 0 || col === 6;
+						if (onRing) {
+							stones.push({
+								row,
+								col,
+								player: "O",
+								visibility: "public"
+							});
+						} else if (!(row === 3 && col === 3)) {
+							stones.push({
+								row,
+								col,
+								player: "X",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				return stones;
+			})()
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

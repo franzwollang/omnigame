@@ -94,6 +94,7 @@ These are built from the same shared schema and operators.
 - **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
 - **Go Lite Komi** (second-player `objective.komi` offset at area scoring)
 - **Go Lite Seki** (`objective.seki` shared-life territory exclusion at scoring)
+- **Go Lite Dead Stones** (`objective.deadStones` pass-alive lite corpse removal at scoring)
 - **Hex Go Lite** (same on hex_offset — six cube-axis liberties)
 - **Graph Go Lite** (same on graph — liberties follow explicit undirected edges)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
@@ -556,14 +557,15 @@ Graph Flying Capture Jump Lite (M62), hex forward-only men /
 Hex Forward Men Jump Lite (M63), graph forward-only men /
 Graph Forward Men Jump Lite (M64), hub-graph forward-only men /
 Graph Hub Forward Men Jump Lite (M65), Go Lite Komi / `objective.komi` (M66),
-Go Lite Seki / `objective.seki` (M67).
+Go Lite Seki / `objective.seki` (M67), Go Lite Dead Stones /
+`objective.deadStones` (M68).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  dead-stone removal; fire→move only with anchor; full Go remainder; realtime
-  scheduler; simultaneous jump; reject recombinations)
-- Deferred: full Go rules (dead stones); realtime scheduler;
+  full Go remainder; fire→move only with anchor; realtime scheduler;
+  simultaneous jump; reject recombinations)
+- Deferred: full Go rules (dead stones landed as lite M68); realtime scheduler;
   fire→move reorder (recombination without anchor); simultaneous jump;
   memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
@@ -575,7 +577,9 @@ Go Lite Seki / `objective.seki` (M67).
   hex promotion in M58; graph promotion in M59; hub targetNodes in M60;
   hex crownedFlyingCapture in M61; graph crownedFlyingCapture in M62;
   hex menForwardOnly in M63; graph menForwardOnly in M64; hub
-  targetNodes + menForwardOnly in M65; komi in M66; seki in M67)
+  targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
+  deadStones in M68)
+
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

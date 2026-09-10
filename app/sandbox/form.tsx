@@ -1175,6 +1175,29 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												</FormItem>
 											)}
 										/>
+										<FormField
+											control={form.control}
+											name="objective.deadStones"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Dead-stone removal</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove interior groups with &lt;2 true eyes
+															before scoring (objective.deadStones).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
 									</>
 								) : null}
 							</div>

@@ -364,20 +364,15 @@ export function enumerateGroups(
 }
 
 /**
- * Empty cells that must stay neutral under seki scoring (M67).
- *
- * Clusters groups that share ≥1 liberty. A mixed-color cluster is seki when
- * every group has fewer than 2 private liberties (liberties not shared with
- * any opposite-color group in the cluster). All liberties of seki-cluster
- * groups are returned as neutral — including mono-border “eyes” that plain
- * area scoring would award as territory.
+ * Shared-life (seki) clusters: mixed-color groups that share liberties where
+ * every group has fewer than 2 private liberties (M67).
  */
-export function findSekiNeutralCells(
+export function findSekiClusters(
 	grid: Grid,
 	wrap: boolean = false,
 	topology: GridTopology = "rectangle",
 	graph?: GraphTopologyData
-): Set<string> {
+): GroupInfo[][] {
 	const groups = enumerateGroups(grid, wrap, topology, graph);
 	const n = groups.length;
 	const parent = groups.map((_, i) => i);
@@ -416,7 +411,7 @@ export function findSekiNeutralCells(
 		else clusters.set(root, [i]);
 	}
 
-	const neutral = new Set<string>();
+	const out: GroupInfo[][] = [];
 	for (const ids of Array.from(clusters.values())) {
 		const colors = new Set(ids.map((i) => groups[i]!.color));
 		if (colors.size < 2) continue;
@@ -445,12 +440,140 @@ export function findSekiNeutralCells(
 			}
 		}
 		if (!isSeki) continue;
+		out.push(ids.map((i) => groups[i]!));
+	}
+	return out;
+}
 
-		for (const i of ids) {
-			for (const lib of Array.from(groups[i]!.liberties)) neutral.add(lib);
+/**
+ * Empty cells that must stay neutral under seki scoring (M67).
+ *
+ * Clusters groups that share ≥1 liberty. A mixed-color cluster is seki when
+ * every group has fewer than 2 private liberties (liberties not shared with
+ * any opposite-color group in the cluster). All liberties of seki-cluster
+ * groups are returned as neutral — including mono-border “eyes” that plain
+ * area scoring would award as territory.
+ */
+export function findSekiNeutralCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Set<string> {
+	const neutral = new Set<string>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) {
+			for (const lib of Array.from(g.liberties)) neutral.add(lib);
 		}
 	}
 	return neutral;
+}
+
+/**
+ * True eye: empty intersection whose every liberty-neighbor is `color`
+ * (or off-board / inactive). Used for pass-alive lite (M68).
+ */
+export function countTrueEyes(
+	grid: Grid,
+	group: Position[],
+	color: Player,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): number {
+	const libs = libertySetOf(grid, group, wrap, topology, graph);
+	let eyes = 0;
+	for (const k of Array.from(libs)) {
+		const [rs, cs] = k.split(",");
+		const pos = { row: Number(rs), col: Number(cs) };
+		const ns = libertyNeighbors(grid, pos, wrap, topology, graph);
+		if (ns.length === 0) continue;
+		if (ns.every((n) => getCell(grid, n) === color)) eyes += 1;
+	}
+	return eyes;
+}
+
+/**
+ * Board-edge foothold: group touches the lattice border (rectangle/hex) or an
+ * inactive/missing neighbor slot (graph). Edge contact counts as life under
+ * dead-stone lite so open-board fights are not mass-removed at two-pass.
+ */
+export function groupTouchesEdge(
+	grid: Grid,
+	stones: Position[],
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): boolean {
+	for (const p of stones) {
+		if (
+			p.row <= 0 ||
+			p.col <= 0 ||
+			p.row >= grid.height - 1 ||
+			p.col >= grid.width - 1
+		) {
+			return true;
+		}
+		if (topology === "graph" && graph) {
+			for (const [dr, dc] of ORTHOGONAL) {
+				const n = { row: p.row + dr, col: p.col + dc };
+				if (!inBounds(grid, n) || !isActivePosition(n, "graph", graph)) {
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Interior groups with fewer than 2 true eyes are dead at scoring (M68),
+ * except stones in seki clusters (shared life is not death). Edge-touching
+ * groups are kept. Returns cells to clear before area count.
+ */
+export function findDeadStoneCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const dead: Position[] = [];
+	for (const g of groups) {
+		if (sekiIds.has(g.id)) continue;
+		if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+		const eyes = countTrueEyes(
+			grid,
+			g.stones,
+			g.color,
+			wrap,
+			topology,
+			graph
+		);
+		if (eyes >= 2) continue;
+		for (const p of g.stones) dead.push(p);
+	}
+	return dead;
+}
+
+/** Clear dead stones from a grid copy (M68 pass-alive lite removal). */
+export function removeDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findDeadStoneCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
 }
 
 /**
@@ -531,6 +654,8 @@ export function scoreArea(
  * under area_control (Go Lite Komi). Returned `score.O` includes komi.
  * When `sekiScoring` is true, empty points in shared-life (seki) clusters
  * are neutral (Go Lite Seki).
+ * When `deadStones` is true, interior groups with fewer than 2 true eyes are
+ * removed before scoring (pass-alive lite; seki clusters exempt) (M68).
  */
 export function areaOutcome(
 	grid: Grid,
@@ -538,16 +663,20 @@ export function areaOutcome(
 	topology: GridTopology = "rectangle",
 	graph?: GraphTopologyData,
 	komi: number = 0,
-	sekiScoring: boolean = false
+	sekiScoring: boolean = false,
+	deadStones: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
 	score: AreaScore;
 } {
+	const scored = deadStones
+		? removeDeadStones(grid, wrap, topology, graph)
+		: grid;
 	const neutral = sekiScoring
-		? findSekiNeutralCells(grid, wrap, topology, graph)
+		? findSekiNeutralCells(scored, wrap, topology, graph)
 		: undefined;
-	const raw = scoreArea(grid, wrap, topology, graph, neutral);
+	const raw = scoreArea(scored, wrap, topology, graph, neutral);
 	const k = Number.isFinite(komi) && komi > 0 ? komi : 0;
 	const score: AreaScore = { X: raw.X, O: raw.O + k };
 	if (score.X > score.O) return { status: "won", winner: "X", score };
