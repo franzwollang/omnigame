@@ -90,7 +90,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥690** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥692** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -842,7 +842,7 @@ M55).
   flying land to win row 0) + helper/schema/transcript/replay tests — **done**
 - Out of scope: hex/graph flying capture; simultaneous jump; multi-jump
   direction-change demos beyond existing chains
-- Green gate: ≥690 tests — **done**
+- Green gate: ≥692 tests — **done**
 
 ## Sequencing notes
 
