@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T11:52+00:00",
-  "turn": 116,
+  "updated_at": "2026-09-10T12:10+00:00",
+  "turn": 117,
   "focus": {
-    "milestone": "M86",
+    "milestone": "M87",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite L-Nakade landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Square-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 906f M85 tip onto cursor/next-task-progression-2642",
-    "Landed M86 objective.lNakadeDeath + go-lite-l-nakade",
-    "Green gate 915 tests"
+    "Synced from 2642 M86 tip onto cursor/next-task-progression-0dfa",
+    "Landed M87 objective.squareNakadeDeath + go-lite-square-nakade",
+    "Green gate 919 tests"
   ],
   "discoveries": [
-    "Bent-3 escapes T1 nakadeDeath + Benson + chase family on unique board",
-    "Square-4 / bulky nakade next in family; throw-in still not unique"
+    "Square-4 escapes T1/L + Benson + chase on unique 2×2 board",
+    "1-ply vital-fill matches T1/L true-eye model (classical 2-ply not needed)"
   ],
   "open_threads": [
-    "Next: square-4 nakade, unique Go L&D, or realtime (not topology ports)"
+    "Next: unique Go L&D or realtime (not topology ports / recombinations)"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M86",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M87",
   "blockers": []
 }

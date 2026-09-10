@@ -102,12 +102,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M84 | Next missing mechanism (multi-action simultaneous jump) | `done` |
 | M85 | Next missing mechanism (commitReveal multi-action jump) | `done` |
 | M86 | Next missing mechanism (Go Lite L-Nakade / objective.lNakadeDeath) | `done` |
+| M87 | Next missing mechanism (Go Lite Square-Nakade / objective.squareNakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M86 Go Lite L-Nakade landed. Pick **P3
+**Optimizing for this marathon:** M87 Go Lite Square-Nakade landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
-with ladder family); square-4 / bulky nakade.
+with ladder family).
 
 ## Marathon runbook (cloud agents)
 
@@ -122,7 +123,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥915** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥919** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -253,9 +254,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
-expressible vs ladder/net/sente/approach on lite boards); square-4 / bulky
-nakade; hex-graph simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler. Go Lite L-Nakade landed (M86). Hidden Double
+expressible vs ladder/net/sente/approach/nakade family on lite boards);
+hex-graph simultaneous jump ports; fire→move reorder (only with
+anchor); realtime scheduler. Go Lite Square-Nakade landed (M87). Go Lite
+L-Nakade landed (M86). Hidden Double
 Simultaneous Jump Race landed
 (M85). Double Simultaneous Jump Race landed
 (M84). Hidden Simultaneous Jump Race landed
@@ -1378,13 +1380,28 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
   T1 `nakadeDeath` so shapes stay contrastable — **done**
 - Kernel: `isLNakadeVulnerableRegion` (3 connected empties, not colinear;
   vital = elbow) + `findLNakadeDeadCells` / `removeLNakadeDeadStones`;
-  `areaOutcome` after optional nakadeDeath, before netDeath — **done**
+  `areaOutcome` after optional nakadeDeath, before squareNakadeDeath /
+  netDeath — **done**
 - Preset `go-lite-l-nakade` (7×7 O-ring + interior X shell; eye + L corridor;
   Benson-alive / T1-miss / chase-miss; flag → O) + schema / uniqueness /
   transcript / replay / contrast tests — **done**
-- Out of scope: square-4 / bulky nakade; throw-in / connect-and-die; hex/graph
-  nakade ports; realtime
+- Out of scope: square-4 / bulky nakade (→ M87); throw-in / connect-and-die;
+  hex/graph nakade ports; realtime
 - Green gate: ≥915 + new cases — **done**
+
+### M87 — Go Lite Square-Nakade / square-4
+
+- Schema: `objective.squareNakadeDeath` boolean (area_control-only); distinct
+  from T1 / L so bulky eyes stay contrastable — **done**
+- Kernel: `isSquareNakadeVulnerableRegion` (filled 2×2 empties; vital =
+  top-left) + `findSquareNakadeDeadCells` / `removeSquareNakadeDeadStones`;
+  `areaOutcome` after optional lNakadeDeath, before netDeath — **done**
+- Preset `go-lite-square-nakade` (7×7 O-ring + interior X shell; eye + 2×2;
+  Benson-alive / T1-miss / L-miss / chase-miss; flag → O) + schema /
+  uniqueness / transcript / replay / contrast tests — **done**
+- Out of scope: throw-in / connect-and-die; hex/graph nakade ports; realtime;
+  larger bulky-five tables
+- Green gate: ≥919 + new cases — **done**
 
 ## Sequencing notes
 

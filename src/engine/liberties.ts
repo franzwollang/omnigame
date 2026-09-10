@@ -641,7 +641,7 @@ function findColorOnlyEmptyRegions(
 /**
  * Classic 3-point straight nakade (T1): mono-border empty region of exactly
  * three cells in an orthogonal line; vital = middle. L (bent-3) is M86
- * `lNakadeDeath`; 4+ / bulky shapes still deferred.
+ * `lNakadeDeath`; square-4 bulky is M87 `squareNakadeDeath`.
  */
 export function isNakadeVulnerableRegion(
 	regionCells: Position[]
@@ -666,8 +666,8 @@ export function isNakadeVulnerableRegion(
 
 /**
  * Bent-3 (L) nakade: three orthogonally connected empties that are not
- * colinear; vital = unique elbow (degree 2 in the induced region). Square-4 /
- * bulky shapes deferred (M86).
+ * colinear; vital = unique elbow (degree 2 in the induced region). Square-4
+ * is M87 `squareNakadeDeath`.
  */
 export function isLNakadeVulnerableRegion(
 	regionCells: Position[]
@@ -690,6 +690,37 @@ export function isLNakadeVulnerableRegion(
 	if (elbows.length !== 1) return null;
 	if (degrees.filter((d) => d === 1).length !== 2) return null;
 	return { vital: regionCells[elbows[0]!]! };
+}
+
+/**
+ * Square-4 (2×2 bulky) nakade: exactly four empties forming a filled 2×2
+ * block; vital = canonical top-left (any of the four works under the
+ * single-cell true-eye model used by T1/L). Distinct from T1/L so shapes
+ * stay contrastable (M87).
+ */
+export function isSquareNakadeVulnerableRegion(
+	regionCells: Position[]
+): { vital: Position } | null {
+	if (regionCells.length !== 4) return null;
+	let minR = Infinity;
+	let maxR = -Infinity;
+	let minC = Infinity;
+	let maxC = -Infinity;
+	const keys = new Set<string>();
+	for (const p of regionCells) {
+		if (p.row < minR) minR = p.row;
+		if (p.row > maxR) maxR = p.row;
+		if (p.col < minC) minC = p.col;
+		if (p.col > maxC) maxC = p.col;
+		keys.add(`${p.row},${p.col}`);
+	}
+	if (maxR !== minR + 1 || maxC !== minC + 1) return null;
+	for (let r = minR; r <= maxR; r++) {
+		for (let c = minC; c <= maxC; c++) {
+			if (!keys.has(`${r},${c}`)) return null;
+		}
+	}
+	return { vital: { row: minR, col: minC } };
 }
 
 /**
@@ -881,6 +912,104 @@ export function removeLNakadeDeadStones(
 	graph?: GraphTopologyData
 ): Grid {
 	const dead = findLNakadeDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
+ * Interior groups that border a square-4 (2×2) nakade big-eye and would have
+ * fewer than 2 true eyes after an opponent vital fill are dead at scoring
+ * (M87). Same exemptions as T1/L nakade (edge + seki). Contrastable with
+ * `nakadeDeath` / `lNakadeDeath` (3-cell shapes only).
+ */
+export function findSquareNakadeDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const dead: Position[] = [];
+	const deadGroupIds = new Set<number>();
+
+	for (const color of ["X", "O"] as const) {
+		const colorGroups = groups.filter((g) => g.color === color);
+		if (colorGroups.length === 0) continue;
+		const stoneToGroup = new Map<string, number>();
+		for (const g of colorGroups) {
+			for (const p of g.stones) stoneToGroup.set(keyOf(p), g.id);
+		}
+		const regions = findColorOnlyEmptyRegions(
+			grid,
+			color,
+			stoneToGroup,
+			wrap,
+			topology,
+			graph
+		);
+		const attacker: Player = color === "X" ? "O" : "X";
+
+		for (const region of regions) {
+			const nakade = isSquareNakadeVulnerableRegion(region.cells);
+			if (!nakade) continue;
+			const sim = simulateLibertyPlace(
+				grid,
+				nakade.vital,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			const nextGrid: Grid = { ...grid, cells: sim.cells };
+
+			for (const gid of Array.from(region.adjacentGroupIds)) {
+				if (deadGroupIds.has(gid)) continue;
+				const g = colorGroups.find((x) => x.id === gid);
+				if (!g) continue;
+				if (sekiIds.has(g.id)) continue;
+				if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+
+				const rem = g.stones.filter((p) => getCell(nextGrid, p) === color);
+				if (rem.length === 0) {
+					deadGroupIds.add(gid);
+					for (const p of g.stones) dead.push(p);
+					continue;
+				}
+				const eyes = countTrueEyes(
+					nextGrid,
+					rem,
+					color,
+					wrap,
+					topology,
+					graph
+				);
+				if (eyes >= 2) continue;
+				deadGroupIds.add(gid);
+				for (const p of g.stones) dead.push(p);
+			}
+		}
+	}
+	return dead;
+}
+
+/** Clear square-nakade-dead stones from a grid copy (M87). */
+export function removeSquareNakadeDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findSquareNakadeDeadCells(grid, wrap, topology, graph);
 	if (dead.length === 0) return grid;
 	let cells = grid.cells;
 	for (const p of dead) {
@@ -1848,17 +1977,20 @@ export function scoreArea(
  * Benson/deadStones and before nakadeDeath / ladderDeath (M75).
  * When `nakadeDeath` is true, interior groups bordering a T1 (3-straight)
  * nakade big-eye that would have <2 true eyes after an opponent vital fill
- * are removed after optional semeaiDeath and before lNakadeDeath / netDeath /
- * ladderDeath (M76). When `lNakadeDeath` is true, the same vital-fill path
- * for bent-3 (L) big-eyes runs after optional nakadeDeath and before
- * netDeath (M86). When `netDeath` is true, groups force-capturable by an
- * attacker-sente tight net / geta (exactly 3 root liberties; every escape
- * has a finishing reply) are removed after optional nakadeDeath /
- * lNakadeDeath and before looseNetDeath / senteLadderDeath / ladderDeath
- * (M77). When `looseNetDeath` is true, the same search with exactly 4 root
- * liberties runs after netDeath and before senteLadderDeath / ladderDeath
- * (M78). When `senteLadderDeath` is true, multi-stone groups with exactly 3
- * root liberties that collapse to a ladder (or capture) under one attacker
+ * are removed after optional semeaiDeath and before lNakadeDeath /
+ * squareNakadeDeath / netDeath / ladderDeath (M76). When `lNakadeDeath` is
+ * true, the same vital-fill path for bent-3 (L) big-eyes runs after optional
+ * nakadeDeath and before squareNakadeDeath / netDeath (M86). When
+ * `squareNakadeDeath` is true, the same path for square-4 (2×2) big-eyes
+ * runs after optional lNakadeDeath and before netDeath (M87). When
+ * `netDeath` is true, groups force-capturable by an attacker-sente tight net
+ * / geta (exactly 3 root liberties; every escape has a finishing reply) are
+ * removed after optional nakadeDeath / lNakadeDeath / squareNakadeDeath and
+ * before looseNetDeath / senteLadderDeath / ladderDeath (M77). When
+ * `looseNetDeath` is true, the same search with exactly 4 root liberties
+ * runs after netDeath and before senteLadderDeath / ladderDeath (M78). When
+ * `senteLadderDeath` is true, multi-stone groups with exactly 3 root
+ * liberties that collapse to a ladder (or capture) under one attacker
  * liberty-fill are removed after optional looseNetDeath and before
  * ladderDeath (M79; attacker-first polarity vs defender-first netDeath;
  * single-stone 3-lib shapes omitted). When `approachNetDeath` is true,
@@ -1887,7 +2019,8 @@ export function areaOutcome(
 	looseNetDeath: boolean = false,
 	senteLadderDeath: boolean = false,
 	approachNetDeath: boolean = false,
-	lNakadeDeath: boolean = false
+	lNakadeDeath: boolean = false,
+	squareNakadeDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -1906,6 +2039,9 @@ export function areaOutcome(
 	}
 	if (lNakadeDeath) {
 		scored = removeLNakadeDeadStones(scored, wrap, topology, graph);
+	}
+	if (squareNakadeDeath) {
+		scored = removeSquareNakadeDeadStones(scored, wrap, topology, graph);
 	}
 	if (netDeath) {
 		scored = removeNetDeadStones(scored, wrap, topology, graph);

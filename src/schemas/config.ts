@@ -523,21 +523,32 @@ export const zConfig = z
 				 * When true, interior groups bordering a bent-3 (L) nakade
 				 * big-eye that would have <2 true eyes after an opponent vital
 				 * fill are removed before two-pass scoring (after optional
-				 * nakadeDeath; before netDeath / looseNetDeath / ladderDeath).
+				 * nakadeDeath; before squareNakadeDeath / netDeath /
+				 * looseNetDeath / ladderDeath).
 				 * Edge foothold + seki clusters kept. Distinct from
 				 * nakadeDeath (T1 straight-only) so the two shapes can be
 				 * contrasted. Default / omit = leave Benson/eye survivors.
 				 */
 				lNakadeDeath: z.boolean().optional(),
 				/**
+				 * When true, interior groups bordering a square-4 (2×2) nakade
+				 * big-eye that would have <2 true eyes after an opponent vital
+				 * fill are removed before two-pass scoring (after optional
+				 * lNakadeDeath; before netDeath / looseNetDeath / ladderDeath).
+				 * Edge foothold + seki clusters kept. Distinct from
+				 * nakadeDeath / lNakadeDeath (3-cell shapes) so bulky eyes can
+				 * be contrasted. Default / omit = leave Benson/eye survivors.
+				 */
+				squareNakadeDeath: z.boolean().optional(),
+				/**
 				 * When true, groups force-capturable by an attacker-sente net /
 				 * geta (root exactly 3 liberties; every defender liberty
 				 * extension has an attacker reply that captures, ladders, or
 				 * re-nets) are removed before two-pass scoring (after optional
-				 * nakadeDeath / lNakadeDeath; before looseNetDeath /
-				 * senteLadderDeath / ladderDeath). Edge foothold does not save.
-				 * Default / omit = leave multi-liberty trapped groups on the
-				 * board.
+				 * nakadeDeath / lNakadeDeath / squareNakadeDeath; before
+				 * looseNetDeath / senteLadderDeath / ladderDeath). Edge
+				 * foothold does not save. Default / omit = leave multi-liberty
+				 * trapped groups on the board.
 				 */
 				netDeath: z.boolean().optional(),
 				/**
@@ -1469,6 +1480,15 @@ export const zConfig = z
 				path: ["objective", "lNakadeDeath"],
 				message:
 					"objective.lNakadeDeath requires objective.mode = 'area_control'"
+			});
+		}
+		// Square-4 (2×2 bulky) nakade removal is area_control-only.
+		if (cfg.objective.squareNakadeDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "squareNakadeDeath"],
+				message:
+					"objective.squareNakadeDeath requires objective.mode = 'area_control'"
 			});
 		}
 

@@ -235,15 +235,23 @@ export type GameConfig = {
 	/**
 	 * When true, two-pass area scoring removes interior groups bordering a
 	 * bent-3 (L) nakade big-eye that would have <2 true eyes after an
-	 * opponent vital fill — after optional nakadeDeath and before netDeath
-	 * (M86).
+	 * opponent vital fill — after optional nakadeDeath and before
+	 * squareNakadeDeath / netDeath (M86).
 	 */
 	lNakadeDeath?: boolean;
 	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * square-4 (2×2) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional lNakadeDeath and before netDeath
+	 * (M87).
+	 */
+	squareNakadeDeath?: boolean;
+	/**
 	 * When true, two-pass area scoring removes groups force-capturable by an
 	 * attacker-sente tight net / geta (exactly 3 root liberties; every escape
-	 * has a finishing reply) after optional nakadeDeath / lNakadeDeath and
-	 * before looseNetDeath / senteLadderDeath / ladderDeath (M77).
+	 * has a finishing reply) after optional nakadeDeath / lNakadeDeath /
+	 * squareNakadeDeath and before looseNetDeath / senteLadderDeath /
+	 * ladderDeath (M77).
 	 */
 	netDeath?: boolean;
 	/**
@@ -1289,7 +1297,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.looseNetDeath === true,
 				config.senteLadderDeath === true,
 				config.approachNetDeath === true,
-				config.lNakadeDeath === true
+				config.lNakadeDeath === true,
+				config.squareNakadeDeath === true
 			);
 			return {
 				...state,
@@ -1320,7 +1329,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.looseNetDeath === true,
 			config.senteLadderDeath === true,
 			config.approachNetDeath === true,
-			config.lNakadeDeath === true
+			config.lNakadeDeath === true,
+			config.squareNakadeDeath === true
 		);
 		return {
 			...state,

@@ -6025,6 +6025,101 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			})()
 		}
 	}),
+	"go-lite-square-nakade": definePreset({
+		id: "go-lite-square-nakade",
+		name: "Go Lite Square-Nakade",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"nakade",
+			"square-nakade",
+			"benson",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with square-4 (2×2 bulky) nakade removal at scoring (objective.squareNakadeDeath). Seeded interior X shell with one true eye + closed 2×2 corridor (Benson-alive; T1/L nakadeDeath miss; chase family miss) plus living edge O: without the flag (or with bensonLife / nakadeDeath / lNakadeDeath) double-pass awards X; with squareNakadeDeath X is cleared → O wins. Unlocks bulky big-eye death beyond T1/L nakade / Benson / chase family.",
+		config: {
+			metadata: { name: "Go Lite Square-Nakade", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", squareNakadeDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				// Interior X shell (rows/cols 1–5): true eye at (2,2); closed
+				// square-4 corridor at (3,3)/(3,4)/(4,3)/(4,4). One true eye
+				// (dead under deadStones) but Benson-alive via eye + 2×2;
+				// T1/L nakadeDeath miss (not 3-cell).
+				const xCells: Array<[number, number]> = [
+					[1, 1],
+					[1, 2],
+					[1, 3],
+					[1, 4],
+					[1, 5],
+					[2, 1],
+					[2, 3],
+					[2, 4],
+					[2, 5],
+					[3, 1],
+					[3, 2],
+					[3, 5],
+					[4, 1],
+					[4, 2],
+					[4, 5],
+					[5, 1],
+					[5, 2],
+					[5, 3],
+					[5, 4],
+					[5, 5]
+				];
+				for (const [row, col] of xCells) {
+					stones.push({ row, col, player: "X", visibility: "public" });
+				}
+				for (let row = 0; row < 7; row++) {
+					for (let col = 0; col < 7; col++) {
+						if (row === 0 || row === 6 || col === 0 || col === 6) {
+							stones.push({
+								row,
+								col,
+								player: "O",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				return stones;
+			})()
+		}
+	}),
 	"go-lite-net": definePreset({
 		id: "go-lite-net",
 		name: "Go Lite Net",
