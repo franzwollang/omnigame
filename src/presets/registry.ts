@@ -6862,6 +6862,98 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			})()
 		}
 	}),
+	"go-lite-u-nakade": definePreset({
+		id: "go-lite-u-nakade",
+		name: "Go Lite U-Nakade",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"nakade",
+			"u-nakade",
+			"benson",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with U-pentomino (2×3 minus edge-middle) nakade removal at scoring (objective.uNakadeDeath). Seeded interior X shell on 9×9 with one true eye + closed U corridor (Benson-alive; T1/L/square/pyramid/twisted/L4/straight-4/bulky-5/plus/V/rabbity-six nakadeDeath miss; chase family miss) plus living edge O: without the flag (or with bensonLife / prior nakade flags) double-pass awards X; with uNakadeDeath X is cleared → O wins. Unlocks the U big-eye death beyond bulky-5 (corner hole) / V / plus / rabbity-six / tetromino nakade / Benson / chase family (needs ≥9×9 for U + disjoint eye uniqueness).",
+		config: {
+			metadata: { name: "Go Lite U-Nakade", version: 1 },
+			grid: { width: 9, height: 9, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", uNakadeDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				// Interior X shell (rows/cols 1–7): true eye at (6,6); closed
+				// U-pentomino at (2,2)/(2,4)/(3,2)/(3,3)/(3,4)
+				// (2×3 minus edge-middle (2,3); vital = opposite (3,3)).
+				// One true eye (dead under deadStones) but Benson-alive via
+				// eye + U; bulky-5 / V / plus / rabbity-six / tetromino tables
+				// miss (corner hole vs edge-middle; length/shape).
+				const empties = new Set([
+					"6,6",
+					"2,2",
+					"2,4",
+					"3,2",
+					"3,3",
+					"3,4"
+				]);
+				for (let row = 1; row <= 7; row++) {
+					for (let col = 1; col <= 7; col++) {
+						if (!empties.has(`${row},${col}`)) {
+							stones.push({
+								row,
+								col,
+								player: "X",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				for (let row = 0; row < 9; row++) {
+					for (let col = 0; col < 9; col++) {
+						if (row === 0 || row === 8 || col === 0 || col === 8) {
+							stones.push({
+								row,
+								col,
+								player: "O",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				return stones;
+			})()
+		}
+	}),
 	"go-lite-net": definePreset({
 		id: "go-lite-net",
 		name: "Go Lite Net",

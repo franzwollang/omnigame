@@ -23,6 +23,7 @@ import {
 	findPlusNakadeDeadCells,
 	findVNakadeDeadCells,
 	findRabbitySixNakadeDeadCells,
+	findUNakadeDeadCells,
 	findNetDeadCells,
 	findLooseNetDeadCells,
 	findSenteLadderDeadCells,
@@ -40,6 +41,7 @@ import {
 	isPlusNakadeVulnerableRegion,
 	isVNakadeVulnerableRegion,
 	isRabbitySixNakadeVulnerableRegion,
+	isUNakadeVulnerableRegion,
 	isNetDeadGroup,
 	isLooseNetDeadGroup,
 	isSenteLadderDeadGroup,
@@ -60,6 +62,7 @@ import {
 	removePlusNakadeDeadStones,
 	removeVNakadeDeadStones,
 	removeRabbitySixNakadeDeadStones,
+	removeUNakadeDeadStones,
 	removeNetDeadStones,
 	removeLooseNetDeadStones,
 	removeSenteLadderDeadStones,
@@ -3706,6 +3709,283 @@ describe("Go Lite (liberties + area_control)", () => {
 			{ bulky5NakadeDeath: true },
 			{ plusNakadeDeath: true },
 			{ vNakadeDeath: true },
+			{ uNakadeDeath: true },
+			{ semeaiDeath: true },
+			{ netDeath: true },
+			{ looseNetDeath: true },
+			{ senteLadderDeath: true },
+			{ approachNetDeath: true },
+			{ ladderDeath: true },
+			{ seki: true }
+		] as const) {
+			const alt = structuredClone(cfg);
+			alt.objective = { mode: "area_control", ...flag };
+			const altKernel = compileConfig(alt);
+			let altState = altKernel.kernel.initialState(cfg.rng.seed);
+			for (const action of script) {
+				altState = altKernel.kernel.stepSync(altState, action).nextState;
+			}
+			expect(altState.winner).toBe("X");
+		}
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
+	});
+
+	it("validates and compiles the go-lite-u-nakade preset", () => {
+		const cfg = examplePresets["go-lite-u-nakade"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.uNakadeDeath).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.uNakadeDeath outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; uNakadeDeath?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", uNakadeDeath: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("findUNakadeDeadCells: U corridor clears Benson-alive one-eyed shell; prior nakade + chase miss", () => {
+		const cfg = examplePresets["go-lite-u-nakade"].config;
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const g = state.grid;
+		const xGroups = enumerateGroups(g).filter((gr) => gr.color === "X");
+		expect(xGroups.length).toBe(1);
+		expect(countTrueEyes(g, xGroups[0]!.stones, "X")).toBe(1);
+		expect(findBensonAliveGroupIds(g, "X").size).toBe(1);
+		expect(findDeadStoneCells(g).length).toBe(xGroups[0]!.stones.length);
+		expect(findSemeaiDeadCells(g).length).toBe(0);
+		expect(findNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findLNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(
+			findSquareNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findPyramidNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findTwistedNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findL4NakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findStraight4NakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findBulky5NakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findPlusNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findVNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findRabbitySixNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findNetDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findLooseNetDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findSenteLadderDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findApproachNetDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findLadderDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		const U = [
+			{ row: 2, col: 2 },
+			{ row: 2, col: 4 },
+			{ row: 3, col: 2 },
+			{ row: 3, col: 3 },
+			{ row: 3, col: 4 }
+		];
+		expect(isUNakadeVulnerableRegion(U)).toEqual({
+			vital: { row: 3, col: 3 }
+		});
+		expect(isNakadeVulnerableRegion(U)).toBeNull();
+		expect(isLNakadeVulnerableRegion(U)).toBeNull();
+		expect(isSquareNakadeVulnerableRegion(U)).toBeNull();
+		expect(isPyramidNakadeVulnerableRegion(U)).toBeNull();
+		expect(isTwistedNakadeVulnerableRegion(U)).toBeNull();
+		expect(isL4NakadeVulnerableRegion(U)).toBeNull();
+		expect(isStraight4NakadeVulnerableRegion(U)).toBeNull();
+		expect(isBulky5NakadeVulnerableRegion(U)).toBeNull();
+		expect(isPlusNakadeVulnerableRegion(U)).toBeNull();
+		expect(isVNakadeVulnerableRegion(U)).toBeNull();
+		expect(isRabbitySixNakadeVulnerableRegion(U)).toBeNull();
+		const dead = findUNakadeDeadCells(g);
+		expect(dead.length).toBe(xGroups[0]!.stones.length);
+		expect(dead.every((p) => getCell(g, p) === "X")).toBe(true);
+		expect(areaOutcome(g).winner).toBe("X");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				true
+			).winner
+		).toBe("O");
+		// rabbitySixNakadeDeath alone leaves X
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				true,
+				false
+			).winner
+		).toBe("X");
+		const cleared = scoreArea(removeUNakadeDeadStones(g));
+		expect(cleared.O).toBeGreaterThan(cleared.X);
+		// Bulky-5 P (corner hole) is not U
+		expect(
+			isUNakadeVulnerableRegion([
+				{ row: 2, col: 2 },
+				{ row: 2, col: 3 },
+				{ row: 2, col: 4 },
+				{ row: 3, col: 2 },
+				{ row: 3, col: 3 }
+			])
+		).toBeNull();
+		// Rabbity-six is not U
+		expect(
+			isUNakadeVulnerableRegion([
+				{ row: 2, col: 2 },
+				{ row: 2, col: 3 },
+				{ row: 2, col: 4 },
+				{ row: 3, col: 2 },
+				{ row: 3, col: 3 },
+				{ row: 3, col: 4 }
+			])
+		).toBeNull();
+		// Bottom-open U also matches; vital opposite
+		expect(
+			isUNakadeVulnerableRegion([
+				{ row: 2, col: 2 },
+				{ row: 2, col: 3 },
+				{ row: 2, col: 4 },
+				{ row: 3, col: 2 },
+				{ row: 3, col: 4 }
+			])
+		).toEqual({ vital: { row: 2, col: 3 } });
+		// 3×2 left-open U
+		expect(
+			isUNakadeVulnerableRegion([
+				{ row: 2, col: 2 },
+				{ row: 2, col: 3 },
+				{ row: 3, col: 3 },
+				{ row: 4, col: 2 },
+				{ row: 4, col: 3 }
+			])
+		).toEqual({ vital: { row: 3, col: 3 } });
+	});
+
+	it("go-lite-u-nakade: seeded double-pass O wins; without flag X wins; contrasts; replay faithful", () => {
+		const cfg = examplePresets["go-lite-u-nakade"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [{ type: "pass" }, { type: "pass" }];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const without = structuredClone(cfg);
+		without.objective = { mode: "area_control" };
+		const baseline = compileConfig(without);
+		let rawState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			rawState = baseline.kernel.stepSync(rawState, action).nextState;
+		}
+		expect(rawState.status).toBe("won");
+		expect(rawState.winner).toBe("X");
+
+		for (const flag of [
+			{ bensonLife: true },
+			{ nakadeDeath: true },
+			{ lNakadeDeath: true },
+			{ squareNakadeDeath: true },
+			{ pyramidNakadeDeath: true },
+			{ twistedNakadeDeath: true },
+			{ l4NakadeDeath: true },
+			{ straight4NakadeDeath: true },
+			{ bulky5NakadeDeath: true },
+			{ plusNakadeDeath: true },
+			{ vNakadeDeath: true },
+			{ rabbitySixNakadeDeath: true },
 			{ semeaiDeath: true },
 			{ netDeath: true },
 			{ looseNetDeath: true },

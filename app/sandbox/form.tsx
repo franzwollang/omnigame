@@ -1538,6 +1538,31 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										/>
 										<FormField
 											control={form.control}
+											name="objective.uNakadeDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>U nakade death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove interior groups bordering a
+															U-pentomino (2×3 minus edge-middle) nakade
+															big-eye after a vital-fill eye check
+															(objective.uNakadeDeath).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
 											name="objective.netDeath"
 											render={({ field }) => (
 												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
