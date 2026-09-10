@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T13:50:00Z",
+  "turn": 124,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M94",
+    "issue": "next-missing-mechanism",
+    "goal": "Go Lite V-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from ae25 M93 tip onto cursor/next-task-progression-ed42",
+    "Landed M94 objective.vNakadeDeath + go-lite-v-nakade",
+    "V unique on 7x7; vital = non-colinear occupied corner"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "V = 3x3 with filled 2x2 hole; dual of plus occupancy",
+    "Rabbity-six deferred to M95 (9x9 first hexomino)"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: rabbity-six or other unique pentomino; not topology ports"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M94",
   "blockers": []
 }
