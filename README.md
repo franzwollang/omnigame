@@ -61,6 +61,7 @@ These are built from the same shared schema and operators.
 - **Double Simultaneous Jump Race** (`actionsPerTurn > 1` × simultaneous jump — multi-hop rounds without mustContinueFrom)
 - **Ordered Simultaneous Jump Race** (ordered simultaneous × jump — sequential mid clear / capture-before-flee)
 - **Hidden Simultaneous Jump Race** (`commitReveal` × simultaneous jump — blind mid-flee abort)
+- **Hidden Double Simultaneous Jump Race** (`commitReveal` + `actionsPerTurn > 1` × jump — private double-hop then reveal)
 - **Hex Jump Race** (`hex_offset` + `capture: jump` — cube-axis leap-over chains)
 - **Graph Jump Race** (`graph` + `capture: jump` — 2-edge leap-over chains)
 - **Mandatory Jump Race** (`mustCapture` — quiet moves illegal when any jump exists)
@@ -143,6 +144,7 @@ These are built from the same shared schema and operators.
 - **Double Simultaneous Jump Race** (`actionsPerTurn = 2` + `capture: jump`; same-piece double-hop mid clears)
 - **Ordered Simultaneous Jump Race** (`resolveOrder` + `capture: jump`; sequential mid clear + capture-before-flee)
 - **Hidden Simultaneous Jump Race** (`commitReveal` + `capture: jump`; private commitMove then reveal; blind mid-flee aborts)
+- **Hidden Double Simultaneous Jump Race** (`commitReveal` + `actionsPerTurn = 2` + `capture: jump`; private chained hops then reveal; blind mid-flee aborts)
 - **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
 - **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; vacated-origin hybrid)
 - **Simultaneous Slide Replace Flee Race** (joint slide through fleeing blocker on the ray)
@@ -235,7 +237,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Hop Race** /
   **Graph Replace Race**; jump capture (rectangle | hex_offset | graph;
   alternating chains or simultaneous single-/multi-hop) — **Jump Race** /
-  **Simultaneous Jump Race** / **Double Simultaneous Jump Race** / **Ordered Simultaneous Jump Race** / **Hidden Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
+  **Simultaneous Jump Race** / **Double Simultaneous Jump Race** / **Ordered Simultaneous Jump Race** / **Hidden Simultaneous Jump Race** / **Hidden Double Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
   **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump
   exists; incompatible with `graphReach: hop`); **Mandatory Longest Jump Lite**
   (`mustLongestCapture` keeps only max-length jump chains); optional
@@ -258,7 +260,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   crowned ray leap with empty approach + long land within `crownedRange`) /
   **Hex Flying Capture Jump Lite** (hex_offset cube-axis flying leap) /
   **Graph Flying Capture Jump Lite** (graph chain-walk flying leap)
-- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous place (Double-Place Simultaneous TTT / Hex / Graph) **or open simultaneous move** (Double Simultaneous Step Race; range 1, no replace) **or commitReveal simultaneous move** (Hidden Double Simultaneous Step Race); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Step Race** / **Hidden Double Simultaneous Step Race** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
+- **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous place (Double-Place Simultaneous TTT / Hex / Graph) **or open simultaneous move** (Double Simultaneous Step Race; range 1, no replace) **or commitReveal simultaneous move** (Hidden Double Simultaneous Step Race); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Step Race** / **Hidden Double Simultaneous Step Race** / **Hidden Simultaneous Jump Race** / **Hidden Double Simultaneous Jump Race** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace /
   jump capture (`movement.capture`; optional `mustCapture` /
   `mustLongestCapture` for jump);
@@ -592,21 +594,20 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.senteLadderDeath` (M79), Go Lite Approach Net /
 `objective.approachNetDeath` (M80), Simultaneous Jump Race (M81),
 Ordered Simultaneous Jump Race (M82), Hidden Simultaneous Jump Race (M83),
-Double Simultaneous Jump Race (M84).
+Double Simultaneous Jump Race (M84), Hidden Double Simultaneous Jump Race (M85).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  hidden multi-action simultaneous jump preset; fuller Go remainder if
-  uniquely expressible; fire→move only with anchor; realtime scheduler;
-  reject recombinations)
+  fuller Go remainder if uniquely expressible; fire→move only with anchor;
+  realtime scheduler; reject recombinations)
 - Deferred: fuller Go rules (approach net landed as M80; sente ladder as M79;
   loose net as M78; net as M77; nakade as M76; semeai as M75;
   territory+prisoners as M74; ladders as M73;
   mark-dead resume as M72; mark-dead as M71;
   dame fill as M70; Benson as M69); realtime scheduler;
-  fire→move reorder (recombination without anchor); multi-action /
-  hex-graph simultaneous jump; throw-in / connect-and-die
+  fire→move reorder (recombination without anchor); hex-graph simultaneous
+  jump ports; throw-in / connect-and-die
   (not unique vs ladder family on lite boards); memory bonus-turn-on-match /
   custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)

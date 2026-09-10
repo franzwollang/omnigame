@@ -3816,7 +3816,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Each seat privately commits two orthogonal steps; pieces move when both fill budget. Same-piece chains allowed. Same destination at an index → neither. Unlocks commitReveal + actionsPerTurn > 1 under simultaneous move (range 1, no replace).",
+			"Each seat privately commits two orthogonal steps; pieces move when both fill budget. Same-piece chains allowed. Same destination at an index → neither. Unlocks commitReveal + actionsPerTurn > 1 under simultaneous move (range 1, no replace). Jump variant: Hidden Double Simultaneous Jump Race.",
 		config: {
 			metadata: {
 				name: "Hidden Double Simultaneous Step Race",

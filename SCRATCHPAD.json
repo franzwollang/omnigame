@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T11:30+00:00",
-  "turn": 114,
+  "updated_at": "2026-09-10T11:40+00:00",
+  "turn": 115,
   "focus": {
-    "milestone": "M84",
+    "milestone": "M85",
     "issue": "next-missing-mechanism",
-    "goal": "Double Simultaneous Jump Race landed; hand off next genuine P3 seam"
+    "goal": "Hidden Double Simultaneous Jump Race landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 74d7 M83 tip onto cursor/next-task-progression-a88b",
-    "Landed M84 multi-action simultaneous jump + double-simultaneous-jump-race",
-    "Jump-aware solo probe + multi-index pieceCaptured"
+    "Synced from a88b M84 tip onto cursor/next-task-progression-906f",
+    "Landed M85 commitReveal multi-action jump + hidden-double-simultaneous-jump-race",
+    "Fixed abort capture synthesis (grid-ref guard)"
   ],
   "discoveries": [
-    "Indexed handleSimultaneousMove already composed jump; schema was the main block",
-    "applySoloMoves must clear jump mids for same-piece double-hop chains"
+    "Kernel already composed commitReveal×multi-action×jump; abort emitted spurious pieceCaptured",
+    "Abort returns same grid ref; successful reveal always replaces grid"
   ],
   "open_threads": [
-    "Next: hidden multi-action jump preset, or unique Go L&D, or realtime"
+    "Next: unique Go L&D, realtime, or other genuine P3 seam (not topology ports)"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M84",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M85",
   "blockers": []
 }

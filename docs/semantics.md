@@ -133,9 +133,11 @@ detects via `isNoop`).
 Under commitReveal + simultaneous: per-seat private commits until budget full
 → auto-reveal as joint event. Deduction commits require matching kind
 (query×query, guess×guess, eliminate×eliminate). Under commitReveal + jump
-(M83): reveal uses the same joint/ordered mid-clear rules as open simultaneous
-jump; a blind mid-flee that makes the joint illegal aborts the reveal (clears
-commits, board unchanged, wasted round) so seats are not soft-locked.
+(M83) or commitReveal + multi-action jump (M85): reveal uses the same
+joint/ordered mid-clear rules as open simultaneous jump; a blind mid-flee
+that makes the joint illegal aborts the reveal (clears commits, board
+unchanged, wasted round; no `pieceCaptured` events) so seats are not
+soft-locked.
 
 ## 3. Features as Machine Slices
 
@@ -252,7 +254,9 @@ KoRule: none | point | positional | situational.
   explicit-edge leaps (incompatible with graphReach hop); Simultaneous Jump
   Race covers joint simultaneous × jump; Ordered Simultaneous Jump Race
   covers resolveOrder × jump; Double Simultaneous Jump Race covers
-  multi-action simultaneous × jump
+  multi-action simultaneous × jump; Hidden Simultaneous Jump Race /
+  Hidden Double Simultaneous Jump Race cover commitReveal × jump
+  (single- / multi-action; blind mid-flee aborts without spurious captures)
 - promotion: optional `movement.promotion` (rectangle | hex_offset | graph +
   jump); exactly one of `targetRows` or graph-only `targetNodes`
   (`"row,col"` hub keys — Graph Hub Crowned Jump Lite) + `crownedAdjacency`

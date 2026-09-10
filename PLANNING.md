@@ -100,12 +100,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M82 | Next missing mechanism (ordered simultaneous jump) | `done` |
 | M83 | Next missing mechanism (commitReveal simultaneous jump) | `done` |
 | M84 | Next missing mechanism (multi-action simultaneous jump) | `done` |
+| M85 | Next missing mechanism (commitReveal multi-action jump) | `done` |
 
-**Optimizing for this marathon:** M84 Double Simultaneous Jump Race landed.
-Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
-without anchor) — without asking which fork. Large deferred: hidden
-multi-action jump; hex-graph simultaneous jump; realtime; fuller Go remainder
-(throw-in / connect-and-die — entangled with ladder family).
+**Optimizing for this marathon:** M85 Hidden Double Simultaneous Jump Race
+landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
+recombinations without anchor) — without asking which fork. Large deferred:
+hex-graph simultaneous jump; realtime; fuller Go remainder (throw-in /
+connect-and-die — entangled with ladder family).
 
 ## Marathon runbook (cloud agents)
 
@@ -120,7 +121,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥889** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥911** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -176,8 +177,10 @@ Replace Race / **Hex Replace Race** / **Graph Replace Race** demonstrate
 `capture = replace` on rectangle | hex_offset | graph; **Jump Race** /
 **Mandatory Jump Race** demonstrate `capture = jump` on rectangle;
 **Simultaneous Jump Race** / **Double Simultaneous Jump Race** /
-**Ordered Simultaneous Jump Race** / **Hidden Simultaneous Jump Race**
-demonstrate simultaneous × jump (single-/multi-hop mid clear);
+**Ordered Simultaneous Jump Race** / **Hidden Simultaneous Jump Race** /
+**Hidden Double Simultaneous Jump Race**
+demonstrate simultaneous × jump (single-/multi-hop mid clear; open or
+commitReveal);
 **Mandatory Longest Jump Lite** demonstrates `mustLongestCapture` (Draughts-lite
 max-length chain pruning); **Hex Jump Race** demonstrates `capture = jump` on
 hex_offset (cube-axis leap-over + `mustContinueFrom` chains); **Graph Jump Race**
@@ -237,7 +240,7 @@ Simultaneous Slide Replace Race, Ordered Simultaneous Slide Replace Race,
 Guess Who Lite, Guess Who Commit Lite, **Guess Who And Lite**, **Guess Who Or Lite**,
 **Guess Who And3 Lite**, **Simultaneous Guess Who Lite**, **Simultaneous Guess Who
 Commit Lite**, **Simultaneous Guess Who And Lite**,
-**Hidden Simultaneous Guess Who Lite**, **Hidden Simultaneous Guess Who Commit Lite**, Simultaneous Step Race, **Hidden Simultaneous Step Race**, **Double Simultaneous Step Race**, **Hidden Double Simultaneous Step Race**, **Simultaneous Jump Race**, **Double Simultaneous Jump Race**, **Ordered Simultaneous Jump Race**, **Hidden Simultaneous Jump Race**, Place Move & Fire Lite, Move & Fire
+**Hidden Simultaneous Guess Who Lite**, **Hidden Simultaneous Guess Who Commit Lite**, Simultaneous Step Race, **Hidden Simultaneous Step Race**, **Double Simultaneous Step Race**, **Hidden Double Simultaneous Step Race**, **Simultaneous Jump Race**, **Double Simultaneous Jump Race**, **Ordered Simultaneous Jump Race**, **Hidden Simultaneous Jump Race**, **Hidden Double Simultaneous Jump Race**, Place Move & Fire Lite, Move & Fire
 Lite, Go Lite variants, etc.).
 
 **Form honesty:** form exposes turn schedule/budget/delay/**phases**,
@@ -249,9 +252,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
-expressible vs ladder/net/sente/approach on lite boards); hidden multi-action
-jump preset; hex-graph simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler. Double Simultaneous Jump Race landed
+expressible vs ladder/net/sente/approach on lite boards); hex-graph
+simultaneous jump ports; fire→move reorder (only with
+anchor); realtime scheduler. Hidden Double Simultaneous Jump Race landed
+(M85). Double Simultaneous Jump Race landed
 (M84). Hidden Simultaneous Jump Race landed
 (M83). Ordered Simultaneous Jump Race landed (M82). Simultaneous Jump Race
 landed (M81). Go Lite Approach Net landed
@@ -1346,10 +1350,25 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Preset `double-simultaneous-jump-race` (diagonal; same-piece double-hop
   clears two mids → win in one round) + schema / legality / transcript /
   replay / agent tests — **done**
-- Out of scope: hidden multi-action jump preset; mustLongestCapture / chains
+- Out of scope: mustLongestCapture / chains
   under simultaneous; hex/graph simultaneous jump ports; throw-in /
   connect-and-die; realtime
 - Green gate: ≥889 + new cases — **done**
+
+### M85 — CommitReveal multi-action simultaneous jump
+
+- Schema: `commitReveal` + `actionsPerTurn > 1` + `capture = jump` already
+  allowed under simultaneous rectangle (M83/M84 composition) — **done**
+- Kernel: accumulate N `commitMove`s per seat then reveal via joint mid
+  clear; blind mid-flee abort clears commits without applying; fix abort
+  capture synthesis (same grid ref → skip `pieceCaptured`) — **done**
+- Contracts: `commitRevealMultiActionJumpAccumulatesThenReveals` — **done**
+- Preset `hidden-double-simultaneous-jump-race` (diagonal; private double-hop
+  commits then reveal; mid-flee abort) + schema / legality / transcript /
+  replay / agent tests — **done**
+- Out of scope: mustLongestCapture / chains under simultaneous; hex/graph
+  simultaneous jump ports; throw-in / connect-and-die; realtime
+- Green gate: ≥911 + new cases — **done**
 
 ## Sequencing notes
 
