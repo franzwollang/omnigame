@@ -584,7 +584,7 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.netDeath` (M77), Go Lite Loose Net /
 `objective.looseNetDeath` (M78), Go Lite Sente Ladder /
 `objective.senteLadderDeath` (M79), Go Lite Approach Net /
-`objective.approachNetDeath` (M80).
+`objective.approachNetDeath` (M80), Simultaneous Jump Race (M81).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
