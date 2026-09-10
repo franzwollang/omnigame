@@ -108,12 +108,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M90 | Next missing mechanism (Go Lite L4-Nakade / objective.l4NakadeDeath) | `done` |
 | M91 | Next missing mechanism (Go Lite Straight-4-Nakade / objective.straight4NakadeDeath) | `done` |
 | M92 | Next missing mechanism (Go Lite Bulky-5-Nakade / objective.bulky5NakadeDeath) | `done` |
+| M93 | Next missing mechanism (Go Lite Plus-Nakade / objective.plusNakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M92 Go Lite Bulky-5-Nakade landed. Pick **P3
+**Optimizing for this marathon:** M93 Go Lite Plus-Nakade landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
-with ladder/nakade family); plus/X-pentomino nakade (needs ≥9×9).
+with ladder/nakade family); reject generic any-5-cell flags.
 
 ## Marathon runbook (cloud agents)
 
@@ -1494,6 +1495,24 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Out of scope: plus/X-pentomino (needs ≥9×9); throw-in / connect-and-die;
   hex/graph nakade ports; realtime
 - Green gate: ≥935 + new cases — **done**
+
+### M93 — Go Lite Plus-Nakade / plus (X-pentomino)
+
+- Schema: `objective.plusNakadeDeath` boolean (area_control-only); distinct
+  from bulky-5 (P) and tetromino nakade tables so the plus big-eye stays
+  contrastable — **done**
+- Kernel: `isPlusNakadeVulnerableRegion` (3×3 bbox missing four corners;
+  vital = unique deg-4 center) + `findPlusNakadeDeadCells` /
+  `removePlusNakadeDeadStones`; `areaOutcome` after optional
+  bulky5NakadeDeath, before netDeath — **done**
+- Preset `go-lite-plus-nakade` (9×9 O-ring + interior X shell; eye + plus
+  corridor; Benson-alive / T1-miss / L-miss / square-miss / pyramid-miss /
+  twisted-miss / L4-miss / straight-4-miss / bulky-5-miss / chase-miss;
+  flag → O) + schema / uniqueness / transcript / replay / contrast tests —
+  **done**
+- Out of scope: generic any-5-cell flag; throw-in / connect-and-die;
+  hex/graph nakade ports; realtime
+- Green gate: ≥939 + new cases — **done**
 
 ## Sequencing notes
 

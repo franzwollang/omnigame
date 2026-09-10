@@ -332,14 +332,19 @@ netDeath; edge + seki exempt; distinct from L4 / twisted / pyramid / square /
 T1 / bent-3 so the last free tetromino stays contrastable);
 optional `objective.bulky5NakadeDeath` removes interior groups bordering a
 bulky-5 (P-pentomino) nakade big-eye that would have <2 true eyes after an
-opponent vital fill (after optional straight4NakadeDeath, before netDeath;
-edge + seki exempt; distinct from tetromino nakade tables so the first
-pentomino big-eye stays contrastable);
+opponent vital fill (after optional straight4NakadeDeath, before
+plusNakadeDeath / netDeath; edge + seki exempt; distinct from tetromino nakade
+tables so the first pentomino big-eye stays contrastable);
+optional `objective.plusNakadeDeath` removes interior groups bordering a plus /
+X-pentomino nakade big-eye that would have <2 true eyes after an opponent
+vital fill (after optional bulky5NakadeDeath, before netDeath; edge + seki
+exempt; distinct from bulky-5 (P) and tetromino nakade tables so the plus
+big-eye stays contrastable);
 optional `objective.netDeath`
 removes groups force-capturable by an attacker-sente tight net / geta (root
 exactly 3 liberties; every escape has a finishing reply; after nakadeDeath /
 lNakadeDeath / squareNakadeDeath / pyramidNakadeDeath / twistedNakadeDeath /
-l4NakadeDeath / straight4NakadeDeath / bulky5NakadeDeath,
+l4NakadeDeath / straight4NakadeDeath / bulky5NakadeDeath / plusNakadeDeath,
 before looseNetDeath /
 senteLadderDeath / ladderDeath; edge
 does not save); optional `objective.looseNetDeath` removes
