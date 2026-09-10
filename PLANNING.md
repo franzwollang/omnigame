@@ -72,9 +72,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M54 | Next missing mechanism (graph flood_reveal) | `done` |
 | M55 | Next missing mechanism (flying jump capture) | `done` |
 | M56 | Next missing mechanism (hex liberties / Hex Go Lite) | `done` |
+| M57 | Next missing mechanism (graph liberties / Graph Go Lite) | `done` |
 
-**Optimizing for this marathon:** M56 hex liberties (`Hex Go Lite` /
-cube-axis-6 group capture) landed. Pick **P3 next-missing-mechanism**
+**Optimizing for this marathon:** M57 graph liberties (`Graph Go Lite` /
+explicit-edge group capture) landed. Pick **P3 next-missing-mechanism**
 (smallest new seam; reject recombinations without anchor) — without asking
 which fork.
 
@@ -91,7 +92,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥699** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥707** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -859,6 +860,19 @@ M55; hex liberties in M56).
 - Out of scope: graph Go; komi/seki; hex superko preset variants; hex
   promotion
 - Green gate: ≥699 tests — **done**
+
+### M57 — Graph liberties / Graph Go Lite
+
+- Schema: graph foothold allows `capture.mode = liberties` + `area_control`
+  (explicit-edge); flip/gravity capture still forbidden on graph — **done**
+- Liberties helpers: `libertyNeighbors` graph branch + `graph` threaded
+  through group capture / legality / `scoreArea` (active nodes only) — **done**
+- Reducer/kernel pass `config.graph` into liberty legality / capture /
+  pass scoring — **done**
+- Preset `graph-go-lite` (Graph Go Lite, bridge graph) + unit / schema /
+  transcript / replay tests — **done**
+- Out of scope: full Go; graph superko preset variants; hex/graph promotion
+- Green gate: ≥707 tests — **done**
 
 ## Sequencing notes
 

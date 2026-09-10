@@ -215,7 +215,7 @@ delayTurns → pendingPlaces.
 | Mode | Config | Mechanism |
 |---|---|---|
 | flip | placement.captureMode | Reversi sandwich along adjacency |
-| liberties | placement.captureMode | Go-lite group removal + ko/superko (rectangle von Neumann-4; hex_offset cube-axis-6 — Hex Go Lite) |
+| liberties | placement.captureMode | Go-lite group removal + ko/superko (rectangle von Neumann-4; hex_offset cube-axis-6 — Hex Go Lite; graph explicit-edge — Graph Go Lite) |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; optional `mustLongestCapture` (max chain length); incompatible with `graphReach: hop` |
 | promote | movement.promotion | Transform on reach row (rectangle jump only): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king) and optional `crownedRange` (quiet slide / flying-capture ray depth) via `effectiveMovement`; optional `crownedFlyingCapture` (long-range leap); optional `menForwardOnly` |

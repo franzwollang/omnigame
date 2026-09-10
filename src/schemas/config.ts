@@ -1220,7 +1220,7 @@ export const zConfig = z
 		}
 
 		// Graph foothold: explicit adjacency; cell + n-in-a-row, move + reach_row,
-		// or flood_reveal + clear_hazards (edge hazard adjacency; M54).
+		// flood_reveal + clear_hazards (M54), or liberties + area_control (M57).
 		if (graphBoard) {
 			if (!cfg.grid.nodes || cfg.grid.nodes.length < 2) {
 				ctx.addIssue({
@@ -1238,6 +1238,7 @@ export const zConfig = z
 			}
 			const graphMove = moveInput && reachRow;
 			const graphFlood = floodReveal && clearHazards;
+			const graphLiberty = libertyCapture && areaControl;
 			if (graphMove) {
 				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
 					ctx.addIssue({
@@ -1252,13 +1253,15 @@ export const zConfig = z
 			} else if (graphFlood) {
 				// flood_reveal on graph: explicit-edge hazard counts (M54);
 				// degree ≤ 8 enforced in flood_reveal block
+			} else if (graphLiberty) {
+				// liberties + area_control on graph (M57)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["objective", "mode"],
 						message:
-							"graph requires objective.mode = 'n_in_a_row' (or move + reach_row, or flood_reveal + clear_hazards)"
+							"graph requires objective.mode = 'n_in_a_row' (or move + reach_row, flood_reveal + clear_hazards, or liberties + area_control)"
 					});
 				}
 				if (cfg.input.mode !== "cell") {
@@ -1270,11 +1273,13 @@ export const zConfig = z
 					});
 				}
 			}
-			if (gravityImplied || captureEnabled) {
+			if (gravityImplied || (captureEnabled && !graphLiberty)) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],
-					message: "graph requires direct placement without capture/gravity"
+					message: graphLiberty
+						? "graph liberties require capture.mode = 'liberties' (no gravity / flip)"
+						: "graph requires direct placement without capture/gravity"
 				});
 			}
 			if (hitMiss) {

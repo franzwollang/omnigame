@@ -85,6 +85,7 @@ These are built from the same shared schema and operators.
 - **Toroidal Hex Connect Lite** (`grid.wrap` on hex_offset)
 - **Go Lite** (liberties group capture + simple point ko + pass-to-score area control)
 - **Hex Go Lite** (same on hex_offset — six cube-axis liberties)
+- **Graph Go Lite** (same on graph — liberties follow explicit undirected edges)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
 - **Go Lite Situational Superko** (situational superko — forbids repeating a prior board+side-to-move)
 - **Graph Connect Lite** (explicit `graph` topology + n-in-a-row)
@@ -521,22 +522,23 @@ Forward Men Jump Lite (M50), longest mandatory capture /
 Mandatory Longest Jump Lite (M51), flying kings / crowned quiet range /
 Flying Kings Jump Lite (M52), hex flood_reveal / Hex Minesweeper Lite (M53),
 graph flood_reveal / Graph Minesweeper Lite (M54), flying jump capture /
-Flying Capture Jump Lite (M55), hex liberties / Hex Go Lite (M56).
+Flying Capture Jump Lite (M55), hex liberties / Hex Go Lite (M56),
+graph liberties / Graph Go Lite (M57).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
   fire→move only with anchor; full Go; realtime scheduler; hex-graph
-  promotion; graph Go / liberties; reject recombinations)
+  promotion; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
-  (recombination without anchor); hex-graph promotion; graph liberties;
+  (recombination without anchor); hex-graph promotion;
   memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
   mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
   promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
   crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54;
-  crownedFlyingCapture in M55; hex liberties in M56)
+  crownedFlyingCapture in M55; hex liberties in M56; graph liberties in M57)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

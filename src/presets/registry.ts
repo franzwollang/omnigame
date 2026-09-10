@@ -4310,6 +4310,72 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
+	}),
+	"graph-go-lite": definePreset({
+		id: "graph-go-lite",
+		name: "Graph Go Lite",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"ko",
+			"graph",
+			"mechanism"
+		],
+		description:
+			"Go-lite group capture on an explicit-edge graph: liberties follow undirected edges only (not von Neumann-4 / hex cube-axis). Point ko, pass-to-score area control. Unlocks graph liberties / area_control — not full Go.",
+		config: {
+			metadata: { name: "Graph Go Lite", version: 1 },
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				// Same bridge + triangle as Graph Connect Lite — hub degree 3
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 0, col: 2, x: 2, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 0, x: 0.25, y: 2 },
+					{ row: 2, col: 2, x: 1.75, y: 2 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,1", "0,2"],
+					["0,1", "1,1"],
+					["1,1", "2,0"],
+					["1,1", "2,2"],
+					["2,0", "2,2"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control" },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
 	})
 };
 

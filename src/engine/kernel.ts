@@ -1016,7 +1016,8 @@ function canPlaceCell(
 			koRule: resolveKoRule(config),
 			koPoint: state.koPoint,
 			positionHistory: state.positionHistory,
-			topology: config.topology ?? "rectangle"
+			topology: config.topology ?? "rectangle",
+			graph: config.graph
 		});
 	}
 	const placedCells = setCell(state.grid, pos, player);
@@ -1657,7 +1658,8 @@ function placeFailureReason(
 				koRule,
 				koPoint: state.koPoint,
 				positionHistory: state.positionHistory,
-				topology
+				topology,
+				graph: config.graph
 			})
 		) {
 			return null;
@@ -1672,7 +1674,7 @@ function placeFailureReason(
 				pos,
 				state.currentPlayer,
 				wrap,
-				{ koRule: "none", topology }
+				{ koRule: "none", topology, graph: config.graph }
 			);
 			if (withoutHistory) return "superko";
 		}

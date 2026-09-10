@@ -1112,7 +1112,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 		const { status, winner } = areaOutcome(
 			state.grid,
 			config.gridWrap === true,
-			config.topology ?? "rectangle"
+			config.topology ?? "rectangle",
+			config.graph
 		);
 		return {
 			...state,
@@ -2432,7 +2433,8 @@ function handlePlace(
 				koRule,
 				koPoint: state.koPoint,
 				positionHistory: state.positionHistory,
-				topology
+				topology,
+				graph: config.graph
 			})
 		) {
 			return state;
@@ -2462,7 +2464,8 @@ function handlePlace(
 			pos,
 			state.currentPlayer,
 			wrap,
-			topology
+			topology,
+			config.graph
 		);
 		newCells = capture.cells;
 		nextKoPoint =

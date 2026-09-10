@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T03:45-00:00",
-  "turn": 86,
+  "updated_at": "2026-09-10T03:55+00:00",
+  "turn": 87,
   "focus": {
-    "milestone": "M56",
+    "milestone": "M57",
     "issue": "next-missing-mechanism",
-    "goal": "hex liberties landed; hand off next genuine P3 seam"
+    "goal": "graph liberties landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 75c3 M55 tip onto cursor/next-task-progression-d41d",
-    "Landed M56 Hex Go Lite / topology-aware liberties on hex_offset",
-    "Schema foothold + libertyNeighbors; rect stays von Neumann-4"
+    "Synced from d41d M56 tip onto cursor/next-task-progression-1903",
+    "Landed M57 Graph Go Lite / explicit-edge liberties on graph",
+    "Schema foothold + libertyNeighbors graph; scoreArea skips inactive"
   ],
   "discoveries": [
-    "Four orthogonal surrounds leave two hex liberties — capture differs",
-    "Graph Go deferred; hex promotion still blocked on crowned adjacency"
+    "Hub degree-3 bridge: orthosurrounds leave two graph liberties",
+    "scoreArea must iterate graph.active or inactive cells inflate territory"
   ],
   "open_threads": [
-    "Next: graph Go, full Go, realtime, hex-graph promo; reject recombinations"
+    "Next: full Go, realtime, hex-graph promo; reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M56",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M57",
   "blockers": []
 }
