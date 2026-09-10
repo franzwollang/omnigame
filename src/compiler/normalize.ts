@@ -59,7 +59,28 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		observationMode: config.observation.mode,
 		fogRadius: config.observation.radius,
 		fogMetric: config.observation.metric,
+		hazards: config.hazards
+			? {
+					count: config.hazards.count,
+					firstRevealSafe: config.hazards.firstRevealSafe === true
+				}
+			: undefined,
+		memory: config.memory
+			? {
+					pairCount: config.memory.pairCount,
+					bonusTurnOnMatch: config.memory.bonusTurnOnMatch === true
+				}
+			: undefined,
 		objectiveMode: config.objective.mode,
+		komi:
+			typeof config.objective.komi === "number"
+				? config.objective.komi
+				: undefined,
+		sekiScoring: config.objective.seki === true ? true : undefined,
+		deadStones: config.objective.deadStones === true ? true : undefined,
+		bensonLife: config.objective.bensonLife === true ? true : undefined,
+		dameFill: config.objective.dameFill === true ? true : undefined,
+		markDead: config.objective.markDead === true ? true : undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -78,12 +99,78 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		movement: config.movement
 			? {
 					adjacency: config.movement.adjacency,
-					range: config.movement.range
+					range: config.movement.range,
+					capture: config.movement.capture ?? "none",
+					...(config.movement.mustCapture === true
+						? { mustCapture: true }
+						: {}),
+					...(config.movement.mustLongestCapture === true
+						? { mustLongestCapture: true }
+						: {}),
+					...(config.movement.graphReach
+						? { graphReach: config.movement.graphReach }
+						: {}),
+					...(config.movement.promotion
+						? {
+								promotion: {
+									...(config.movement.promotion.targetRows
+										? {
+												targetRows: {
+													X: config.movement.promotion.targetRows.X,
+													O: config.movement.promotion.targetRows.O
+												}
+											}
+										: {}),
+									...(config.movement.promotion.targetNodes
+										? {
+												targetNodes: {
+													X: config.movement.promotion.targetNodes.X,
+													O: config.movement.promotion.targetNodes.O
+												}
+											}
+										: {}),
+									...(config.movement.promotion.crownedAdjacency
+										? {
+												crownedAdjacency:
+													config.movement.promotion.crownedAdjacency
+											}
+										: {}),
+									...(typeof config.movement.promotion.crownedRange ===
+									"number"
+										? {
+												crownedRange:
+													config.movement.promotion.crownedRange
+											}
+										: {}),
+									...(config.movement.promotion
+										.crownedFlyingCapture === true
+										? { crownedFlyingCapture: true }
+										: {}),
+									...(config.movement.promotion.menForwardOnly === true
+										? { menForwardOnly: true }
+										: {})
+								}
+							}
+						: {})
 				}
 			: undefined,
 		targetRows: config.objective.targetRows,
 		fleet: config.fleet
 			? { ships: [...config.fleet.ships] }
+			: undefined,
+		seed: config.rng.seed,
+		deduction: config.deduction
+			? {
+					roster: config.deduction.roster.map((c) => ({
+						id: c.id,
+						traits: { ...c.traits }
+					})),
+					traits: [...config.deduction.traits],
+					wrongGuess: config.deduction.wrongGuess,
+					autoEliminate: config.deduction.autoEliminate ?? true,
+					queryShape: config.deduction.queryShape ?? "single",
+					compoundArity: config.deduction.compoundArity ?? 2
+				}
 			: undefined,
 		initial: config.initial
 	};
@@ -108,6 +195,12 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	fogRadius: 1,
 	fogMetric: "chebyshev",
 	objectiveMode: "n_in_a_row",
+	komi: undefined,
+	sekiScoring: undefined,
+	deadStones: undefined,
+	bensonLife: undefined,
+	dameFill: undefined,
+	markDead: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,
