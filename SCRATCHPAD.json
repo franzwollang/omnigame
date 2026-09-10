@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T04:33+00:00",
-  "turn": 90,
+  "updated_at": "2026-09-10T04:50+00:00",
+  "turn": 91,
   "focus": {
-    "milestone": "M60",
+    "milestone": "M61",
     "issue": "next-missing-mechanism",
-    "goal": "hub targetNodes promotion landed; hand off next genuine P3 seam"
+    "goal": "hex flying capture landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 3539 M59 tip onto cursor/next-task-progression-0514",
-    "Landed M60 Graph Hub Crowned Jump Lite / promotion.targetNodes",
-    "Schema: exactly one of targetRows|targetNodes; graph-only nodes"
+    "Synced from 0514 M60 tip onto cursor/next-task-progression-98b7",
+    "Landed M61 Hex Flying Capture Jump Lite / crownedFlyingCapture on hex",
+    "Schema: hex allows flying; graph still forbids; cube-axis jump rays"
   ],
   "discoveries": [
-    "mustCapture + hub-adjacent O reply blocks quiet crowned win",
-    "targetRows on hub graph promotes same-row decoy; targetNodes does not"
+    "Opening X(5,3)→(3,2) promote; chain mid O(2,2); fly land (0,1) wins",
+    "Adjacent chain land (1,1) is contrast without flying flag"
   ],
   "open_threads": [
-    "Next: full Go, realtime, hex/graph flying/forward; reject recombinations"
+    "Next: graph flying, hex/graph menForwardOnly, full Go, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M60",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M61",
   "blockers": []
 }

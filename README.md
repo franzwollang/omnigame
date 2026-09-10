@@ -68,6 +68,7 @@ These are built from the same shared schema and operators.
 - **Forward Men Jump Lite** (`menForwardOnly` — uncrowned advance toward promo side only)
 - **Flying Kings Jump Lite** (`crownedRange` — crowned quiet slides longer than men)
 - **Flying Capture Jump Lite** (`crownedFlyingCapture` — crowned long-range leap capture)
+- **Hex Flying Capture Jump Lite** (`hex_offset` + `crownedFlyingCapture` — cube-axis flying leap)
 - **Minesweeper Lite** (`flood_reveal` + `clear_hazards` + seeded mines)
 - **Hex Minesweeper Lite** (`hex_offset` + `flood_reveal` — cube-axis-6 hazard adjacency)
 - **Graph Minesweeper Lite** (`graph` + `flood_reveal` — explicit-edge hazard adjacency)
@@ -221,7 +222,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   advance toward promotion side only; crowned unrestricted) / **Flying Kings
   Jump Lite** (`crownedRange`: crowned quiet slides longer than men; jump
   leaps unchanged) / **Flying Capture Jump Lite** (`crownedFlyingCapture`:
-  crowned ray leap with empty approach + long land within `crownedRange`)
+  crowned ray leap with empty approach + long land within `crownedRange`) /
+  **Hex Flying Capture Jump Lite** (hex_offset cube-axis flying leap)
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous place (Double-Place Simultaneous TTT / Hex / Graph) **or open simultaneous move** (Double Simultaneous Step Race; range 1, no replace) **or commitReveal simultaneous move** (Hidden Double Simultaneous Step Race); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Step Race** / **Hidden Double Simultaneous Step Race** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace /
   jump capture (`movement.capture`; optional `mustCapture` /
@@ -534,23 +536,25 @@ graph flood_reveal / Graph Minesweeper Lite (M54), flying jump capture /
 Flying Capture Jump Lite (M55), hex liberties / Hex Go Lite (M56),
 graph liberties / Graph Go Lite (M57), hex promotion / Hex Crowned Jump Lite
 (M58), graph promotion / Graph Crowned Jump Lite (M59), hub `targetNodes`
-promotion / Graph Hub Crowned Jump Lite (M60).
+promotion / Graph Hub Crowned Jump Lite (M60), hex flying capture /
+Hex Flying Capture Jump Lite (M61).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor; full Go; realtime scheduler; hex/graph
-  flying capture / menForwardOnly geometry; reject recombinations)
+  fire→move only with anchor; full Go; realtime scheduler; graph flying
+  capture / hex-graph menForwardOnly geometry; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
-  (recombination without anchor); hex/graph flying capture / menForwardOnly;
-  memory bonus-turn-on-match / custom decks
+  (recombination without anchor); graph flying capture; hex/graph
+  menForwardOnly; memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
   mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
   promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
   crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54;
   crownedFlyingCapture in M55; hex liberties in M56; graph liberties in M57;
-  hex promotion in M58; graph promotion in M59; hub targetNodes in M60)
+  hex promotion in M58; graph promotion in M59; hub targetNodes in M60;
+  hex crownedFlyingCapture in M61)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

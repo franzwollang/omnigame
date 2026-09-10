@@ -76,11 +76,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M58 | Next missing mechanism (hex promotion / Hex Crowned Jump Lite) | `done` |
 | M59 | Next missing mechanism (graph promotion / Graph Crowned Jump Lite) | `done` |
 | M60 | Next missing mechanism (hub targetNodes promotion / Graph Hub Crowned Jump Lite) | `done` |
+| M61 | Next missing mechanism (hex flying capture / Hex Flying Capture Jump Lite) | `done` |
 
-**Optimizing for this marathon:** M60 hub-graph promotion
-(`Graph Hub Crowned Jump Lite` / `movement.promotion.targetNodes`) landed.
-Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
-without anchor) — without asking which fork.
+**Optimizing for this marathon:** M61 hex flying capture
+(`Hex Flying Capture Jump Lite` / `promotion.crownedFlyingCapture` on
+`hex_offset`) landed. Pick **P3 next-missing-mechanism** (smallest new seam;
+reject recombinations without anchor) — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -95,7 +96,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥737** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥747** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -164,7 +165,8 @@ crowned unrestricted); **Flying Kings Jump Lite** demonstrates
 `promotion.crownedRange` (crowned quiet slides longer than men; jump leaps
 unchanged); **Flying Capture Jump Lite** demonstrates
 `promotion.crownedFlyingCapture` (crowned long-range leap capture within
-`crownedRange`).
+`crownedRange`); **Hex Flying Capture Jump Lite** demonstrates the same on
+`hex_offset` (cube-axis flying leap).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals);
 **Hex Minesweeper Lite** demonstrates the same on `hex_offset` with cube-axis-6
@@ -216,7 +218,9 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler. Hub-graph promotion landed (M60 Graph Hub Crowned Jump Lite).
+scheduler; graph flying capture; hex/graph menForwardOnly. Hex flying
+capture landed (M61 Hex Flying Capture Jump Lite). Hub-graph promotion
+landed (M60 Graph Hub Crowned Jump Lite).
 Graph promotion landed (M59 Graph Crowned Jump Lite). Hex promotion
 landed (M58 Hex Crowned Jump Lite).
 Graph liberties landed (M57 Graph Go Lite). Hex liberties landed
@@ -233,7 +237,7 @@ Mandatory jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
 M45; memory_flip in M46; hex jump in M47; graph jump in M48; promotion in
 M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
 hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
-M55; hex liberties in M56).
+M55; hex liberties in M56; hex crownedFlyingCapture in M61).
 
 ## Phase 2 exit criteria
 
@@ -921,6 +925,19 @@ M55; hex liberties in M56).
 - Out of scope: hex/graph flying capture; hex/graph menForwardOnly;
   simultaneous jump; full Go; realtime
 - Green gate: ≥737 tests — **done**
+
+### M61 — Hex flying capture / Hex Flying Capture Jump Lite
+
+- Schema: allow `crownedFlyingCapture` on `hex_offset` + jump promotion;
+  keep graph forbid; require `crownedRange >= 2` + orthogonal
+  `crownedAdjacency` — **done**
+- Kernel: hex `jumpDestinations` / `jumpMid` cube-axis ray flying capture
+  (mirror rectangle M55; men stay adjacent-only) — **done**
+- Preset `hex-flying-capture-jump-lite` (Hex Flying Capture Jump Lite) +
+  schema / movement / transcript / replay tests — **done**
+- Out of scope: graph flying capture; hex/graph menForwardOnly;
+  simultaneous jump; full Go; realtime
+- Green gate: ≥747 tests — **done**
 
 ## Sequencing notes
 

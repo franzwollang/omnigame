@@ -156,8 +156,10 @@ export const zConfig = z
 		 * (default king on rectangle; orthogonal required on hex/graph).
 		 * Optional `menForwardOnly` restricts uncrowned quiet/jump moves to
 		 * the forward row-delta toward the seat's promotion side (crowned
-		 * unrestricted; rectangle + `targetRows` only). Rectangle |
-		 * hex_offset | graph + jump for v1 (hex/graph forbid menForwardOnly /
+		 * unrestricted; rectangle + `targetRows` only). Optional
+		 * `crownedFlyingCapture` (rectangle | hex_offset) extends crowned
+		 * jump rays (graph still deferred). Rectangle | hex_offset | graph +
+		 * jump for v1 (hex/graph forbid menForwardOnly; graph forbids
 		 * crownedFlyingCapture; graph requires orthogonal crownedAdjacency;
 		 * `targetNodes` is graph-only and mutually exclusive with
 		 * `targetRows`).
@@ -192,8 +194,9 @@ export const zConfig = z
 				 * crowned pieces use `crownedAdjacency` for quiet/jump rays.
 				 * Optional `crownedRange` (default 1) gives crowned quiet
 				 * slides longer than men (`movement.range` stays 1). Optional
-				 * `crownedFlyingCapture` (rectangle) extends crowned jump
-				 * leaps along a clear ray within `crownedRange`. Optional
+				 * `crownedFlyingCapture` (rectangle | hex_offset) extends
+				 * crowned jump leaps along a clear ray within `crownedRange`
+				 * (hex: cube-axis). Optional
 				 * `menForwardOnly` (rectangle + targetRows) restricts
 				 * uncrowned row deltas to the promotion-side advance.
 				 * Hex/graph require orthogonal crownedAdjacency.
@@ -2306,7 +2309,8 @@ export const zConfig = z
 
 		// Piece promotion / crowned kings (Transform lite): rectangle |
 		// hex_offset | graph + jump. Hex/graph: orthogonal crowned adjacency
-		// only; no menForwardOnly / crownedFlyingCapture (rectangle Draughts).
+		// only; no menForwardOnly (rectangle Draughts). Graph still forbids
+		// crownedFlyingCapture (chain-walk flying deferred); hex allows it.
 		if (cfg.movement?.promotion) {
 			if (cfg.movement.capture !== "jump") {
 				ctx.addIssue({
@@ -2357,11 +2361,15 @@ export const zConfig = z
 						message: `${topoLabel} promotion is incompatible with menForwardOnly (rectangle only)`
 					});
 				}
-				if (cfg.movement.promotion.crownedFlyingCapture === true) {
+				if (
+					cfg.grid.topology === "graph" &&
+					cfg.movement.promotion.crownedFlyingCapture === true
+				) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "promotion", "crownedFlyingCapture"],
-						message: `${topoLabel} promotion is incompatible with crownedFlyingCapture (rectangle only)`
+						message:
+							"graph promotion is incompatible with crownedFlyingCapture (rectangle | hex_offset only)"
 					});
 				}
 			}

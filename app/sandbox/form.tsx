@@ -889,12 +889,13 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											for quiet slides longer than men (Flying Kings
 											Jump Lite / Hex Crowned Jump Lite / Graph Crowned
 											Jump Lite / Graph Hub Crowned Jump Lite).
-											Rectangle-only optional{" "}
+											Optional{" "}
 											<code className="text-[11px]">
 												crownedFlyingCapture
 											</code>{" "}
-											for long-range leap capture (Flying Capture Jump
-											Lite). Optional{" "}
+											(rectangle | hex_offset) for long-range leap
+											capture (Flying Capture Jump Lite / Hex Flying
+											Capture Jump Lite; graph still deferred). Optional{" "}
 											<code className="text-[11px]">
 												menForwardOnly
 											</code>{" "}

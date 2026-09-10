@@ -63,7 +63,7 @@ describe("hex movement.promotion schema", () => {
 		expect(parsed.success).toBe(false);
 	});
 
-	it("rejects hex promotion with crownedFlyingCapture", () => {
+	it("accepts hex promotion with crownedFlyingCapture when crownedRange >= 2", () => {
 		const base = structuredClone(
 			examplePresets["hex-crowned-jump-lite"].config
 		);
@@ -76,7 +76,7 @@ describe("hex movement.promotion schema", () => {
 			}
 		};
 		const parsed = zConfig.safeParse(base);
-		expect(parsed.success).toBe(false);
+		expect(parsed.success).toBe(true);
 	});
 
 	it("rejects hex promotion when crownedAdjacency omitted (defaults king)", () => {

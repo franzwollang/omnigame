@@ -15,20 +15,20 @@
  * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king on
  * rectangle; orthogonal required on hex/graph) and optional `crownedRange`
  * (quiet slide depth; default men `range`) via `effectiveMovement`. Optional
- * `crownedFlyingCapture` (rectangle only): crowned pieces may leap over an
- * enemy at any distance along a ray (empties before the mid) and land on any
- * empty cell beyond within `crownedRange` (Draughts-lite flying capture); men
- * stay adjacent single-leap. Optional `menForwardOnly` (rectangle only):
- * uncrowned pieces may only quiet-move / jump with row delta toward their
- * promotion side (derived from the two `targetRows`); crowned pieces ignore
- * the filter.
+ * `crownedFlyingCapture` (rectangle | hex_offset): crowned pieces may leap
+ * over an enemy at any distance along a ray (empties before the mid) and land
+ * on any empty cell beyond within `crownedRange` (Draughts-lite flying
+ * capture; hex uses cube-axis rays); men stay adjacent single-leap. Optional
+ * `menForwardOnly` (rectangle only): uncrowned pieces may only quiet-move /
+ * jump with row delta toward their promotion side (derived from the two
+ * `targetRows`); crowned pieces ignore the filter.
  * Hex_offset: orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
- * hops along one cube dir). Graph: orthogonal chain-walk along explicit edges
- * (range 1..8; no turning at junctions) **or** hop-ball BFS within range
- * (`graphReach: "hop"`; may turn at junctions) — same blocker/replace rules
- * as rectangle/hex — plus jump as a 2-edge leap over an enemy mid node to an
- * empty landing.
+ * hops along one cube dir; flying capture extends rays). Graph: orthogonal
+ * chain-walk along explicit edges (range 1..8; no turning at junctions) **or**
+ * hop-ball BFS within range (`graphReach: "hop"`; may turn at junctions) —
+ * same blocker/replace rules as rectangle/hex — plus jump as a 2-edge leap
+ * over an enemy mid node to an empty landing.
  */
 import type { CellValue, Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -130,11 +130,12 @@ export type MovementConfig = {
 	 */
 	graphReach?: GraphReach;
 	/**
-	 * Crowned kings / Transform lite (rectangle | hex_offset jump): promote
-	 * on `targetRows[seat]`; crowned pieces use `crownedAdjacency` and
-	 * optional `crownedRange` / `crownedFlyingCapture` (rectangle). Optional
+	 * Crowned kings / Transform lite (rectangle | hex_offset | graph jump):
+	 * promote on `targetRows[seat]` / graph `targetNodes`; crowned pieces use
+	 * `crownedAdjacency` and optional `crownedRange` /
+	 * `crownedFlyingCapture` (rectangle | hex_offset). Optional
 	 * `menForwardOnly` (rectangle) restricts uncrowned quiet/jump row deltas.
-	 * Hex requires crownedAdjacency = orthogonal (cube-axis slides / jumps).
+	 * Hex/graph require crownedAdjacency = orthogonal.
 	 */
 	promotion?: MovementPromotion;
 };
@@ -336,6 +337,37 @@ export function jumpMid(
 				if (land.row === to.row && land.col === to.col) return mid;
 			}
 		}
+		// Flying capture: unique enemy between from and to on a cube-axis ray.
+		if (
+			config.promotion?.crownedFlyingCapture === true &&
+			grid &&
+			config.capture === "jump"
+		) {
+			const mover = cellOwner(getCell(grid, from));
+			if (mover === null) return null;
+			for (const d of CUBE_NEIGHBOR_DIRS) {
+				let enemy: Position | null = null;
+				let cursor: Position = from;
+				for (let i = 1; i <= config.range; i++) {
+					const next = stepHex(grid, cursor, d, opts.wrap);
+					if (!next) break;
+					cursor = next;
+					if (cursor.row === to.row && cursor.col === to.col) {
+						return enemy;
+					}
+					const occ = getCell(grid, cursor);
+					if (enemy === null) {
+						if (occ === null) continue;
+						if (isEnemyPiece(occ, mover)) {
+							enemy = cursor;
+							continue;
+						}
+						return null;
+					}
+					if (occ !== null) return null;
+				}
+			}
+		}
 		return null;
 	}
 	for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
@@ -380,10 +412,10 @@ export function jumpMid(
 /**
  * Landing cells reachable by jumping over exactly one enemy to an empty
  * square (rectangle adjacency rays, hex cube-axis double steps, or graph
- * 2-edge leaps). With `crownedFlyingCapture`, crowned rectangle pieces may
- * approach across empties and land any empty cell beyond the mid within
- * `crownedRange`. Distinct from replace (land on enemy) and hop-ball
- * (BFS through empties).
+ * 2-edge leaps). With `crownedFlyingCapture`, crowned rectangle | hex pieces
+ * may approach across empties and land any empty cell beyond the mid within
+ * `crownedRange` (hex uses cube-axis rays). Distinct from replace (land on
+ * enemy) and hop-ball (BFS through empties).
  */
 export function jumpDestinations(
 	grid: Grid,
@@ -421,6 +453,30 @@ export function jumpDestinations(
 
 	if (opts.topology === "hex_offset") {
 		if (eff.adjacency !== "orthogonal") return [];
+		// Hex flying capture (crowned only): cube-axis ray approach + long land.
+		if (usesFlyingCapture(config, cell)) {
+			for (const d of CUBE_NEIGHBOR_DIRS) {
+				let enemyMid: Position | null = null;
+				let cursor: Position = from;
+				for (let i = 1; i <= eff.range; i++) {
+					const next = stepHex(grid, cursor, d, opts.wrap);
+					if (!next) break;
+					cursor = next;
+					const occ = getCell(grid, cursor);
+					if (enemyMid === null) {
+						if (occ === null) continue;
+						if (isEnemyPiece(occ, owner)) {
+							enemyMid = cursor;
+							continue;
+						}
+						break;
+					}
+					if (occ !== null) break;
+					out.push(cursor);
+				}
+			}
+			return out;
+		}
 		for (const d of CUBE_NEIGHBOR_DIRS) {
 			const mid = stepHex(grid, from, d, opts.wrap);
 			if (!mid) continue;

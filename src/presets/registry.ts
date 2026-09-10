@@ -1879,6 +1879,76 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"hex-flying-capture-jump-lite": definePreset({
+		id: "hex-flying-capture-jump-lite",
+		name: "Hex Flying Capture Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"flying",
+			"flying-capture",
+			"crowned-range",
+			"reach-row",
+			"hex",
+			"topology",
+			"6x6",
+			"mechanism"
+		],
+		description:
+			"Hex Draughts-lite flying jump capture: after crowning on odd-r hex, kings may leap over an enemy along a clear cube-axis ray and land beyond the immediate past-mid cell (within crownedRange). mustCapture forces the opening leap onto promo row 3 (≠ win row 0); mustContinueFrom then requires a second jump from the crowned piece. Adjacent-only continuation lands at (1,1); flying capture reaches (0,1) for the win. Unlocks promotion.crownedFlyingCapture on hex_offset — Hex Crowned Jump Lite extends quiet slides only; rectangle Flying Capture Jump Lite cannot express cube-axis rays.",
+		config: {
+			metadata: { name: "Hex Flying Capture Jump Lite", version: 1 },
+			grid: { width: 6, height: 6, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					targetRows: { X: 3, O: 2 },
+					crownedAdjacency: "orthogonal",
+					crownedRange: 4,
+					crownedFlyingCapture: true
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 5 }
+			},
+			tokens: [
+				{
+					id: "hex-flycap-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-flycap-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(5,3) mustCapture-jumps O(4,3)→(3,2): promotes to X+.
+				// mustContinueFrom: O(2,2) is the next mid; adjacent land is
+				// (1,1); crownedFlyingCapture also reaches (0,1) for the win.
+				{ row: 5, col: 3, player: "X", visibility: "public" },
+				{ row: 4, col: 3, player: "O", visibility: "public" },
+				{ row: 2, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"graph-crowned-jump-lite": definePreset({
 		id: "graph-crowned-jump-lite",
 		name: "Graph Crowned Jump Lite",

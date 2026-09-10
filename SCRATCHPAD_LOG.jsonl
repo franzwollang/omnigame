@@ -114,3 +114,4 @@
 {"ts":"2026-09-10T04:10+00:00","focus":"M58 hex promotion","summary":"Landed movement.promotion on hex_offset + Hex Crowned Jump Lite; hand off next P3 seam","next":"Pick smallest genuine next-missing-mechanism after M58"}
 {"ts":"2026-09-10T04:16+00:00","focus":"M59 graph promotion","summary":"Landed movement.promotion on graph + Graph Crowned Jump Lite; hand off next P3 seam","next":"Pick smallest genuine next-missing-mechanism after M59"}
 {"ts":"2026-09-10T04:33+00:00","focus":"M60 hub targetNodes","summary":"Landed Graph Hub Crowned Jump Lite; targetNodes vs targetRows decoy contrast","next":"Pick smallest genuine next-missing-mechanism after M60"}
+{"ts":"2026-09-10T04:50+00:00","focus":"M61 hex flying capture","summary":"Landed Hex Flying Capture Jump Lite / crownedFlyingCapture on hex_offset","next":"Pick smallest genuine next-missing-mechanism after M61"}
