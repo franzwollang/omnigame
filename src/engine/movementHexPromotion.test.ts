@@ -48,7 +48,7 @@ describe("hex movement.promotion schema", () => {
 		}
 	});
 
-	it("rejects hex promotion with menForwardOnly", () => {
+	it("accepts hex promotion with menForwardOnly", () => {
 		const base = structuredClone(
 			examplePresets["hex-crowned-jump-lite"].config
 		);
@@ -60,7 +60,10 @@ describe("hex movement.promotion schema", () => {
 			}
 		};
 		const parsed = zConfig.safeParse(base);
-		expect(parsed.success).toBe(false);
+		expect(parsed.success).toBe(true);
+		if (parsed.success) {
+			expect(parsed.data.movement?.promotion?.menForwardOnly).toBe(true);
+		}
 	});
 
 	it("accepts hex promotion with crownedFlyingCapture when crownedRange >= 2", () => {

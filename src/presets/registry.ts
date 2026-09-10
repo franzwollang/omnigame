@@ -1879,6 +1879,79 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"hex-forward-men-jump-lite": definePreset({
+		id: "hex-forward-men-jump-lite",
+		name: "Hex Forward Men Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"forward-only",
+			"men",
+			"reach-row",
+			"hex",
+			"topology",
+			"6x6",
+			"mechanism"
+		],
+		description:
+			"Hex Checkers-lite forward-only men: uncrowned pieces may only quiet-move or jump with offset-row delta toward their promotion side (same targetRows sign as rectangle Forward Men Jump Lite; cube-axis lands filtered). After crowning, pieces ignore the filter and quiet-slide with crownedRange 2 — including retreat. mustCapture forces the opening forward leap that promotes (promo row ≠ win row). Unlocks promotion.menForwardOnly on hex_offset — rectangle Forward Men cannot express cube-axis forward geometry; Hex Crowned Jump Lite crowns without restricting men direction.",
+		config: {
+			metadata: { name: "Hex Forward Men Jump Lite", version: 1 },
+			grid: { width: 6, height: 6, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					// X advances −row toward 2; O advances +row toward 4.
+					targetRows: { X: 2, O: 4 },
+					crownedAdjacency: "orthogonal",
+					crownedRange: 2,
+					menForwardOnly: true
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 5 }
+			},
+			tokens: [
+				{
+					id: "hex-forward-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hex-forward-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,2) mustCapture-jumps O(3,1)→(2,1): forward + promotes.
+				// Backward cube steps from (4,2) to row 5 are illegal under
+				// menForwardOnly; same-row E/W neighbors (dr=0) also blocked.
+				// Spare O at (3,4) has a forward reply (4,4) or (4,5) toward
+				// promo row 4. After O replies, X+ at (2,1) walks crownedRange
+				// 2 to (0,0) to win — and could also retreat (crowned ignores
+				// the forward filter).
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 3, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-flying-capture-jump-lite": definePreset({
 		id: "hex-flying-capture-jump-lite",
 		name: "Hex Flying Capture Jump Lite",

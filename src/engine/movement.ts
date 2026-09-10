@@ -19,9 +19,11 @@
  * leap over an enemy at any distance along a ray (empties before the mid) and
  * land on any empty cell beyond within `crownedRange` (Draughts-lite flying
  * capture; hex uses cube-axis rays; graph uses chain-walk rays); men stay
- * adjacent single-leap. Optional `menForwardOnly` (rectangle only): uncrowned
- * pieces may only quiet-move / jump with row delta toward their promotion side
- * (derived from the two `targetRows`); crowned pieces ignore the filter.
+ * adjacent single-leap. Optional `menForwardOnly` (rectangle | hex_offset +
+ * `targetRows`): uncrowned pieces may only quiet-move / jump with row delta
+ * toward their promotion side (derived from the two `targetRows`; hex filters
+ * cube-axis destinations by the same offset-row sign); crowned pieces ignore
+ * the filter. Graph still forbids menForwardOnly (needs edge-distance geometry).
  * Hex_offset: orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
  * hops along one cube dir; flying capture extends rays). Graph: orthogonal
@@ -81,8 +83,9 @@ export type MovementPromotion = {
 	crownedFlyingCapture?: boolean;
 	/**
 	 * When true, uncrowned men may only advance toward their promotion side
-	 * (row-delta sign from the two targetRows). Crowned pieces unrestricted.
-	 * Requires `targetRows` (rectangle only).
+	 * (row-delta sign from the two targetRows; hex uses the same offset-row
+	 * filter on cube-axis quiet/jump destinations). Crowned pieces unrestricted.
+	 * Requires `targetRows` (rectangle | hex_offset; graph deferred).
 	 */
 	menForwardOnly?: boolean;
 };
@@ -135,8 +138,9 @@ export type MovementConfig = {
 	 * promote on `targetRows[seat]` / graph `targetNodes`; crowned pieces use
 	 * `crownedAdjacency` and optional `crownedRange` /
 	 * `crownedFlyingCapture` (rectangle | hex_offset | graph). Optional
-	 * `menForwardOnly` (rectangle) restricts uncrowned quiet/jump row deltas.
-	 * Hex/graph require crownedAdjacency = orthogonal.
+	 * `menForwardOnly` (rectangle | hex_offset + targetRows) restricts
+	 * uncrowned quiet/jump row deltas. Hex/graph require crownedAdjacency =
+	 * orthogonal; graph forbids menForwardOnly.
 	 */
 	promotion?: MovementPromotion;
 };
@@ -224,7 +228,10 @@ export function pieceAdjacencyDeltas(
 	return deltas.filter(([dr]) => Math.sign(dr) === sign);
 }
 
-/** Filter destinations to forward row steps for uncrowned menForwardOnly. */
+/**
+ * Filter destinations to forward row steps for uncrowned menForwardOnly.
+ * Shared by rectangle rays and hex cube-axis quiet/jump lands (offset row).
+ */
 function filterMenForwardDestinations(
 	from: Position,
 	dests: Position[],
@@ -561,7 +568,7 @@ export function jumpDestinations(
 			if (!land || getCell(grid, land) !== null) continue;
 			out.push(land);
 		}
-		return out;
+		return filterMenForwardDestinations(from, out, config, cell);
 	}
 
 	// Rectangle flying capture (crowned only): ray approach + long land.
@@ -1113,6 +1120,7 @@ export function legalDestinations(
 
 	if (topology === "hex_offset") {
 		// Cube-axis slides with the same blocker / replace rules as rectangle.
+		// menForwardOnly filters uncrowned quiet ∪ jump lands by offset-row sign.
 		if (eff.adjacency !== "orthogonal") return [];
 		if (eff.capture === "jump") {
 			const quiet = slideHexDestinations(
@@ -1132,9 +1140,14 @@ export function legalDestinations(
 					out.push(j);
 				}
 			}
-			return out;
+			return filterMenForwardDestinations(from, out, config, cell);
 		}
-		return slideHexDestinations(grid, from, eff, wrap, mover);
+		return filterMenForwardDestinations(
+			from,
+			slideHexDestinations(grid, from, eff, wrap, mover),
+			config,
+			cell
+		);
 	}
 
 	// Rectangle: jump capture unions quiet slides (men range 1; crowned may

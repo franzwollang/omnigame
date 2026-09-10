@@ -11,16 +11,16 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Graph flying capture (`Graph Flying Capture Jump Lite` /
-`promotion.crownedFlyingCapture` on `graph`) landed as **M62**. Hex flying
-capture closed as M61; hub-graph promotion as M60; graph promotion as M59;
-hex promotion as M58; graph liberties as M57; hex liberties as M56; flying
-jump capture as M55; graph flood_reveal as M54; hex flood_reveal as M53;
-flying kings as M52; longest mandatory capture as M51; forward-only men as
-M50; crowned promotion as M49; graph jump as M48; hex jump as M47; memory
-flip as M46; mustCapture as M45; rectangle flood_reveal as M44. P4 tooling-ci
-and semantics-doc-refresh already closed (M41–M42; semantics notes continue
-per mechanism).
+Hex forward-only men (`Hex Forward Men Jump Lite` /
+`promotion.menForwardOnly` on `hex_offset`) landed as **M63**. Graph flying
+capture closed as M62; hex flying capture as M61; hub-graph promotion as M60;
+graph promotion as M59; hex promotion as M58; graph liberties as M57; hex
+liberties as M56; flying jump capture as M55; graph flood_reveal as M54; hex
+flood_reveal as M53; flying kings as M52; longest mandatory capture as M51;
+forward-only men as M50; crowned promotion as M49; graph jump as M48; hex
+jump as M47; memory flip as M46; mustCapture as M45; rectangle flood_reveal
+as M44. P4 tooling-ci and semantics-doc-refresh already closed (M41–M42;
+semantics notes continue per mechanism).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -36,8 +36,8 @@ e.g.:
 - multi-action slide/replace under simultaneous (deferred composition; only if
   a new seam appears — not a recombination demo)
 - `queryShape: not` (reject unless nested AST / new pruning class)
-- Hex/graph `menForwardOnly` (requires new forward-edge geometry toward
-  promotion target — not a forbid lift)
+- Graph `menForwardOnly` (requires edge-distance forward geometry toward
+  promotion target — not a forbid lift; `targetNodes` hubs need separate rule)
 - Full Go rules (large; prefer smaller seams first)
 - Realtime / continuous scheduler (large)
 - Simultaneous jump (large composition; deferred)
@@ -84,27 +84,30 @@ menForwardOnly). **Graph Crowned Jump Lite** covers promotion on `graph` via
 **Graph Hub Crowned Jump Lite** covers promotion via `targetNodes` (hub vs
 same-row decoy; graph-only). **Forward Men Jump Lite** covers Checkers-lite
 forward-only men (`promotion.menForwardOnly`; uncrowned row-delta filter;
-crowned unrestricted). **Flying Kings Jump Lite** covers Draughts-lite flying
-kings (`promotion.crownedRange` — crowned quiet slides longer than men; jump
-leaps unchanged without flying capture). **Flying Capture Jump Lite** covers
-Draughts-lite flying jump capture (`promotion.crownedFlyingCapture` —
-crowned ray leap with empty approach + long land). **Hex Flying Capture Jump
-Lite** covers the same on `hex_offset` (cube-axis flying leap). **Graph Flying
-Capture Jump Lite** covers the same on `graph` (chain-walk flying leap).
-**Minesweeper Lite** covers flood-fill region reveal (`flood_reveal` /
-`clear_hazards` / `hazards`) on rectangle. **Hex Minesweeper Lite** covers hex
-cube-axis-6 hazard adjacency. **Graph Minesweeper Lite** covers graph
-explicit-edge hazard adjacency (max degree ≤ 8). **Memory Flip Lite** covers
-tile pair-matching (`memory_flip` / `flip` / `match_pairs` / `memory`).
-**Hex Go Lite** covers liberties + area_control on `hex_offset` (cube-axis-6).
-**Graph Go Lite** covers liberties + area_control on `graph` (explicit-edge).
-Open simultaneous deduction joint UCT covers agent search over
-query/guess(/eliminate) cartesian (fire→move still open if an anchor appears).
-CI green gate: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics
-draft: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
-mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
-promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
-crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54;
-crownedFlyingCapture in M55; hex liberties in M56; graph liberties in M57;
-hex promotion in M58; graph promotion in M59; hub `targetNodes` promotion in
-M60; hex crownedFlyingCapture in M61; graph crownedFlyingCapture in M62).
+crowned unrestricted). **Hex Forward Men Jump Lite** covers the same on
+`hex_offset` (cube-axis lands filtered by offset-row sign). **Flying Kings
+Jump Lite** covers Draughts-lite flying kings (`promotion.crownedRange` —
+crowned quiet slides longer than men; jump leaps unchanged without flying
+capture). **Flying Capture Jump Lite** covers Draughts-lite flying jump
+capture (`promotion.crownedFlyingCapture` — crowned ray leap with empty
+approach + long land). **Hex Flying Capture Jump Lite** covers the same on
+`hex_offset` (cube-axis flying leap). **Graph Flying Capture Jump Lite**
+covers the same on `graph` (chain-walk flying leap). **Minesweeper Lite**
+covers flood-fill region reveal (`flood_reveal` / `clear_hazards` /
+`hazards`) on rectangle. **Hex Minesweeper Lite** covers hex cube-axis-6
+hazard adjacency. **Graph Minesweeper Lite** covers graph explicit-edge
+hazard adjacency (max degree ≤ 8). **Memory Flip Lite** covers tile
+pair-matching (`memory_flip` / `flip` / `match_pairs` / `memory`).
+**Hex Go Lite** covers liberties + area_control on `hex_offset`
+(cube-axis-6). **Graph Go Lite** covers liberties + area_control on `graph`
+(explicit-edge). Open simultaneous deduction joint UCT covers agent search
+over query/guess(/eliminate) cartesian (fire→move still open if an anchor
+appears). CI green gate: `.github/workflows/ci.yml` (Node 20.19 + pnpm
+10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; jump in M43;
+flood_reveal in M44; mustCapture in M45; memory_flip in M46; hex jump in
+M47; graph jump in M48; promotion in M49; menForwardOnly in M50;
+mustLongestCapture in M51; crownedRange in M52; hex flood_reveal in M53;
+graph flood_reveal in M54; crownedFlyingCapture in M55; hex liberties in
+M56; graph liberties in M57; hex promotion in M58; graph promotion in M59;
+hub `targetNodes` promotion in M60; hex crownedFlyingCapture in M61; graph
+crownedFlyingCapture in M62; hex menForwardOnly in M63).

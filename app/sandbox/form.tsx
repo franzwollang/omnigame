@@ -900,9 +900,11 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												menForwardOnly
 											</code>{" "}
-											(rectangle + targetRows) restricts uncrowned
-											quiet/jump moves to the forward row-delta (see
-											Forward Men Jump Lite).
+											(rectangle | hex_offset + targetRows)
+											restricts uncrowned quiet/jump moves to
+											the forward row-delta (see Forward Men Jump
+											Lite / Hex Forward Men Jump Lite; graph
+											deferred).
 										</p>
 									)}
 								</div>

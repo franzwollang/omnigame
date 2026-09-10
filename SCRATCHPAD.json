@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T05:02+00:00",
-  "turn": 92,
+  "updated_at": "2026-09-10T05:20+00:00",
+  "turn": 93,
   "focus": {
-    "milestone": "M62",
+    "milestone": "M63",
     "issue": "next-missing-mechanism",
-    "goal": "graph flying capture landed; hand off next genuine P3 seam"
+    "goal": "hex menForwardOnly landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 98b7 M61 tip onto cursor/next-task-progression-de7c",
-    "Landed M62 Graph Flying Capture Jump Lite / crownedFlyingCapture on graph",
-    "Schema: graph flying allowed; chain-walk jumpDestinations/jumpMid"
+    "Synced from de7c M62 tip onto cursor/next-task-progression-3c3b",
+    "Landed M63 Hex Forward Men Jump Lite / menForwardOnly on hex_offset",
+    "Schema: hex allowed; graph still forbidden; cube-axis row-sign filter"
   ],
   "discoveries": [
-    "Opening X(6,0)→(4,0) promote; chain mid O(3,0); fly land (0,0) wins",
-    "Adjacent chain land (2,0) is contrast without flying flag; junctions stop rays"
+    "Opening X(4,2)→(2,1) promote; O(3,4)→(4,4) forward; X+ (0,0) wins",
+    "Same-row hex neighbors (dr=0) blocked; crowned retreat ignores filter"
   ],
   "open_threads": [
-    "Next: hex/graph menForwardOnly, full Go, realtime, simultaneous jump"
+    "Next: graph menForwardOnly, full Go, realtime, simultaneous jump"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M62",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M63",
   "blockers": []
 }
