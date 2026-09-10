@@ -2049,6 +2049,73 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"flying-kings-jump-lite": definePreset({
+		id: "flying-kings-jump-lite",
+		name: "Flying Kings Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"flying",
+			"crowned-range",
+			"reach-row",
+			"6x6",
+			"mechanism"
+		],
+		description:
+			"Draughts-lite flying kings: men stay diagonal range 1; after crowning, pieces keep diagonal adjacency but quiet-slide with crownedRange 2. mustCapture forces the opening leap onto promo row 2 (≠ win row 0). From (2,4) only a 2-step diagonal reaches win row 0 — Crowned Kings Jump Lite changes adjacency, not slide depth. Jump leaps stay single-step (no flying capture). Unlocks promotion.crownedRange.",
+		config: {
+			metadata: { name: "Flying Kings Jump Lite", version: 1 },
+			grid: { width: 6, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "diagonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					// Promo row ≠ win row so a crowned 2-step quiet is playable.
+					targetRows: { X: 2, O: 3 },
+					crownedAdjacency: "diagonal",
+					crownedRange: 2
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 5 }
+			},
+			tokens: [
+				{
+					id: "flying-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "flying-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,2) mustCapture-jumps O(3,3)→(2,4): promotes to X+.
+				// Men / crownedRange=1 from (2,4) only reach row 1; crownedRange=2
+				// reaches (0,2) for the win after O's quiet reply.
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" },
+				{ row: 5, col: 5, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-replace-race": definePreset({
 		id: "hex-replace-race",
 		name: "Hex Replace Race",

@@ -105,3 +105,4 @@
 {"ts":"2026-08-02T12:35-00:00","focus":"M49 crowned promotion","summary":"Fixed crowned-jump-race demo: promo row 1 ≠ win row 0 so crowned orthogonal step is playable; canvas geometric + badge; 641 green","next":"Pick smallest genuine next-missing-mechanism after M49"}
 {"ts":"2026-08-02T12:50-00:00","focus":"M50 forward-only men","summary":"Landed promotion.menForwardOnly + Forward Men Jump Lite after M49; ≥649 green","next":"Pick smallest genuine next-missing-mechanism after M50"}
 {"ts":"2026-09-10T02:40-00:00","focus":"M51 mustLongestCapture","summary":"Landed longest mandatory capture + Mandatory Longest Jump Lite","next":"Pick next genuine P3 seam after M51"}
+{"ts":"2026-09-10T02:50-00:00","focus":"M52 flying kings","summary":"Landed promotion.crownedRange + Flying Kings Jump Lite after M51","next":"Pick next genuine P3 seam after M52"}

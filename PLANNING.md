@@ -67,8 +67,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M49 | Next missing mechanism (crowned promotion / Transform lite) | `done` |
 | M50 | Next missing mechanism (forward-only men) | `done` |
 | M51 | Next missing mechanism (longest mandatory capture) | `done` |
+| M52 | Next missing mechanism (flying kings / crownedRange) | `done` |
 
-**Optimizing for this marathon:** M51 longest mandatory capture landed. Pick
+**Optimizing for this marathon:** M52 flying kings (`crownedRange`) landed. Pick
 **P3 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
@@ -85,7 +86,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥658** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥667** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -147,7 +148,9 @@ demonstrates `capture = jump` on graph (2-edge leap-over + chains);
 **Crowned Kings Jump Lite** demonstrates `movement.promotion` (Transform lite —
 crown on reach row; crowned adjacency); **Forward Men Jump Lite** demonstrates
 `promotion.menForwardOnly` (uncrowned advance toward promo side only;
-crowned unrestricted).
+crowned unrestricted); **Flying Kings Jump Lite** demonstrates
+`promotion.crownedRange` (crowned quiet slides longer than men; jump leaps
+unchanged).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
 **Memory:** **Memory Flip Lite** demonstrates `memory_flip` + `flip` +
@@ -197,7 +200,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; hex-graph promotion. Longest mandatory capture landed
+scheduler; hex-graph promotion; flying jump capture. Flying kings quiet
+range landed (M52 Flying Kings Jump Lite). Longest mandatory capture landed
 (M51 Mandatory Longest Jump Lite). Forward-only men landed
 (M50 Forward Men Jump Lite). Crowned promotion landed (M49 Crowned Kings
 Jump Lite). Graph jump landed (M48 Graph Jump Race). Hex jump landed
@@ -205,7 +209,8 @@ Jump Lite). Graph jump landed (M48 Graph Jump Race). Hex jump landed
 Jump Race). CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
 Semantics: `docs/semantics.md` (M42; jump in M43; flood_reveal in M44;
 mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in
-M48; promotion in M49; menForwardOnly in M50; mustLongestCapture in M51).
+M48; promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
+crownedRange in M52).
 
 ## Phase 2 exit criteria
 
@@ -766,6 +771,23 @@ M48; promotion in M49; menForwardOnly in M50; mustLongestCapture in M51).
   longest legal) + helper/schema/transcript/replay tests — **done**
 - Out of scope: hex/graph promotion; simultaneous jump; flying kings
 - Green gate: ≥658 tests — **done**
+
+### M52 — Flying kings / crowned quiet range
+
+- Schema: optional `movement.promotion.crownedRange` (int 1–8); men keep
+  `movement.range = 1` under jump; inherits promotion constraints
+  (rectangle jump, alternating) — **done**
+- Movement: `effectiveMovement` sets crowned `range` from `crownedRange`;
+  jump-mode quiet slides use `eff.range` (no longer hardcode 1); jump leap
+  distance unchanged (no flying capture) — **done**
+- Normalize passes `crownedRange`; contract invariant
+  `crownedUsesCrownedRange`; form JSON note — **done**
+- Preset `flying-kings-jump-lite` (Flying Kings Jump Lite — mustCapture jump
+  promotes on row 2; crowned diagonal `crownedRange: 2` slides to win row 0;
+  men / `crownedRange` omitted cannot) + helper/schema/transcript/replay
+  tests — **done**
+- Out of scope: flying jump capture; hex/graph promotion; simultaneous jump
+- Green gate: ≥667 tests — **done**
 
 ## Sequencing notes
 

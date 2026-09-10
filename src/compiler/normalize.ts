@@ -114,6 +114,13 @@ export function flattenToGameConfig(config: Config): GameConfig {
 													config.movement.promotion.crownedAdjacency
 											}
 										: {}),
+									...(typeof config.movement.promotion.crownedRange ===
+									"number"
+										? {
+												crownedRange:
+													config.movement.promotion.crownedRange
+											}
+										: {}),
 									...(config.movement.promotion.menForwardOnly === true
 										? { menForwardOnly: true }
 										: {})

@@ -873,14 +873,19 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												crownedAdjacency
 											</code>{" "}
-											(default king). Optional{" "}
+											(default king) and optional{" "}
+											<code className="text-[11px]">
+												crownedRange
+											</code>{" "}
+											for quiet slides longer than men (Flying Kings
+											Jump Lite). Optional{" "}
 											<code className="text-[11px]">
 												menForwardOnly
 											</code>{" "}
 											restricts uncrowned quiet/jump moves to the
 											forward row-delta (see Forward Men Jump Lite).
 											Crowned Kings Jump Lite covers promotion without
-											the forward filter.
+											the forward filter or flying range.
 										</p>
 									)}
 								</div>

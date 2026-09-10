@@ -218,7 +218,7 @@ delayTurns → pendingPlaces.
 | liberties | placement.captureMode | Go-lite group removal + ko/superko |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; optional `mustLongestCapture` (max chain length); incompatible with `graphReach: hop` |
-| promote | movement.promotion | Transform on reach row (rectangle jump only): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king) via `effectiveMovement`; optional `menForwardOnly` |
+| promote | movement.promotion | Transform on reach row (rectangle jump only): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `menForwardOnly` |
 
 KoRule: none | point | positional | situational.
 
@@ -235,8 +235,11 @@ KoRule: none | point | positional | situational.
   capture chain (Mandatory Longest Jump Lite); Graph Jump Race covers
   explicit-edge leaps (incompatible with graphReach hop)
 - promotion: optional `movement.promotion` (rectangle + jump only);
-  `targetRows` + `crownedAdjacency`; preserve crown on move; emit
-  `piecePromoted` (Crowned Kings Jump Lite); optional `menForwardOnly`
+  `targetRows` + `crownedAdjacency`; optional `crownedRange` (1–8) for
+  crowned quiet slides (men keep `movement.range` = 1 under jump; jump
+  leap distance unchanged — Flying Kings Jump Lite); preserve crown on
+  move; emit `piecePromoted` (Crowned Kings Jump Lite); optional
+  `menForwardOnly`
   restricts uncrowned quiet/jump row deltas toward the promotion side
   (Forward Men Jump Lite; crowned unrestricted)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)

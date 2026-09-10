@@ -152,6 +152,7 @@ export const Contracts = {
 		invariants: [
 			"transformOnReachPromotionRow",
 			"crownedUsesCrownedAdjacency",
+			"crownedUsesCrownedRange",
 			"preserveCrownOnMove",
 			"rectangleJumpOnly",
 			"menForwardOnlyRestrictsUncrowned"

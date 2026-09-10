@@ -183,8 +183,11 @@ export const zConfig = z
 				 * Crowned kings / Transform lite (rectangle jump only): land on
 				 * `targetRows[seat]` → promote in place; crowned pieces use
 				 * `crownedAdjacency` for quiet/jump rays. Optional
+				 * `crownedRange` (default 1) gives crowned quiet slides longer
+				 * than men (`movement.range` stays 1). Optional
 				 * `menForwardOnly` restricts uncrowned row deltas to the
-				 * promotion-side advance.
+				 * promotion-side advance. Jump capture stays single-leap
+				 * (flying capture deferred).
 				 */
 				promotion: z
 					.object({
@@ -198,6 +201,11 @@ export const zConfig = z
 						crownedAdjacency: z
 							.enum(["orthogonal", "diagonal", "king"])
 							.default("king"),
+						/**
+						 * Quiet slide range for crowned pieces (1–8). Men keep
+						 * `movement.range` (= 1 under jump). Default 1.
+						 */
+						crownedRange: z.number().int().min(1).max(8).optional(),
 						/**
 						 * Uncrowned men may only quiet-move / jump with row delta
 						 * toward their promotion side (from the two targetRows).

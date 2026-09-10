@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T02:40-00:00",
-  "turn": 81,
+  "updated_at": "2026-09-10T02:50-00:00",
+  "turn": 82,
   "focus": {
-    "milestone": "M51",
+    "milestone": "M52",
     "issue": "next-missing-mechanism",
-    "goal": "mustLongestCapture landed; hand off next genuine P3 seam"
+    "goal": "crownedRange landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 73cf M50 tip onto cursor/next-task-progression-4985",
-    "Landed M51 mustLongestCapture + Mandatory Longest Jump Lite",
-    "Opening prunes 1-capture vs 2-capture; mid-chain max remaining"
+    "Synced from 4985 M51 tip onto cursor/next-task-progression-f416",
+    "Landed M52 promotion.crownedRange + Flying Kings Jump Lite",
+    "Quiet flying only; jump leap distance unchanged"
   ],
   "discoveries": [
-    "mustLongestCapture requires mustCapture; DFS via applyJumpSim clears",
-    "Short vs long pieces must not share jump-adjacent victims"
+    "effectiveMovement now overrides range for crowned pieces",
+    "Jump-mode quiet slides use eff.range (was hardcoded 1)"
   ],
   "open_threads": [
-    "Next: hex-graph promo, full Go, realtime; reject fire→move recombinations"
+    "Next: hex flood, flying jump capture, full Go, realtime; reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M51",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M52",
   "blockers": []
 }

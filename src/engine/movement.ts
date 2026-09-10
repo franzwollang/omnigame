@@ -11,10 +11,12 @@
  * restricts jump starts / mid-chain branches to those that maximize total
  * pieces captured along the jump tree (Draughts longest-chain rule).
  * Optional `promotion` (rectangle jump): land on `targetRows[seat]` → crown
- * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king) via
- * `effectiveMovement`. Optional `menForwardOnly`: uncrowned pieces may only
- * quiet-move / jump with row delta toward their promotion side (derived from
- * the two `targetRows`); crowned pieces ignore the filter. Hex_offset:
+ * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king) and
+ * optional `crownedRange` (quiet slide depth; default men `range`) via
+ * `effectiveMovement`. Jump capture stays single-leap (no flying capture).
+ * Optional `menForwardOnly`: uncrowned pieces may only quiet-move / jump
+ * with row delta toward their promotion side (derived from the two
+ * `targetRows`); crowned pieces ignore the filter. Hex_offset:
  * orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
  * hops along one cube dir). Graph: orthogonal chain-walk along explicit edges
@@ -48,6 +50,11 @@ export type MovementPromotion = {
 	targetRows: { X: number; O: number };
 	/** Quiet/jump adjacency for crowned pieces. Default king. */
 	crownedAdjacency?: MovementAdjacency;
+	/**
+	 * Quiet slide range for crowned pieces (1–8). Men keep `config.range`.
+	 * Default: same as men range. Does not extend jump leap distance.
+	 */
+	crownedRange?: number;
 	/**
 	 * When true, uncrowned men may only advance toward their promotion side
 	 * (row-delta sign from the two targetRows). Crowned pieces unrestricted.
@@ -85,8 +92,9 @@ export type MovementConfig = {
 	graphReach?: GraphReach;
 	/**
 	 * Crowned kings / Transform lite (rectangle jump): promote on
-	 * `targetRows[seat]`; crowned pieces use `crownedAdjacency`.
-	 * Optional `menForwardOnly` restricts uncrowned quiet/jump row deltas.
+	 * `targetRows[seat]`; crowned pieces use `crownedAdjacency` and
+	 * optional `crownedRange`. Optional `menForwardOnly` restricts
+	 * uncrowned quiet/jump row deltas.
 	 */
 	promotion?: MovementPromotion;
 };
@@ -98,8 +106,9 @@ export type MovementBoard = {
 };
 
 /**
- * Per-piece movement: crowned marks use `crownedAdjacency` (default king);
- * uncrowned use config.adjacency.
+ * Per-piece movement: crowned marks use `crownedAdjacency` (default king)
+ * and optional `crownedRange` (default men `range`); uncrowned use
+ * config.adjacency / config.range.
  */
 export function effectiveMovement(
 	config: MovementConfig,
@@ -108,7 +117,8 @@ export function effectiveMovement(
 	if (!isCrowned(cellValue)) return config;
 	return {
 		...config,
-		adjacency: config.promotion?.crownedAdjacency ?? "king"
+		adjacency: config.promotion?.crownedAdjacency ?? "king",
+		range: config.promotion?.crownedRange ?? config.range
 	};
 }
 
@@ -818,13 +828,13 @@ export function legalDestinations(
 
 	if (topology === "graph") {
 		// Chain-walk (default) or hop-ball BFS; same blocker/replace as rect/hex.
-		// Jump: quiet range-1 edge neighbors ∪ 2-edge leap landings.
+		// Jump: quiet slides (eff.range; promotion is rectangle-only so 1) ∪ leaps.
 		if (eff.adjacency !== "orthogonal" || !graph) return [];
 		if (eff.capture === "jump") {
 			const quiet = slideGraphDestinations(
 				grid,
 				from,
-				{ ...eff, capture: "none", range: 1 },
+				{ ...eff, capture: "none" },
 				graph,
 				mover
 			);
@@ -853,7 +863,7 @@ export function legalDestinations(
 			const quiet = slideHexDestinations(
 				grid,
 				from,
-				{ ...eff, capture: "none", range: 1 },
+				{ ...eff, capture: "none" },
 				wrap,
 				mover
 			);
@@ -872,12 +882,13 @@ export function legalDestinations(
 		return slideHexDestinations(grid, from, eff, wrap, mover);
 	}
 
-	// Rectangle: jump capture unions quiet adjacent empties with leap landings.
+	// Rectangle: jump capture unions quiet slides (men range 1; crowned may
+	// use crownedRange) with single-leap landings (jump distance unchanged).
 	if (eff.capture === "jump") {
 		const quiet = slideDestinations(
 			grid,
 			from,
-			{ ...eff, capture: "none", range: 1 },
+			{ ...eff, capture: "none" },
 			wrap,
 			mover,
 			cell
