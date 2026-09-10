@@ -796,6 +796,41 @@ function applyJumpSim(
 }
 
 /**
+ * Solo-apply a seat's move list onto a probe grid, clearing jump mids when
+ * `capture = jump`. Used for multi-action simultaneous move chains (open,
+ * commitReveal probe, stepPly, jointLegal enumeration).
+ */
+export function applySoloMovesCaptureAware(
+	grid: Grid,
+	player: Player,
+	moves: readonly { from: Position; to: Position }[],
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false
+): Grid {
+	let g = grid;
+	for (const m of moves) {
+		if (config.capture === "jump") {
+			const jumped = applyJumpSim(
+				g,
+				m.from,
+				m.to,
+				config,
+				wrapOrBoard,
+				player
+			);
+			if (jumped) {
+				g = jumped;
+				continue;
+			}
+		}
+		let cells = setCell(g, m.from, null);
+		cells = setCell({ ...g, cells }, m.to, player);
+		g = { ...g, cells };
+	}
+	return g;
+}
+
+/**
  * Maximum number of captures reachable by a jump tree starting at `from`
  * (0 when no jump exists). Pure DFS over `jumpDestinations` with simulated
  * clears — used by `mustLongestCapture`.

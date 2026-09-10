@@ -58,6 +58,7 @@ These are built from the same shared schema and operators.
 - **Graph Replace Race** (`graph` + `capture: replace` — chain-walk attrition)
 - **Jump Race** (`movement.capture = jump` — leap over enemy + mustContinueFrom chains)
 - **Simultaneous Jump Race** (joint simultaneous × jump — single-hop mid clear)
+- **Double Simultaneous Jump Race** (`actionsPerTurn > 1` × simultaneous jump — multi-hop rounds without mustContinueFrom)
 - **Ordered Simultaneous Jump Race** (ordered simultaneous × jump — sequential mid clear / capture-before-flee)
 - **Hidden Simultaneous Jump Race** (`commitReveal` × simultaneous jump — blind mid-flee abort)
 - **Hex Jump Race** (`hex_offset` + `capture: jump` — cube-axis leap-over chains)
@@ -139,6 +140,7 @@ These are built from the same shared schema and operators.
 - **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
 - **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
 - **Simultaneous Jump Race** (`simultaneous` + `capture: jump`; single-hop mid clear + pieceCaptured)
+- **Double Simultaneous Jump Race** (`actionsPerTurn = 2` + `capture: jump`; same-piece double-hop mid clears)
 - **Ordered Simultaneous Jump Race** (`resolveOrder` + `capture: jump`; sequential mid clear + capture-before-flee)
 - **Hidden Simultaneous Jump Race** (`commitReveal` + `capture: jump`; private commitMove then reveal; blind mid-flee aborts)
 - **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
@@ -232,8 +234,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   hop-ball BFS (`movement.graphReach = hop`; may turn at junctions) —
   Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Hop Race** /
   **Graph Replace Race**; jump capture (rectangle | hex_offset | graph;
-  alternating chains or simultaneous single-hop) — **Jump Race** /
-  **Simultaneous Jump Race** / **Ordered Simultaneous Jump Race** / **Hidden Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
+  alternating chains or simultaneous single-/multi-hop) — **Jump Race** /
+  **Simultaneous Jump Race** / **Double Simultaneous Jump Race** / **Ordered Simultaneous Jump Race** / **Hidden Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
   **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump
   exists; incompatible with `graphReach: hop`); **Mandatory Longest Jump Lite**
   (`mustLongestCapture` keeps only max-length jump chains); optional
@@ -589,14 +591,15 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.looseNetDeath` (M78), Go Lite Sente Ladder /
 `objective.senteLadderDeath` (M79), Go Lite Approach Net /
 `objective.approachNetDeath` (M80), Simultaneous Jump Race (M81),
-Ordered Simultaneous Jump Race (M82), Hidden Simultaneous Jump Race (M83).
+Ordered Simultaneous Jump Race (M82), Hidden Simultaneous Jump Race (M83),
+Double Simultaneous Jump Race (M84).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  multi-action simultaneous jump; fuller Go remainder if uniquely
-  expressible; fire→move only with anchor; realtime scheduler; reject
-  recombinations)
+  hidden multi-action simultaneous jump preset; fuller Go remainder if
+  uniquely expressible; fire→move only with anchor; realtime scheduler;
+  reject recombinations)
 - Deferred: fuller Go rules (approach net landed as M80; sente ladder as M79;
   loose net as M78; net as M77; nakade as M76; semeai as M75;
   territory+prisoners as M74; ladders as M73;

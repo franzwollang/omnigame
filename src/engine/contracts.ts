@@ -141,7 +141,7 @@ export const Contracts = {
 			"mustCaptureForbidsQuietWhenJumpExists",
 			"mustLongestCapturePrunesShorterChains",
 			"jumpChainsAlternatingOnly",
-			"simultaneousJumpSingleHopOnly"
+			"simultaneousJumpNoMustContinueFrom"
 		]
 	}),
 	MovementPromotion: (): FeatureContract => ({

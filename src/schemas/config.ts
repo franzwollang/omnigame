@@ -143,8 +143,11 @@ export const zConfig = z
 		 * hex uses cube-axis double steps; graph uses a 2-edge leap over an
 		 * enemy mid node). Under alternating, further jumps from the landing
 		 * keep the same seat (`mustContinueFrom` chain). Under simultaneous
-		 * (rectangle + joint, single-hop only), both seats move once per
-		 * round with mid cleared on apply — no `mustContinueFrom` chains.
+		 * (rectangle; joint / ordered / commitReveal), seats move once per
+		 * round by default with mid cleared on apply — no `mustContinueFrom`
+		 * chains. Multi-action (`actionsPerTurn > 1`) indexes N hop/quiet
+		 * pairs per round (same-piece `to→from` chains allowed); still no
+		 * `mustContinueFrom`.
 		 * Optional `mustCapture: true` forbids quiet moves at turn/round
 		 * start when any jump exists (Checkers-lite mandatory capture).
 		 * Optional `mustLongestCapture: true` (requires `mustCapture`) keeps
@@ -2539,8 +2542,8 @@ export const zConfig = z
 				});
 			}
 			if (cfg.turn.schedule === "simultaneous") {
-				// M81 joint + M82 ordered + M83 commitReveal simultaneous
-				// single-hop jump on rectangle only (multi-action still deferred).
+				// M81 joint + M82 ordered + M83 commitReveal + M84 multi-action
+				// simultaneous jump on rectangle only (hex/graph deferred).
 				if (cfg.grid.topology !== "rectangle") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
@@ -2582,12 +2585,15 @@ export const zConfig = z
 						"movement.capture = 'jump' requires movement.range = 1 (jump distance is always 2)"
 				});
 			}
-			if ((cfg.turn.actionsPerTurn ?? 1) > 1) {
+			if (
+				(cfg.turn.actionsPerTurn ?? 1) > 1 &&
+				cfg.turn.schedule !== "simultaneous"
+			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["turn", "actionsPerTurn"],
 					message:
-						"movement.capture = 'jump' is incompatible with actionsPerTurn > 1 (chains use mustContinueFrom)"
+						"movement.capture = 'jump' is incompatible with actionsPerTurn > 1 under alternating (chains use mustContinueFrom); simultaneous multi-action jump is allowed"
 				});
 			}
 			if ((cfg.turn.phases?.length ?? 0) > 0) {

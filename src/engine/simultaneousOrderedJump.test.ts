@@ -47,7 +47,7 @@ describe("schema: ordered simultaneous jump (M82)", () => {
 		expect(validateConfig(cfg).ok).toBe(true);
 	});
 
-	it("still rejects multi-action under simultaneous jump", () => {
+	it("accepts multi-action under ordered simultaneous jump (M84 schema)", () => {
 		const cfg = {
 			...examplePresets["ordered-simultaneous-jump-race"].config,
 			turn: {
@@ -57,7 +57,8 @@ describe("schema: ordered simultaneous jump (M82)", () => {
 				actionsPerTurn: 2
 			}
 		};
-		expect(validateConfig(cfg).ok).toBe(false);
+		expect(validateConfig(cfg).ok).toBe(true);
+		expect(zConfig.safeParse(cfg).success).toBe(true);
 	});
 
 	it("still rejects hex simultaneous jump", () => {

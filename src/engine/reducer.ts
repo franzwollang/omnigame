@@ -22,7 +22,6 @@ import {
 	positionsEqual,
 	setCell,
 	toIndex,
-	applySoloMoves,
 	type MovePair
 } from "./types";
 import { checkWinner, type AdjacencyConfig } from "@/engine/rules";
@@ -62,6 +61,7 @@ import {
 	jumpMid,
 	landsOnPromotionTarget,
 	movementBoardFrom,
+	applySoloMovesCaptureAware,
 	type MovementConfig
 } from "@/engine/movement";
 import { isCrowned, promote } from "@/engine/pieces";
@@ -1976,7 +1976,13 @@ function handleCommitMove(
 	const nextPair: MovePair = { from, to };
 	if (listHasMove(own, nextPair)) return state;
 
-	const probe = applySoloMoves(state.grid, player, own);
+	const probe = applySoloMovesCaptureAware(
+		state.grid,
+		player,
+		own,
+		movement,
+		board
+	);
 	if (!canMove(probe, from, to, player, movement, board)) return state;
 
 	const nextOwn = [...own, nextPair];

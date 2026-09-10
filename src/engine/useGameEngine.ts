@@ -18,8 +18,9 @@ import {
 	type PlayerId,
 	type Seed
 } from "@/engine/kernel";
-import { listHasPosition, positionsEqual, setCell, applySoloMoves, type MovePair } from "@/engine/types";
+import { listHasPosition, positionsEqual, setCell, type MovePair } from "@/engine/types";
 import {
+	applySoloMovesCaptureAware,
 	canMove,
 	movementBoardFrom
 } from "@/engine/movement";
@@ -259,11 +260,16 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 					if (!selected) {
 						if (ownCommits.length > 0) {
 							const lastTo = ownCommits[ownCommits.length - 1]!.to;
-							const probe = applySoloMoves(
-								stateRef.current.grid,
-								seat,
-								ownCommits
-							);
+							const movement = config.movement;
+							const probe = movement
+								? applySoloMovesCaptureAware(
+										stateRef.current.grid,
+										seat,
+										ownCommits,
+										movement,
+										movementBoardFrom(config)
+									)
+								: stateRef.current.grid;
 							const probeOcc = getCell(probe, pos);
 							if (
 								positionsEqual(lastTo, pos) ||
@@ -292,12 +298,16 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 						setSelectedFrom(pos);
 						return;
 					}
-					const probe = applySoloMoves(
-						stateRef.current.grid,
-						seat,
-						ownCommits
-					);
 					const movement = config.movement;
+					const probe = movement
+						? applySoloMovesCaptureAware(
+								stateRef.current.grid,
+								seat,
+								ownCommits,
+								movement,
+								movementBoardFrom(config)
+							)
+						: stateRef.current.grid;
 					const moveOk =
 						!!movement &&
 						canMove(

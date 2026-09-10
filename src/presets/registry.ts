@@ -3922,7 +3922,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Joint simultaneous diagonal jump: X leaps over a stationary O mid to the target row while O steps a second piece. Single-hop per round (no mustContinueFrom chains). Unlocks simultaneous × jump — Ordered Simultaneous Jump Race covers resolveOrder priority at mid; Hidden Simultaneous Jump Race covers commitReveal; alternating Jump Race keeps multi-jump chains; Simultaneous Replace Race lands on the enemy rather than leaping over.",
+			"Joint simultaneous diagonal jump: X leaps over a stationary O mid to the target row while O steps a second piece. Single hop per round by default (no mustContinueFrom chains). Unlocks simultaneous × jump — Double Simultaneous Jump Race covers actionsPerTurn > 1 multi-hop rounds; Ordered Simultaneous Jump Race covers resolveOrder priority at mid; Hidden Simultaneous Jump Race covers commitReveal; alternating Jump Race keeps multi-jump chains; Simultaneous Replace Race lands on the enemy rather than leaping over.",
 		config: {
 			metadata: { name: "Simultaneous Jump Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -3956,6 +3956,67 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 2, col: 0, player: "X", visibility: "public" },
 				{ row: 1, col: 1, player: "O", visibility: "public" },
 				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"double-simultaneous-jump-race": definePreset({
+		id: "double-simultaneous-jump-race",
+		name: "Double Simultaneous Jump Race",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"reach-row",
+			"simultaneous",
+			"actionsPerTurn",
+			"multi-action",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Each seat submits two diagonal hops/steps per simultaneous round; indexed pairs resolve jointly with mid clear per index. Same-piece to→from chains allowed without mustContinueFrom. Unlocks actionsPerTurn > 1 under simultaneous × jump — single-hop is Simultaneous Jump Race; quiet multi-action is Double Simultaneous Step Race; commitReveal multi-jump deferred.",
+		config: {
+			metadata: {
+				name: "Double Simultaneous Jump Race",
+				version: 1
+			},
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				actionsPerTurn: 2
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "diagonal", range: 1, capture: "jump" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "dbl-sim-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "dbl-sim-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,0) jumps mid O(3,1)→(2,2) then mid O(1,3)→(0,4) wins in one round.
+				// O runner (0,0) takes two quiet diagonal steps (not fleeing either mid).
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 3, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
 			]
 		}
 	}),

@@ -69,7 +69,7 @@ describe("simultaneous jump (M81)", () => {
 		expect(validateConfig(cfg).ok).toBe(false);
 	});
 
-	it("rejects simultaneous jump with actionsPerTurn > 1", () => {
+	it("accepts simultaneous jump with actionsPerTurn > 1 (M84)", () => {
 		const cfg = {
 			...examplePresets["simultaneous-jump-race"].config,
 			turn: {
@@ -78,7 +78,8 @@ describe("simultaneous jump (M81)", () => {
 				actionsPerTurn: 2
 			}
 		};
-		expect(validateConfig(cfg).ok).toBe(false);
+		expect(validateConfig(cfg).ok).toBe(true);
+		expect(zConfig.safeParse(cfg).success).toBe(true);
 	});
 
 	it("joint legality: stationary mid jump + quiet opponent", () => {

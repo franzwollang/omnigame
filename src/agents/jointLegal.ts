@@ -13,8 +13,7 @@ import {
 	asMoveList,
 	asPlacementList,
 	getCell,
-	pendingFingerprint,
-	setCell
+	pendingFingerprint
 } from "@/engine/types";
 import type {
 	GameKernel,
@@ -33,6 +32,7 @@ import {
 } from "@/engine/kernel";
 import { formatQueryFingerprint } from "@/engine/deduction";
 import {
+	applySoloMovesCaptureAware,
 	canMove,
 	legalDestinations,
 	movementBoardFrom
@@ -165,10 +165,17 @@ export function orderedMoveChains(
 				) {
 					continue;
 				}
-				let cells = setCell(grid, from, null);
-				cells = setCell({ ...grid, cells }, to, seat);
 				picked.push(action);
-				rec({ ...grid, cells }, picked);
+				rec(
+					applySoloMovesCaptureAware(
+						grid,
+						seat,
+						[{ from, to }],
+						movement,
+						board
+					),
+					picked
+				);
 				picked.pop();
 			}
 		}

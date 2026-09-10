@@ -65,7 +65,7 @@ describe("schema: commitReveal × simultaneous jump (M83)", () => {
 		expect(validateConfig(cfg).ok).toBe(false);
 	});
 
-	it("still rejects actionsPerTurn > 1 under simultaneous jump", () => {
+	it("accepts actionsPerTurn > 1 under commitReveal simultaneous jump (M84)", () => {
 		const cfg = {
 			...examplePresets["hidden-simultaneous-jump-race"].config,
 			turn: {
@@ -75,7 +75,8 @@ describe("schema: commitReveal × simultaneous jump (M83)", () => {
 				actionsPerTurn: 2
 			}
 		};
-		expect(validateConfig(cfg).ok).toBe(false);
+		expect(validateConfig(cfg).ok).toBe(true);
+		expect(zConfig.safeParse(cfg).success).toBe(true);
 	});
 
 	it("still rejects mustLongestCapture under simultaneous jump", () => {
