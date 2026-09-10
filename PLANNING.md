@@ -71,9 +71,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M53 | Next missing mechanism (hex flood_reveal) | `done` |
 | M54 | Next missing mechanism (graph flood_reveal) | `done` |
 | M55 | Next missing mechanism (flying jump capture) | `done` |
+| M56 | Next missing mechanism (hex liberties / Hex Go Lite) | `done` |
 
-**Optimizing for this marathon:** M55 flying jump capture (`Flying Capture
-Jump Lite` / `crownedFlyingCapture`) landed. Pick **P3 next-missing-mechanism**
+**Optimizing for this marathon:** M56 hex liberties (`Hex Go Lite` /
+cube-axis-6 group capture) landed. Pick **P3 next-missing-mechanism**
 (smallest new seam; reject recombinations without anchor) — without asking
 which fork.
 
@@ -90,7 +91,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥692** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥699** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -208,8 +209,9 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; hex-graph promotion. Flying jump capture landed (M55 Flying
-Capture Jump Lite). Graph flood_reveal landed (M54 Graph Minesweeper Lite).
+scheduler; hex-graph promotion; graph liberties. Hex liberties landed
+(M56 Hex Go Lite). Flying jump capture landed (M55 Flying Capture Jump
+Lite). Graph flood_reveal landed (M54 Graph Minesweeper Lite).
 Hex flood_reveal landed (M53 Hex Minesweeper Lite). Flying kings quiet range
 landed (M52 Flying Kings Jump Lite). Longest mandatory capture landed (M51
 Mandatory Longest Jump Lite). Forward-only men landed (M50 Forward Men Jump
@@ -221,7 +223,7 @@ Mandatory jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
 M45; memory_flip in M46; hex jump in M47; graph jump in M48; promotion in
 M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
 hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
-M55).
+M55; hex liberties in M56).
 
 ## Phase 2 exit criteria
 
@@ -843,6 +845,20 @@ M55).
 - Out of scope: hex/graph flying capture; simultaneous jump; multi-jump
   direction-change demos beyond existing chains
 - Green gate: ≥692 tests — **done**
+
+### M56 — Hex liberties / Hex Go Lite
+
+- Schema: hex foothold allows `capture.mode = liberties` + `area_control`
+  (cube-axis-6); flip/gravity capture still forbidden on hex — **done**
+- Liberties helpers: `libertyNeighbors` / topology-threaded group capture +
+  area scoring; rectangle stays von Neumann-4 — **done**
+- Reducer/kernel pass `config.topology` into liberty legality / capture /
+  pass scoring — **done**
+- Preset `hex-go-lite` (Hex Go Lite) + unit / schema / transcript / replay
+  tests — **done**
+- Out of scope: graph Go; komi/seki; hex superko preset variants; hex
+  promotion
+- Green gate: ≥699 tests — **done**
 
 ## Sequencing notes
 

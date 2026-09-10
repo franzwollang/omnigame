@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T03:29-00:00",
-  "turn": 85,
+  "updated_at": "2026-09-10T03:45-00:00",
+  "turn": 86,
   "focus": {
-    "milestone": "M55",
+    "milestone": "M56",
     "issue": "next-missing-mechanism",
-    "goal": "flying jump capture landed; hand off next genuine P3 seam"
+    "goal": "hex liberties landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 0665 M54 tip onto cursor/next-task-progression-75c3",
-    "Landed M55 crownedFlyingCapture + Flying Capture Jump Lite",
-    "Crowned ray leap; men adjacent; crownedRange>=2 required"
+    "Synced from 75c3 M55 tip onto cursor/next-task-progression-d41d",
+    "Landed M56 Hex Go Lite / topology-aware liberties on hex_offset",
+    "Schema foothold + libertyNeighbors; rect stays von Neumann-4"
   ],
   "discoveries": [
-    "Quiet slide blocked by mid makes flying land the unique win path",
-    "crownedFlyingCapture with crownedRange 1 yields zero landings"
+    "Four orthogonal surrounds leave two hex liberties — capture differs",
+    "Graph Go deferred; hex promotion still blocked on crowned adjacency"
   ],
   "open_threads": [
-    "Next: full Go, realtime, hex-graph promo; reject recombinations"
+    "Next: graph Go, full Go, realtime, hex-graph promo; reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M55",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M56",
   "blockers": []
 }

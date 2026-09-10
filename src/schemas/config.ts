@@ -1156,11 +1156,12 @@ export const zConfig = z
 			}
 		}
 
-		// Hex foothold: cell + n-in-a-row, move + reach_row, or flood_reveal +
-		// clear_hazards (cube-axis hazard adjacency). No gravity/column/tick/capture.
+		// Hex foothold: cell + n-in-a-row, move + reach_row, flood_reveal +
+		// clear_hazards, or liberties + area_control (cube-axis group capture).
 		if (hexBoard) {
 			const hexMove = moveInput && reachRow;
 			const hexFlood = floodReveal && clearHazards;
+			const hexLiberty = libertyCapture && areaControl;
 			if (hexMove) {
 				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
 					ctx.addIssue({
@@ -1173,13 +1174,15 @@ export const zConfig = z
 				// hex_offset sliding range 1..8 on cube axes (M21)
 			} else if (hexFlood) {
 				// flood_reveal on hex_offset: cube-axis-6 counts (M53)
+			} else if (hexLiberty) {
+				// liberties + area_control on hex_offset (M56)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["objective", "mode"],
 						message:
-							"hex_offset requires objective.mode = 'n_in_a_row' (or move + reach_row, or flood_reveal + clear_hazards)"
+							"hex_offset requires objective.mode = 'n_in_a_row' (or move + reach_row, flood_reveal + clear_hazards, or liberties + area_control)"
 					});
 				}
 				if (cfg.input.mode !== "cell") {
@@ -1191,12 +1194,13 @@ export const zConfig = z
 					});
 				}
 			}
-			if (gravityImplied || captureEnabled) {
+			if (gravityImplied || (captureEnabled && !hexLiberty)) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["placement"],
-					message:
-						"hex_offset requires direct placement without capture/gravity"
+					message: hexLiberty
+						? "hex_offset liberties require capture.mode = 'liberties' (no gravity / flip)"
+						: "hex_offset requires direct placement without capture/gravity"
 				});
 			}
 			if (hitMiss) {

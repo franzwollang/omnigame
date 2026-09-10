@@ -1111,7 +1111,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 	if (passes >= 2) {
 		const { status, winner } = areaOutcome(
 			state.grid,
-			config.gridWrap === true
+			config.gridWrap === true,
+			config.topology ?? "rectangle"
 		);
 		return {
 			...state,
@@ -2430,7 +2431,8 @@ function handlePlace(
 			!isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
 				koRule,
 				koPoint: state.koPoint,
-				positionHistory: state.positionHistory
+				positionHistory: state.positionHistory,
+				topology
 			})
 		) {
 			return state;
@@ -2459,7 +2461,8 @@ function handlePlace(
 			{ ...state.grid, cells: newCells },
 			pos,
 			state.currentPlayer,
-			wrap
+			wrap,
+			topology
 		);
 		newCells = capture.cells;
 		nextKoPoint =

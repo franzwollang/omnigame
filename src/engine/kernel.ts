@@ -1015,7 +1015,8 @@ function canPlaceCell(
 		return isLegalLibertyPlace(state.grid, pos, player, wrap, {
 			koRule: resolveKoRule(config),
 			koPoint: state.koPoint,
-			positionHistory: state.positionHistory
+			positionHistory: state.positionHistory,
+			topology: config.topology ?? "rectangle"
 		});
 	}
 	const placedCells = setCell(state.grid, pos, player);
@@ -1650,11 +1651,13 @@ function placeFailureReason(
 		) {
 			return "ko";
 		}
+		const topology = config.topology ?? "rectangle";
 		if (
 			isLegalLibertyPlace(state.grid, pos, state.currentPlayer, wrap, {
 				koRule,
 				koPoint: state.koPoint,
-				positionHistory: state.positionHistory
+				positionHistory: state.positionHistory,
+				topology
 			})
 		) {
 			return null;
@@ -1669,7 +1672,7 @@ function placeFailureReason(
 				pos,
 				state.currentPlayer,
 				wrap,
-				{ koRule: "none" }
+				{ koRule: "none", topology }
 			);
 			if (withoutHistory) return "superko";
 		}

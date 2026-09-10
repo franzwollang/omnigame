@@ -4266,6 +4266,50 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placements: [],
 			initial: []
 		}
+	}),
+	"hex-go-lite": definePreset({
+		id: "hex-go-lite",
+		name: "Hex Go Lite",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"ko",
+			"hex",
+			"mechanism"
+		],
+		description:
+			"Go-lite group capture on hex_offset: six cube-axis liberties (not von Neumann-4), point ko, pass-to-score area control. Unlocks hex liberties / area_control — not full Go, not graph Go.",
+		config: {
+			metadata: { name: "Hex Go Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control" },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
 	})
 };
 
