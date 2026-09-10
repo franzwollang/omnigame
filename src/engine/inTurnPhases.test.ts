@@ -111,10 +111,11 @@ describe("schema: turn.phases in-turn sequence", () => {
 
 		const { gameConfig } = compileToGameConfig(cfg);
 		expect(gameConfig.turnPhases).toEqual(["place", "move"]);
-		expect(gameConfig.movement).toEqual({
-			adjacency: "orthogonal",
-			range: 1
-		});
+	expect(gameConfig.movement).toEqual({
+		adjacency: "orthogonal",
+		range: 1,
+		capture: "none"
+	});
 		expect(gameConfig.inputMode).toBe("cell");
 	});
 });
