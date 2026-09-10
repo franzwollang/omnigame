@@ -226,6 +226,12 @@ export type GameConfig = {
 	 * race (semeai) against a higher-liberty opponent sharing a liberty (M75).
 	 */
 	semeaiDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * T1 (3-straight) nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill (M76).
+	 */
+	nakadeDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1240,7 +1246,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.ladderDeath === true,
 				config.territoryPrisoners === true,
 				state.prisoners ?? { X: 0, O: 0 },
-				config.semeaiDeath === true
+				config.semeaiDeath === true,
+				config.nakadeDeath === true
 			);
 			return {
 				...state,
@@ -1265,7 +1272,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.ladderDeath === true,
 			config.territoryPrisoners === true,
 			state.prisoners ?? { X: 0, O: 0 },
-			config.semeaiDeath === true
+			config.semeaiDeath === true,
+			config.nakadeDeath === true
 		);
 		return {
 			...state,

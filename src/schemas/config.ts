@@ -504,7 +504,15 @@ export const zConfig = z
 				 * opponents are kept (seki-like). Default / omit = leave
 				 * fighting groups on the board.
 				 */
-				semeaiDeath: z.boolean().optional()
+				semeaiDeath: z.boolean().optional(),
+				/**
+				 * When true, interior groups bordering a T1 (3-straight) nakade
+				 * big-eye that would have <2 true eyes after an opponent vital
+				 * fill are removed before two-pass scoring (after optional
+				 * semeaiDeath; before ladderDeath). Edge foothold + seki
+				 * clusters kept. Default / omit = leave Benson/eye survivors.
+				 */
+				nakadeDeath: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1383,6 +1391,16 @@ export const zConfig = z
 				path: ["objective", "semeaiDeath"],
 				message:
 					"objective.semeaiDeath requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Nakade (T1 big-eye) removal is area_control-only.
+		if (cfg.objective.nakadeDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "nakadeDeath"],
+				message:
+					"objective.nakadeDeath requires objective.mode = 'area_control'"
 			});
 		}
 

@@ -577,12 +577,14 @@ export function removeDeadStones(
 }
 
 type BensonRegion = {
+	cells: Position[];
 	adjacentGroupIds: Set<number>;
 };
 
 /**
  * Empty regions whose border stones are exclusively `color` (no opponent).
- * Used as candidate vital regions for Benson unconditional life (M69).
+ * Used as candidate vital regions for Benson unconditional life (M69) and
+ * nakade shape detection (M76).
  */
 function findColorOnlyEmptyRegions(
 	grid: Grid,
@@ -602,6 +604,7 @@ function findColorOnlyEmptyRegions(
 			continue;
 		}
 
+		const cells: Position[] = [];
 		const adjacentGroupIds = new Set<number>();
 		const border = new Set<Player>();
 		const stack: Position[] = [start];
@@ -609,6 +612,7 @@ function findColorOnlyEmptyRegions(
 
 		while (stack.length > 0) {
 			const cur = stack.pop()!;
+			cells.push(cur);
 			for (const n of libertyNeighbors(grid, cur, wrap, topology, graph)) {
 				const nk = keyOf(n);
 				const val = getCell(grid, n);
@@ -628,10 +632,135 @@ function findColorOnlyEmptyRegions(
 		}
 
 		if (border.size === 1 && border.has(color) && adjacentGroupIds.size > 0) {
-			regions.push({ adjacentGroupIds });
+			regions.push({ cells, adjacentGroupIds });
 		}
 	}
 	return regions;
+}
+
+/**
+ * Classic 3-point straight nakade (T1): mono-border empty region of exactly
+ * three cells in an orthogonal line; vital = middle. L / 4+ / bulky shapes
+ * deferred (M76).
+ */
+export function isNakadeVulnerableRegion(
+	regionCells: Position[]
+): { vital: Position } | null {
+	if (regionCells.length !== 3) return null;
+	const sorted = [...regionCells].sort(
+		(a, b) => a.row - b.row || a.col - b.col
+	);
+	const a = sorted[0]!;
+	const b = sorted[1]!;
+	const c = sorted[2]!;
+	const sameRow = a.row === b.row && b.row === c.row;
+	const sameCol = a.col === b.col && b.col === c.col;
+	if (sameRow && b.col === a.col + 1 && c.col === a.col + 2) {
+		return { vital: b };
+	}
+	if (sameCol && b.row === a.row + 1 && c.row === a.row + 2) {
+		return { vital: b };
+	}
+	return null;
+}
+
+/**
+ * Interior groups that border a T1 nakade big-eye and would have fewer than
+ * 2 true eyes after an opponent vital fill are dead at scoring (M76). Edge
+ * foothold + seki clusters kept (same exemptions as deadStones/Benson).
+ * This removes Benson-alive dual one-eyed blocks that share a 3-cell corridor
+ * — a shape deadStones clears but Benson keeps.
+ */
+export function findNakadeDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const dead: Position[] = [];
+	const deadGroupIds = new Set<number>();
+
+	for (const color of ["X", "O"] as const) {
+		const colorGroups = groups.filter((g) => g.color === color);
+		if (colorGroups.length === 0) continue;
+		const stoneToGroup = new Map<string, number>();
+		for (const g of colorGroups) {
+			for (const p of g.stones) stoneToGroup.set(keyOf(p), g.id);
+		}
+		const regions = findColorOnlyEmptyRegions(
+			grid,
+			color,
+			stoneToGroup,
+			wrap,
+			topology,
+			graph
+		);
+		const attacker: Player = color === "X" ? "O" : "X";
+
+		for (const region of regions) {
+			const nakade = isNakadeVulnerableRegion(region.cells);
+			if (!nakade) continue;
+			const sim = simulateLibertyPlace(
+				grid,
+				nakade.vital,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			const nextGrid: Grid = { ...grid, cells: sim.cells };
+
+			for (const gid of Array.from(region.adjacentGroupIds)) {
+				if (deadGroupIds.has(gid)) continue;
+				const g = colorGroups.find((x) => x.id === gid);
+				if (!g) continue;
+				if (sekiIds.has(g.id)) continue;
+				if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+
+				const rem = g.stones.filter((p) => getCell(nextGrid, p) === color);
+				if (rem.length === 0) {
+					deadGroupIds.add(gid);
+					for (const p of g.stones) dead.push(p);
+					continue;
+				}
+				const eyes = countTrueEyes(
+					nextGrid,
+					rem,
+					color,
+					wrap,
+					topology,
+					graph
+				);
+				if (eyes >= 2) continue;
+				deadGroupIds.add(gid);
+				for (const p of g.stones) dead.push(p);
+			}
+		}
+	}
+	return dead;
+}
+
+/** Clear nakade-dead stones from a grid copy (M76). */
+export function removeNakadeDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findNakadeDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
 }
 
 /**
@@ -1169,7 +1298,10 @@ export function scoreArea(
  * included — the seam M68/M69 intentionally keep).
  * When `semeaiDeath` is true, groups that lose a capturing race against a
  * higher-liberty opponent sharing a liberty are removed after optional
- * Benson/deadStones and before ladderDeath (M75).
+ * Benson/deadStones and before nakadeDeath / ladderDeath (M75).
+ * When `nakadeDeath` is true, interior groups bordering a T1 (3-straight)
+ * nakade big-eye that would have <2 true eyes after an opponent vital fill
+ * are removed after optional semeaiDeath and before ladderDeath (M76).
  * When `territoryPrisoners` is true, score is territory + prisoners (Japanese
  * lite) instead of stones + territory (M74); `prisoners` tallies captures in
  * play.
@@ -1186,7 +1318,8 @@ export function areaOutcome(
 	ladderDeath: boolean = false,
 	territoryPrisoners: boolean = false,
 	prisoners: AreaScore = { X: 0, O: 0 },
-	semeaiDeath: boolean = false
+	semeaiDeath: boolean = false,
+	nakadeDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -1199,6 +1332,9 @@ export function areaOutcome(
 			: grid;
 	if (semeaiDeath) {
 		scored = removeSemeaiDeadStones(scored, wrap, topology, graph);
+	}
+	if (nakadeDeath) {
+		scored = removeNakadeDeadStones(scored, wrap, topology, graph);
 	}
 	if (ladderDeath) {
 		scored = removeLadderDeadStones(scored, wrap, topology, graph);

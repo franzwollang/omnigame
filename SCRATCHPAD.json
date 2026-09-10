@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T08:35+00:00",
-  "turn": 105,
+  "updated_at": "2026-09-10T08:50+00:00",
+  "turn": 106,
   "focus": {
-    "milestone": "M75",
+    "milestone": "M76",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Semeai landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 3324 M74 tip onto cursor/next-task-progression-5cfd",
-    "Landed M75 semeaiDeath + go-lite-semeai",
-    "X race 3 libs vs O 4: raw→X, semeai→O; ladder/eyes skip"
+    "Synced from 5cfd M75 tip onto cursor/next-task-progression-9cd8",
+    "Landed M76 nakadeDeath + go-lite-nakade",
+    "Closed 3-corridor + 1 eye: raw/Benson→X, nakade→O"
   ],
   "discoveries": [
-    "Pairwise share+strict liberty compare; >2 libs escapes ladderDeath",
-    "O seal under race isolates living X without shared dame"
+    "Open corridor merges with exterior — need sealed T1 eye",
+    "deadStones also clears seed; contrast uses benson/semeai/ladder/seki"
   ],
   "open_threads": [
-    "Next: nakade/nets, simultaneous jump, realtime"
+    "Next: nets/geta, deeper L&D, simultaneous jump, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M75",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M76",
   "blockers": []
 }

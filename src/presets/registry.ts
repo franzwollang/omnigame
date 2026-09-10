@@ -5542,6 +5542,102 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-nakade": definePreset({
+		id: "go-lite-nakade",
+		name: "Go Lite Nakade",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"nakade",
+			"benson",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with T1 nakade (3-straight big-eye) removal at scoring (objective.nakadeDeath). Seeded interior X shell with one true eye + closed 3-cell corridor (Benson-alive, 1 true eye) plus living edge O: without the flag (or with bensonLife) double-pass awards X; with nakadeDeath X is cleared → O wins. Unlocks shape-aware big-eye death beyond eye count / Benson / semeai / ladders.",
+		config: {
+			metadata: { name: "Go Lite Nakade", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", nakadeDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				// Interior X shell (rows/cols 1–5): true eye at (2,2); closed
+				// 3-straight nakade corridor at (2,4)/(3,4)/(4,4). One true eye
+				// (dead under deadStones) but Benson-alive via eye + corridor.
+				const xCells: Array<[number, number]> = [
+					[1, 1],
+					[1, 2],
+					[1, 3],
+					[1, 4],
+					[1, 5],
+					[2, 1],
+					[2, 3],
+					[2, 5],
+					[3, 1],
+					[3, 2],
+					[3, 3],
+					[3, 5],
+					[4, 1],
+					[4, 2],
+					[4, 3],
+					[4, 5],
+					[5, 1],
+					[5, 2],
+					[5, 3],
+					[5, 4],
+					[5, 5]
+				];
+				for (const [row, col] of xCells) {
+					stones.push({ row, col, player: "X", visibility: "public" });
+				}
+				// Living edge O ring — raw X still leads on area; after nakade
+				// clears X, O wins.
+				for (let row = 0; row < 7; row++) {
+					for (let col = 0; col < 7; col++) {
+						if (row === 0 || row === 6 || col === 0 || col === 6) {
+							stones.push({
+								row,
+								col,
+								player: "O",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				return stones;
+			})()
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",
