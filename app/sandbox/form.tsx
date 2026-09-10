@@ -1223,6 +1223,30 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												</FormItem>
 											)}
 										/>
+										<FormField
+											control={form.control}
+											name="objective.dameFill"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Dame-fill endgame</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															After first pass with dame left, only dame
+															places + pass are legal until two-pass score
+															(objective.dameFill).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
 									</>
 								) : null}
 							</div>

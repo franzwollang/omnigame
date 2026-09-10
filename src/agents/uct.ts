@@ -184,6 +184,7 @@ function stateFingerprint(state: GameState): string {
 				}`
 			: "",
 		state.consecutivePasses ?? "",
+		state.endgamePhase === true ? "eg:1" : "",
 		state.koPoint
 			? `${state.koPoint.row},${state.koPoint.col}`
 			: "",

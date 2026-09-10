@@ -110,7 +110,9 @@ detects via `isNoop`).
 - Simultaneous: currentPlayer unchanged; joint events advance moveCount;
   commit buffers clear on reveal
 - tick: global update; no player flip
-- pass: consecutivePasses++; may terminal (area_control)
+- pass: consecutivePasses++; may terminal (area_control). With
+  `objective.dameFill`, first pass while dame remain sets `endgamePhase`
+  (resets consecutivePasses); only dame places stay legal until two-pass score.
 
 ### 2.2 Simultaneous resolve
 
@@ -267,7 +269,9 @@ optional `objective.seki` neutralizes shared-life empty points; optional
 `objective.deadStones` removes interior groups with fewer than 2 true eyes
 before counting; optional `objective.bensonLife` removes interior groups that
 are not Benson-unconditionally alive — vital-region fixed point; supersedes
-`deadStones` when both are set) |
+`deadStones` when both are set; optional `objective.dameFill` enters a
+damezukai-lite endgame on the first pass while dame remain — only dame places
++ pass legal until two consecutive passes score) |
 identify_secret | clear_hazards | match_pairs | none.
 
 ### Observation

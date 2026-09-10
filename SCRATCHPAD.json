@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T06:56+00:00",
-  "turn": 99,
+  "updated_at": "2026-09-10T07:15+00:00",
+  "turn": 100,
   "focus": {
-    "milestone": "M69",
+    "milestone": "M70",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Benson landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Dame Fill landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from a21e M68 tip onto cursor/next-task-progression-f264",
-    "Landed M69 Go Lite Benson / objective.bensonLife + preset",
-    "Dual one-eyed X groups kept via shared vital corridor"
+    "Synced from f264 M69 tip onto cursor/next-task-progression-c38d",
+    "Landed M70 Go Lite Dame Fill / objective.dameFill + preset",
+    "Dame-only endgame after first pass; territory fill illegal"
   ],
   "discoveries": [
-    "Benson supersedes deadStones when both flags set in areaOutcome",
-    "deadStones clears mutual one-eye pairs; Benson keeps them"
+    "First pass with dame remaining enters endgamePhase; empty dame falls through",
+    "findDameCells = mixed/open empties; mono territory excluded"
   ],
   "open_threads": [
-    "Next: fuller Go, simultaneous jump, realtime — reject recombinations"
+    "Next: fuller Go (negotiation/L&D), simultaneous jump, realtime — reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M69",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M70",
   "blockers": []
 }

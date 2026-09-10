@@ -101,6 +101,11 @@ export type GameState = {
 	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */
 	consecutivePasses?: number;
 	/**
+	 * Dame-fill endgame (objective.dameFill): after the opening pass when dame
+	 * remain, only dame places + pass are legal until two consecutive passes.
+	 */
+	endgamePhase?: boolean;
+	/**
 	 * Simple (point) ko: intersection forbidden for the next place only.
 	 * Set when a single stone was just captured; cleared otherwise / on reset.
 	 * Pass does not clear (Go-correct). Unused when koRule is positional/situational.

@@ -85,11 +85,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M67 | Next missing mechanism (Go Lite Seki / objective.seki) | `done` |
 | M68 | Next missing mechanism (Go Lite Dead Stones / objective.deadStones) | `done` |
 | M69 | Next missing mechanism (Go Lite Benson / objective.bensonLife) | `done` |
+| M70 | Next missing mechanism (Go Lite Dame Fill / objective.dameFill) | `done` |
 
-**Optimizing for this marathon:** M69 Go Lite Benson (`objective.bensonLife`)
+**Optimizing for this marathon:** M70 Go Lite Dame Fill (`objective.dameFill`)
 landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
 recombinations without anchor) — without asking which fork. Large deferred:
-simultaneous jump / realtime / fuller Go remainder beyond Benson.
+simultaneous jump / realtime / fuller Go remainder beyond dame fill.
 
 ## Marathon runbook (cloud agents)
 
@@ -104,7 +105,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥798** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥802** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -229,9 +230,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond Benson (M69); fire→move
+**Not yet:** fuller Go remainder beyond dame fill (M70); fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Benson landed
+anchor); realtime scheduler; simultaneous jump. Go Lite Dame Fill landed
+(M70). Go Lite Benson landed
 (M69). Go Lite Dead Stones landed
 (M68). Go Lite Seki landed (M67). Go Lite Komi landed (M66).
 Graph hub menForwardOnly landed (M65 Graph Hub
@@ -259,7 +261,7 @@ hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
-deadStones in M68; bensonLife in M69).
+deadStones in M68; bensonLife in M69; dameFill in M70).
 
 ## Phase 2 exit criteria
 
@@ -1067,6 +1069,21 @@ deadStones in M68; bensonLife in M69).
 - Out of scope: fuller Go / semantic life-death search; hex/graph Benson
   presets; simultaneous jump; realtime
 - Green gate: ≥798 + new cases — **done**
+
+### M70 — Go Lite Dame Fill / `objective.dameFill`
+
+- Schema: optional `objective.dameFill` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `findDameCells`; `endgamePhase` state; first pass while dame remain
+  enters damezukai-lite endgame (dame-only places + pass); two consecutive
+  passes in endgame score via existing `areaOutcome` stack; normalize
+  pass-through — **done**
+- Preset `go-lite-dame-fill` (X eye + mixed dame corridor; territory illegal
+  after pass, dame fill then score) + unit / schema / transcript / replay
+  tests; form switch under area_control — **done**
+- Out of scope: interactive dead-stone negotiation; semantic life-death
+  search; hex/graph dame-fill presets; simultaneous jump; realtime
+- Green gate: ≥802 + new cases — **done**
 
 ## Sequencing notes
 

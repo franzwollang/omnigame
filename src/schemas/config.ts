@@ -459,7 +459,14 @@ export const zConfig = z
 				 * are set. Edge foothold + seki clusters kept. Default / omit =
 				 * leave stones (or use deadStones lite if that flag is on).
 				 */
-				bensonLife: z.boolean().optional()
+				bensonLife: z.boolean().optional(),
+				/**
+				 * When true, the first pass while dame remain enters an endgame
+				 * phase where only dame intersections (plus pass) are legal;
+				 * two consecutive passes in that phase score (damezukai lite).
+				 * Default / omit = immediate two-pass → score.
+				 */
+				dameFill: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1249,6 +1256,16 @@ export const zConfig = z
 				path: ["objective", "bensonLife"],
 				message:
 					"objective.bensonLife requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Dame-fill endgame is area_control-only (damezukai lite).
+		if (cfg.objective.dameFill === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "dameFill"],
+				message:
+					"objective.dameFill requires objective.mode = 'area_control'"
 			});
 		}
 

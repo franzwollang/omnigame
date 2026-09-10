@@ -8,6 +8,7 @@ import {
 	enumerateGroups,
 	findBensonAliveGroupIds,
 	findBensonDeadStoneCells,
+	findDameCells,
 	findDeadStoneCells,
 	findGroup,
 	isLegalLibertyPlace,
@@ -685,6 +686,152 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(replay.finalState.winner).toBe("X");
 	});
 
+	it("validates and compiles the go-lite-dame-fill preset", () => {
+		const cfg = examplePresets["go-lite-dame-fill"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.dameFill).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(state.endgamePhase).toBe(false);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.dameFill outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; dameFill?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", dameFill: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("findDameCells returns mixed/open empties, not mono territory", () => {
+		// 5×4 matching go-lite-dame-fill seed: eye at (1,1); dame at (2,2)+row3
+		const w = 5;
+		const h = 4;
+		const cells = Array(w * h).fill(null) as (string | null)[];
+		const put = (row: number, col: number, p: string) => {
+			cells[row * w + col] = p;
+		};
+		for (const [row, col, p] of [
+			[0, 0, "X"],
+			[0, 1, "X"],
+			[0, 2, "X"],
+			[0, 3, "O"],
+			[0, 4, "O"],
+			[1, 0, "X"],
+			[1, 2, "X"],
+			[1, 3, "O"],
+			[1, 4, "O"],
+			[2, 0, "X"],
+			[2, 1, "X"],
+			[2, 3, "O"],
+			[2, 4, "O"]
+		] as const) {
+			put(row, col, p);
+		}
+		const g = gridOf(w, h, cells);
+		expect(scoreArea(g)).toEqual({ X: 8, O: 6 }); // 7X+1 eye, 6O
+		const dame = findDameCells(g);
+		const dameKeys = new Set(dame.map((p) => `${p.row},${p.col}`));
+		expect(dameKeys.has("1,1")).toBe(false);
+		expect(dameKeys.has("2,2")).toBe(true);
+		expect(dameKeys.has("3,0")).toBe(true);
+		expect(dame.length).toBe(6);
+	});
+
+	it("dameFill: first pass enters endgame; territory illegal; dame legal; fill then score", () => {
+		const cfg = examplePresets["go-lite-dame-fill"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		expect(state.endgamePhase).toBe(false);
+
+		const enter = kernel.stepSync(state, { type: "pass" });
+		expect(enter.events[0]?.type).toBe("actionApplied");
+		state = enter.nextState;
+		expect(state.endgamePhase).toBe(true);
+		expect(state.consecutivePasses).toBe(0);
+		expect(state.status).toBe("playing");
+		expect(state.currentPlayer).toBe("O");
+
+		const legal = kernel.legalActions(state, playerIdOf(state.currentPlayer));
+		const placeKeys = new Set(
+			legal
+				.filter((a) => a.type === "place")
+				.map((a) => `${a.position.row},${a.position.col}`)
+		);
+		expect(placeKeys.has("1,1")).toBe(false);
+		expect(placeKeys.has("2,2")).toBe(true);
+		expect(legal.some((a) => a.type === "pass")).toBe(true);
+
+		// O passes so X can take the dame stone.
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.endgamePhase).toBe(true);
+		expect(state.consecutivePasses).toBe(1);
+		expect(state.currentPlayer).toBe("X");
+
+		const fill = kernel.stepSync(state, {
+			type: "place",
+			position: { row: 2, col: 2 }
+		});
+		expect(fill.events[0]?.type).toBe("actionApplied");
+		state = fill.nextState;
+		expect(state.endgamePhase).toBe(true);
+		expect(state.consecutivePasses).toBe(0);
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("X");
+
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status).toBe("playing");
+		expect(state.consecutivePasses).toBe(1);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(state.consecutivePasses).toBe(2);
+
+		// Without the dame fill, X still wins but with a lower area (eye only).
+		const noFillScript: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		let raw = kernel.initialState(cfg.rng.seed);
+		for (const action of noFillScript) {
+			raw = kernel.stepSync(raw, action).nextState;
+		}
+		expect(raw.status).toBe("won");
+		expect(raw.winner).toBe("X");
+		expect(scoreArea(raw.grid)).toEqual({ X: 8, O: 6 });
+		expect(scoreArea(state.grid)).toEqual({ X: 9, O: 6 });
+
+		const fillScript: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "pass" },
+			{ type: "place", position: { row: 2, col: 2 } },
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		const replay = replayActions(gameConfig, fillScript, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+	});
+
+	it("dameFill off: two consecutive passes still score immediately", () => {
+		const cfg = structuredClone(examplePresets["go-lite-dame-fill"].config);
+		cfg.objective = { mode: "area_control" };
+		const { kernel } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.endgamePhase).toBe(false);
+		expect(state.consecutivePasses).toBe(1);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+	});
+
 	it("rejects capture.ko without liberties mode", () => {
 		const bad = structuredClone(examplePresets["go-lite"].config);
 		bad.placement.capture = { enabled: true, mode: "flip", ko: true };
@@ -1089,7 +1236,7 @@ describe("Go Lite (liberties + area_control)", () => {
 });
 
 describe("createInitialState consecutivePasses + koPoint", () => {
-	it("seeds consecutivePasses at 0 and koPoint null", () => {
+	it("seeds consecutivePasses at 0, endgamePhase false, and koPoint null", () => {
 		const config: GameConfig = {
 			gridWidth: 5,
 			gridHeight: 5,
@@ -1109,6 +1256,7 @@ describe("createInitialState consecutivePasses + koPoint", () => {
 		};
 		const state = createInitialState(config);
 		expect(state.consecutivePasses).toBe(0);
+		expect(state.endgamePhase).toBe(false);
 		expect(state.koPoint).toBeNull();
 		expect(state.positionHistory).toBeUndefined();
 	});

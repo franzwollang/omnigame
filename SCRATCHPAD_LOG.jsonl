@@ -123,3 +123,4 @@
 {"ts":"2026-09-10T06:25+00:00","focus":"M67 Go Lite Seki","summary":"Landed objective.seki + go-lite-seki; seeded mutual-life X-win→draw","next":"Pick next genuine P3 seam after M67 (prefer dead stones)"}
 {"ts":"2026-09-10T06:46+00:00","focus":"M68 Go Lite Dead Stones","summary":"Landed objective.deadStones + go-lite-dead-stones; seeded ring X-win→O-win","next":"Pick next genuine P3 seam after M68"}
 {"ts":"2026-09-10T06:56+00:00","focus":"M69 Go Lite Benson","summary":"Landed objective.bensonLife + go-lite-benson; dual one-eye X kept vs deadStones draw","next":"Pick next genuine P3 seam after M69"}
+{"ts":"2026-09-10T07:15+00:00","focus":"M70 Go Lite Dame Fill","summary":"Landed objective.dameFill + go-lite-dame-fill; dame-only endgame after first pass","next":"Pick next genuine P3 seam after M70"}

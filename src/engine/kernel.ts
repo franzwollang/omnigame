@@ -24,7 +24,12 @@ import {
 	type GameConfig
 } from "@/engine/reducer";
 import { applyCaptureIfAny } from "@/engine/capture";
-import { isLegalLibertyPlace, usesSuperkoHistory, type KoRule } from "@/engine/liberties";
+import {
+	findDameCells,
+	isLegalLibertyPlace,
+	usesSuperkoHistory,
+	type KoRule
+} from "@/engine/liberties";
 import { setCell } from "@/engine/types";
 import {
 	observe,
@@ -418,6 +423,8 @@ function isNoop(before: GameState, after: GameState): boolean {
 			(after.mustContinueFrom?.col ?? null) &&
 		(before.koPoint?.row ?? null) === (after.koPoint?.row ?? null) &&
 		(before.koPoint?.col ?? null) === (after.koPoint?.col ?? null) &&
+		(before.consecutivePasses ?? 0) === (after.consecutivePasses ?? 0) &&
+		(before.endgamePhase ?? false) === (after.endgamePhase ?? false) &&
 		before.grid.cells === after.grid.cells &&
 		before.hidden?.cells === after.hidden?.cells &&
 		before.pendingPlaces === after.pendingPlaces &&
@@ -1012,13 +1019,32 @@ function canPlaceCell(
 	const wrap = config.gridWrap === true;
 	const captureMode = config.captureMode ?? "flip";
 	if (captureMode === "liberties") {
-		return isLegalLibertyPlace(state.grid, pos, player, wrap, {
-			koRule: resolveKoRule(config),
-			koPoint: state.koPoint,
-			positionHistory: state.positionHistory,
-			topology: config.topology ?? "rectangle",
-			graph: config.graph
-		});
+		if (
+			!isLegalLibertyPlace(state.grid, pos, player, wrap, {
+				koRule: resolveKoRule(config),
+				koPoint: state.koPoint,
+				positionHistory: state.positionHistory,
+				topology: config.topology ?? "rectangle",
+				graph: config.graph
+			})
+		) {
+			return false;
+		}
+		// Damezukai lite: in endgame, only dame intersections are placeable.
+		if (
+			config.dameFill === true &&
+			state.endgamePhase === true &&
+			(config.objectiveMode ?? "n_in_a_row") === "area_control"
+		) {
+			const dame = findDameCells(
+				state.grid,
+				wrap,
+				config.topology ?? "rectangle",
+				config.graph
+			);
+			return dame.some((p) => p.row === pos.row && p.col === pos.col);
+		}
+		return true;
 	}
 	const placedCells = setCell(state.grid, pos, player);
 	const after = applyCaptureIfAny(

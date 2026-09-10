@@ -567,6 +567,7 @@ export function jointStateFingerprint(state: GameState): string {
 			: "",
 		committedMovesFingerprint(state),
 		state.consecutivePasses ?? "",
+		state.endgamePhase === true ? "eg:1" : "",
 		state.koPoint ? `${state.koPoint.row},${state.koPoint.col}` : "",
 		(state.positionHistory ?? []).join(";"),
 		state.phase ?? "combat",
@@ -601,6 +602,7 @@ export function commitRevealRoundFingerprint(state: GameState): string {
 			.map((p) => pendingFingerprint(p))
 			.join(";"),
 		state.consecutivePasses ?? "",
+		state.endgamePhase === true ? "eg:1" : "",
 		state.koPoint ? `${state.koPoint.row},${state.koPoint.col}` : "",
 		(state.positionHistory ?? []).join(";"),
 		state.phase ?? "combat",

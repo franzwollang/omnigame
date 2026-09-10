@@ -31,6 +31,7 @@ import {
 	applyLibertyCapture,
 	areaOutcome,
 	boardPositionHash,
+	findDameCells,
 	isLegalLibertyPlace,
 	koPointFromCapture,
 	situationHash,
@@ -191,6 +192,12 @@ export type GameConfig = {
 	 * deadStones when both are set. Default false.
 	 */
 	bensonLife?: boolean;
+	/**
+	 * When true, the first pass while dame remain enters an endgame phase
+	 * where only dame intersections (plus pass) are legal; two consecutive
+	 * passes in that phase score (damezukai lite). Default false.
+	 */
+	dameFill?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -496,6 +503,7 @@ export function createInitialState(config: GameConfig): GameState {
 		winner: null,
 		moveCount: 0,
 		consecutivePasses: 0,
+		endgamePhase: false,
 		koPoint: null,
 		phase: placement ? "placement" : "combat",
 		fleetProgress: placement ? initialFleetProgressMap() : undefined,
@@ -1127,14 +1135,33 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
 	if (state.status !== "playing") return state;
 
-	const passes = (state.consecutivePasses ?? 0) + 1;
 	const newMoveCount = state.moveCount + 1;
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	const wrap = config.gridWrap === true;
+	const topology = config.topology ?? "rectangle";
+
+	// Damezukai lite: first pass while dame remain enters endgame without
+	// counting toward terminal two-pass; only dame places stay legal after.
+	if (config.dameFill === true && state.endgamePhase !== true) {
+		const dame = findDameCells(state.grid, wrap, topology, config.graph);
+		if (dame.length > 0) {
+			return {
+				...state,
+				endgamePhase: true,
+				currentPlayer: nextPlayer,
+				moveCount: newMoveCount,
+				consecutivePasses: 0
+			};
+		}
+	}
+
+	const passes = (state.consecutivePasses ?? 0) + 1;
 
 	if (passes >= 2) {
 		const { status, winner } = areaOutcome(
 			state.grid,
-			config.gridWrap === true,
-			config.topology ?? "rectangle",
+			wrap,
+			topology,
 			config.graph,
 			config.komi ?? 0,
 			config.sekiScoring === true,
@@ -1150,7 +1177,6 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 		};
 	}
 
-	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
 	return {
 		...state,
 		currentPlayer: nextPlayer,

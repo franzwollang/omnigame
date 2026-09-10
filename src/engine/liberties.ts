@@ -744,6 +744,57 @@ export function removeBensonDeadStones(
 }
 
 /**
+ * Empty cells in mixed-border or edge-open regions (dame) — score for neither
+ * under simplified area scoring. Mono-border territory empties are excluded
+ * (including seki-neutral mono regions, which are not dame-fill targets).
+ */
+export function findDameCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const dame: Position[] = [];
+	const seedPositions = seedPositionsFor(grid, topology, graph);
+	const visited = new Set<string>();
+	for (const start of seedPositions) {
+		const k = keyOf(start);
+		if (visited.has(k)) continue;
+		if (getCell(grid, start) !== null) {
+			visited.add(k);
+			continue;
+		}
+
+		const region: Position[] = [];
+		const border = new Set<Player>();
+		const stack: Position[] = [start];
+		visited.add(k);
+
+		while (stack.length > 0) {
+			const cur = stack.pop()!;
+			region.push(cur);
+			for (const n of libertyNeighbors(grid, cur, wrap, topology, graph)) {
+				const nk = keyOf(n);
+				const val = getCell(grid, n);
+				if (val === null) {
+					if (!visited.has(nk)) {
+						visited.add(nk);
+						stack.push(n);
+					}
+				} else if (val === "X" || val === "O") {
+					border.add(val);
+				}
+			}
+		}
+
+		if (border.size !== 1) {
+			dame.push(...region);
+		}
+	}
+	return dame;
+}
+
+/**
  * Simplified area scoring: stones + empty regions bordered only by one color.
  * Mixed-border or edge-open empty regions score for neither (dame).
  * On wrap boards, regions never "edge-open" via board boundary.

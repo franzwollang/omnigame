@@ -5114,6 +5114,65 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			})()
 		}
 	}),
+	"go-lite-dame-fill": definePreset({
+		id: "go-lite-dame-fill",
+		name: "Go Lite Dame Fill",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"dame",
+			"damezukai",
+			"mechanism"
+		],
+		description:
+			"Go Lite with damezukai-lite endgame (objective.dameFill). Seeded X eye + shared dame corridor: first pass enters endgame where mono-border territory is illegal to fill but dame is legal; filling dame then two-pass scores higher for X. Unlocks region-restricted endgame play beyond immediate two-pass scoring.",
+		config: {
+			metadata: { name: "Go Lite Dame Fill", version: 1 },
+			grid: { width: 5, height: 4, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", dameFill: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Row 0–2: X block with eye at (1,1); O block on the right; (2,2)+bottom = dame
+				{ row: 0, col: 0, player: "X", visibility: "public" },
+				{ row: 0, col: 1, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 3, player: "O", visibility: "public" },
+				{ row: 0, col: 4, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "X", visibility: "public" },
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 1, col: 3, player: "O", visibility: "public" },
+				{ row: 1, col: 4, player: "O", visibility: "public" },
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "O", visibility: "public" },
+				{ row: 2, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

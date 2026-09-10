@@ -11,8 +11,8 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Go Lite Benson (`go-lite-benson` / `objective.bensonLife` vital-region
-unconditional life) landed as **M69**. Go Lite Dead Stones closed as M68;
+Go Lite Dame Fill (`go-lite-dame-fill` / `objective.dameFill` damezukai-lite
+endgame) landed as **M70**. Go Lite Benson closed as M69; dead stones as M68;
 seki as M67; komi as M66; hub-graph forward-only men as M65; graph forward-only
 men as M64; hex forward-only men as M63; graph flying capture as M62; hex
 flying capture as M61; hub-graph promotion as M60; graph promotion as M59; hex
@@ -27,7 +27,8 @@ mechanism).
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
-- Fuller Go remainder beyond Benson (e.g. semantic life/death / damezukai)
+- Fuller Go remainder beyond dame fill (e.g. interactive dead-stone
+  negotiation / semantic life-death)
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
 - Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
@@ -41,8 +42,8 @@ e.g.:
 - `queryShape: not` (reject unless nested AST / new pruning class)
 - Realtime / continuous scheduler (large)
 - Simultaneous jump (large composition; deferred)
-- Hex/graph seki, dead-stone, or Benson presets (topology ports — only if a
-  new seam appears)
+- Hex/graph seki, dead-stone, Benson, or dame-fill presets (topology ports —
+  only if a new seam appears)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -58,7 +59,8 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 ### deferred-mvp-anchors
 
 Fuller Go remains a candidate under `next-missing-mechanism` (komi M66 + seki
-M67 + dead-stone lite M68 + Benson M69 landed; semantic life/death still open).
+M67 + dead-stone lite M68 + Benson M69 + dame fill M70 landed; interactive
+dead-stone negotiation / semantic life-death still open).
 Guess Who Lite + Commit Lite + Commit
 Phases Lite + And Lite + Or Lite + And3 Lite + Simultaneous Guess Who Lite +
 Simultaneous Guess Who Commit Lite + Simultaneous Guess Who And Lite + Hidden
@@ -110,8 +112,9 @@ second-player scoring offset. **Go Lite Seki** covers `objective.seki`
 shared-life territory exclusion. **Go Lite Dead Stones** covers
 `objective.deadStones` pass-alive lite interior corpse removal. **Go Lite
 Benson** covers `objective.bensonLife` vital-region unconditional life.
+**Go Lite Dame Fill** covers `objective.dameFill` damezukai-lite endgame.
 Open simultaneous deduction joint UCT covers
 agent search over query/guess(/eliminate) cartesian (fire→move still open if
 an anchor appears). CI green gate: `.github/workflows/ci.yml` (Node 20.19 +
-pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M69
-bensonLife).
+pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M70
+dameFill).
