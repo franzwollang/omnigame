@@ -110,14 +110,14 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M92 | Next missing mechanism (Go Lite Bulky-5-Nakade / objective.bulky5NakadeDeath) | `done` |
 | M93 | Next missing mechanism (Go Lite Plus-Nakade / objective.plusNakadeDeath) | `done` |
 | M94 | Next missing mechanism (Go Lite V-Nakade / objective.vNakadeDeath) | `done` |
+| M95 | Next missing mechanism (Go Lite Rabbity-Six-Nakade / objective.rabbitySixNakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M94 Go Lite V-Nakade landed. Pick **P3
-next-missing-mechanism** (smallest new seam; reject recombinations without
+**Optimizing for this marathon:** M95 Go Lite Rabbity-Six-Nakade landed. Pick
+**P3 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
-with ladder/nakade family); reject generic any-5-cell flags. Prefer rabbity-six
-(first hexomino) or another uniquely contrastable free pentomino over topology
-ports.
+with ladder/nakade family); reject generic any-N-cell flags. Prefer another
+uniquely contrastable free pentomino/hexomino over topology ports.
 
 ## Marathon runbook (cloud agents)
 
@@ -265,8 +265,9 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
 expressible vs ladder/net/sente/approach/nakade family on lite boards);
 hex-graph simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler; rabbity-six / remaining free-pentomino nakade
-(only if uniquely contrastable). Go Lite V-Nakade landed (M94). Go Lite
+anchor); realtime scheduler; remaining free-pentomino / hexomino nakade
+(only if uniquely contrastable). Go Lite Rabbity-Six-Nakade landed (M95). Go
+Lite V-Nakade landed (M94). Go Lite
 Plus-Nakade landed (M93). Go Lite
 Bulky-5-Nakade landed (M92). Go Lite Straight-4-Nakade landed (M91). Go Lite
 L4-Nakade landed (M90). Go Lite
@@ -1534,6 +1535,22 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
   + schema / uniqueness / transcript / replay / contrast tests — **done**
 - Out of scope: generic any-5-cell flag; rabbity-six (defer M95); throw-in /
   connect-and-die; hex/graph nakade ports; realtime
+- Green gate: ≥947 + new cases — **done**
+
+### M95 — Go Lite Rabbity-Six-Nakade / filled 2×3 hexomino
+
+- Schema: `objective.rabbitySixNakadeDeath` boolean (area_control-only);
+  first 6-cell nakade class; distinct from V / plus / bulky-5 and tetromino
+  tables — **done**
+- Kernel: `isRabbitySixNakadeVulnerableRegion` (filled 2×3 / 3×2 bbox; vital =
+  lex-first deg-3 long-side center) + `findRabbitySixNakadeDeadCells` /
+  `removeRabbitySixNakadeDeadStones`; `areaOutcome` after optional
+  vNakadeDeath, before netDeath — **done**
+- Preset `go-lite-rabbity6-nakade` (9×9 O-ring + interior X shell; eye + 2×3
+  corridor; Benson-alive / T1–V miss / chase-miss; flag → O) + schema /
+  uniqueness / transcript / replay / contrast tests — **done**
+- Out of scope: generic any-N-cell flag; throw-in / connect-and-die; hex/graph
+  nakade ports; realtime
 - Green gate: ≥947 + new cases — **done**
 
 ## Sequencing notes
