@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T03:45-00:00",
+  "turn": 86,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M56",
+    "issue": "next-missing-mechanism",
+    "goal": "hex liberties landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 75c3 M55 tip onto cursor/next-task-progression-d41d",
+    "Landed M56 Hex Go Lite / topology-aware liberties on hex_offset",
+    "Schema foothold + libertyNeighbors; rect stays von Neumann-4"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Four orthogonal surrounds leave two hex liberties — capture differs",
+    "Graph Go deferred; hex promotion still blocked on crowned adjacency"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: graph Go, full Go, realtime, hex-graph promo; reject recombinations"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M56",
   "blockers": []
 }

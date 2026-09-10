@@ -1,12 +1,16 @@
 /**
- * Liberty / group-capture helpers (M5 Go-lite foothold).
- * Orthogonal connectivity only — enough for group capture + area scoring.
- * Optional point ko, positional superko, or situational superko; suicide is
- * illegal after opponent captures.
+ * Liberty / group-capture helpers (M5 Go-lite foothold; M56 hex topology).
+ * Rectangle: orthogonal (von Neumann) connectivity. Hex_offset: six cube-axis
+ * neighbors. Optional point ko, positional superko, or situational superko;
+ * suicide is illegal after opponent captures.
  */
 import type { CellValue, Grid, Player, Position } from "@/engine/types";
 import { getCell, setCell, toIndex } from "@/engine/types";
 import { step } from "@/engine/adjacency";
+import {
+	neighbors,
+	type GridTopology
+} from "@/engine/topology";
 
 /** Ko / superko rule selected by config. */
 export type KoRule = "none" | "point" | "positional" | "situational";
@@ -59,11 +63,30 @@ export function orthogonalNeighbors(
 	return out;
 }
 
+/**
+ * Liberty adjacency for group capture / area scoring.
+ * Rectangle stays 4-orthogonal (not Chebyshev-8 from topology.neighbors).
+ * Hex_offset uses six cube-axis neighbors.
+ * Graph liberties deferred (M57+).
+ */
+export function libertyNeighbors(
+	grid: Grid,
+	pos: Position,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
+): Position[] {
+	if (topology === "hex_offset") {
+		return neighbors(grid, pos, "hex_offset", undefined, wrap);
+	}
+	return orthogonalNeighbors(grid, pos, wrap);
+}
+
 /** Flood-fill same-color stone group containing `start` (must be occupied). */
 export function findGroup(
 	grid: Grid,
 	start: Position,
-	wrap: boolean = false
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
 ): Position[] {
 	const color = getCell(grid, start);
 	if (color !== "X" && color !== "O") return [];
@@ -76,7 +99,7 @@ export function findGroup(
 	while (stack.length > 0) {
 		const cur = stack.pop()!;
 		group.push(cur);
-		for (const n of orthogonalNeighbors(grid, cur, wrap)) {
+		for (const n of libertyNeighbors(grid, cur, wrap, topology)) {
 			const k = keyOf(n);
 			if (seen.has(k)) continue;
 			if (getCell(grid, n) !== color) continue;
@@ -87,15 +110,16 @@ export function findGroup(
 	return group;
 }
 
-/** Distinct empty cells orthogonally adjacent to any stone in the group. */
+/** Distinct empty cells adjacent (liberty-topology) to any stone in the group. */
 export function countLiberties(
 	grid: Grid,
 	group: Position[],
-	wrap: boolean = false
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
 ): number {
 	const libs = new Set<string>();
 	for (const stone of group) {
-		for (const n of orthogonalNeighbors(grid, stone, wrap)) {
+		for (const n of libertyNeighbors(grid, stone, wrap, topology)) {
 			if (getCell(grid, n) === null) libs.add(keyOf(n));
 		}
 	}
@@ -124,7 +148,8 @@ export function applyLibertyCapture(
 	grid: Grid,
 	placed: Position,
 	currentPlayer: Player,
-	wrap: boolean = false
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
 ): LibertyCaptureResult {
 	const opponent: Player = currentPlayer === "X" ? "O" : "X";
 	let cells = grid.cells;
@@ -132,13 +157,13 @@ export function applyLibertyCapture(
 	const removedKeys = new Set<string>();
 	const removed: Position[] = [];
 
-	for (const n of orthogonalNeighbors(working, placed, wrap)) {
+	for (const n of libertyNeighbors(working, placed, wrap, topology)) {
 		if (getCell(working, n) !== opponent) continue;
 		const k = keyOf(n);
 		if (removedKeys.has(k)) continue;
-		const group = findGroup({ ...working, cells }, n, wrap);
+		const group = findGroup({ ...working, cells }, n, wrap, topology);
 		if (group.length === 0) continue;
-		if (countLiberties({ ...working, cells }, group, wrap) === 0) {
+		if (countLiberties({ ...working, cells }, group, wrap, topology) === 0) {
 			cells = removePositions({ ...working, cells }, group);
 			for (const p of group) {
 				const pk = keyOf(p);
@@ -171,6 +196,8 @@ export type LibertyPlaceOpts = {
 	 * (board|side-to-move).
 	 */
 	positionHistory?: readonly string[];
+	/** Board topology for liberty adjacency (default rectangle). */
+	topology?: GridTopology;
 };
 
 function resolveKoRule(opts?: LibertyPlaceOpts): KoRule {
@@ -186,7 +213,8 @@ export function simulateLibertyPlace(
 	grid: Grid,
 	pos: Position,
 	player: Player,
-	wrap: boolean = false
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
 ): LibertyCaptureResult | null {
 	if (!inBounds(grid, pos)) return null;
 	if (getCell(grid, pos) !== null) return null;
@@ -195,11 +223,12 @@ export function simulateLibertyPlace(
 		{ ...grid, cells: placedCells },
 		pos,
 		player,
-		wrap
+		wrap,
+		topology
 	);
 	const afterGrid: Grid = { ...grid, cells: afterCapture.cells };
-	const ownGroup = findGroup(afterGrid, pos, wrap);
-	if (countLiberties(afterGrid, ownGroup, wrap) <= 0) return null;
+	const ownGroup = findGroup(afterGrid, pos, wrap, topology);
+	if (countLiberties(afterGrid, ownGroup, wrap, topology) <= 0) return null;
 	return afterCapture;
 }
 
@@ -214,6 +243,7 @@ export function isLegalLibertyPlace(
 	wrap: boolean = false,
 	opts?: LibertyPlaceOpts
 ): boolean {
+	const topology = opts?.topology ?? "rectangle";
 	const koRule = resolveKoRule(opts);
 	if (
 		koRule === "point" &&
@@ -223,7 +253,7 @@ export function isLegalLibertyPlace(
 		return false;
 	}
 
-	const simulated = simulateLibertyPlace(grid, pos, player, wrap);
+	const simulated = simulateLibertyPlace(grid, pos, player, wrap, topology);
 	if (!simulated) return false;
 
 	if (usesSuperkoHistory(koRule)) {
@@ -246,8 +276,13 @@ export type AreaScore = { X: number; O: number };
  * Simplified area scoring: stones + empty regions bordered only by one color.
  * Mixed-border or edge-open empty regions score for neither (dame).
  * On wrap boards, regions never "edge-open" via board boundary.
+ * Region flood uses the same liberty adjacency as capture.
  */
-export function scoreArea(grid: Grid, wrap: boolean = false): AreaScore {
+export function scoreArea(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
+): AreaScore {
 	const score: AreaScore = { X: 0, O: 0 };
 	for (const cell of grid.cells) {
 		if (cell === "X") score.X += 1;
@@ -273,7 +308,7 @@ export function scoreArea(grid: Grid, wrap: boolean = false): AreaScore {
 			while (stack.length > 0) {
 				const cur = stack.pop()!;
 				region.push(cur);
-				for (const n of orthogonalNeighbors(grid, cur, wrap)) {
+				for (const n of libertyNeighbors(grid, cur, wrap, topology)) {
 					const nk = keyOf(n);
 					const val = getCell(grid, n);
 					if (val === null) {
@@ -300,13 +335,14 @@ export function scoreArea(grid: Grid, wrap: boolean = false): AreaScore {
 /** Winner by area score; draw on tie. */
 export function areaOutcome(
 	grid: Grid,
-	wrap: boolean = false
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
 	score: AreaScore;
 } {
-	const score = scoreArea(grid, wrap);
+	const score = scoreArea(grid, wrap, topology);
 	if (score.X > score.O) return { status: "won", winner: "X", score };
 	if (score.O > score.X) return { status: "won", winner: "O", score };
 	return { status: "draw", winner: null, score };
@@ -316,11 +352,12 @@ export function areaOutcome(
 export function libertiesAt(
 	grid: Grid,
 	pos: Position,
-	wrap: boolean = false
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle"
 ): number {
-	const group = findGroup(grid, pos, wrap);
+	const group = findGroup(grid, pos, wrap, topology);
 	if (group.length === 0) return 0;
-	return countLiberties(grid, group, wrap);
+	return countLiberties(grid, group, wrap, topology);
 }
 
 export function cellIndex(grid: Grid, pos: Position): number {
