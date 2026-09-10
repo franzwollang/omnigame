@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T07:15+00:00",
+  "turn": 100,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M70",
+    "issue": "next-missing-mechanism",
+    "goal": "Go Lite Dame Fill landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from f264 M69 tip onto cursor/next-task-progression-c38d",
+    "Landed M70 Go Lite Dame Fill / objective.dameFill + preset",
+    "Dame-only endgame after first pass; territory fill illegal"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "First pass with dame remaining enters endgamePhase; empty dame falls through",
+    "findDameCells = mixed/open empties; mono territory excluded"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: fuller Go (negotiation/L&D), simultaneous jump, realtime — reject recombinations"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M70",
   "blockers": []
 }
