@@ -19,6 +19,7 @@ function centerBias(state: GameState, action: KernelAction): number {
 		case "fire":
 		case "reveal":
 		case "flip":
+		case "markDead":
 		case "commitPlace":
 			row = action.position.row;
 			col = action.position.col;

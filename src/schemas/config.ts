@@ -466,7 +466,15 @@ export const zConfig = z
 				 * two consecutive passes in that phase score (damezukai lite).
 				 * Default / omit = immediate two-pass → score.
 				 */
-				dameFill: z.boolean().optional()
+				dameFill: z.boolean().optional(),
+				/**
+				 * When true, two consecutive passes enter a marking phase where
+				 * players alternately toggle opponent groups as dead; two
+				 * consecutive passes in that phase remove marked stones then
+				 * score (interactive dead-stone negotiation lite). Default /
+				 * omit = immediate two-pass → score (after dameFill if set).
+				 */
+				markDead: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1266,6 +1274,27 @@ export const zConfig = z
 				path: ["objective", "dameFill"],
 				message:
 					"objective.dameFill requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Interactive dead-stone marking is area_control-only (alternating).
+		if (cfg.objective.markDead === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "markDead"],
+				message:
+					"objective.markDead requires objective.mode = 'area_control'"
+			});
+		}
+		if (
+			cfg.objective.markDead === true &&
+			cfg.turn.schedule === "simultaneous"
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "markDead"],
+				message:
+					"objective.markDead is incompatible with turn.schedule = 'simultaneous'"
 			});
 		}
 

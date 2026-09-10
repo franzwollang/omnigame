@@ -106,6 +106,16 @@ export type GameState = {
 	 */
 	endgamePhase?: boolean;
 	/**
+	 * Dead-stone marking (objective.markDead): after two consecutive passes
+	 * (post–dame-fill if enabled), players toggle opponent groups as dead.
+	 */
+	markingPhase?: boolean;
+	/**
+	 * Stone keys (`row,col`) marked for removal during markingPhase.
+	 * Cleared when marking confirms (two passes) or on reset.
+	 */
+	markedDead?: string[];
+	/**
 	 * Simple (point) ko: intersection forbidden for the next place only.
 	 * Set when a single stone was just captured; cleared otherwise / on reset.
 	 * Pass does not clear (Go-correct). Unused when koRule is positional/situational.
@@ -325,6 +335,11 @@ export type PassEvent = {
 	type: "pass";
 };
 
+export type MarkDeadEvent = {
+	type: "markDead";
+	position: Position;
+};
+
 export type SimultaneousPlaceEvent = {
 	type: "simultaneousPlace";
 	/** One place each (scalar) or N places per seat for multi-action rounds. */
@@ -451,6 +466,7 @@ export type GameEvent =
 	| PopOutRowEvent
 	| TickEvent
 	| PassEvent
+	| MarkDeadEvent
 	| SimultaneousPlaceEvent
 	| SimultaneousMoveEvent
 	| SimultaneousQueryEvent

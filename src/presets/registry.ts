@@ -5173,6 +5173,62 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-mark-dead": definePreset({
+		id: "go-lite-mark-dead",
+		name: "Go Lite Mark Dead",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"dead-stones",
+			"marking",
+			"mechanism"
+		],
+		description:
+			"Go Lite with interactive dead-stone marking (objective.markDead). Seeded O ring around a lone X: without marking, double-pass awards O the win on area; with marking, X marks the O group then double-pass removes corpses → X wins. Unlocks player-agreed corpse removal beyond automatic deadStones/Benson.",
+		config: {
+			metadata: { name: "Go Lite Mark Dead", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", markDead: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// O ring (1..3)×(1..3) minus center X — O leads on raw area;
+				// marking removes the ring so X wins the empty board by lone stone.
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 2, player: "O", visibility: "public" },
+				{ row: 1, col: 3, player: "O", visibility: "public" },
+				{ row: 2, col: 1, player: "O", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "O", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 3, col: 2, player: "O", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

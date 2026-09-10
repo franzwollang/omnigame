@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T07:15+00:00",
-  "turn": 100,
+  "updated_at": "2026-09-10T07:31+00:00",
+  "turn": 101,
   "focus": {
-    "milestone": "M70",
+    "milestone": "M71",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Dame Fill landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Mark Dead landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from f264 M69 tip onto cursor/next-task-progression-c38d",
-    "Landed M70 Go Lite Dame Fill / objective.dameFill + preset",
-    "Dame-only endgame after first pass; territory fill illegal"
+    "Synced from c38d M70 tip onto cursor/next-task-progression-9312",
+    "Landed M71 Go Lite Mark Dead / objective.markDead + preset",
+    "Marking phase after two-pass; group toggle; confirm removes"
   ],
   "discoveries": [
-    "First pass with dame remaining enters endgamePhase; empty dame falls through",
-    "findDameCells = mixed/open empties; mono territory excluded"
+    "markDead forbids simultaneous; place blocked in markingPhase",
+    "Preset O-ring + lone X: raw O win → mark flips to X"
   ],
   "open_threads": [
-    "Next: fuller Go (negotiation/L&D), simultaneous jump, realtime — reject recombinations"
+    "Next: resume-on-dispute / semantic L&D, simultaneous jump, realtime — reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M70",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M71",
   "blockers": []
 }

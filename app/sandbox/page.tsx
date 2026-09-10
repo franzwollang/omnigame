@@ -488,6 +488,12 @@ export default function GamePage() {
 												: ""
 										}`
 									: ` · ${gameState.currentPlayer} to move${
+											gameState.markingPhase
+												? " · marking dead"
+												: gameState.endgamePhase
+													? " · dame endgame"
+													: ""
+										}${
 											gameState.turnPhaseIndex != null &&
 											(engineConfig.turnPhases?.length ?? 0) > 0
 												? ` · ${engineConfig.turnPhases![gameState.turnPhaseIndex]}`
@@ -533,7 +539,11 @@ export default function GamePage() {
 									className="h-7 px-2 text-xs"
 									disabled={gameState.status !== "playing"}
 									onClick={() => pass()}
-									title="Pass turn (two consecutive passes end Go Lite)"
+									title={
+										gameState.markingPhase
+											? "Pass in marking (two consecutive confirms removal + score)"
+											: "Pass turn (two consecutive passes end Go Lite or enter marking)"
+									}
 								>
 									Pass
 								</Button>
@@ -710,7 +720,12 @@ export default function GamePage() {
 								: currentConfig?.placement.capture?.ko === "positional"
 									? "positional superko"
 									: "simple ko"}
-							); Pass twice to score
+							)
+							{gameState.markingPhase
+								? "; marking — click opponent stones to toggle dead, Pass twice to score"
+								: currentConfig?.objective.markDead
+									? "; Pass twice to enter dead-stone marking"
+									: "; Pass twice to score"}
 						</p>
 					)}
 					{currentConfig?.observation.mode === "hit_miss" &&

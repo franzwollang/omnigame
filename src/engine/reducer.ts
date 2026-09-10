@@ -32,8 +32,10 @@ import {
 	areaOutcome,
 	boardPositionHash,
 	findDameCells,
+	findGroup,
 	isLegalLibertyPlace,
 	koPointFromCapture,
+	removeMarkedDeadStones,
 	situationHash,
 	usesSuperkoHistory,
 	type KoRule
@@ -198,6 +200,12 @@ export type GameConfig = {
 	 * passes in that phase score (damezukai lite). Default false.
 	 */
 	dameFill?: boolean;
+	/**
+	 * When true, two consecutive passes enter a marking phase where players
+	 * alternately toggle opponent groups as dead; two consecutive passes in
+	 * that phase remove marked stones then score. Default false.
+	 */
+	markDead?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -504,6 +512,8 @@ export function createInitialState(config: GameConfig): GameState {
 		moveCount: 0,
 		consecutivePasses: 0,
 		endgamePhase: false,
+		markingPhase: false,
+		markedDead: [],
 		koPoint: null,
 		phase: placement ? "placement" : "combat",
 		fleetProgress: placement ? initialFleetProgressMap() : undefined,
@@ -644,6 +654,15 @@ export function reduce(
 	event: GameEvent,
 	config: GameConfig
 ): GameState {
+	// Marking phase: only pass / markDead / reset may mutate.
+	if (
+		state.markingPhase === true &&
+		event.type !== "pass" &&
+		event.type !== "markDead" &&
+		event.type !== "reset"
+	) {
+		return state;
+	}
 	switch (event.type) {
 		case "place":
 			return handlePlace(state, event.position, config);
@@ -667,6 +686,8 @@ export function reduce(
 			return handleTick(state, config);
 		case "pass":
 			return handlePass(state, config);
+		case "markDead":
+			return handleMarkDead(state, event.position, config);
 		case "simultaneousPlace":
 			return handleSimultaneousPlace(state, event.placements, config);
 		case "simultaneousMove":
@@ -1142,7 +1163,12 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 
 	// Damezukai lite: first pass while dame remain enters endgame without
 	// counting toward terminal two-pass; only dame places stay legal after.
-	if (config.dameFill === true && state.endgamePhase !== true) {
+	// Skip while already in dead-stone marking (places are disabled there).
+	if (
+		config.dameFill === true &&
+		state.endgamePhase !== true &&
+		state.markingPhase !== true
+	) {
 		const dame = findDameCells(state.grid, wrap, topology, config.graph);
 		if (dame.length > 0) {
 			return {
@@ -1158,6 +1184,45 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 	const passes = (state.consecutivePasses ?? 0) + 1;
 
 	if (passes >= 2) {
+		// Interactive marking: two passes enter marking instead of scoring.
+		if (config.markDead === true && state.markingPhase !== true) {
+			return {
+				...state,
+				markingPhase: true,
+				markedDead: state.markedDead ?? [],
+				currentPlayer: nextPlayer,
+				moveCount: newMoveCount,
+				consecutivePasses: 0
+			};
+		}
+
+		// Confirm marking: remove agreed corpses, then score.
+		if (state.markingPhase === true) {
+			const cleared = removeMarkedDeadStones(
+				state.grid,
+				state.markedDead ?? []
+			);
+			const { status, winner } = areaOutcome(
+				cleared,
+				wrap,
+				topology,
+				config.graph,
+				config.komi ?? 0,
+				config.sekiScoring === true,
+				config.deadStones === true,
+				config.bensonLife === true
+			);
+			return {
+				...state,
+				grid: cleared,
+				status,
+				winner,
+				moveCount: newMoveCount,
+				consecutivePasses: passes,
+				markedDead: []
+			};
+		}
+
 		const { status, winner } = areaOutcome(
 			state.grid,
 			wrap,
@@ -1182,6 +1247,48 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 		currentPlayer: nextPlayer,
 		moveCount: newMoveCount,
 		consecutivePasses: passes
+	};
+}
+
+function keyOfPos(pos: Position): string {
+	return `${pos.row},${pos.col}`;
+}
+
+function handleMarkDead(
+	state: GameState,
+	position: Position,
+	config: GameConfig
+): GameState {
+	if (config.markDead !== true) return state;
+	if (state.markingPhase !== true) return state;
+	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
+	if (state.status !== "playing") return state;
+
+	const occupant = getCell(state.grid, position);
+	const opponent: Player = state.currentPlayer === "X" ? "O" : "X";
+	if (occupant !== opponent) return state;
+
+	const wrap = config.gridWrap === true;
+	const topology = config.topology ?? "rectangle";
+	const group = findGroup(state.grid, position, wrap, topology, config.graph);
+	if (group.length === 0) return state;
+
+	const marked = new Set(state.markedDead ?? []);
+	const groupKeys = group.map(keyOfPos);
+	const allMarked = groupKeys.every((k) => marked.has(k));
+	if (allMarked) {
+		for (const k of groupKeys) marked.delete(k);
+	} else {
+		for (const k of groupKeys) marked.add(k);
+	}
+
+	const nextPlayer: Player = state.currentPlayer === "X" ? "O" : "X";
+	return {
+		...state,
+		markedDead: Array.from(marked).sort(),
+		currentPlayer: nextPlayer,
+		moveCount: state.moveCount + 1,
+		consecutivePasses: 0
 	};
 }
 

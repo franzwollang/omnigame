@@ -86,11 +86,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M68 | Next missing mechanism (Go Lite Dead Stones / objective.deadStones) | `done` |
 | M69 | Next missing mechanism (Go Lite Benson / objective.bensonLife) | `done` |
 | M70 | Next missing mechanism (Go Lite Dame Fill / objective.dameFill) | `done` |
+| M71 | Next missing mechanism (Go Lite Mark Dead / objective.markDead) | `done` |
 
-**Optimizing for this marathon:** M70 Go Lite Dame Fill (`objective.dameFill`)
+**Optimizing for this marathon:** M71 Go Lite Mark Dead (`objective.markDead`)
 landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
 recombinations without anchor) — without asking which fork. Large deferred:
-simultaneous jump / realtime / fuller Go remainder beyond dame fill.
+simultaneous jump / realtime / fuller Go remainder beyond mark-dead
+(resume-on-dispute / semantic L&D).
 
 ## Marathon runbook (cloud agents)
 
@@ -105,7 +107,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥802** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥813** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -230,9 +232,11 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond dame fill (M70); fire→move
+**Not yet:** fuller Go remainder beyond mark-dead (M71; e.g. resume-on-dispute /
+semantic L&D); fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Dame Fill landed
+anchor); realtime scheduler; simultaneous jump. Go Lite Mark Dead landed
+(M71). Go Lite Dame Fill landed
 (M70). Go Lite Benson landed
 (M69). Go Lite Dead Stones landed
 (M68). Go Lite Seki landed (M67). Go Lite Komi landed (M66).
@@ -261,7 +265,7 @@ hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
-deadStones in M68; bensonLife in M69; dameFill in M70).
+deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71).
 
 ## Phase 2 exit criteria
 
@@ -1084,6 +1088,21 @@ deadStones in M68; bensonLife in M69; dameFill in M70).
 - Out of scope: interactive dead-stone negotiation; semantic life-death
   search; hex/graph dame-fill presets; simultaneous jump; realtime
 - Green gate: ≥802 + new cases — **done**
+
+### M71 — Go Lite Mark Dead / `objective.markDead`
+
+- Schema: optional `objective.markDead` boolean; require
+  `objective.mode = area_control`; forbid `turn.schedule = simultaneous` —
+  **done**
+- Kernel: `markingPhase` + `markedDead` state; `markDead` action toggles
+  opponent groups; two consecutive passes enter marking (after dameFill if
+  set); two consecutive passes in marking remove marked stones then
+  `areaOutcome`; normalize + form switch — **done**
+- Preset `go-lite-mark-dead` (O ring + lone X; mark flips winner) + unit /
+  schema / transcript / replay tests — **done**
+- Out of scope: resume-on-dispute; semantic life-death search; simultaneous
+  marking; hex/graph mark-dead presets; simultaneous jump; realtime
+- Green gate: ≥813 + new cases — **done**
 
 ## Sequencing notes
 

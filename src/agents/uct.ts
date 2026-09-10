@@ -97,6 +97,8 @@ export function actionKey(action: KernelAction): string {
 			return "tick";
 		case "pass":
 			return "pass";
+		case "markDead":
+			return `markDead:${action.position.row},${action.position.col}`;
 		case "simultaneousPlace": {
 			const xs = asPlacementList(action.placements.X);
 			const os = asPlacementList(action.placements.O);

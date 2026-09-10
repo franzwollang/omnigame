@@ -744,6 +744,28 @@ export function removeBensonDeadStones(
 }
 
 /**
+ * Remove stones whose keys appear in `markedKeys` (`row,col`). Used when
+ * interactive dead-stone marking confirms (two passes in markingPhase).
+ */
+export function removeMarkedDeadStones(
+	grid: Grid,
+	markedKeys: readonly string[]
+): Grid {
+	if (markedKeys.length === 0) return grid;
+	const dead = new Set(markedKeys);
+	let cells = grid.cells;
+	for (let row = 0; row < grid.height; row++) {
+		for (let col = 0; col < grid.width; col++) {
+			const k = `${row},${col}`;
+			if (!dead.has(k)) continue;
+			if (getCell({ ...grid, cells }, { row, col }) == null) continue;
+			cells = setCell({ ...grid, cells }, { row, col }, null);
+		}
+	}
+	return { ...grid, cells };
+}
+
+/**
  * Empty cells in mixed-border or edge-open regions (dame) — score for neither
  * under simplified area scoring. Mono-border territory empties are excluded
  * (including seki-neutral mono regions, which are not dame-fill targets).

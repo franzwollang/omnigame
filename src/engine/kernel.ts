@@ -81,6 +81,7 @@ export type KernelAction =
 	| { type: "popOutRow"; row: number }
 	| { type: "tick" }
 	| { type: "pass" }
+	| { type: "markDead"; position: Position }
 	| {
 			type: "simultaneousPlace";
 			placements: {
@@ -317,6 +318,8 @@ function formatAction(action: KernelAction): string {
 			return "tick";
 		case "pass":
 			return "pass";
+		case "markDead":
+			return `markDead (${action.position.row},${action.position.col})`;
 		case "simultaneousPlace": {
 			const xs = asPlacementList(action.placements.X);
 			const os = asPlacementList(action.placements.O);
@@ -425,6 +428,9 @@ function isNoop(before: GameState, after: GameState): boolean {
 		(before.koPoint?.col ?? null) === (after.koPoint?.col ?? null) &&
 		(before.consecutivePasses ?? 0) === (after.consecutivePasses ?? 0) &&
 		(before.endgamePhase ?? false) === (after.endgamePhase ?? false) &&
+		(before.markingPhase ?? false) === (after.markingPhase ?? false) &&
+		(before.markedDead ?? []).join("|") ===
+			(after.markedDead ?? []).join("|") &&
 		before.grid.cells === after.grid.cells &&
 		before.hidden?.cells === after.hidden?.cells &&
 		before.pendingPlaces === after.pendingPlaces &&
@@ -1129,6 +1135,26 @@ function collectLegalActions(
 
 	const jumpChain = collectJumpChainActions(config, state, actingPlayer);
 	if (jumpChain) return jumpChain;
+
+	// Dead-stone marking: only toggle opponent groups + pass.
+	if (
+		config.markDead === true &&
+		state.markingPhase === true &&
+		(config.objectiveMode ?? "n_in_a_row") === "area_control"
+	) {
+		const opponent: Player = actingPlayer === "X" ? "O" : "X";
+		for (const position of allActivePositions(
+			state.grid,
+			config.topology ?? "rectangle",
+			config.graph
+		)) {
+			if (getCell(state.grid, position) === opponent) {
+				actions.push({ type: "markDead", position });
+			}
+		}
+		actions.push({ type: "pass" });
+		return actions;
+	}
 
 	if (floodReveal) {
 		for (const position of allActivePositions(
@@ -2357,6 +2383,35 @@ export function explainKernelAction(
 			}
 			break;
 		}
+		case "markDead": {
+			if (
+				config.markDead !== true ||
+				(config.objectiveMode ?? "n_in_a_row") !== "area_control"
+			) {
+				return {
+					legal: false,
+					reason: "not_applicable",
+					detail: detailFor("not_applicable", action)
+				};
+			}
+			if (state.markingPhase !== true) {
+				return {
+					legal: false,
+					reason: "wrong_phase",
+					detail: detailFor("wrong_phase", action)
+				};
+			}
+			const occupant = getCell(state.grid, action.position);
+			const opponent = state.currentPlayer === "X" ? "O" : "X";
+			if (occupant !== opponent) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: "Can only mark an opponent stone during marking"
+				};
+			}
+			break;
+		}
 		case "fire": {
 			if (!hitMiss) {
 				return {
@@ -2817,6 +2872,8 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 		case "fire":
 		case "reveal":
 		case "flip":
+		case "markDead":
+		case "commitPlace":
 			return (
 				b.type === a.type &&
 				a.position.row === b.position.row &&
@@ -3089,6 +3146,7 @@ export function highlightCellsForActions(
 			case "fire":
 			case "reveal":
 			case "flip":
+			case "markDead":
 			case "commitPlace":
 				push(action.position);
 				break;

@@ -573,6 +573,15 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 				return;
 			}
 			if (
+				config.markDead === true &&
+				stateRef.current.markingPhase === true
+			) {
+				applyAction({ type: "markDead", position: pos });
+				selectedFromRef.current = null;
+				setSelectedFrom(null);
+				return;
+			}
+			if (
 				(config.observationMode ?? "full") === "memory_flip" ||
 				(config.inputMode ?? "cell") === "flip"
 			) {

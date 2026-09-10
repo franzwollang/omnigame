@@ -15,6 +15,7 @@ import {
 	orthogonalNeighbors,
 	removeBensonDeadStones,
 	removeDeadStones,
+	removeMarkedDeadStones,
 	scoreArea,
 	areaOutcome,
 	findSekiNeutralCells,
@@ -832,6 +833,151 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(state.winner).toBe("X");
 	});
 
+	it("validates and compiles the go-lite-mark-dead preset", () => {
+		const cfg = examplePresets["go-lite-mark-dead"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.markDead).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(state.markingPhase).toBe(false);
+		expect(state.markedDead).toEqual([]);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.markDead outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; markDead?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", markDead: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("rejects objective.markDead under simultaneous schedule", () => {
+		const bad = structuredClone(examplePresets["go-lite-mark-dead"].config);
+		bad.turn = { mode: "turn", schedule: "simultaneous" };
+		expect(validateConfig(bad).ok).toBe(false);
+	});
+
+	it("removeMarkedDeadStones clears listed keys only", () => {
+		const cells = Array(25).fill(null) as (string | null)[];
+		cells[2 * 5 + 2] = "X";
+		cells[1 * 5 + 1] = "O";
+		cells[1 * 5 + 2] = "O";
+		const g = gridOf(5, 5, cells);
+		const cleared = removeMarkedDeadStones(g, ["1,1", "1,2"]);
+		expect(getCell(cleared, { row: 1, col: 1 })).toBeNull();
+		expect(getCell(cleared, { row: 1, col: 2 })).toBeNull();
+		expect(getCell(cleared, { row: 2, col: 2 })).toBe("X");
+	});
+
+	it("markDead: two-pass enters marking; mark group; confirm removes and flips winner", () => {
+		const cfg = examplePresets["go-lite-mark-dead"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		// O ring claims surrounding empties under simplified area scoring.
+		expect(scoreArea(state.grid)).toEqual({ X: 1, O: 24 });
+
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.markingPhase).toBe(false);
+		expect(state.consecutivePasses).toBe(1);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.markingPhase).toBe(true);
+		expect(state.status).toBe("playing");
+		expect(state.consecutivePasses).toBe(0);
+		expect(state.currentPlayer).toBe("X");
+
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.every((a) => a.type === "markDead" || a.type === "pass")).toBe(
+			true
+		);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "markDead" && a.position.row === 1 && a.position.col === 1
+			)
+		).toBe(true);
+		expect(legal.some((a) => a.type === "place")).toBe(false);
+
+		const mark = kernel.stepSync(state, {
+			type: "markDead",
+			position: { row: 1, col: 1 }
+		});
+		expect(mark.events[0]?.type).toBe("actionApplied");
+		state = mark.nextState;
+		expect(state.markedDead?.length).toBe(8);
+		expect(state.consecutivePasses).toBe(0);
+		expect(state.currentPlayer).toBe("O");
+
+		// Own stone / empty illegal (O cannot mark O stones)
+		const own = kernel.stepSync(state, {
+			type: "markDead",
+			position: { row: 1, col: 1 }
+		});
+		expect(own.events[0]?.type).toBe("ignored");
+		expect(own.nextState).toBe(state);
+
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.consecutivePasses).toBe(1);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBeNull();
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("X");
+		expect(scoreArea(state.grid)).toEqual({ X: 25, O: 0 });
+
+		// Without markDead, double-pass awards O immediately.
+		const noMark = structuredClone(cfg);
+		noMark.objective = { mode: "area_control" };
+		const baseline = compileConfig(noMark);
+		let raw = baseline.kernel.initialState(cfg.rng.seed);
+		raw = baseline.kernel.stepSync(raw, { type: "pass" }).nextState;
+		raw = baseline.kernel.stepSync(raw, { type: "pass" }).nextState;
+		expect(raw.status).toBe("won");
+		expect(raw.winner).toBe("O");
+
+		const script: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "pass" },
+			{ type: "markDead", position: { row: 1, col: 1 } },
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+	});
+
+	it("markDead toggle off: confirm with empty marks leaves stones", () => {
+		const cfg = examplePresets["go-lite-mark-dead"].config;
+		const { kernel } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.markingPhase).toBe(true);
+		state = kernel.stepSync(state, {
+			type: "markDead",
+			position: { row: 1, col: 1 }
+		}).nextState;
+		expect(state.markedDead?.length).toBe(8);
+		// O passes; X toggles the same group off
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, {
+			type: "markDead",
+			position: { row: 3, col: 3 }
+		}).nextState;
+		expect(state.markedDead).toEqual([]);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe("O");
+	});
+
 	it("rejects capture.ko without liberties mode", () => {
 		const bad = structuredClone(examplePresets["go-lite"].config);
 		bad.placement.capture = { enabled: true, mode: "flip", ko: true };
@@ -1236,7 +1382,7 @@ describe("Go Lite (liberties + area_control)", () => {
 });
 
 describe("createInitialState consecutivePasses + koPoint", () => {
-	it("seeds consecutivePasses at 0, endgamePhase false, and koPoint null", () => {
+	it("seeds consecutivePasses at 0, endgamePhase false, markingPhase false, and koPoint null", () => {
 		const config: GameConfig = {
 			gridWidth: 5,
 			gridHeight: 5,
@@ -1257,6 +1403,8 @@ describe("createInitialState consecutivePasses + koPoint", () => {
 		const state = createInitialState(config);
 		expect(state.consecutivePasses).toBe(0);
 		expect(state.endgamePhase).toBe(false);
+		expect(state.markingPhase).toBe(false);
+		expect(state.markedDead).toEqual([]);
 		expect(state.koPoint).toBeNull();
 		expect(state.positionHistory).toBeUndefined();
 	});
