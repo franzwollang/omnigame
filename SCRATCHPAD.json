@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T12:10+00:00",
-  "turn": 117,
+  "updated_at": "2026-09-10T12:20+00:00",
+  "turn": 118,
   "focus": {
-    "milestone": "M87",
+    "milestone": "M88",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Square-Nakade landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Pyramid-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 2642 M86 tip onto cursor/next-task-progression-0dfa",
-    "Landed M87 objective.squareNakadeDeath + go-lite-square-nakade",
-    "Green gate 919 tests"
+    "Synced from 0dfa M87 tip onto cursor/next-task-progression-6d30",
+    "Probed T/straight/twisted/L4/bulky5; picked pyramid-4 (unique on 7×7)",
+    "Landed M88 objective.pyramidNakadeDeath + go-lite-pyramid-nakade"
   ],
   "discoveries": [
-    "Square-4 escapes T1/L + Benson + chase on unique 2×2 board",
-    "1-ply vital-fill matches T1/L true-eye model (classical 2-ply not needed)"
+    "Pyramid-4 T escapes T1/L/square + Benson + chase on unique board",
+    "7×7 T-up corridor (3,3)/(4,2)/(4,3)/(4,4); vital=junction (4,3)"
   ],
   "open_threads": [
     "Next: unique Go L&D or realtime (not topology ports / recombinations)"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M87",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M88",
   "blockers": []
 }

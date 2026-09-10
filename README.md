@@ -110,6 +110,7 @@ These are built from the same shared schema and operators.
 - **Go Lite Nakade** (`objective.nakadeDeath` T1 3-straight big-eye vital-fill removal at scoring)
 - **Go Lite L-Nakade** (`objective.lNakadeDeath` bent-3 big-eye vital-fill removal at scoring)
 - **Go Lite Square-Nakade** (`objective.squareNakadeDeath` square-4 / 2×2 bulky big-eye vital-fill removal at scoring)
+- **Go Lite Pyramid-Nakade** (`objective.pyramidNakadeDeath` pyramid-4 / T bulky big-eye vital-fill removal at scoring)
 - **Go Lite Net** (`objective.netDeath` attacker-sente net / geta removal at scoring)
 - **Go Lite Loose Net** (`objective.looseNetDeath` attacker-sente loose net / 4-lib geta removal at scoring)
 - **Go Lite Sente Ladder** (`objective.senteLadderDeath` attacker-first 3-lib → ladder collapse at scoring)
@@ -598,14 +599,16 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 Ordered Simultaneous Jump Race (M82), Hidden Simultaneous Jump Race (M83),
 Double Simultaneous Jump Race (M84), Hidden Double Simultaneous Jump Race (M85),
 Go Lite L-Nakade / `objective.lNakadeDeath` (M86), Go Lite Square-Nakade /
-`objective.squareNakadeDeath` (M87).
+`objective.squareNakadeDeath` (M87), Go Lite Pyramid-Nakade /
+`objective.pyramidNakadeDeath` (M88).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
   fuller Go remainder if uniquely expressible; realtime scheduler; reject
   recombinations and topology ports)
-- Deferred: fuller Go rules (square-nakade landed as M87; L-nakade as M86;
+- Deferred: fuller Go rules (pyramid-nakade landed as M88; square-nakade as
+  M87; L-nakade as M86;
   approach net as M80;
   sente ladder as M79; loose net as M78; net as M77; nakade as M76; semeai as
   M75; territory+prisoners as M74; ladders as M73;
@@ -631,7 +634,8 @@ Go Lite L-Nakade / `objective.lNakadeDeath` (M86), Go Lite Square-Nakade /
   M78; senteLadderDeath in M79; approachNetDeath in M80; simultaneous jump in
   M81; ordered simultaneous jump in M82; commitReveal simultaneous jump in
   M83; multi-action simultaneous jump in M84; commitReveal multi-action
-  jump in M85; lNakadeDeath in M86; squareNakadeDeath in M87)
+  jump in M85; lNakadeDeath in M86; squareNakadeDeath in M87;
+  pyramidNakadeDeath in M88)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

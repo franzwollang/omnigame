@@ -534,19 +534,32 @@ export const zConfig = z
 				 * When true, interior groups bordering a square-4 (2×2) nakade
 				 * big-eye that would have <2 true eyes after an opponent vital
 				 * fill are removed before two-pass scoring (after optional
-				 * lNakadeDeath; before netDeath / looseNetDeath / ladderDeath).
+				 * lNakadeDeath; before pyramidNakadeDeath / netDeath /
+				 * looseNetDeath / ladderDeath).
 				 * Edge foothold + seki clusters kept. Distinct from
 				 * nakadeDeath / lNakadeDeath (3-cell shapes) so bulky eyes can
 				 * be contrasted. Default / omit = leave Benson/eye survivors.
 				 */
 				squareNakadeDeath: z.boolean().optional(),
 				/**
+				 * When true, interior groups bordering a pyramid-4 (T) nakade
+				 * big-eye that would have <2 true eyes after an opponent vital
+				 * fill are removed before two-pass scoring (after optional
+				 * squareNakadeDeath; before netDeath / looseNetDeath /
+				 * ladderDeath). Edge foothold + seki clusters kept. Distinct
+				 * from squareNakadeDeath (2×2) and 3-cell T1/L so T-shape
+				 * bulky eyes can be contrasted. Default / omit = leave
+				 * Benson/eye survivors.
+				 */
+				pyramidNakadeDeath: z.boolean().optional(),
+				/**
 				 * When true, groups force-capturable by an attacker-sente net /
 				 * geta (root exactly 3 liberties; every defender liberty
 				 * extension has an attacker reply that captures, ladders, or
 				 * re-nets) are removed before two-pass scoring (after optional
-				 * nakadeDeath / lNakadeDeath / squareNakadeDeath; before
-				 * looseNetDeath / senteLadderDeath / ladderDeath). Edge
+				 * nakadeDeath / lNakadeDeath / squareNakadeDeath /
+				 * pyramidNakadeDeath; before looseNetDeath / senteLadderDeath /
+				 * ladderDeath). Edge
 				 * foothold does not save. Default / omit = leave multi-liberty
 				 * trapped groups on the board.
 				 */
@@ -1489,6 +1502,15 @@ export const zConfig = z
 				path: ["objective", "squareNakadeDeath"],
 				message:
 					"objective.squareNakadeDeath requires objective.mode = 'area_control'"
+			});
+		}
+		// Pyramid-4 (T) nakade removal is area_control-only.
+		if (cfg.objective.pyramidNakadeDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "pyramidNakadeDeath"],
+				message:
+					"objective.pyramidNakadeDeath requires objective.mode = 'area_control'"
 			});
 		}
 

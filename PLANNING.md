@@ -103,12 +103,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M85 | Next missing mechanism (commitReveal multi-action jump) | `done` |
 | M86 | Next missing mechanism (Go Lite L-Nakade / objective.lNakadeDeath) | `done` |
 | M87 | Next missing mechanism (Go Lite Square-Nakade / objective.squareNakadeDeath) | `done` |
+| M88 | Next missing mechanism (Go Lite Pyramid-Nakade / objective.pyramidNakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M87 Go Lite Square-Nakade landed. Pick **P3
+**Optimizing for this marathon:** M88 Go Lite Pyramid-Nakade landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
-with ladder family).
+with ladder/nakade family).
 
 ## Marathon runbook (cloud agents)
 
@@ -256,7 +257,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
 expressible vs ladder/net/sente/approach/nakade family on lite boards);
 hex-graph simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler. Go Lite Square-Nakade landed (M87). Go Lite
+anchor); realtime scheduler. Go Lite Pyramid-Nakade landed (M88). Go Lite
+Square-Nakade landed (M87). Go Lite
 L-Nakade landed (M86). Hidden Double
 Simultaneous Jump Race landed
 (M85). Double Simultaneous Jump Race landed
@@ -1399,9 +1401,24 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Preset `go-lite-square-nakade` (7×7 O-ring + interior X shell; eye + 2×2;
   Benson-alive / T1-miss / L-miss / chase-miss; flag → O) + schema /
   uniqueness / transcript / replay / contrast tests — **done**
-- Out of scope: throw-in / connect-and-die; hex/graph nakade ports; realtime;
-  larger bulky-five tables
+- Out of scope: pyramid-4 / T nakade (→ M88); throw-in / connect-and-die;
+  hex/graph nakade ports; realtime; larger bulky-five tables
 - Green gate: ≥919 + new cases — **done**
+
+### M88 — Go Lite Pyramid-Nakade / pyramid-4 (T)
+
+- Schema: `objective.pyramidNakadeDeath` boolean (area_control-only); distinct
+  from T1 / L / square-4 so T-shape bulky eyes stay contrastable — **done**
+- Kernel: `isPyramidNakadeVulnerableRegion` (T: one deg-3 junction + three
+  deg-1 leaves; vital = junction) + `findPyramidNakadeDeadCells` /
+  `removePyramidNakadeDeadStones`; `areaOutcome` after optional
+  squareNakadeDeath, before netDeath — **done**
+- Preset `go-lite-pyramid-nakade` (7×7 O-ring + interior X shell; eye + T
+  corridor; Benson-alive / T1-miss / L-miss / square-miss / chase-miss; flag
+  → O) + schema / uniqueness / transcript / replay / contrast tests — **done**
+- Out of scope: straight-4 / twisted-4 / bulky-5 tables; throw-in /
+  connect-and-die; hex/graph nakade ports; realtime
+- Green gate: ≥923 + new cases — **done**
 
 ## Sequencing notes
 

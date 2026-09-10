@@ -6120,6 +6120,101 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			})()
 		}
 	}),
+	"go-lite-pyramid-nakade": definePreset({
+		id: "go-lite-pyramid-nakade",
+		name: "Go Lite Pyramid-Nakade",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"nakade",
+			"pyramid-nakade",
+			"benson",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with pyramid-4 (T) nakade removal at scoring (objective.pyramidNakadeDeath). Seeded interior X shell with one true eye + closed T corridor (Benson-alive; T1/L/square nakadeDeath miss; chase family miss) plus living edge O: without the flag (or with bensonLife / nakadeDeath / lNakadeDeath / squareNakadeDeath) double-pass awards X; with pyramidNakadeDeath X is cleared → O wins. Unlocks T-shape bulky big-eye death beyond T1/L/square nakade / Benson / chase family.",
+		config: {
+			metadata: { name: "Go Lite Pyramid-Nakade", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", pyramidNakadeDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				// Interior X shell (rows/cols 1–5): true eye at (2,2); closed
+				// pyramid-4 T corridor at (3,3)/(4,2)/(4,3)/(4,4) (T pointing
+				// up; vital = junction (4,3)). One true eye (dead under
+				// deadStones) but Benson-alive via eye + T; T1/L/square miss.
+				const xCells: Array<[number, number]> = [
+					[1, 1],
+					[1, 2],
+					[1, 3],
+					[1, 4],
+					[1, 5],
+					[2, 1],
+					[2, 3],
+					[2, 4],
+					[2, 5],
+					[3, 1],
+					[3, 2],
+					[3, 4],
+					[3, 5],
+					[4, 1],
+					[4, 5],
+					[5, 1],
+					[5, 2],
+					[5, 3],
+					[5, 4],
+					[5, 5]
+				];
+				for (const [row, col] of xCells) {
+					stones.push({ row, col, player: "X", visibility: "public" });
+				}
+				for (let row = 0; row < 7; row++) {
+					for (let col = 0; col < 7; col++) {
+						if (row === 0 || row === 6 || col === 0 || col === 6) {
+							stones.push({
+								row,
+								col,
+								player: "O",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				return stones;
+			})()
+		}
+	}),
 	"go-lite-net": definePreset({
 		id: "go-lite-net",
 		name: "Go Lite Net",

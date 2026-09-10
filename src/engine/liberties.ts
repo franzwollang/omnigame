@@ -696,7 +696,7 @@ export function isLNakadeVulnerableRegion(
  * Square-4 (2×2 bulky) nakade: exactly four empties forming a filled 2×2
  * block; vital = canonical top-left (any of the four works under the
  * single-cell true-eye model used by T1/L). Distinct from T1/L so shapes
- * stay contrastable (M87).
+ * stay contrastable (M87). Pyramid-4 (T) is M88 `pyramidNakadeDeath`.
  */
 export function isSquareNakadeVulnerableRegion(
 	regionCells: Position[]
@@ -721,6 +721,36 @@ export function isSquareNakadeVulnerableRegion(
 		}
 	}
 	return { vital: { row: minR, col: minC } };
+}
+
+/**
+ * Pyramid-4 (T) nakade: exactly four empties forming a T — three colinear
+ * base cells plus one stem orthogonal from the middle; vital = unique
+ * degree-3 junction. Distinct from square-4 / T1 / L so shapes stay
+ * contrastable (M88).
+ */
+export function isPyramidNakadeVulnerableRegion(
+	regionCells: Position[]
+): { vital: Position } | null {
+	if (regionCells.length !== 4) return null;
+	// Square-4 is `squareNakadeDeath`'s job — keep flags contrastable.
+	if (isSquareNakadeVulnerableRegion(regionCells)) return null;
+	const ortho = (a: Position, b: Position) =>
+		Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
+	const degrees = regionCells.map((p, i) =>
+		regionCells.reduce(
+			(d, q, j) => (i !== j && ortho(p, q) ? d + 1 : d),
+			0
+		)
+	);
+	if (degrees.some((d) => d === 0)) return null;
+	const junctions = degrees
+		.map((d, i) => (d === 3 ? i : -1))
+		.filter((i) => i >= 0);
+	if (junctions.length !== 1) return null;
+	if (degrees.filter((d) => d === 1).length !== 3) return null;
+	if (degrees.some((d) => d === 2)) return null;
+	return { vital: regionCells[junctions[0]!]! };
 }
 
 /**
@@ -1010,6 +1040,104 @@ export function removeSquareNakadeDeadStones(
 	graph?: GraphTopologyData
 ): Grid {
 	const dead = findSquareNakadeDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
+ * Interior groups that border a pyramid-4 (T) nakade big-eye and would have
+ * fewer than 2 true eyes after an opponent vital fill are dead at scoring
+ * (M88). Same exemptions as T1/L/square nakade (edge + seki). Contrastable
+ * with `squareNakadeDeath` (2×2 only) and 3-cell T1/L.
+ */
+export function findPyramidNakadeDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const dead: Position[] = [];
+	const deadGroupIds = new Set<number>();
+
+	for (const color of ["X", "O"] as const) {
+		const colorGroups = groups.filter((g) => g.color === color);
+		if (colorGroups.length === 0) continue;
+		const stoneToGroup = new Map<string, number>();
+		for (const g of colorGroups) {
+			for (const p of g.stones) stoneToGroup.set(keyOf(p), g.id);
+		}
+		const regions = findColorOnlyEmptyRegions(
+			grid,
+			color,
+			stoneToGroup,
+			wrap,
+			topology,
+			graph
+		);
+		const attacker: Player = color === "X" ? "O" : "X";
+
+		for (const region of regions) {
+			const nakade = isPyramidNakadeVulnerableRegion(region.cells);
+			if (!nakade) continue;
+			const sim = simulateLibertyPlace(
+				grid,
+				nakade.vital,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			const nextGrid: Grid = { ...grid, cells: sim.cells };
+
+			for (const gid of Array.from(region.adjacentGroupIds)) {
+				if (deadGroupIds.has(gid)) continue;
+				const g = colorGroups.find((x) => x.id === gid);
+				if (!g) continue;
+				if (sekiIds.has(g.id)) continue;
+				if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+
+				const rem = g.stones.filter((p) => getCell(nextGrid, p) === color);
+				if (rem.length === 0) {
+					deadGroupIds.add(gid);
+					for (const p of g.stones) dead.push(p);
+					continue;
+				}
+				const eyes = countTrueEyes(
+					nextGrid,
+					rem,
+					color,
+					wrap,
+					topology,
+					graph
+				);
+				if (eyes >= 2) continue;
+				deadGroupIds.add(gid);
+				for (const p of g.stones) dead.push(p);
+			}
+		}
+	}
+	return dead;
+}
+
+/** Clear pyramid-nakade-dead stones from a grid copy (M88). */
+export function removePyramidNakadeDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findPyramidNakadeDeadCells(grid, wrap, topology, graph);
 	if (dead.length === 0) return grid;
 	let cells = grid.cells;
 	for (const p of dead) {
@@ -1978,15 +2106,19 @@ export function scoreArea(
  * When `nakadeDeath` is true, interior groups bordering a T1 (3-straight)
  * nakade big-eye that would have <2 true eyes after an opponent vital fill
  * are removed after optional semeaiDeath and before lNakadeDeath /
- * squareNakadeDeath / netDeath / ladderDeath (M76). When `lNakadeDeath` is
- * true, the same vital-fill path for bent-3 (L) big-eyes runs after optional
- * nakadeDeath and before squareNakadeDeath / netDeath (M86). When
- * `squareNakadeDeath` is true, the same path for square-4 (2×2) big-eyes
- * runs after optional lNakadeDeath and before netDeath (M87). When
- * `netDeath` is true, groups force-capturable by an attacker-sente tight net
- * / geta (exactly 3 root liberties; every escape has a finishing reply) are
- * removed after optional nakadeDeath / lNakadeDeath / squareNakadeDeath and
- * before looseNetDeath / senteLadderDeath / ladderDeath (M77). When
+ * squareNakadeDeath / pyramidNakadeDeath / netDeath / ladderDeath (M76). When
+ * `lNakadeDeath` is true, the same vital-fill path for bent-3 (L) big-eyes
+ * runs after optional nakadeDeath and before squareNakadeDeath /
+ * pyramidNakadeDeath / netDeath (M86). When `squareNakadeDeath` is true, the
+ * same path for square-4 (2×2) big-eyes runs after optional lNakadeDeath and
+ * before pyramidNakadeDeath / netDeath (M87). When `pyramidNakadeDeath` is
+ * true, the same path for pyramid-4 (T) big-eyes runs after optional
+ * squareNakadeDeath and before netDeath (M88). When `netDeath` is true,
+ * groups force-capturable by an attacker-sente tight net / geta (exactly 3
+ * root liberties; every escape has a finishing reply) are removed after
+ * optional nakadeDeath / lNakadeDeath / squareNakadeDeath /
+ * pyramidNakadeDeath and before looseNetDeath / senteLadderDeath /
+ * ladderDeath (M77). When
  * `looseNetDeath` is true, the same search with exactly 4 root liberties
  * runs after netDeath and before senteLadderDeath / ladderDeath (M78). When
  * `senteLadderDeath` is true, multi-stone groups with exactly 3 root
@@ -2020,7 +2152,8 @@ export function areaOutcome(
 	senteLadderDeath: boolean = false,
 	approachNetDeath: boolean = false,
 	lNakadeDeath: boolean = false,
-	squareNakadeDeath: boolean = false
+	squareNakadeDeath: boolean = false,
+	pyramidNakadeDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -2042,6 +2175,9 @@ export function areaOutcome(
 	}
 	if (squareNakadeDeath) {
 		scored = removeSquareNakadeDeadStones(scored, wrap, topology, graph);
+	}
+	if (pyramidNakadeDeath) {
+		scored = removePyramidNakadeDeadStones(scored, wrap, topology, graph);
 	}
 	if (netDeath) {
 		scored = removeNetDeadStones(scored, wrap, topology, graph);
