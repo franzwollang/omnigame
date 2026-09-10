@@ -2,83 +2,47 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P1 → P2 → P3 → P4** in order (P0 composition bugs
-closed in prep). Do not ask which fork — honesty first, then capture-by-replacement.
+**Marathon rule:** Work **P3** `next-missing-mechanism`. Do not ask which fork —
+pick the smallest new seam; reject recombinations without an anchor.
 
 ---
 
 ## Immediate (prioritized)
 
-### P1 — sandbox-form-honesty
+### P3 — next-missing-mechanism
 
-**Problem:** Form does not expose `movement.adjacency` / `movement.range` or
-`turn.phases`. README Usage now notes JSON-only; still prefer form controls or a
-durable in-UI “JSON-only” affordance.
+Hex flying capture (`Hex Flying Capture Jump Lite` /
+`promotion.crownedFlyingCapture` on `hex_offset`) landed as **M61**. Hub-graph
+promotion closed as M60; graph promotion as M59; hex promotion as M58; graph
+liberties as M57; hex liberties as M56; flying jump capture as M55; graph
+flood_reveal as M54; hex flood_reveal as M53; flying kings as M52; longest
+mandatory capture as M51; forward-only men as M50; crowned promotion as M49;
+graph jump as M48; hex jump as M47; memory flip as M46; mustCapture as M45;
+rectangle flood_reveal as M44. P4 tooling-ci and semantics-doc-refresh already
+closed (M41–M42; semantics notes continue per mechanism).
 
-**Acceptance:**
+Pick the smallest remaining new seam that existing primitives cannot express,
+e.g.:
 
-- [ ] Add form controls for movement (+ `turn.phases` when relevant), **or**
-      durable UI copy (not only README) that those fields are JSON/preset-only
-- [ ] No impression that the form covers the full schema
+- fire→move phase reorder (only if a new seam / anchor appears — otherwise
+  reject as recombination)
+- Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
+  recombination of reveal)
+- Memory bonus-turn-on-match / custom decks (schema field exists; deferred —
+  bonusTurnOnMatch is kernel-complete / preset-only)
+- commitReveal + slide/replace demos (kernel complete — preset-only unless a
+  new seam appears)
+- multi-action slide/replace under simultaneous (deferred composition; only if
+  a new seam appears — not a recombination demo)
+- `queryShape: not` (reject unless nested AST / new pruning class)
+- Hex/graph `menForwardOnly` / graph `crownedFlyingCapture` (requires new
+  forward / chain-walk ray geometry — not a forbid lift)
+- Full Go rules (large; prefer smaller seams first)
+- Realtime / continuous scheduler (large)
+- Simultaneous jump (large composition; deferred)
 
-### P2 — simultaneous-agent-search
-
-**Problem:** Tiny MCTS / UCT fall back to uniform random among seat legals under
-`schedule = simultaneous`; greedy skips lookahead. Joint action space is never
-searched.
-
-**Acceptance:**
-
-- [ ] Label Agent UI: “random under simultaneous” for MCTS/UCT, **or**
-- [ ] Root search over joint actions via `stepJoint` / `stepPly` for ≥1 agent
-- [ ] Test or README agents blurb documents the limitation
-
-### P3 — capture-by-replacement (default next mechanism)
-
-**Why existing primitives fail:** Move only allows empty destinations.
-Chess-like / attrition races need **move onto enemy → remove occupant**.
-Liberties/flip capture are place-centric, not move-replace.
-
-**Mini-spec:**
-
-- Schema: e.g. `movement.capture = "none" | "replace"` (name OK if documented);
-  rectangle foothold; require `input.mode = move`
-- Kernel/reducer: enemy cells legal destinations when replace on; apply clears
-  occupant then lands; emit events
-- Illegal: own-piece destination; sliding path empty except destination
-- Preset: **Replace Race** (reach_row + replace)
-- Tests: transcript, replay, validateConfig rejects bad combos
-- Out of scope: multi-jump checkers, capture chains, hex/graph (unless free)
-
-**Acceptance:**
-
-- [ ] Schema + contracts + kernel path
-- [ ] Preset + transcript/replay tests
-- [ ] PLANNING M9 → `done`; hand off next mechanism
-
-### P3 — next-missing-mechanism (after capture)
-
-Only after capture-by-replacement. Pick smallest new seam, e.g.:
-
-- Guess Who-like query / commit (README MVP anchor)
-- Richer multi-phase machines beyond current `turn.phases`
-- Apply-time simultaneous sliding (re-open composition)
-- Hex/graph `range > 1` (only if a new seam appears)
-
-**Acceptance:** schema + kernel + preset + tests; mechanism-first.
-
-### P4 — tooling-ci
-
-- [ ] Optional `.github/workflows` pinning Node ≥20.19 + pnpm 10.5.2
-      (`typecheck` + `test`)
-
-### P4 — semantics-doc-refresh
-
-**Problem:** `docs/semantics.md` still uses pre-simultaneous event vocabulary.
-
-**Acceptance:**
-
-- [ ] Sync compact draft with current kernel events/state/phases
+**Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
+exhaust `references/` or recombine covered primitives).
 
 ---
 
@@ -90,5 +54,55 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 
 ### deferred-mvp-anchors
 
-Guess Who-like / full Go remain deferred under post-capture
-`next-missing-mechanism`.
+Full Go remains a candidate under `next-missing-mechanism`. Guess Who Lite +
+Commit Lite + Commit Phases Lite + And Lite + Or Lite + And3 Lite +
+Simultaneous Guess Who Lite + Simultaneous Guess Who Commit Lite +
+Simultaneous Guess Who And Lite + Hidden Simultaneous Guess Who Lite +
+**Hidden Simultaneous Guess Who Commit Lite** cover query/guess + hypothesis
+eliminate + same-turn query→eliminate + 2-clause AND/OR + N-clause AND via
+`compoundArity` + joint simultaneous query/guess + joint simultaneous manual
+eliminate + joint simultaneous compound AND + hidden commitReveal under
+simultaneous deduction + commitReveal deduction joint UCT + **commitReveal +
+manual eliminate (`commitEliminate`)**. **Hidden Simultaneous Step Race**
+covers commitReveal under simultaneous move / `commitMove`. **Double
+Simultaneous Step Race** covers `actionsPerTurn > 1` under open simultaneous
+move. **Hidden Double Simultaneous Step Race** covers commitReveal +
+`actionsPerTurn > 1` under simultaneous move. Graph Hop Race covers hop-ball
+BFS. **Jump Race** covers leap-over capture + same-seat chains
+(`movement.capture = jump` / `mustContinueFrom`). **Mandatory Jump Race**
+covers Checkers-lite turn-start mandatory capture (`mustCapture`).
+**Mandatory Longest Jump Lite** covers Draughts-lite max-length capture
+(`mustLongestCapture`). **Hex Jump Race** covers jump on `hex_offset`
+(cube-axis). **Graph Jump Race** covers jump on `graph` (2-edge leap-over;
+simultaneous jump still deferred). **Crowned Kings Jump Lite** covers
+Transform-lite promotion (`movement.promotion` / `X+`|`O+` / `piecePromoted`;
+rectangle jump only). **Hex Crowned Jump Lite** covers promotion on
+`hex_offset` (orthogonal crownedAdjacency + `crownedRange`; no
+menForwardOnly). **Graph Crowned Jump Lite** covers promotion on `graph` via
+`targetRows` (lane graphs; orthogonal crownedAdjacency + `crownedRange`).
+**Graph Hub Crowned Jump Lite** covers promotion via `targetNodes` (hub vs
+same-row decoy; graph-only). **Forward Men Jump Lite** covers Checkers-lite
+forward-only men (`promotion.menForwardOnly`; uncrowned row-delta filter;
+crowned unrestricted). **Flying Kings Jump Lite** covers Draughts-lite flying
+kings (`promotion.crownedRange` — crowned quiet slides longer than men; jump
+leaps unchanged without flying capture). **Flying Capture Jump Lite** covers
+Draughts-lite flying jump capture (`promotion.crownedFlyingCapture` —
+crowned ray leap with empty approach + long land). **Hex Flying Capture Jump
+Lite** covers the same on `hex_offset` (cube-axis flying leap). **Minesweeper
+Lite** covers flood-fill region reveal (`flood_reveal` / `clear_hazards` /
+`hazards`) on rectangle. **Hex Minesweeper Lite** covers hex cube-axis-6
+hazard adjacency. **Graph Minesweeper Lite** covers graph explicit-edge hazard
+adjacency (max degree ≤ 8). **Memory Flip Lite** covers tile pair-matching
+(`memory_flip` / `flip` / `match_pairs` / `memory`). **Hex Go Lite** covers
+liberties + area_control on `hex_offset` (cube-axis-6). **Graph Go Lite**
+covers liberties + area_control on `graph` (explicit-edge). Open simultaneous
+deduction joint UCT covers agent search over query/guess(/eliminate) cartesian
+(fire→move still open if an anchor appears). CI green gate:
+`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics draft:
+`docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
+mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
+promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
+crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54;
+crownedFlyingCapture in M55; hex liberties in M56; graph liberties in M57;
+hex promotion in M58; graph promotion in M59; hub `targetNodes` promotion in
+M60; hex crownedFlyingCapture in M61).

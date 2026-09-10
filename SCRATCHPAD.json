@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T04:50+00:00",
+  "turn": 91,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M61",
+    "issue": "next-missing-mechanism",
+    "goal": "hex flying capture landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 0514 M60 tip onto cursor/next-task-progression-98b7",
+    "Landed M61 Hex Flying Capture Jump Lite / crownedFlyingCapture on hex",
+    "Schema: hex allows flying; graph still forbids; cube-axis jump rays"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Opening X(5,3)→(3,2) promote; chain mid O(2,2); fly land (0,1) wins",
+    "Adjacent chain land (1,1) is contrast without flying flag"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: graph flying, hex/graph menForwardOnly, full Go, realtime"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M61",
   "blockers": []
 }
