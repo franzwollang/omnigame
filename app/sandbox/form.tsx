@@ -1263,14 +1263,47 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<FormControl>
 														<Switch
 															checked={field.value === true}
-															onCheckedChange={(v) =>
-																field.onChange(v ? true : undefined)
-															}
+															onCheckedChange={(v) => {
+																field.onChange(v ? true : undefined);
+																if (!v) {
+																	form.setValue(
+																		"objective.markDeadResume",
+																		undefined,
+																		{ shouldDirty: true }
+																	);
+																}
+															}}
 														/>
 													</FormControl>
 												</FormItem>
 											)}
 										/>
+										{form.watch("objective.markDead") === true ? (
+											<FormField
+												control={form.control}
+												name="objective.markDeadResume"
+												render={({ field }) => (
+													<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+														<div className="space-y-0.5">
+															<FormLabel>Resume on dispute</FormLabel>
+															<p className="text-xs text-muted-foreground">
+																During marking, Reject marks exits without
+																scoring so play resumes
+																(objective.markDeadResume).
+															</p>
+														</div>
+														<FormControl>
+															<Switch
+																checked={field.value === true}
+																onCheckedChange={(v) =>
+																	field.onChange(v ? true : undefined)
+																}
+															/>
+														</FormControl>
+													</FormItem>
+												)}
+											/>
+										) : null}
 									</>
 								) : null}
 							</div>

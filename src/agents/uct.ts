@@ -99,6 +99,8 @@ export function actionKey(action: KernelAction): string {
 			return "pass";
 		case "markDead":
 			return `markDead:${action.position.row},${action.position.col}`;
+		case "rejectMarks":
+			return "rejectMarks";
 		case "simultaneousPlace": {
 			const xs = asPlacementList(action.placements.X);
 			const os = asPlacementList(action.placements.O);

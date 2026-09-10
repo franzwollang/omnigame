@@ -474,7 +474,14 @@ export const zConfig = z
 				 * score (interactive dead-stone negotiation lite). Default /
 				 * omit = immediate two-pass → score (after dameFill if set).
 				 */
-				markDead: z.boolean().optional()
+				markDead: z.boolean().optional(),
+				/**
+				 * When true (requires markDead), a seat may `rejectMarks` during
+				 * marking if any stones are marked: exit marking without scoring,
+				 * clear marks, resume placement (dispute → resume lite). Default /
+				 * omit = marking only ends via two-pass confirm.
+				 */
+				markDeadResume: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1296,6 +1303,34 @@ export const zConfig = z
 				message:
 					"objective.markDead is incompatible with turn.schedule = 'simultaneous'"
 			});
+		}
+
+		// Resume-on-dispute requires interactive marking.
+		if (cfg.objective.markDeadResume === true) {
+			if (cfg.objective.markDead !== true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "markDeadResume"],
+					message:
+						"objective.markDeadResume requires objective.markDead = true"
+				});
+			}
+			if (!areaControl) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "markDeadResume"],
+					message:
+						"objective.markDeadResume requires objective.mode = 'area_control'"
+				});
+			}
+			if (cfg.turn.schedule === "simultaneous") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["objective", "markDeadResume"],
+					message:
+						"objective.markDeadResume is incompatible with turn.schedule = 'simultaneous'"
+				});
+			}
 		}
 
 		// Hex foothold: cell + n-in-a-row, move + reach_row, flood_reveal +

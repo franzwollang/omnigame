@@ -116,6 +116,7 @@ export default function GamePage() {
 		popOutRow,
 		tick,
 		pass,
+		rejectMarks,
 		reset,
 		replayFromTranscript
 	} = useGameEngine(engineConfig, playSeed);
@@ -548,6 +549,21 @@ export default function GamePage() {
 									Pass
 								</Button>
 							)}
+							{enablePass &&
+								currentConfig?.objective.markDeadResume === true &&
+								gameState.markingPhase === true &&
+								(gameState.markedDead?.length ?? 0) > 0 && (
+									<Button
+										variant="outline"
+										size="sm"
+										className="h-7 px-2 text-xs"
+										disabled={gameState.status !== "playing"}
+										onClick={() => rejectMarks()}
+										title="Reject marked stones and resume play (dispute)"
+									>
+										Reject marks
+									</Button>
+								)}
 						</div>
 					</div>
 					{eventLines.length === 0 ? (
@@ -722,7 +738,9 @@ export default function GamePage() {
 									: "simple ko"}
 							)
 							{gameState.markingPhase
-								? "; marking — click opponent stones to toggle dead, Pass twice to score"
+								? currentConfig?.objective.markDeadResume
+									? "; marking — click opponent stones to toggle dead; Pass twice to score, or Reject marks to resume"
+									: "; marking — click opponent stones to toggle dead, Pass twice to score"
 								: currentConfig?.objective.markDead
 									? "; Pass twice to enter dead-stone marking"
 									: "; Pass twice to score"}

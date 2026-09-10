@@ -340,6 +340,11 @@ export type MarkDeadEvent = {
 	position: Position;
 };
 
+/** Dispute marks: exit marking without scoring (objective.markDeadResume). */
+export type RejectMarksEvent = {
+	type: "rejectMarks";
+};
+
 export type SimultaneousPlaceEvent = {
 	type: "simultaneousPlace";
 	/** One place each (scalar) or N places per seat for multi-action rounds. */
@@ -467,6 +472,7 @@ export type GameEvent =
 	| TickEvent
 	| PassEvent
 	| MarkDeadEvent
+	| RejectMarksEvent
 	| SimultaneousPlaceEvent
 	| SimultaneousMoveEvent
 	| SimultaneousQueryEvent

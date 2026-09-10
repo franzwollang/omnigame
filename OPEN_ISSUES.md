@@ -11,24 +11,24 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Go Lite Mark Dead (`go-lite-mark-dead` / `objective.markDead` interactive
-dead-stone marking) landed as **M71**. Go Lite Dame Fill closed as M70; Benson
-as M69; dead stones as M68; seki as M67; komi as M66; hub-graph forward-only
-men as M65; graph forward-only men as M64; hex forward-only men as M63; graph
-flying capture as M62; hex flying capture as M61; hub-graph promotion as M60;
-graph promotion as M59; hex promotion as M58; graph liberties as M57; hex
-liberties as M56; flying jump capture as M55; graph flood_reveal as M54; hex
-flood_reveal as M53; flying kings as M52; longest mandatory capture as M51;
-forward-only men as M50; crowned promotion as M49; graph jump as M48; hex jump
-as M47; memory flip as M46; mustCapture as M45; rectangle flood_reveal as M44.
-P4 tooling-ci and semantics-doc-refresh already closed (M41–M42; semantics
-notes continue per mechanism).
+Go Lite Mark Dead Resume (`go-lite-mark-dead-resume` /
+`objective.markDeadResume` + `rejectMarks`) landed as **M72**. Go Lite Mark
+Dead closed as M71; Dame Fill as M70; Benson as M69; dead stones as M68; seki
+as M67; komi as M66; hub-graph forward-only men as M65; graph forward-only
+men as M64; hex forward-only men as M63; graph flying capture as M62; hex
+flying capture as M61; hub-graph promotion as M60; graph promotion as M59;
+hex promotion as M58; graph liberties as M57; hex liberties as M56; flying
+jump capture as M55; graph flood_reveal as M54; hex flood_reveal as M53;
+flying kings as M52; longest mandatory capture as M51; forward-only men as
+M50; crowned promotion as M49; graph jump as M48; hex jump as M47; memory
+flip as M46; mustCapture as M45; rectangle flood_reveal as M44. P4 tooling-ci
+and semantics-doc-refresh already closed (M41–M42; semantics notes continue
+per mechanism).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
-- Fuller Go remainder beyond mark-dead (e.g. resume-on-dispute /
-  semantic life-death)
+- Fuller Go remainder beyond mark-dead resume (e.g. semantic life-death)
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
 - Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
@@ -42,8 +42,8 @@ e.g.:
 - `queryShape: not` (reject unless nested AST / new pruning class)
 - Realtime / continuous scheduler (large)
 - Simultaneous jump (large composition; deferred)
-- Hex/graph seki, dead-stone, Benson, dame-fill, or mark-dead presets
-  (topology ports — only if a new seam appears)
+- Hex/graph seki, dead-stone, Benson, dame-fill, mark-dead, or mark-dead-resume
+  presets (topology ports — only if a new seam appears)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -59,8 +59,8 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 ### deferred-mvp-anchors
 
 Fuller Go remains a candidate under `next-missing-mechanism` (komi M66 + seki
-M67 + dead-stone lite M68 + Benson M69 + dame fill M70 + mark-dead M71 landed;
-resume-on-dispute / semantic life-death still open).
+M67 + dead-stone lite M68 + Benson M69 + dame fill M70 + mark-dead M71 +
+mark-dead resume M72 landed; semantic life-death still open).
 Guess Who Lite + Commit Lite + Commit
 Phases Lite + And Lite + Or Lite + And3 Lite + Simultaneous Guess Who Lite +
 Simultaneous Guess Who Commit Lite + Simultaneous Guess Who And Lite + Hidden
@@ -114,8 +114,9 @@ shared-life territory exclusion. **Go Lite Dead Stones** covers
 Benson** covers `objective.bensonLife` vital-region unconditional life.
 **Go Lite Dame Fill** covers `objective.dameFill` damezukai-lite endgame.
 **Go Lite Mark Dead** covers `objective.markDead` interactive dead-stone
-marking. Open simultaneous deduction joint UCT covers
+marking. **Go Lite Mark Dead Resume** covers `objective.markDeadResume` +
+`rejectMarks` dispute→resume. Open simultaneous deduction joint UCT covers
 agent search over query/guess(/eliminate) cartesian (fire→move still open if
 an anchor appears). CI green gate: `.github/workflows/ci.yml` (Node 20.19 +
-pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M71
-markDead).
+pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M72
+markDeadResume).

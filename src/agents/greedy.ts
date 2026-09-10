@@ -24,6 +24,10 @@ function centerBias(state: GameState, action: KernelAction): number {
 			row = action.position.row;
 			col = action.position.col;
 			break;
+		case "rejectMarks":
+		case "pass":
+		case "tick":
+			break;
 		case "move":
 		case "commitMove":
 			row = action.to.row;

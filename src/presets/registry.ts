@@ -5229,6 +5229,66 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-mark-dead-resume": definePreset({
+		id: "go-lite-mark-dead-resume",
+		name: "Go Lite Mark Dead Resume",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"dead-stones",
+			"marking",
+			"dispute",
+			"resume",
+			"mechanism"
+		],
+		description:
+			"Go Lite Mark Dead plus resume-on-dispute (objective.markDeadResume). Same O-ring seed: after marking the ring, rejectMarks exits marking without scoring so play resumes; a later double-pass without re-marking awards O. Unlocks disagree-and-continue beyond agree-and-remove.",
+		config: {
+			metadata: { name: "Go Lite Mark Dead Resume", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: {
+				mode: "area_control",
+				markDead: true,
+				markDeadResume: true
+			},
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 2, player: "O", visibility: "public" },
+				{ row: 1, col: 3, player: "O", visibility: "public" },
+				{ row: 2, col: 1, player: "O", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "O", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 3, col: 2, player: "O", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T07:31+00:00",
-  "turn": 101,
+  "updated_at": "2026-09-10T07:45+00:00",
+  "turn": 102,
   "focus": {
-    "milestone": "M71",
+    "milestone": "M72",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Mark Dead landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Mark Dead Resume landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from c38d M70 tip onto cursor/next-task-progression-9312",
-    "Landed M71 Go Lite Mark Dead / objective.markDead + preset",
-    "Marking phase after two-pass; group toggle; confirm removes"
+    "Synced from 9312 M71 tip onto cursor/next-task-progression-70e0",
+    "Landed M72 markDeadResume + rejectMarks + go-lite-mark-dead-resume",
+    "Dispute clears marking; later double-pass re-enters or scores"
   ],
   "discoveries": [
-    "markDead forbids simultaneous; place blocked in markingPhase",
-    "Preset O-ring + lone X: raw O win → mark flips to X"
+    "rejectMarks requires non-empty markedDead; rejecter keeps seat",
+    "endgamePhase preserved across dispute (dameFill-then-mark safe)"
   ],
   "open_threads": [
-    "Next: resume-on-dispute / semantic L&D, simultaneous jump, realtime — reject recombinations"
+    "Next: semantic L&D, simultaneous jump, realtime — reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M71",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M72",
   "blockers": []
 }

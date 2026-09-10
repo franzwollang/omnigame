@@ -87,12 +87,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M69 | Next missing mechanism (Go Lite Benson / objective.bensonLife) | `done` |
 | M70 | Next missing mechanism (Go Lite Dame Fill / objective.dameFill) | `done` |
 | M71 | Next missing mechanism (Go Lite Mark Dead / objective.markDead) | `done` |
+| M72 | Next missing mechanism (Go Lite Mark Dead Resume / objective.markDeadResume) | `done` |
 
-**Optimizing for this marathon:** M71 Go Lite Mark Dead (`objective.markDead`)
-landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
-recombinations without anchor) — without asking which fork. Large deferred:
-simultaneous jump / realtime / fuller Go remainder beyond mark-dead
-(resume-on-dispute / semantic L&D).
+**Optimizing for this marathon:** M72 Go Lite Mark Dead Resume
+(`objective.markDeadResume` + `rejectMarks`) landed. Pick **P3
+next-missing-mechanism** (smallest new seam; reject recombinations without
+anchor) — without asking which fork. Large deferred: simultaneous jump /
+realtime / fuller Go remainder beyond mark-dead resume (semantic L&D).
 
 ## Marathon runbook (cloud agents)
 
@@ -232,10 +233,11 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond mark-dead (M71; e.g. resume-on-dispute /
-semantic L&D); fire→move
+**Not yet:** fuller Go remainder beyond mark-dead resume (M72; e.g. semantic
+L&D); fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Mark Dead landed
+anchor); realtime scheduler; simultaneous jump. Go Lite Mark Dead Resume
+landed (M72). Go Lite Mark Dead landed
 (M71). Go Lite Dame Fill landed
 (M70). Go Lite Benson landed
 (M69). Go Lite Dead Stones landed
@@ -265,7 +267,8 @@ hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
-deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71).
+deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
+markDeadResume in M72).
 
 ## Phase 2 exit criteria
 
@@ -1102,6 +1105,20 @@ deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71).
   schema / transcript / replay tests — **done**
 - Out of scope: resume-on-dispute; semantic life-death search; simultaneous
   marking; hex/graph mark-dead presets; simultaneous jump; realtime
+- Green gate: ≥813 + new cases — **done**
+
+### M72 — Go Lite Mark Dead Resume / `objective.markDeadResume`
+
+- Schema: optional `objective.markDeadResume` boolean; require
+  `objective.markDead = true` + `area_control`; forbid simultaneous — **done**
+- Kernel: `rejectMarks` action exits `markingPhase`, clears `markedDead`,
+  keeps rejecter initiative, grid unchanged; legal only when marks non-empty;
+  re-entry via later double-pass unchanged; normalize + form switch + Reject
+  marks button — **done**
+- Preset `go-lite-mark-dead-resume` (same O-ring seed; dispute → resume →
+  score without removal) + schema / transcript / replay tests — **done**
+- Out of scope: semantic life-death search; hex/graph mark-dead-resume
+  presets; simultaneous jump; realtime
 - Green gate: ≥813 + new cases — **done**
 
 ## Sequencing notes

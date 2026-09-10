@@ -674,6 +674,10 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		applyAction({ type: "pass" });
 	}, [applyAction]);
 
+	const rejectMarks = useCallback(() => {
+		applyAction({ type: "rejectMarks" });
+	}, [applyAction]);
+
 	const reset = useCallback(() => {
 		const next = kernel.initialState(seedRef.current);
 		stateRef.current = next;
@@ -778,6 +782,7 @@ export function useGameEngine(config: GameConfig, seed: Seed = DEFAULT_SEED) {
 		popOutRow,
 		tick,
 		pass,
+		rejectMarks,
 		reset,
 		replayFromTranscript
 	};

@@ -82,6 +82,7 @@ export type KernelAction =
 	| { type: "tick" }
 	| { type: "pass" }
 	| { type: "markDead"; position: Position }
+	| { type: "rejectMarks" }
 	| {
 			type: "simultaneousPlace";
 			placements: {
@@ -320,6 +321,8 @@ function formatAction(action: KernelAction): string {
 			return "pass";
 		case "markDead":
 			return `markDead (${action.position.row},${action.position.col})`;
+		case "rejectMarks":
+			return "rejectMarks";
 		case "simultaneousPlace": {
 			const xs = asPlacementList(action.placements.X);
 			const os = asPlacementList(action.placements.O);
@@ -1136,7 +1139,7 @@ function collectLegalActions(
 	const jumpChain = collectJumpChainActions(config, state, actingPlayer);
 	if (jumpChain) return jumpChain;
 
-	// Dead-stone marking: only toggle opponent groups + pass.
+	// Dead-stone marking: only toggle opponent groups + pass (+ rejectMarks).
 	if (
 		config.markDead === true &&
 		state.markingPhase === true &&
@@ -1153,6 +1156,12 @@ function collectLegalActions(
 			}
 		}
 		actions.push({ type: "pass" });
+		if (
+			config.markDeadResume === true &&
+			(state.markedDead ?? []).length > 0
+		) {
+			actions.push({ type: "rejectMarks" });
+		}
 		return actions;
 	}
 
@@ -2412,6 +2421,34 @@ export function explainKernelAction(
 			}
 			break;
 		}
+		case "rejectMarks": {
+			if (
+				config.markDead !== true ||
+				config.markDeadResume !== true ||
+				(config.objectiveMode ?? "n_in_a_row") !== "area_control"
+			) {
+				return {
+					legal: false,
+					reason: "not_applicable",
+					detail: detailFor("not_applicable", action)
+				};
+			}
+			if (state.markingPhase !== true) {
+				return {
+					legal: false,
+					reason: "wrong_phase",
+					detail: detailFor("wrong_phase", action)
+				};
+			}
+			if ((state.markedDead ?? []).length === 0) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: "rejectMarks requires at least one marked stone"
+				};
+			}
+			break;
+		}
 		case "fire": {
 			if (!hitMiss) {
 				return {
@@ -2895,6 +2932,7 @@ function actionsEqual(a: KernelAction, b: KernelAction): boolean {
 			return b.type === a.type && a.row === b.row;
 		case "tick":
 		case "pass":
+		case "rejectMarks":
 			return true;
 		case "simultaneousPlace": {
 			if (b.type !== "simultaneousPlace") return false;

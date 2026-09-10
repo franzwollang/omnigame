@@ -978,6 +978,119 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(getCell(state.grid, { row: 1, col: 1 })).toBe("O");
 	});
 
+	it("compiles go-lite-mark-dead-resume with markDeadResume", () => {
+		const cfg = examplePresets["go-lite-mark-dead-resume"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { gameConfig } = compileConfig(cfg);
+		expect(gameConfig.markDead).toBe(true);
+		expect(gameConfig.markDeadResume).toBe(true);
+	});
+
+	it("rejects objective.markDeadResume without markDead", () => {
+		const bad = structuredClone(
+			examplePresets["go-lite-mark-dead-resume"].config
+		) as {
+			objective: {
+				mode: string;
+				markDead?: boolean;
+				markDeadResume?: boolean;
+			};
+		};
+		bad.objective = { mode: "area_control", markDeadResume: true };
+		expect(validateConfig(bad).ok).toBe(false);
+	});
+
+	it("rejects objective.markDeadResume under simultaneous schedule", () => {
+		const bad = structuredClone(
+			examplePresets["go-lite-mark-dead-resume"].config
+		);
+		bad.turn = { mode: "turn", schedule: "simultaneous" };
+		expect(validateConfig(bad).ok).toBe(false);
+	});
+
+	it("rejectMarks: dispute exits marking; place legal; later score without removal", () => {
+		const cfg = examplePresets["go-lite-mark-dead-resume"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.markingPhase).toBe(true);
+
+		// Empty marks: rejectMarks illegal / noop
+		const emptyReject = kernel.stepSync(state, { type: "rejectMarks" });
+		expect(emptyReject.events[0]?.type).toBe("ignored");
+		expect(emptyReject.nextState).toBe(state);
+		expect(
+			kernel.legalActions(state, 0).some((a) => a.type === "rejectMarks")
+		).toBe(false);
+
+		state = kernel.stepSync(state, {
+			type: "markDead",
+			position: { row: 1, col: 1 }
+		}).nextState;
+		expect(state.markedDead?.length).toBe(8);
+		expect(state.currentPlayer).toBe("O");
+		expect(
+			kernel.legalActions(state, 1).some((a) => a.type === "rejectMarks")
+		).toBe(true);
+
+		const disputed = kernel.stepSync(state, { type: "rejectMarks" });
+		expect(disputed.events[0]?.type).toBe("actionApplied");
+		state = disputed.nextState;
+		expect(state.markingPhase).toBe(false);
+		expect(state.markedDead).toEqual([]);
+		expect(state.status).toBe("playing");
+		expect(state.consecutivePasses).toBe(0);
+		expect(state.currentPlayer).toBe("O"); // rejecter keeps initiative
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe("O");
+		expect(kernel.legalActions(state, 1).some((a) => a.type === "place")).toBe(
+			true
+		);
+
+		// Double-pass without re-marking → O wins (raw area)
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		// Re-enters marking (markDead still on)
+		expect(state.markingPhase).toBe(true);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(getCell(state.grid, { row: 1, col: 1 })).toBe("O");
+
+		const script: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "pass" },
+			{ type: "markDead", position: { row: 1, col: 1 } },
+			{ type: "rejectMarks" },
+			{ type: "pass" },
+			{ type: "pass" },
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
+	});
+
+	it("rejectMarks noop when markDeadResume is off", () => {
+		const cfg = examplePresets["go-lite-mark-dead"].config;
+		const { kernel } = compileConfig(cfg);
+		let state = kernel.initialState(cfg.rng.seed);
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, { type: "pass" }).nextState;
+		state = kernel.stepSync(state, {
+			type: "markDead",
+			position: { row: 1, col: 1 }
+		}).nextState;
+		const rejected = kernel.stepSync(state, { type: "rejectMarks" });
+		expect(rejected.events[0]?.type).toBe("ignored");
+		expect(rejected.nextState).toBe(state);
+		expect(state.markingPhase).toBe(true);
+	});
+
 	it("rejects capture.ko without liberties mode", () => {
 		const bad = structuredClone(examplePresets["go-lite"].config);
 		bad.placement.capture = { enabled: true, mode: "flip", ko: true };

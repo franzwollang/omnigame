@@ -81,6 +81,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		bensonLife: config.objective.bensonLife === true ? true : undefined,
 		dameFill: config.objective.dameFill === true ? true : undefined,
 		markDead: config.objective.markDead === true ? true : undefined,
+		markDeadResume:
+			config.objective.markDeadResume === true ? true : undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -201,6 +203,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	bensonLife: undefined,
 	dameFill: undefined,
 	markDead: undefined,
+	markDeadResume: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,

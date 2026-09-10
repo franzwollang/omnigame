@@ -115,7 +115,10 @@ detects via `isNoop`).
   (resets consecutivePasses); only dame places stay legal until two-pass score.
   With `objective.markDead`, two consecutive passes set `markingPhase` (instead
   of scoring); `markDead` toggles opponent groups into `markedDead`; two
-  consecutive passes in marking remove marked stones then score.
+  consecutive passes in marking remove marked stones then score. With
+  `objective.markDeadResume`, `rejectMarks` (when marks are non-empty) clears
+  `markedDead`, exits `markingPhase`, and resumes placement without scoring;
+  a later double-pass may re-enter marking.
 
 ### 2.2 Simultaneous resolve
 
@@ -275,8 +278,10 @@ are not Benson-unconditionally alive — vital-region fixed point; supersedes
 `deadStones` when both are set; optional `objective.dameFill` enters a
 damezukai-lite endgame on the first pass while dame remain — only dame places
 + pass legal until two consecutive passes score; optional `objective.markDead`
-enters a marking phase after two consecutive passes — players toggle opponent
-groups as dead, then two-pass removes marked stones and scores) |
+  enters a marking phase after two consecutive passes — players toggle opponent
+  groups as dead, then two-pass removes marked stones and scores; optional
+  `objective.markDeadResume` adds `rejectMarks` to exit marking without scoring
+  when marks exist) |
 identify_secret | clear_hazards | match_pairs | none.
 
 ### Observation

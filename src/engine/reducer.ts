@@ -206,6 +206,11 @@ export type GameConfig = {
 	 * that phase remove marked stones then score. Default false.
 	 */
 	markDead?: boolean;
+	/**
+	 * When true (requires markDead), `rejectMarks` exits marking without
+	 * scoring when any stones are marked — resume placement (dispute lite).
+	 */
+	markDeadResume?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -654,11 +659,12 @@ export function reduce(
 	event: GameEvent,
 	config: GameConfig
 ): GameState {
-	// Marking phase: only pass / markDead / reset may mutate.
+	// Marking phase: only pass / markDead / rejectMarks / reset may mutate.
 	if (
 		state.markingPhase === true &&
 		event.type !== "pass" &&
 		event.type !== "markDead" &&
+		event.type !== "rejectMarks" &&
 		event.type !== "reset"
 	) {
 		return state;
@@ -688,6 +694,8 @@ export function reduce(
 			return handlePass(state, config);
 		case "markDead":
 			return handleMarkDead(state, event.position, config);
+		case "rejectMarks":
+			return handleRejectMarks(state, config);
 		case "simultaneousPlace":
 			return handleSimultaneousPlace(state, event.placements, config);
 		case "simultaneousMove":
@@ -1289,6 +1297,30 @@ function handleMarkDead(
 		currentPlayer: nextPlayer,
 		moveCount: state.moveCount + 1,
 		consecutivePasses: 0
+	};
+}
+
+/**
+ * Dispute: exit marking without scoring when marks exist (markDeadResume).
+ * Rejecter keeps initiative; grid unchanged; endgamePhase preserved if set.
+ */
+function handleRejectMarks(
+	state: GameState,
+	config: GameConfig
+): GameState {
+	if (config.markDead !== true) return state;
+	if (config.markDeadResume !== true) return state;
+	if (state.markingPhase !== true) return state;
+	if ((config.objectiveMode ?? "n_in_a_row") !== "area_control") return state;
+	if (state.status !== "playing") return state;
+	if ((state.markedDead ?? []).length === 0) return state;
+
+	return {
+		...state,
+		markingPhase: false,
+		markedDead: [],
+		consecutivePasses: 0,
+		moveCount: state.moveCount + 1
 	};
 }
 
