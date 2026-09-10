@@ -865,23 +865,31 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												movement.promotion
 											</code>{" "}
-											in JSON (rectangle | hex_offset jump; graph
-											deferred) — land on{" "}
+											in JSON (rectangle | hex_offset | graph jump)
+											— land on{" "}
 											<code className="text-[11px]">
 												targetRows[seat]
 											</code>{" "}
-											to crown; crowned pieces use{" "}
+											or graph{" "}
+											<code className="text-[11px]">
+												targetNodes[seat]
+											</code>{" "}
+											(<code className="text-[11px]">
+												&quot;row,col&quot;
+											</code>
+											) to crown; crowned pieces use{" "}
 											<code className="text-[11px]">
 												crownedAdjacency
 											</code>{" "}
 											(default king on rectangle; orthogonal required
-											on hex) and optional{" "}
+											on hex/graph) and optional{" "}
 											<code className="text-[11px]">
 												crownedRange
 											</code>{" "}
 											for quiet slides longer than men (Flying Kings
-											Jump Lite / Hex Crowned Jump Lite). Rectangle-only
-											optional{" "}
+											Jump Lite / Hex Crowned Jump Lite / Graph Crowned
+											Jump Lite / Graph Hub Crowned Jump Lite).
+											Rectangle-only optional{" "}
 											<code className="text-[11px]">
 												crownedFlyingCapture
 											</code>{" "}
@@ -890,12 +898,9 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												menForwardOnly
 											</code>{" "}
-											(rectangle) restricts uncrowned quiet/jump moves
-											to the forward row-delta (see Forward Men Jump
-											Lite). Hex Crowned Jump Lite covers promotion on
-											hex_offset; Crowned Kings Jump Lite covers
-											rectangle promotion without the forward filter or
-											flying range.
+											(rectangle + targetRows) restricts uncrowned
+											quiet/jump moves to the forward row-delta (see
+											Forward Men Jump Lite).
 										</p>
 									)}
 								</div>

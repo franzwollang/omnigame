@@ -75,11 +75,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M57 | Next missing mechanism (graph liberties / Graph Go Lite) | `done` |
 | M58 | Next missing mechanism (hex promotion / Hex Crowned Jump Lite) | `done` |
 | M59 | Next missing mechanism (graph promotion / Graph Crowned Jump Lite) | `done` |
+| M60 | Next missing mechanism (hub targetNodes promotion / Graph Hub Crowned Jump Lite) | `done` |
 
-**Optimizing for this marathon:** M59 graph promotion (`Graph Crowned Jump Lite` /
-`movement.promotion` on `graph`) landed. Pick **P3 next-missing-mechanism**
-(smallest new seam; reject recombinations without anchor) — without asking
-which fork.
+**Optimizing for this marathon:** M60 hub-graph promotion
+(`Graph Hub Crowned Jump Lite` / `movement.promotion.targetNodes`) landed.
+Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
+without anchor) — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -94,7 +95,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥726** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥737** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -154,7 +155,10 @@ max-length chain pruning); **Hex Jump Race** demonstrates `capture = jump` on
 hex_offset (cube-axis leap-over + `mustContinueFrom` chains); **Graph Jump Race**
 demonstrates `capture = jump` on graph (2-edge leap-over + chains);
 **Crowned Kings Jump Lite** demonstrates `movement.promotion` (Transform lite —
-crown on reach row; crowned adjacency); **Forward Men Jump Lite** demonstrates
+crown on reach row; crowned adjacency); **Hex Crowned Jump Lite** /
+**Graph Crowned Jump Lite** demonstrate promotion on hex/graph via
+`targetRows`; **Graph Hub Crowned Jump Lite** demonstrates
+`promotion.targetNodes` (hub vs same-row decoy); **Forward Men Jump Lite** demonstrates
 `promotion.menForwardOnly` (uncrowned advance toward promo side only;
 crowned unrestricted); **Flying Kings Jump Lite** demonstrates
 `promotion.crownedRange` (crowned quiet slides longer than men; jump leaps
@@ -212,7 +216,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler. Graph promotion landed (M59 Graph Crowned Jump Lite). Hex promotion
+scheduler. Hub-graph promotion landed (M60 Graph Hub Crowned Jump Lite).
+Graph promotion landed (M59 Graph Crowned Jump Lite). Hex promotion
 landed (M58 Hex Crowned Jump Lite).
 Graph liberties landed (M57 Graph Go Lite). Hex liberties landed
 (M56 Hex Go Lite). Flying jump capture landed (M55 Flying Capture Jump
@@ -903,6 +908,19 @@ M55; hex liberties in M56).
 - Out of scope: hub `targetNodes` promotion geometry; graph flying capture;
   graph menForwardOnly; simultaneous jump
 - Green gate: ≥726 tests — **done**
+
+### M60 — Hub-graph promotion / Graph Hub Crowned Jump Lite
+
+- Schema: `movement.promotion.targetNodes` (`"row,col"` per seat) on `graph`
+  + jump; mutually exclusive with `targetRows`; keys must be active nodes;
+  rectangle/hex reject `targetNodes` — **done**
+- Kernel: `landsOnPromotionTarget` — promote on exact node key match (not
+  every co-row node) — **done**
+- Preset `graph-hub-crowned-jump-lite` (Graph Hub Crowned Jump Lite) + schema /
+  movement / transcript / replay / decoy-contrast tests — **done**
+- Out of scope: hex/graph flying capture; hex/graph menForwardOnly;
+  simultaneous jump; full Go; realtime
+- Green gate: ≥737 tests — **done**
 
 ## Sequencing notes
 

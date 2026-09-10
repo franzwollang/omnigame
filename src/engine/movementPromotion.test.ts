@@ -142,7 +142,7 @@ describe("promotion apply + events", () => {
 				{ row: 4, col: 4, player: "O", visibility: "public" }
 			]
 		});
-		expect(gameConfig.movement?.promotion?.targetRows.X).toBe(1);
+		expect(gameConfig.movement?.promotion?.targetRows?.X).toBe(1);
 		const state = kernel.initialState(42);
 		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("X");
 		const quiet: KernelAction = {

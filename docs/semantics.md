@@ -74,7 +74,8 @@ Not reducer inputs — emitted by `GameKernel.step` / `stepJoint`:
 - `pieceCaptured` — replace capture at destination; jump capture at mid cell
   (captured reports seat owner via cellOwner, incl. crowned mid)
 - `piecePromoted` — Transform lite: uncrowned piece landed on
-  movement.promotion.targetRows[seat] → CrownMark
+  movement.promotion.targetRows[seat] **or** graph
+  targetNodes[seat] (`"row,col"`) → CrownMark
 - `queryAnswered` — trait/clauses + boolean answer
 - `guessResult` — targetId + correct
 - `candidateEliminated` — pruned roster id
@@ -218,7 +219,7 @@ delayTurns → pendingPlaces.
 | liberties | placement.captureMode | Go-lite group removal + ko/superko (rectangle von Neumann-4; hex_offset cube-axis-6 — Hex Go Lite; graph explicit-edge — Graph Go Lite) |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; optional `mustLongestCapture` (max chain length); incompatible with `graphReach: hop` |
-| promote | movement.promotion | Transform on reach row (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` / `menForwardOnly` (rectangle only) |
+| promote | movement.promotion | Transform on reach row/node (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` **or** graph `targetNodes[seat]` (`"row,col"`; mutually exclusive) → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` / `menForwardOnly` (rectangle + targetRows only) |
 
 KoRule: none | point | positional | situational.
 
@@ -235,16 +236,17 @@ KoRule: none | point | positional | situational.
   capture chain (Mandatory Longest Jump Lite); Graph Jump Race covers
   explicit-edge leaps (incompatible with graphReach hop)
 - promotion: optional `movement.promotion` (rectangle | hex_offset | graph +
-  jump); `targetRows` + `crownedAdjacency` (hex/graph: orthogonal only);
-  optional `crownedRange` (1–8) for crowned quiet slides (men keep
-  `movement.range` = 1 under jump; jump leap distance unchanged without
-  flying — Flying Kings Jump Lite / Hex Crowned Jump Lite / Graph Crowned
-  Jump Lite); optional
+  jump); exactly one of `targetRows` or graph-only `targetNodes`
+  (`"row,col"` hub keys — Graph Hub Crowned Jump Lite) + `crownedAdjacency`
+  (hex/graph: orthogonal only); optional `crownedRange` (1–8) for crowned
+  quiet slides (men keep `movement.range` = 1 under jump; jump leap distance
+  unchanged without flying — Flying Kings Jump Lite / Hex Crowned Jump Lite /
+  Graph Crowned Jump Lite / Graph Hub Crowned Jump Lite); optional
   `crownedFlyingCapture` (rectangle) extends crowned jumps along a clear ray
   within `crownedRange` (empty approach + land beyond immediate past-mid;
   requires `crownedRange >= 2` — Flying Capture Jump Lite); preserve crown on
   move; emit `piecePromoted` (Crowned Kings Jump Lite); optional
-  `menForwardOnly` (rectangle)
+  `menForwardOnly` (rectangle + targetRows)
   restricts uncrowned quiet/jump row deltas toward the promotion side
   (Forward Men Jump Lite; crowned unrestricted)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)

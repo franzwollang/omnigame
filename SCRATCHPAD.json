@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T04:16+00:00",
-  "turn": 89,
+  "updated_at": "2026-09-10T04:33+00:00",
+  "turn": 90,
   "focus": {
-    "milestone": "M59",
+    "milestone": "M60",
     "issue": "next-missing-mechanism",
-    "goal": "graph promotion landed; hand off next genuine P3 seam"
+    "goal": "hub targetNodes promotion landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 99f6 M58 tip onto cursor/next-task-progression-3539",
-    "Landed M59 Graph Crowned Jump Lite / promotion on graph",
-    "Schema: graph orthogonal crownedAdjacency; forbid menForward/flying"
+    "Synced from 3539 M59 tip onto cursor/next-task-progression-0514",
+    "Landed M60 Graph Hub Crowned Jump Lite / promotion.targetNodes",
+    "Schema: exactly one of targetRows|targetNodes; graph-only nodes"
   ],
   "discoveries": [
-    "Default crownedAdjacency king yields [] legalDests on graph",
-    "Lane graphs reuse targetRows; hub targetNodes still deferred"
+    "mustCapture + hub-adjacent O reply blocks quiet crowned win",
+    "targetRows on hub graph promotes same-row decoy; targetNodes does not"
   ],
   "open_threads": [
-    "Next: full Go, realtime, hub targetNodes; reject recombinations"
+    "Next: full Go, realtime, hex/graph flying/forward; reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M59",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M60",
   "blockers": []
 }

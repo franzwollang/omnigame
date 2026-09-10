@@ -57,6 +57,7 @@ import {
 	isMaximalJumpStart,
 	jumpDestinations,
 	jumpMid,
+	landsOnPromotionTarget,
 	movementBoardFrom,
 	type MovementConfig
 } from "@/engine/movement";
@@ -1953,11 +1954,7 @@ function handleMove(
 		? (promote(owner) ?? owner)
 		: owner;
 	const promo = movement.promotion;
-	if (
-		promo &&
-		!isCrowned(landMark) &&
-		to.row === promo.targetRows[owner]
-	) {
+	if (promo && !isCrowned(landMark) && landsOnPromotionTarget(promo, owner, to)) {
 		landMark = promote(owner) ?? landMark;
 	}
 

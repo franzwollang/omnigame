@@ -151,13 +151,16 @@ export const zConfig = z
 		 * Incompatible with `graphReach: "hop"` (jump has fixed 2-edge
 		 * semantics).
 		 * Optional `promotion`: Transform lite — uncrowned pieces that land
-		 * on `targetRows[seat]` become crowned (`X+`/`O+`) and thereafter use
-		 * `crownedAdjacency` (default king on rectangle; orthogonal required
-		 * on hex). Optional `menForwardOnly` restricts uncrowned quiet/jump
-		 * moves to the forward row-delta toward the seat's promotion side
-		 * (crowned unrestricted; rectangle only). Rectangle | hex_offset |
-		 * graph + jump for v1 (hex/graph forbid menForwardOnly /
-		 * crownedFlyingCapture; graph requires orthogonal crownedAdjacency).
+		 * on `targetRows[seat]` (or graph `targetNodes[seat]` `"row,col"`)
+		 * become crowned (`X+`/`O+`) and thereafter use `crownedAdjacency`
+		 * (default king on rectangle; orthogonal required on hex/graph).
+		 * Optional `menForwardOnly` restricts uncrowned quiet/jump moves to
+		 * the forward row-delta toward the seat's promotion side (crowned
+		 * unrestricted; rectangle + `targetRows` only). Rectangle |
+		 * hex_offset | graph + jump for v1 (hex/graph forbid menForwardOnly /
+		 * crownedFlyingCapture; graph requires orthogonal crownedAdjacency;
+		 * `targetNodes` is graph-only and mutually exclusive with
+		 * `targetRows`).
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -184,24 +187,40 @@ export const zConfig = z
 				graphReach: z.enum(["chain", "hop"]).optional(),
 				/**
 				 * Crowned kings / Transform lite (rectangle | hex_offset |
-				 * graph jump): land on `targetRows[seat]` → promote in place;
+				 * graph jump): land on `targetRows[seat]` **or** graph
+				 * `targetNodes[seat]` (`"row,col"`) → promote in place;
 				 * crowned pieces use `crownedAdjacency` for quiet/jump rays.
 				 * Optional `crownedRange` (default 1) gives crowned quiet
 				 * slides longer than men (`movement.range` stays 1). Optional
 				 * `crownedFlyingCapture` (rectangle) extends crowned jump
 				 * leaps along a clear ray within `crownedRange`. Optional
-				 * `menForwardOnly` (rectangle) restricts uncrowned row deltas
-				 * to the promotion-side advance. Hex/graph require orthogonal
-				 * crownedAdjacency.
+				 * `menForwardOnly` (rectangle + targetRows) restricts
+				 * uncrowned row deltas to the promotion-side advance.
+				 * Hex/graph require orthogonal crownedAdjacency.
+				 * `targetNodes` is graph-only and mutually exclusive with
+				 * `targetRows`.
 				 */
 				promotion: z
 					.object({
+						/** Row trigger — mutually exclusive with targetNodes. */
 						targetRows: z
 							.object({
 								X: z.number().int().min(0),
 								O: z.number().int().min(0)
 							})
-							.strict(),
+							.strict()
+							.optional(),
+						/**
+						 * Graph hub trigger (`"row,col"` node keys) — mutually
+						 * exclusive with targetRows; graph topology only.
+						 */
+						targetNodes: z
+							.object({
+								X: z.string().regex(/^\d+,\d+$/),
+								O: z.string().regex(/^\d+,\d+$/)
+							})
+							.strict()
+							.optional(),
 						/** Quiet/jump adjacency for crowned pieces. Default king. */
 						crownedAdjacency: z
 							.enum(["orthogonal", "diagonal", "king"])
@@ -2402,16 +2421,69 @@ export const zConfig = z
 						"movement.promotion is incompatible with delayTurns"
 				});
 			}
-			const promoRows = cfg.movement.promotion.targetRows;
-			for (const player of ["X", "O"] as const) {
-				const row = promoRows[player];
-				if (row < 0 || row >= cfg.grid.height) {
+			const hasRows = cfg.movement.promotion.targetRows != null;
+			const hasNodes = cfg.movement.promotion.targetNodes != null;
+			if (hasRows === hasNodes) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion"],
+					message:
+						"movement.promotion requires exactly one of targetRows or targetNodes"
+				});
+			}
+			if (hasNodes) {
+				if (cfg.grid.topology !== "graph") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
-						path: ["movement", "promotion", "targetRows", player],
-						message: `promotion.targetRows.${player} must be in [0, ${cfg.grid.height - 1}]`
+						path: ["movement", "promotion", "targetNodes"],
+						message:
+							"promotion.targetNodes requires grid.topology = 'graph'"
 					});
+				} else {
+					const nodeKeys = new Set(
+						(cfg.grid.nodes ?? []).map((n) => `${n.row},${n.col}`)
+					);
+					const targets = cfg.movement.promotion.targetNodes!;
+					for (const player of ["X", "O"] as const) {
+						const key = targets[player];
+						if (!nodeKeys.has(key)) {
+							ctx.addIssue({
+								code: z.ZodIssueCode.custom,
+								path: [
+									"movement",
+									"promotion",
+									"targetNodes",
+									player
+								],
+								message: `promotion.targetNodes.${player} must be an active graph node key`
+							});
+						}
+					}
 				}
+			}
+			if (hasRows) {
+				const promoRows = cfg.movement.promotion.targetRows!;
+				for (const player of ["X", "O"] as const) {
+					const row = promoRows[player];
+					if (row < 0 || row >= cfg.grid.height) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["movement", "promotion", "targetRows", player],
+							message: `promotion.targetRows.${player} must be in [0, ${cfg.grid.height - 1}]`
+						});
+					}
+				}
+			}
+			if (
+				cfg.movement.promotion.menForwardOnly === true &&
+				!hasRows
+			) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "promotion", "menForwardOnly"],
+					message:
+						"promotion.menForwardOnly requires promotion.targetRows"
+				});
 			}
 			if (cfg.movement.promotion.crownedFlyingCapture === true) {
 				const flyRange = cfg.movement.promotion.crownedRange ?? 1;

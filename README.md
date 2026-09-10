@@ -64,6 +64,7 @@ These are built from the same shared schema and operators.
 - **Crowned Kings Jump Lite** (`movement.promotion` — crown on reach row; king adjacency)
 - **Hex Crowned Jump Lite** (`hex_offset` + `promotion` — cube-axis crown + crownedRange)
 - **Graph Crowned Jump Lite** (`graph` + `promotion` — edge chain-walk crown + crownedRange)
+- **Graph Hub Crowned Jump Lite** (`promotion.targetNodes` — hub vs same-row decoy)
 - **Forward Men Jump Lite** (`menForwardOnly` — uncrowned advance toward promo side only)
 - **Flying Kings Jump Lite** (`crownedRange` — crowned quiet slides longer than men)
 - **Flying Capture Jump Lite** (`crownedFlyingCapture` — crowned long-range leap capture)
@@ -214,7 +215,9 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   (Transform lite: land on `targetRows` → `X+`/`O+`; crowned uses
   `crownedAdjacency`) / **Hex Crowned Jump Lite** (hex_offset + orthogonal
   crownedAdjacency + `crownedRange`) / **Graph Crowned Jump Lite** (graph +
-  orthogonal crownedAdjacency + `crownedRange` chain-walk) / **Forward Men Jump Lite** (`menForwardOnly`: uncrowned
+  orthogonal crownedAdjacency + `crownedRange` chain-walk via `targetRows`) /
+  **Graph Hub Crowned Jump Lite** (`targetNodes` hub vs same-row decoy) /
+  **Forward Men Jump Lite** (`menForwardOnly`: uncrowned
   advance toward promotion side only; crowned unrestricted) / **Flying Kings
   Jump Lite** (`crownedRange`: crowned quiet slides longer than men; jump
   leaps unchanged) / **Flying Capture Jump Lite** (`crownedFlyingCapture`:
@@ -223,7 +226,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace /
   jump capture (`movement.capture`; optional `mustCapture` /
   `mustLongestCapture` for jump);
-  optional promotion (`movement.promotion` — Transform on reach row; optional
+  optional promotion (`movement.promotion` — Transform on reach row **or**
+  graph `targetNodes`; optional
   `menForwardOnly` / `crownedRange` / `crownedFlyingCapture`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3 / Simultaneous / Simultaneous And / **Hidden Simultaneous** / **Hidden Simultaneous Commit**); `clear_hazards` (Minesweeper Lite / **Hex Minesweeper Lite** / **Graph Minesweeper Lite**); `match_pairs` (Memory Flip Lite); `none` (open-ended / tick demos)
 - **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), `deduction` (public roster + own eliminations / last query / pending commit), `flood_reveal` (shared hazard counts + flood open on rectangle Chebyshev-8, **hex cube-axis-6**, or **graph explicit edges**), or `memory_flip` (shared face-up / matched pair marks); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Minesweeper Lite** / **Hex Minesweeper Lite** / **Graph Minesweeper Lite** / **Memory Flip Lite** / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who Commit Phases Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** / **Simultaneous Guess Who Lite** / **Simultaneous Guess Who Commit Lite** / **Simultaneous Guess Who And Lite** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite** presets
@@ -234,7 +238,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder
-(only with anchor), realtime scheduler, hub-graph `targetNodes` promotion,
+(only with anchor), realtime scheduler,
 and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
@@ -529,15 +533,16 @@ Flying Kings Jump Lite (M52), hex flood_reveal / Hex Minesweeper Lite (M53),
 graph flood_reveal / Graph Minesweeper Lite (M54), flying jump capture /
 Flying Capture Jump Lite (M55), hex liberties / Hex Go Lite (M56),
 graph liberties / Graph Go Lite (M57), hex promotion / Hex Crowned Jump Lite
-(M58), graph promotion / Graph Crowned Jump Lite (M59).
+(M58), graph promotion / Graph Crowned Jump Lite (M59), hub `targetNodes`
+promotion / Graph Hub Crowned Jump Lite (M60).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor; full Go; realtime scheduler; hub
-  `targetNodes` promotion; reject recombinations)
+  fire→move only with anchor; full Go; realtime scheduler; hex/graph
+  flying capture / menForwardOnly geometry; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
-  (recombination without anchor); hub-graph promotion via `targetNodes`;
+  (recombination without anchor); hex/graph flying capture / menForwardOnly;
   memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
@@ -545,7 +550,7 @@ graph liberties / Graph Go Lite (M57), hex promotion / Hex Crowned Jump Lite
   promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
   crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54;
   crownedFlyingCapture in M55; hex liberties in M56; graph liberties in M57;
-  hex promotion in M58; graph promotion in M59)
+  hex promotion in M58; graph promotion in M59; hub targetNodes in M60)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

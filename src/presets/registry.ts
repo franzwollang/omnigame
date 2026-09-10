@@ -1973,6 +1973,98 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"graph-hub-crowned-jump-lite": definePreset({
+		id: "graph-hub-crowned-jump-lite",
+		name: "Graph Hub Crowned Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"crowned-range",
+			"target-nodes",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Hub-graph jump race with node-key promotion: land on hub (2,1) to crown (X+/O+), not the same-row decoy (2,0). After crowning, crownedRange 2 chain-walks through (1,1) to win row 0 — men stay range 1. mustCapture forces the opening leap onto the hub (promo node ≠ win row). Unlocks movement.promotion.targetNodes — Graph Crowned Jump Lite's targetRows cannot distinguish co-row hub vs decoy nodes.",
+		config: {
+			metadata: { name: "Graph Hub Crowned Jump Lite", version: 1 },
+			grid: {
+				width: 3,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 3, col: 2, x: 2, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 4, col: 2, x: 2, y: 4 }
+				],
+				edges: [
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "2,0"],
+					["2,1", "3,0"],
+					["3,0", "4,0"],
+					// O dangling lane — not hub-adjacent, so O's quiet reply
+					// cannot create a mustCapture jump from the crowned hub.
+					["3,2", "4,2"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					// Hub vs same-row decoy (2,0) — targetRows cannot express this.
+					targetNodes: { X: "2,1", O: "2,0" },
+					crownedAdjacency: "orthogonal",
+					crownedRange: 2
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-hub-crowned-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-hub-crowned-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,0) mustCapture-jumps O(3,0)→hub(2,1): promotes to X+.
+				// Men from hub only reach (1,1); crownedRange=2 reaches (0,1).
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "O", visibility: "public" },
+				{ row: 4, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"graph-jump-race": definePreset({
 		id: "graph-jump-race",
 		name: "Graph Jump Race",

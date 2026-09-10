@@ -104,10 +104,22 @@ export function flattenToGameConfig(config: Config): GameConfig {
 					...(config.movement.promotion
 						? {
 								promotion: {
-									targetRows: {
-										X: config.movement.promotion.targetRows.X,
-										O: config.movement.promotion.targetRows.O
-									},
+									...(config.movement.promotion.targetRows
+										? {
+												targetRows: {
+													X: config.movement.promotion.targetRows.X,
+													O: config.movement.promotion.targetRows.O
+												}
+											}
+										: {}),
+									...(config.movement.promotion.targetNodes
+										? {
+												targetNodes: {
+													X: config.movement.promotion.targetNodes.X,
+													O: config.movement.promotion.targetNodes.O
+												}
+											}
+										: {}),
 									...(config.movement.promotion.crownedAdjacency
 										? {
 												crownedAdjacency:

@@ -150,12 +150,12 @@ export const Contracts = {
 		slots: [],
 		hooks: ["applyEffects"],
 		invariants: [
-			"transformOnReachPromotionRow",
+			"transformOnReachPromotionTarget",
 			"crownedUsesCrownedAdjacency",
 			"crownedUsesCrownedRange",
 			"crownedFlyingCaptureExtendsJumpRays",
 			"preserveCrownOnMove",
-			"rectangleJumpOnly",
+			"rectangleHexGraphJumpOnly",
 			"menForwardOnlyRestrictsUncrowned"
 		]
 	}),

@@ -11,16 +11,17 @@
  * restricts jump starts / mid-chain branches to those that maximize total
  * pieces captured along the jump tree (Draughts longest-chain rule).
  * Optional `promotion` (rectangle | hex_offset | graph jump): land on
- * `targetRows[seat]` → crown (`X+`/`O+`); crowned pieces use
- * `crownedAdjacency` (default king on rectangle; orthogonal required on
- * hex/graph) and optional `crownedRange` (quiet slide depth; default men
- * `range`) via `effectiveMovement`. Optional `crownedFlyingCapture`
- * (rectangle only): crowned pieces may leap over an enemy at any distance
- * along a ray (empties before the mid) and land on any empty cell beyond
- * within `crownedRange` (Draughts-lite flying capture); men stay adjacent
- * single-leap. Optional `menForwardOnly` (rectangle only): uncrowned pieces
- * may only quiet-move / jump with row delta toward their promotion side
- * (derived from the two `targetRows`); crowned pieces ignore the filter.
+ * `targetRows[seat]` or graph `targetNodes[seat]` (`"row,col"`) → crown
+ * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king on
+ * rectangle; orthogonal required on hex/graph) and optional `crownedRange`
+ * (quiet slide depth; default men `range`) via `effectiveMovement`. Optional
+ * `crownedFlyingCapture` (rectangle only): crowned pieces may leap over an
+ * enemy at any distance along a ray (empties before the mid) and land on any
+ * empty cell beyond within `crownedRange` (Draughts-lite flying capture); men
+ * stay adjacent single-leap. Optional `menForwardOnly` (rectangle only):
+ * uncrowned pieces may only quiet-move / jump with row delta toward their
+ * promotion side (derived from the two `targetRows`); crowned pieces ignore
+ * the filter.
  * Hex_offset: orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
  * hops along one cube dir). Graph: orthogonal chain-walk along explicit edges
@@ -39,6 +40,7 @@ import {
 	CUBE_NEIGHBOR_DIRS,
 	offsetToCube,
 	cubeToOffset,
+	posKey,
 	type GridTopology,
 	type GraphTopologyData
 } from "@/engine/topology";
@@ -51,7 +53,17 @@ export type MovementCapture = "none" | "replace" | "jump";
 export type GraphReach = "chain" | "hop";
 
 export type MovementPromotion = {
-	targetRows: { X: number; O: number };
+	/**
+	 * Row-based promotion trigger (rectangle | hex | lane graphs). Mutually
+	 * exclusive with `targetNodes`.
+	 */
+	targetRows?: { X: number; O: number };
+	/**
+	 * Node-key promotion trigger (`"row,col"`). Graph-only hub geometry —
+	 * promotes only when landing on the seat's exact node (not every node
+	 * sharing that row). Mutually exclusive with `targetRows`.
+	 */
+	targetNodes?: { X: string; O: string };
 	/** Quiet/jump adjacency for crowned pieces. Default king. */
 	crownedAdjacency?: MovementAdjacency;
 	/**
@@ -69,9 +81,25 @@ export type MovementPromotion = {
 	/**
 	 * When true, uncrowned men may only advance toward their promotion side
 	 * (row-delta sign from the two targetRows). Crowned pieces unrestricted.
+	 * Requires `targetRows` (rectangle only).
 	 */
 	menForwardOnly?: boolean;
 };
+
+/** True when landing at `to` triggers promotion for `seat`. */
+export function landsOnPromotionTarget(
+	promo: MovementPromotion,
+	seat: Player,
+	to: Position
+): boolean {
+	if (promo.targetNodes) {
+		return posKey(to) === promo.targetNodes[seat];
+	}
+	if (promo.targetRows) {
+		return to.row === promo.targetRows[seat];
+	}
+	return false;
+}
 
 export type MovementConfig = {
 	adjacency: MovementAdjacency;
@@ -205,8 +233,9 @@ function filterMenForwardDestinations(
 	if (isCrowned(cellValue)) return dests;
 	const owner = cellOwner(cellValue);
 	if (owner === null || !config.promotion.targetRows) return dests;
+	const promoRows = config.promotion.targetRows;
 	return dests.filter((to) =>
-		isForwardRowDelta(to.row - from.row, owner, config.promotion!.targetRows)
+		isForwardRowDelta(to.row - from.row, owner, promoRows)
 	);
 }
 
@@ -256,10 +285,6 @@ function boardOpts(
 		topology: wrapOrBoard.topology ?? "rectangle",
 		graph: wrapOrBoard.graph
 	};
-}
-
-function posKey(p: Position): string {
-	return `${p.row},${p.col}`;
 }
 
 /**
