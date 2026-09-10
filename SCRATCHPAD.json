@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T09:25+00:00",
-  "turn": 108,
+  "updated_at": "2026-09-10T09:50+00:00",
+  "turn": 109,
   "focus": {
-    "milestone": "M78",
+    "milestone": "M79",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Loose Net landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Sente Ladder landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 9be8 M77 tip onto cursor/next-task-progression-cacd",
-    "Landed M78 looseNetDeath + go-lite-loose-net",
-    "Root exactly 4 libs; netDeath contrast keeps X"
+    "Synced from cacd M78 tip onto cursor/next-task-progression-9419",
+    "Landed M79 senteLadderDeath + go-lite-sente-ladder",
+    "Open cage: netDeath misses; attacker liberty-fill ladders"
   ],
   "discoveries": [
-    "Living mass must not also be 4-lib — add X@(3,2) for 5 libs",
-    "Drop O@(0,1) vs tight geta opens 4th victim liberty"
+    "netDeath is defender-first; M79 is attacker-first polarity",
+    "Omit semeai contrast — living mass can lose shared-lib race"
   ],
   "open_threads": [
     "Next: throw-in nets, connect-and-die, simultaneous jump, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M78",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M79",
   "blockers": []
 }

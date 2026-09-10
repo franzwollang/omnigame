@@ -519,19 +519,31 @@ export const zConfig = z
 				 * geta (root exactly 3 liberties; every defender liberty
 				 * extension has an attacker reply that captures, ladders, or
 				 * re-nets) are removed before two-pass scoring (after optional
-				 * nakadeDeath; before looseNetDeath / ladderDeath). Edge
-				 * foothold does not save. Default / omit = leave multi-liberty
-				 * trapped groups on the board.
+				 * nakadeDeath; before looseNetDeath / senteLadderDeath /
+				 * ladderDeath). Edge foothold does not save. Default / omit =
+				 * leave multi-liberty trapped groups on the board.
 				 */
 				netDeath: z.boolean().optional(),
 				/**
 				 * When true, groups force-capturable by an attacker-sente loose
 				 * net (root exactly 4 liberties; same escape/reply search as
 				 * netDeath) are removed before two-pass scoring (after optional
-				 * netDeath; before ladderDeath). Edge foothold does not save.
-				 * Default / omit = leave 4-liberty trapped groups on the board.
+				 * netDeath; before senteLadderDeath / ladderDeath). Edge
+				 * foothold does not save. Default / omit = leave 4-liberty
+				 * trapped groups on the board.
 				 */
-				looseNetDeath: z.boolean().optional()
+				looseNetDeath: z.boolean().optional(),
+				/**
+				 * When true, multi-stone groups with exactly 3 root liberties
+				 * that collapse to a ladder (or immediate capture) under one
+				 * attacker liberty-fill are removed before two-pass scoring
+				 * (after optional looseNetDeath; before ladderDeath).
+				 * Attacker-first polarity — unlike defender-first netDeath.
+				 * Single-stone 3-lib shapes omitted. Edge foothold does not
+				 * save. Default / omit = leave open 3-lib cages that fail
+				 * defender-first nets.
+				 */
+				senteLadderDeath: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1440,6 +1452,16 @@ export const zConfig = z
 				path: ["objective", "looseNetDeath"],
 				message:
 					"objective.looseNetDeath requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Sente-ladder removal is area_control-only.
+		if (cfg.objective.senteLadderDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "senteLadderDeath"],
+				message:
+					"objective.senteLadderDeath requires objective.mode = 'area_control'"
 			});
 		}
 

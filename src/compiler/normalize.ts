@@ -91,6 +91,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		netDeath: config.objective.netDeath === true ? true : undefined,
 		looseNetDeath:
 			config.objective.looseNetDeath === true ? true : undefined,
+		senteLadderDeath:
+			config.objective.senteLadderDeath === true ? true : undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -218,6 +220,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	nakadeDeath: undefined,
 	netDeath: undefined,
 	looseNetDeath: undefined,
+	senteLadderDeath: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,

@@ -5804,6 +5804,91 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-sente-ladder": definePreset({
+		id: "go-lite-sente-ladder",
+		name: "Go Lite Sente Ladder",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"ladder",
+			"sente",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with attacker-sente 3-lib → ladder removal at scoring (objective.senteLadderDeath). Seeded open-cage edge X pair (exactly 3 liberties): defender-first netDeath misses, but one attacker liberty-fill ladders. Without the flag (or with netDeath / looseNetDeath / ladderDeath / nakadeDeath / deadStones / Benson) double-pass awards X; with senteLadderDeath the trapped group is cleared → O wins. Unlocks attacker-first polarity vs defender-first nets.",
+		config: {
+			metadata: { name: "Go Lite Sente Ladder", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", senteLadderDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Open cage vs go-lite-net: drop O@(1,4) so defender-first
+				// netDeath fails, but each liberty fill O@(1,2)/(1,3)/(0,4)
+				// leaves a ladder. Victim X@(0,2)/(0,3) has exactly 3 libs.
+				// Add X@(3,2) so living mass stays ≥4 libs; add O@(2,6)/(3,6)
+				// to restore scoring after losing the cage closer. Omit
+				// semeai contrast (living mass can lose a shared-lib race).
+				{ row: 0, col: 0, player: "O", visibility: "public" },
+				{ row: 0, col: 1, player: "O", visibility: "public" },
+				{ row: 0, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 3, player: "X", visibility: "public" },
+				{ row: 0, col: 5, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "O", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 2, col: 4, player: "O", visibility: "public" },
+				{ row: 2, col: 6, player: "O", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" },
+				{ row: 3, col: 6, player: "O", visibility: "public" },
+				{ row: 4, col: 5, player: "O", visibility: "public" },
+				{ row: 4, col: 6, player: "O", visibility: "public" },
+				{ row: 5, col: 5, player: "O", visibility: "public" },
+				{ row: 5, col: 6, player: "O", visibility: "public" },
+				{ row: 6, col: 4, player: "O", visibility: "public" },
+				{ row: 6, col: 5, player: "O", visibility: "public" },
+				{ row: 6, col: 6, player: "O", visibility: "public" },
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "X", visibility: "public" },
+				{ row: 3, col: 2, player: "X", visibility: "public" },
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 4, col: 1, player: "X", visibility: "public" },
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 5, col: 0, player: "X", visibility: "public" },
+				{ row: 5, col: 1, player: "X", visibility: "public" },
+				{ row: 5, col: 2, player: "X", visibility: "public" },
+				{ row: 5, col: 3, player: "X", visibility: "public" },
+				{ row: 6, col: 0, player: "X", visibility: "public" },
+				{ row: 6, col: 1, player: "X", visibility: "public" },
+				{ row: 6, col: 2, player: "X", visibility: "public" },
+				{ row: 6, col: 3, player: "X", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

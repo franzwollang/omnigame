@@ -15,11 +15,13 @@ import {
 	findNakadeDeadCells,
 	findNetDeadCells,
 	findLooseNetDeadCells,
+	findSenteLadderDeadCells,
 	findSemeaiDeadCells,
 	isLadderDeadGroup,
 	isNakadeVulnerableRegion,
 	isNetDeadGroup,
 	isLooseNetDeadGroup,
+	isSenteLadderDeadGroup,
 	isLegalLibertyPlace,
 	orthogonalNeighbors,
 	removeBensonDeadStones,
@@ -28,6 +30,7 @@ import {
 	removeNakadeDeadStones,
 	removeNetDeadStones,
 	removeLooseNetDeadStones,
+	removeSenteLadderDeadStones,
 	removeSemeaiDeadStones,
 	removeMarkedDeadStones,
 	scoreArea,
@@ -1499,6 +1502,194 @@ describe("Go Lite (liberties + area_control)", () => {
 			{ bensonLife: true },
 			{ nakadeDeath: true },
 			{ netDeath: true },
+			{ ladderDeath: true },
+			{ seki: true }
+		] as const) {
+			const alt = structuredClone(cfg);
+			alt.objective = { mode: "area_control", ...flag };
+			const altKernel = compileConfig(alt);
+			let altState = altKernel.kernel.initialState(cfg.rng.seed);
+			for (const action of script) {
+				altState = altKernel.kernel.stepSync(altState, action).nextState;
+			}
+			expect(altState.winner).toBe("X");
+		}
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
+	});
+
+	it("validates and compiles the go-lite-sente-ladder preset", () => {
+		const cfg = examplePresets["go-lite-sente-ladder"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.senteLadderDeath).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.senteLadderDeath outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; senteLadderDeath?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", senteLadderDeath: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("findSenteLadderDeadCells: open cage clears 3-lib X; siblings skip", () => {
+		const cfg = examplePresets["go-lite-sente-ladder"].config;
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const g = state.grid;
+		const netX = enumerateGroups(g).find(
+			(gr) => gr.color === "X" && gr.stones.some((p) => p.row === 0)
+		)!;
+		expect(netX.liberties.size).toBe(3);
+		expect(isLadderDeadGroup(g, netX.stones, "X")).toBe(false);
+		expect(isNetDeadGroup(g, netX.stones, "X")).toBe(false);
+		expect(isLooseNetDeadGroup(g, netX.stones, "X")).toBe(false);
+		expect(isSenteLadderDeadGroup(g, netX.stones, "X")).toBe(true);
+		expect(findNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findLadderDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findNetDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findLooseNetDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		// Edge foothold: deadStones/Benson keep the victim.
+		expect(
+			findDeadStoneCells(g).every(
+				(p) => !(p.row === 0 && (p.col === 2 || p.col === 3))
+			)
+		).toBe(true);
+		expect(
+			findBensonDeadStoneCells(g).every(
+				(p) => !(p.row === 0 && (p.col === 2 || p.col === 3))
+			)
+		).toBe(true);
+		const dead = findSenteLadderDeadCells(g);
+		expect(dead.length).toBe(netX.stones.length);
+		expect(dead.every((p) => getCell(g, p) === "X")).toBe(true);
+		// Each liberty fill ladders (documents attacker-first predicate).
+		const libs = Array.from(netX.liberties).map((k) => {
+			const [r, c] = k.split(",").map(Number);
+			return { row: r!, col: c! };
+		});
+		for (const fill of libs) {
+			const sim = simulateLibertyPlace(g, fill, "O");
+			expect(sim).not.toBeNull();
+			const next = { ...g, cells: sim!.cells };
+			const rem = netX.stones.filter((p) => getCell(next, p) === "X");
+			expect(rem.length).toBeGreaterThan(0);
+			expect(isLadderDeadGroup(next, rem, "X")).toBe(true);
+		}
+		expect(areaOutcome(g).winner).toBe("X");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				false,
+				false,
+				true
+			).winner
+		).toBe("O");
+		// Defender-first netDeath alone does not flip.
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				true,
+				false,
+				false
+			).winner
+		).toBe("X");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				true
+			).winner
+		).toBe("X");
+		const living = enumerateGroups(g).find(
+			(gr) =>
+				gr.color === "X" && !gr.stones.some((p) => p.row === 0 && p.col <= 3)
+		)!;
+		expect(living.liberties.size).toBeGreaterThanOrEqual(4);
+		expect(isSenteLadderDeadGroup(g, living.stones, "X")).toBe(false);
+		const cleared = scoreArea(removeSenteLadderDeadStones(g));
+		expect(cleared.O).toBeGreaterThan(cleared.X);
+	});
+
+	it("go-lite-sente-ladder: seeded double-pass O wins; without flag X wins; contrasts; replay faithful", () => {
+		const cfg = examplePresets["go-lite-sente-ladder"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [{ type: "pass" }, { type: "pass" }];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const without = structuredClone(cfg);
+		without.objective = { mode: "area_control" };
+		const baseline = compileConfig(without);
+		let rawState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			rawState = baseline.kernel.stepSync(rawState, action).nextState;
+		}
+		expect(rawState.status).toBe("won");
+		expect(rawState.winner).toBe("X");
+
+		// Omit semeaiDeath: living X mass can lose a shared-lib race.
+		for (const flag of [
+			{ deadStones: true },
+			{ bensonLife: true },
+			{ nakadeDeath: true },
+			{ netDeath: true },
+			{ looseNetDeath: true },
 			{ ladderDeath: true },
 			{ seki: true }
 		] as const) {

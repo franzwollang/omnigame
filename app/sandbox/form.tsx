@@ -1347,6 +1347,31 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										/>
 										<FormField
 											control={form.control}
+											name="objective.senteLadderDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Sente ladder death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove multi-stone 3-liberty groups that
+															collapse to a ladder under one attacker
+															liberty-fill (attacker-first;
+															objective.senteLadderDeath).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
 											name="objective.territoryPrisoners"
 											render={({ field }) => (
 												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">

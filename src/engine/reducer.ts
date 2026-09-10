@@ -236,15 +236,24 @@ export type GameConfig = {
 	 * When true, two-pass area scoring removes groups force-capturable by an
 	 * attacker-sente tight net / geta (exactly 3 root liberties; every escape
 	 * has a finishing reply) after optional nakadeDeath and before
-	 * looseNetDeath / ladderDeath (M77).
+	 * looseNetDeath / senteLadderDeath / ladderDeath (M77).
 	 */
 	netDeath?: boolean;
 	/**
 	 * When true, two-pass area scoring removes groups force-capturable by an
 	 * attacker-sente loose net (exactly 4 root liberties; same search as
-	 * netDeath) after optional netDeath and before ladderDeath (M78).
+	 * netDeath) after optional netDeath and before senteLadderDeath /
+	 * ladderDeath (M78).
 	 */
 	looseNetDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes multi-stone groups with
+	 * exactly 3 root liberties that collapse to a ladder (or capture) under
+	 * one attacker liberty-fill — after optional looseNetDeath and before
+	 * ladderDeath (M79). Attacker-first polarity vs defender-first netDeath.
+	 * Single-stone 3-lib shapes omitted.
+	 */
+	senteLadderDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1262,7 +1271,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.semeaiDeath === true,
 				config.nakadeDeath === true,
 				config.netDeath === true,
-				config.looseNetDeath === true
+				config.looseNetDeath === true,
+				config.senteLadderDeath === true
 			);
 			return {
 				...state,
@@ -1290,7 +1300,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.semeaiDeath === true,
 			config.nakadeDeath === true,
 			config.netDeath === true,
-			config.looseNetDeath === true
+			config.looseNetDeath === true,
+			config.senteLadderDeath === true
 		);
 		return {
 			...state,
