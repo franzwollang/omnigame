@@ -2,83 +2,61 @@
 
 Current open work only. History: `OPEN_ISSUES_LOG.jsonl`. Roadmap: `PLANNING.md`.
 
-**Marathon rule:** Work **P1 → P2 → P3 → P4** in order (P0 composition bugs
-closed in prep). Do not ask which fork — honesty first, then capture-by-replacement.
+**Marathon rule:** Work **P3** `next-missing-mechanism`. Do not ask which fork —
+pick the smallest new seam; reject recombinations without an anchor.
 
 ---
 
 ## Immediate (prioritized)
 
-### P1 — sandbox-form-honesty
+### P3 — next-missing-mechanism
 
-**Problem:** Form does not expose `movement.adjacency` / `movement.range` or
-`turn.phases`. README Usage now notes JSON-only; still prefer form controls or a
-durable in-UI “JSON-only” affordance.
+Go Lite Square-Nakade (`go-lite-square-nakade` / `objective.squareNakadeDeath`
+square-4 / 2×2 bulky big-eye vital-fill removal at scoring; Benson-alive /
+T1-miss / L-miss / chase-miss unique board) landed as **M87**. Go Lite L-Nakade
+closed as M86; Hidden Double Simultaneous Jump Race as M85; Double Simultaneous
+Jump Race as M84; Hidden Simultaneous Jump Race as M83; Ordered Simultaneous
+Jump Race as M82; Simultaneous Jump Race as M81; Go Lite Approach Net as M80;
+Sente Ladder as M79; Loose Net as M78; Net as M77; Nakade as M76; Semeai as
+M75; Territory Prisoners as M74; Ladders as M73; Mark Dead Resume as M72; Mark
+Dead as M71; Dame Fill as M70; Benson as M69; dead stones as M68; seki as M67;
+komi as M66; hub-graph forward-only men as M65; graph forward-only men as M64;
+hex forward-only men as M63; graph flying capture as M62; hex flying capture as
+M61; hub-graph promotion as M60; graph promotion as M59; hex promotion as M58;
+graph liberties as M57; hex liberties as M56; flying jump capture as M55; graph
+flood_reveal as M54; hex flood_reveal as M53; flying kings as M52; longest
+mandatory capture as M51; forward-only men as M50; crowned promotion as M49;
+graph jump as M48; hex jump as M47; memory flip as M46; mustCapture as M45;
+rectangle flood_reveal as M44. P4 tooling-ci and semantics-doc-refresh already
+closed (M41–M42; semantics notes continue per mechanism).
 
-**Acceptance:**
+Pick the smallest remaining new seam that existing primitives cannot express,
+e.g.:
 
-- [ ] Add form controls for movement (+ `turn.phases` when relevant), **or**
-      durable UI copy (not only README) that those fields are JSON/preset-only
-- [ ] No impression that the form covers the full schema
+- Fuller Go remainder (throw-in / snapback / connect-and-die) — only if a
+  board uniquely escapes ladder/net/sente/approach/nakade family (prior probe
+  did not)
+- fire→move phase reorder (only if a new seam / anchor appears — otherwise
+  reject as recombination)
+- Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
+  recombination of reveal)
+- Memory bonus-turn-on-match / custom decks (schema field exists; deferred —
+  bonusTurnOnMatch is kernel-complete / preset-only)
+- commitReveal + slide/replace demos (kernel complete — preset-only unless a
+  new seam appears)
+- multi-action slide/replace under simultaneous (deferred composition; only if
+  a new seam appears — not a recombination demo)
+- `queryShape: not` (reject unless nested AST / new pruning class)
+- Realtime / continuous scheduler (large)
+- Hex/graph simultaneous jump ports (topology ports — only if a new seam
+  appears)
+- Hex/graph seki, dead-stone, Benson, dame-fill, mark-dead, mark-dead-resume,
+  ladderDeath, territoryPrisoners, semeaiDeath, nakadeDeath, lNakadeDeath,
+  squareNakadeDeath, netDeath, looseNetDeath, senteLadderDeath, or
+  approachNetDeath presets (topology ports — only if a new seam appears)
 
-### P2 — simultaneous-agent-search
-
-**Problem:** Tiny MCTS / UCT fall back to uniform random among seat legals under
-`schedule = simultaneous`; greedy skips lookahead. Joint action space is never
-searched.
-
-**Acceptance:**
-
-- [ ] Label Agent UI: “random under simultaneous” for MCTS/UCT, **or**
-- [ ] Root search over joint actions via `stepJoint` / `stepPly` for ≥1 agent
-- [ ] Test or README agents blurb documents the limitation
-
-### P3 — capture-by-replacement (default next mechanism)
-
-**Why existing primitives fail:** Move only allows empty destinations.
-Chess-like / attrition races need **move onto enemy → remove occupant**.
-Liberties/flip capture are place-centric, not move-replace.
-
-**Mini-spec:**
-
-- Schema: e.g. `movement.capture = "none" | "replace"` (name OK if documented);
-  rectangle foothold; require `input.mode = move`
-- Kernel/reducer: enemy cells legal destinations when replace on; apply clears
-  occupant then lands; emit events
-- Illegal: own-piece destination; sliding path empty except destination
-- Preset: **Replace Race** (reach_row + replace)
-- Tests: transcript, replay, validateConfig rejects bad combos
-- Out of scope: multi-jump checkers, capture chains, hex/graph (unless free)
-
-**Acceptance:**
-
-- [ ] Schema + contracts + kernel path
-- [ ] Preset + transcript/replay tests
-- [ ] PLANNING M9 → `done`; hand off next mechanism
-
-### P3 — next-missing-mechanism (after capture)
-
-Only after capture-by-replacement. Pick smallest new seam, e.g.:
-
-- Guess Who-like query / commit (README MVP anchor)
-- Richer multi-phase machines beyond current `turn.phases`
-- Apply-time simultaneous sliding (re-open composition)
-- Hex/graph `range > 1` (only if a new seam appears)
-
-**Acceptance:** schema + kernel + preset + tests; mechanism-first.
-
-### P4 — tooling-ci
-
-- [ ] Optional `.github/workflows` pinning Node ≥20.19 + pnpm 10.5.2
-      (`typecheck` + `test`)
-
-### P4 — semantics-doc-refresh
-
-**Problem:** `docs/semantics.md` still uses pre-simultaneous event vocabulary.
-
-**Acceptance:**
-
-- [ ] Sync compact draft with current kernel events/state/phases
+**Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
+exhaust `references/` or recombine covered primitives).
 
 ---
 
@@ -90,5 +68,6 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 
 ### deferred-mvp-anchors
 
-Guess Who-like / full Go remain deferred under post-capture
-`next-missing-mechanism`.
+Guess Who-like remainder / full Go remain deferred under
+`next-missing-mechanism` (post-square-nakade; prefer a uniquely expressible Go
+seam or realtime over topology ports).
