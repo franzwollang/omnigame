@@ -5367,6 +5367,85 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-territory-prisoners": definePreset({
+		id: "go-lite-territory-prisoners",
+		name: "Go Lite Territory Prisoners",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"prisoners",
+			"scoring",
+			"mechanism"
+		],
+		description:
+			"Go Lite with Japanese-style territory + prisoners scoring (objective.territoryPrisoners). Seeded stone-heavy X wall + 3-stone X group in atari: O captures then double-pass. Area (stones+territory) awards X; territory+prisoners awards O. Unlocks scoring identity beyond Chinese area.",
+		config: {
+			metadata: { name: "Go Lite Territory Prisoners", version: 1 },
+			grid: { width: 6, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", territoryPrisoners: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Living X wall + 4-point eye (rows 0–2)
+				{ row: 0, col: 0, player: "X", visibility: "public" },
+				{ row: 0, col: 1, player: "X", visibility: "public" },
+				{ row: 0, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 3, player: "X", visibility: "public" },
+				{ row: 0, col: 4, player: "X", visibility: "public" },
+				{ row: 0, col: 5, player: "X", visibility: "public" },
+				{ row: 1, col: 0, player: "X", visibility: "public" },
+				{ row: 1, col: 5, player: "X", visibility: "public" },
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "X", visibility: "public" },
+				{ row: 2, col: 4, player: "X", visibility: "public" },
+				{ row: 2, col: 5, player: "X", visibility: "public" },
+				// Extra living X on O's row (stone-heavy area without joining the atari group)
+				{ row: 3, col: 5, player: "X", visibility: "public" },
+				// O net; liberty at (3,3) for the 3-stone X group below
+				{ row: 3, col: 0, player: "O", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 3, col: 2, player: "O", visibility: "public" },
+				{ row: 3, col: 4, player: "O", visibility: "public" },
+				{ row: 4, col: 0, player: "O", visibility: "public" },
+				{ row: 4, col: 1, player: "X", visibility: "public" },
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 4, col: 3, player: "X", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" },
+				{ row: 4, col: 5, player: "O", visibility: "public" },
+				{ row: 5, col: 0, player: "O", visibility: "public" },
+				{ row: 5, col: 1, player: "O", visibility: "public" },
+				{ row: 5, col: 2, player: "O", visibility: "public" },
+				{ row: 5, col: 3, player: "O", visibility: "public" },
+				{ row: 5, col: 4, player: "O", visibility: "public" },
+				{ row: 5, col: 5, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

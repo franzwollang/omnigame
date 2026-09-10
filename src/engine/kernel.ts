@@ -430,6 +430,8 @@ function isNoop(before: GameState, after: GameState): boolean {
 		(before.koPoint?.row ?? null) === (after.koPoint?.row ?? null) &&
 		(before.koPoint?.col ?? null) === (after.koPoint?.col ?? null) &&
 		(before.consecutivePasses ?? 0) === (after.consecutivePasses ?? 0) &&
+		(before.prisoners?.X ?? 0) === (after.prisoners?.X ?? 0) &&
+		(before.prisoners?.O ?? 0) === (after.prisoners?.O ?? 0) &&
 		(before.endgamePhase ?? false) === (after.endgamePhase ?? false) &&
 		(before.markingPhase ?? false) === (after.markingPhase ?? false) &&
 		(before.markedDead ?? []).join("|") ===

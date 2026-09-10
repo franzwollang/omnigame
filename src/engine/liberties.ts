@@ -1008,15 +1008,11 @@ export function findDameCells(
 }
 
 /**
- * Simplified area scoring: stones + empty regions bordered only by one color.
- * Mixed-border or edge-open empty regions score for neither (dame).
- * On wrap boards, regions never "edge-open" via board boundary.
- * Region flood uses the same liberty adjacency as capture.
- * On graph boards, only active nodes participate (inactive cells ignored).
- * When `sekiNeutral` is set, mono-border regions that intersect those cells
- * are not awarded as territory (shared-life / seki scoring).
+ * Empty mono-border regions only (Japanese-style territory points).
+ * Mixed-border or edge-open empties score for neither (dame). Same flood /
+ * sekiNeutral rules as {@link scoreArea}, without counting on-board stones.
  */
-export function scoreArea(
+export function scoreTerritory(
 	grid: Grid,
 	wrap: boolean = false,
 	topology: GridTopology = "rectangle",
@@ -1024,15 +1020,7 @@ export function scoreArea(
 	sekiNeutral?: Set<string>
 ): AreaScore {
 	const score: AreaScore = { X: 0, O: 0 };
-
 	const seedPositions = seedPositionsFor(grid, topology, graph);
-
-	for (const pos of seedPositions) {
-		const cell = getCell(grid, pos);
-		if (cell === "X") score.X += 1;
-		else if (cell === "O") score.O += 1;
-	}
-
 	const visited = new Set<string>();
 	for (const start of seedPositions) {
 		const k = keyOf(start);
@@ -1080,6 +1068,39 @@ export function scoreArea(
 }
 
 /**
+ * Simplified area scoring: stones + empty regions bordered only by one color.
+ * Mixed-border or edge-open empty regions score for neither (dame).
+ * On wrap boards, regions never "edge-open" via board boundary.
+ * Region flood uses the same liberty adjacency as capture.
+ * On graph boards, only active nodes participate (inactive cells ignored).
+ * When `sekiNeutral` is set, mono-border regions that intersect those cells
+ * are not awarded as territory (shared-life / seki scoring).
+ */
+export function scoreArea(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData,
+	sekiNeutral?: Set<string>
+): AreaScore {
+	const score: AreaScore = { X: 0, O: 0 };
+
+	const seedPositions = seedPositionsFor(grid, topology, graph);
+
+	for (const pos of seedPositions) {
+		const cell = getCell(grid, pos);
+		if (cell === "X") score.X += 1;
+		else if (cell === "O") score.O += 1;
+	}
+
+	const territory = scoreTerritory(grid, wrap, topology, graph, sekiNeutral);
+	score.X += territory.X;
+	score.O += territory.O;
+
+	return score;
+}
+
+/**
  * Winner by area score; draw on tie.
  * `komi` (default 0) is added to O's score as second-player compensation
  * under area_control (Go Lite Komi). Returned `score.O` includes komi.
@@ -1093,6 +1114,9 @@ export function scoreArea(
  * When `ladderDeath` is true, attacker-sente ladder / atari-run groups are
  * removed after optional Benson/deadStones clearance (M73; edge runners
  * included — the seam M68/M69 intentionally keep).
+ * When `territoryPrisoners` is true, score is territory + prisoners (Japanese
+ * lite) instead of stones + territory (M74); `prisoners` tallies captures in
+ * play.
  */
 export function areaOutcome(
 	grid: Grid,
@@ -1103,7 +1127,9 @@ export function areaOutcome(
 	sekiScoring: boolean = false,
 	deadStones: boolean = false,
 	bensonLife: boolean = false,
-	ladderDeath: boolean = false
+	ladderDeath: boolean = false,
+	territoryPrisoners: boolean = false,
+	prisoners: AreaScore = { X: 0, O: 0 }
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -1120,7 +1146,15 @@ export function areaOutcome(
 	const neutral = sekiScoring
 		? findSekiNeutralCells(scored, wrap, topology, graph)
 		: undefined;
-	const raw = scoreArea(scored, wrap, topology, graph, neutral);
+	const raw = territoryPrisoners
+		? (() => {
+				const t = scoreTerritory(scored, wrap, topology, graph, neutral);
+				return {
+					X: t.X + (prisoners.X ?? 0),
+					O: t.O + (prisoners.O ?? 0)
+				};
+			})()
+		: scoreArea(scored, wrap, topology, graph, neutral);
 	const k = Number.isFinite(komi) && komi > 0 ? komi : 0;
 	const score: AreaScore = { X: raw.X, O: raw.O + k };
 	if (score.X > score.O) return { status: "won", winner: "X", score };

@@ -392,7 +392,11 @@ export const Contracts = {
 		provides: [],
 		slots: [{ type: "EndCondition", value: "areaControl" }],
 		hooks: ["checkEnd"],
-		invariants: ["twoPassesEndGame", "scoreStonesPlusTerritory"]
+		invariants: [
+			"twoPassesEndGame",
+			"scoreStonesPlusTerritory",
+			"optionalTerritoryPlusPrisoners"
+		]
 	}),
 	IdentifySecret: (): FeatureContract => ({
 		id: "IdentifySecret",

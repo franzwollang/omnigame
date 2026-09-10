@@ -216,6 +216,11 @@ export type GameConfig = {
 	 * atari-run groups after optional Benson/deadStones clearance (M73).
 	 */
 	ladderDeath?: boolean;
+	/**
+	 * When true, two-pass scoring uses territory + prisoners (Japanese lite)
+	 * instead of stones + territory (M74).
+	 */
+	territoryPrisoners?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -530,6 +535,9 @@ export function createInitialState(config: GameConfig): GameState {
 		actionsRemaining: alternatingMultiStep ? actionsPerTurn : undefined,
 		turnPhaseIndex: inTurnPhases ? 0 : undefined
 	};
+	if ((config.objectiveMode ?? "n_in_a_row") === "area_control") {
+		base.prisoners = { X: 0, O: 0 };
+	}
 
 	const seeds = config.initial ?? [];
 	const hasOwner = seeds.some((p) => (p.visibility ?? "public") === "owner");
@@ -1224,7 +1232,9 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.sekiScoring === true,
 				config.deadStones === true,
 				config.bensonLife === true,
-				config.ladderDeath === true
+				config.ladderDeath === true,
+				config.territoryPrisoners === true,
+				state.prisoners ?? { X: 0, O: 0 }
 			);
 			return {
 				...state,
@@ -1246,7 +1256,9 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.sekiScoring === true,
 			config.deadStones === true,
 			config.bensonLife === true,
-			config.ladderDeath === true
+			config.ladderDeath === true,
+			config.territoryPrisoners === true,
+			state.prisoners ?? { X: 0, O: 0 }
 		);
 		return {
 			...state,
@@ -2652,6 +2664,7 @@ function handlePlace(
 	let newCells = setCell(state.grid, pos, state.currentPlayer);
 	let nextKoPoint: Position | null = null;
 	let nextHistory = state.positionHistory;
+	let nextPrisoners = state.prisoners ?? { X: 0, O: 0 };
 	if (libertyMode) {
 		const capture = applyLibertyCapture(
 			{ ...state.grid, cells: newCells },
@@ -2664,6 +2677,14 @@ function handlePlace(
 		newCells = capture.cells;
 		nextKoPoint =
 			koRule === "point" ? koPointFromCapture(capture.removed) : null;
+		if (capture.removed.length > 0) {
+			const seat = state.currentPlayer;
+			nextPrisoners = {
+				X: nextPrisoners.X,
+				O: nextPrisoners.O,
+				[seat]: nextPrisoners[seat] + capture.removed.length
+			};
+		}
 	} else if (config.captureEnabled) {
 		newCells = applyCaptureIfAny(
 			{ ...state.grid, cells: newCells },
@@ -2692,7 +2713,8 @@ function handlePlace(
 			grid: newGrid,
 			moveCount: newMoveCount,
 			koPoint: nextKoPoint,
-			positionHistory: nextHistory
+			positionHistory: nextHistory,
+			...(libertyMode ? { prisoners: nextPrisoners } : {})
 		};
 	}
 
@@ -2706,7 +2728,8 @@ function handlePlace(
 			moveCount: newMoveCount,
 			consecutivePasses: 0,
 			koPoint: nextKoPoint,
-			positionHistory: nextHistory
+			positionHistory: nextHistory,
+			prisoners: nextPrisoners
 		};
 	}
 

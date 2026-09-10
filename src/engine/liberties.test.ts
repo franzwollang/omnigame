@@ -20,6 +20,7 @@ import {
 	removeLadderDeadStones,
 	removeMarkedDeadStones,
 	scoreArea,
+	scoreTerritory,
 	areaOutcome,
 	findSekiNeutralCells,
 	simulateLibertyPlace,
@@ -856,6 +857,103 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(replay.faithful).toBe(true);
 		expect(replay.finalState.status).toBe("won");
 		expect(replay.finalState.winner).toBe("O");
+	});
+
+	it("scoreTerritory omits on-board stones", () => {
+		const g = gridOf(3, 2, [
+			"X",
+			"X",
+			"X",
+			"X",
+			null,
+			"X" // mono-border empty at (1,1)
+		]);
+		expect(scoreArea(g)).toEqual({ X: 6, O: 0 }); // 5 stones + 1 empty
+		expect(scoreTerritory(g)).toEqual({ X: 1, O: 0 });
+	});
+
+	it("areaOutcome territoryPrisoners adds prisoners to territory", () => {
+		const g = gridOf(3, 2, ["X", "X", "X", "X", null, "X"]);
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				true,
+				{ X: 0, O: 3 }
+			)
+		).toEqual({
+			status: "won",
+			winner: "O",
+			score: { X: 1, O: 3 }
+		});
+		expect(areaOutcome(g).winner).toBe("X");
+	});
+
+	it("validates and compiles the go-lite-territory-prisoners preset", () => {
+		const cfg = examplePresets["go-lite-territory-prisoners"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.territoryPrisoners).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(state.prisoners).toEqual({ X: 0, O: 0 });
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.territoryPrisoners outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; territoryPrisoners?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", territoryPrisoners: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("go-lite-territory-prisoners: capture then double-pass O wins; area awards X; replay faithful", () => {
+		const cfg = examplePresets["go-lite-territory-prisoners"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "place", position: { row: 3, col: 3 } },
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.prisoners).toEqual({ X: 0, O: 3 });
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const without = structuredClone(cfg);
+		without.objective = { mode: "area_control" };
+		const baseline = compileConfig(without);
+		let rawState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			rawState = baseline.kernel.stepSync(rawState, action).nextState;
+		}
+		expect(rawState.prisoners).toEqual({ X: 0, O: 3 });
+		expect(rawState.status).toBe("won");
+		expect(rawState.winner).toBe("X");
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
+		expect(replay.finalState.prisoners).toEqual({ X: 0, O: 3 });
 	});
 
 	it("validates and compiles the go-lite-dame-fill preset", () => {

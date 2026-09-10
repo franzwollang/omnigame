@@ -101,6 +101,11 @@ export type GameState = {
 	/** Consecutive pass actions (area_control / Go-lite); two ends the game. */
 	consecutivePasses?: number;
 	/**
+	 * Stones captured during play under liberties / area_control.
+	 * Tallied for Japanese-style territory + prisoners scoring (M74).
+	 */
+	prisoners?: { X: number; O: number };
+	/**
 	 * Dame-fill endgame (objective.dameFill): after the opening pass when dame
 	 * remain, only dame places + pass are legal until two consecutive passes.
 	 */

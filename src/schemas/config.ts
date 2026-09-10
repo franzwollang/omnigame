@@ -488,7 +488,14 @@ export const zConfig = z
 				 * Edge foothold does not save a laddered runner. Default / omit =
 				 * leave stones that M68/M69 keep.
 				 */
-				ladderDeath: z.boolean().optional()
+				ladderDeath: z.boolean().optional(),
+				/**
+				 * When true, two-pass scoring uses Japanese-style territory +
+				 * prisoners (empty mono-border points + stones captured in play)
+				 * instead of Chinese-style area (stones + territory). Default /
+				 * omit = area scoring.
+				 */
+				territoryPrisoners: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1347,6 +1354,16 @@ export const zConfig = z
 				path: ["objective", "ladderDeath"],
 				message:
 					"objective.ladderDeath requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Territory + prisoners scoring is area_control-only (Japanese-style).
+		if (cfg.objective.territoryPrisoners === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "territoryPrisoners"],
+				message:
+					"objective.territoryPrisoners requires objective.mode = 'area_control'"
 			});
 		}
 

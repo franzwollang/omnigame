@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T08:05+00:00",
-  "turn": 103,
+  "updated_at": "2026-09-10T08:20+00:00",
+  "turn": 104,
   "focus": {
-    "milestone": "M73",
+    "milestone": "M74",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Ladders landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Territory Prisoners landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 70e0 M72 tip onto cursor/next-task-progression-5b0c",
-    "Landed M73 ladderDeath + go-lite-ladders (edge atari → O)",
-    "Ladder runs after Benson/deadStones; edge foothold does not save"
+    "Synced from 5b0c M73 tip onto cursor/next-task-progression-3324",
+    "Landed M74 territoryPrisoners + go-lite-territory-prisoners",
+    "O captures 3-stone atari: area→X, territory+prisoners→O"
   ],
   "discoveries": [
-    "Lite seki detector can cluster atari runners — skip seki exempt for ladders",
-    "Attacker-sente ≤2-lib chase via simulateLibertyPlace"
+    "scoreTerritory reuses scoreArea empty flood without stone loop",
+    "Prisoners tallied on liberty capture for all area_control games"
   ],
   "open_threads": [
-    "Next: deeper L&D, territory+prisoners, simultaneous jump, realtime"
+    "Next: deeper L&D (semeai/nakade), simultaneous jump, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M73",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M74",
   "blockers": []
 }
