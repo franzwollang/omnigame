@@ -1949,6 +1949,110 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"graph-flying-capture-jump-lite": definePreset({
+		id: "graph-flying-capture-jump-lite",
+		name: "Graph Flying Capture Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"flying",
+			"flying-capture",
+			"crowned-range",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Lane-graph Draughts-lite flying jump capture: after crowning on a chain-walk lane, kings may leap over an enemy along a clear unique-forward edge ray and land beyond the immediate past-mid node (within crownedRange). mustCapture forces the opening leap onto promo row 4 (≠ win row 0); mustContinueFrom then requires a second jump from the crowned piece. Adjacent-only continuation lands at (2,0); flying capture reaches (0,0) for the win. Unlocks promotion.crownedFlyingCapture on graph — Graph Crowned Jump Lite extends quiet chain-walks only; rectangle/hex Flying Capture presets cannot express explicit-edge chain-walk rays.",
+		config: {
+			metadata: { name: "Graph Flying Capture Jump Lite", version: 1 },
+			grid: {
+				width: 2,
+				height: 7,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 5, col: 0, x: 0, y: 5 },
+					{ row: 6, col: 0, x: 0, y: 6 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 },
+					{ row: 5, col: 1, x: 1, y: 5 },
+					{ row: 6, col: 1, x: 1, y: 6 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["4,0", "5,0"],
+					["5,0", "6,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"],
+					["4,1", "5,1"],
+					["5,1", "6,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					targetRows: { X: 4, O: 5 },
+					crownedAdjacency: "orthogonal",
+					crownedRange: 4,
+					crownedFlyingCapture: true
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 6 }
+			},
+			tokens: [
+				{
+					id: "graph-flycap-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-flycap-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(6,0) mustCapture-jumps O(5,0)→(4,0): promotes to X+.
+				// mustContinueFrom: O(3,0) is the next mid; adjacent land is
+				// (2,0); crownedFlyingCapture also reaches (0,0) for the win.
+				{ row: 6, col: 0, player: "X", visibility: "public" },
+				{ row: 5, col: 0, player: "O", visibility: "public" },
+				{ row: 3, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"graph-crowned-jump-lite": definePreset({
 		id: "graph-crowned-jump-lite",
 		name: "Graph Crowned Jump Lite",

@@ -15,20 +15,21 @@
  * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king on
  * rectangle; orthogonal required on hex/graph) and optional `crownedRange`
  * (quiet slide depth; default men `range`) via `effectiveMovement`. Optional
- * `crownedFlyingCapture` (rectangle | hex_offset): crowned pieces may leap
- * over an enemy at any distance along a ray (empties before the mid) and land
- * on any empty cell beyond within `crownedRange` (Draughts-lite flying
- * capture; hex uses cube-axis rays); men stay adjacent single-leap. Optional
- * `menForwardOnly` (rectangle only): uncrowned pieces may only quiet-move /
- * jump with row delta toward their promotion side (derived from the two
- * `targetRows`); crowned pieces ignore the filter.
+ * `crownedFlyingCapture` (rectangle | hex_offset | graph): crowned pieces may
+ * leap over an enemy at any distance along a ray (empties before the mid) and
+ * land on any empty cell beyond within `crownedRange` (Draughts-lite flying
+ * capture; hex uses cube-axis rays; graph uses chain-walk rays); men stay
+ * adjacent single-leap. Optional `menForwardOnly` (rectangle only): uncrowned
+ * pieces may only quiet-move / jump with row delta toward their promotion side
+ * (derived from the two `targetRows`); crowned pieces ignore the filter.
  * Hex_offset: orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
  * hops along one cube dir; flying capture extends rays). Graph: orthogonal
  * chain-walk along explicit edges (range 1..8; no turning at junctions) **or**
  * hop-ball BFS within range (`graphReach: "hop"`; may turn at junctions) —
  * same blocker/replace rules as rectangle/hex — plus jump as a 2-edge leap
- * over an enemy mid node to an empty landing.
+ * over an enemy mid node to an empty landing (flying capture extends
+ * chain-walk rays).
  */
 import type { CellValue, Grid, Position, Player } from "@/engine/types";
 import { getCell, setCell } from "@/engine/types";
@@ -133,7 +134,7 @@ export type MovementConfig = {
 	 * Crowned kings / Transform lite (rectangle | hex_offset | graph jump):
 	 * promote on `targetRows[seat]` / graph `targetNodes`; crowned pieces use
 	 * `crownedAdjacency` and optional `crownedRange` /
-	 * `crownedFlyingCapture` (rectangle | hex_offset). Optional
+	 * `crownedFlyingCapture` (rectangle | hex_offset | graph). Optional
 	 * `menForwardOnly` (rectangle) restricts uncrowned quiet/jump row deltas.
 	 * Hex/graph require crownedAdjacency = orthogonal.
 	 */
@@ -291,10 +292,10 @@ function boardOpts(
 /**
  * Mid cell for a jump: adjacent 2-step leap (rectangle / hex / graph), or
  * the unique enemy on a flying-capture ray when `crownedFlyingCapture` is
- * set and `from→to` lies on a clear adjacency ray within `config.range`.
- * Returns null when no legal mid exists. Pass `wrapOrBoard` + `grid` for
- * hex/graph/flying (and wrap-aware mid); rectangle adjacent leaps still
- * use raw deltas when board/grid omitted.
+ * set and `from→to` lies on a clear adjacency / chain-walk ray within
+ * `config.range`. Returns null when no legal mid exists. Pass `wrapOrBoard`
+ * + `grid` for hex/graph/flying (and wrap-aware mid); rectangle adjacent
+ * leaps still use raw deltas when board/grid omitted.
  */
 export function jumpMid(
 	from: Position,
@@ -312,6 +313,45 @@ export function jumpMid(
 				midNeighbors.some((p) => p.row === to.row && p.col === to.col)
 			) {
 				return mid;
+			}
+		}
+		// Flying capture: unique enemy between from and to on a chain-walk ray.
+		if (
+			config.promotion?.crownedFlyingCapture === true &&
+			grid &&
+			config.capture === "jump"
+		) {
+			const mover = cellOwner(getCell(grid, from));
+			if (mover === null) return null;
+			for (const n1 of opts.graph.neighborsOf.get(posKey(from)) ?? []) {
+				let enemy: Position | null = null;
+				let prev: Position = from;
+				let cur: Position = n1;
+				const pathSeen = new Set<string>([posKey(from)]);
+				for (let i = 1; i <= config.range; i++) {
+					const key = posKey(cur);
+					if (pathSeen.has(key)) break;
+					pathSeen.add(key);
+					if (cur.row === to.row && cur.col === to.col) {
+						return enemy;
+					}
+					const occ = getCell(grid, cur);
+					if (enemy === null) {
+						if (occ === null) {
+							/* approach empty */
+						} else if (isEnemyPiece(occ, mover)) {
+							enemy = cur;
+						} else {
+							break;
+						}
+					} else if (occ !== null) {
+						break;
+					}
+					const next = graphChainForward(cur, prev, opts.graph);
+					if (!next) break;
+					prev = cur;
+					cur = next;
+				}
 			}
 		}
 		return null;
@@ -412,10 +452,10 @@ export function jumpMid(
 /**
  * Landing cells reachable by jumping over exactly one enemy to an empty
  * square (rectangle adjacency rays, hex cube-axis double steps, or graph
- * 2-edge leaps). With `crownedFlyingCapture`, crowned rectangle | hex pieces
- * may approach across empties and land any empty cell beyond the mid within
- * `crownedRange` (hex uses cube-axis rays). Distinct from replace (land on
- * enemy) and hop-ball (BFS through empties).
+ * 2-edge leaps). With `crownedFlyingCapture`, crowned rectangle | hex | graph
+ * pieces may approach across empties and land any empty cell beyond the mid
+ * within `crownedRange` (hex: cube-axis; graph: chain-walk). Distinct from
+ * replace (land on enemy) and hop-ball (BFS through empties).
  */
 export function jumpDestinations(
 	grid: Grid,
@@ -436,6 +476,41 @@ export function jumpDestinations(
 	if (opts.topology === "graph") {
 		if (eff.adjacency !== "orthogonal" || !opts.graph) return [];
 		const seen = new Set<string>();
+		// Graph flying capture (crowned only): chain-walk ray approach + long land.
+		if (usesFlyingCapture(config, cell)) {
+			for (const n1 of opts.graph.neighborsOf.get(posKey(from)) ?? []) {
+				let enemyMid: Position | null = null;
+				let prev: Position = from;
+				let cur: Position = n1;
+				const pathSeen = new Set<string>([posKey(from)]);
+				for (let i = 1; i <= eff.range; i++) {
+					const key = posKey(cur);
+					if (pathSeen.has(key)) break;
+					pathSeen.add(key);
+					const occ = getCell(grid, cur);
+					if (enemyMid === null) {
+						if (occ === null) {
+							/* approach empty */
+						} else if (isEnemyPiece(occ, owner)) {
+							enemyMid = cur;
+						} else {
+							break;
+						}
+					} else {
+						if (occ !== null) break;
+						if (!seen.has(key)) {
+							seen.add(key);
+							out.push(cur);
+						}
+					}
+					const next = graphChainForward(cur, prev, opts.graph);
+					if (!next) break;
+					prev = cur;
+					cur = next;
+				}
+			}
+			return out;
+		}
 		for (const mid of opts.graph.neighborsOf.get(posKey(from)) ?? []) {
 			const occ = getCell(grid, mid);
 			if (!isEnemyPiece(occ, owner)) continue;
@@ -822,6 +897,22 @@ function slideHexDestinations(
 }
 
 /**
+ * Unique forward neighbor on a graph chain-walk ray (exclude backtrack).
+ * Returns null at junctions (|forward| ≠ 1) or dead-ends — same junction
+ * rule as quiet `slideGraphDestinations` / flying-capture rays.
+ */
+function graphChainForward(
+	cur: Position,
+	prev: Position,
+	graph: GraphTopologyData
+): Position | null {
+	const forward = (graph.neighborsOf.get(posKey(cur)) ?? []).filter(
+		(p) => p.row !== prev.row || p.col !== prev.col
+	);
+	return forward.length === 1 ? forward[0]! : null;
+}
+
+/**
  * Graph chain-walk slides: for each first edge from `from`, walk forward
  * along the unique non-backtrack neighbor up to `range`. Empty cells along
  * the chain are destinations. With `capture: "replace"`, the first enemy
@@ -865,12 +956,10 @@ function slideGraphDestinations(
 				out.push(cur);
 			}
 			if (dist === range) break;
-			const forward = (graph.neighborsOf.get(key) ?? []).filter(
-				(p) => p.row !== prev.row || p.col !== prev.col
-			);
-			if (forward.length !== 1) break;
+			const next = graphChainForward(cur, prev, graph);
+			if (!next) break;
 			prev = cur;
-			cur = forward[0]!;
+			cur = next;
 		}
 	}
 	return out;

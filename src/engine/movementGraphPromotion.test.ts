@@ -59,7 +59,7 @@ describe("graph movement.promotion schema", () => {
 		expect(parsed.success).toBe(false);
 	});
 
-	it("rejects graph promotion with crownedFlyingCapture", () => {
+	it("accepts graph promotion with crownedFlyingCapture when crownedRange >= 2", () => {
 		const base = structuredClone(
 			examplePresets["graph-crowned-jump-lite"].config
 		);
@@ -72,7 +72,7 @@ describe("graph movement.promotion schema", () => {
 			}
 		};
 		const parsed = zConfig.safeParse(base);
-		expect(parsed.success).toBe(false);
+		expect(parsed.success).toBe(true);
 	});
 
 	it("rejects graph promotion when crownedAdjacency omitted (defaults king)", () => {

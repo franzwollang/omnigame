@@ -66,7 +66,7 @@ describe("hex promotion.crownedFlyingCapture schema", () => {
 		expect(parsed.success).toBe(false);
 	});
 
-	it("still rejects graph crownedFlyingCapture", () => {
+	it("accepts graph crownedFlyingCapture (M62)", () => {
 		const base = structuredClone(
 			examplePresets["graph-crowned-jump-lite"].config
 		);
@@ -79,7 +79,7 @@ describe("hex promotion.crownedFlyingCapture schema", () => {
 			}
 		};
 		const parsed = zConfig.safeParse(base);
-		expect(parsed.success).toBe(false);
+		expect(parsed.success).toBe(true);
 	});
 });
 

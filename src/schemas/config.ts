@@ -157,12 +157,11 @@ export const zConfig = z
 		 * Optional `menForwardOnly` restricts uncrowned quiet/jump moves to
 		 * the forward row-delta toward the seat's promotion side (crowned
 		 * unrestricted; rectangle + `targetRows` only). Optional
-		 * `crownedFlyingCapture` (rectangle | hex_offset) extends crowned
-		 * jump rays (graph still deferred). Rectangle | hex_offset | graph +
-		 * jump for v1 (hex/graph forbid menForwardOnly; graph forbids
-		 * crownedFlyingCapture; graph requires orthogonal crownedAdjacency;
-		 * `targetNodes` is graph-only and mutually exclusive with
-		 * `targetRows`).
+		 * `crownedFlyingCapture` (rectangle | hex_offset | graph) extends
+		 * crowned jump rays (graph: chain-walk). Rectangle | hex_offset |
+		 * graph + jump for v1 (hex/graph forbid menForwardOnly; graph
+		 * requires orthogonal crownedAdjacency; `targetNodes` is graph-only
+		 * and mutually exclusive with `targetRows`).
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -194,9 +193,9 @@ export const zConfig = z
 				 * crowned pieces use `crownedAdjacency` for quiet/jump rays.
 				 * Optional `crownedRange` (default 1) gives crowned quiet
 				 * slides longer than men (`movement.range` stays 1). Optional
-				 * `crownedFlyingCapture` (rectangle | hex_offset) extends
-				 * crowned jump leaps along a clear ray within `crownedRange`
-				 * (hex: cube-axis). Optional
+				 * `crownedFlyingCapture` (rectangle | hex_offset | graph)
+				 * extends crowned jump leaps along a clear ray within
+				 * `crownedRange` (hex: cube-axis; graph: chain-walk). Optional
 				 * `menForwardOnly` (rectangle + targetRows) restricts
 				 * uncrowned row deltas to the promotion-side advance.
 				 * Hex/graph require orthogonal crownedAdjacency.
@@ -2309,8 +2308,8 @@ export const zConfig = z
 
 		// Piece promotion / crowned kings (Transform lite): rectangle |
 		// hex_offset | graph + jump. Hex/graph: orthogonal crowned adjacency
-		// only; no menForwardOnly (rectangle Draughts). Graph still forbids
-		// crownedFlyingCapture (chain-walk flying deferred); hex allows it.
+		// only; no menForwardOnly (rectangle Draughts). crownedFlyingCapture
+		// allowed on rectangle | hex_offset | graph (chain-walk flying).
 		if (cfg.movement?.promotion) {
 			if (cfg.movement.capture !== "jump") {
 				ctx.addIssue({
@@ -2359,17 +2358,6 @@ export const zConfig = z
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "promotion", "menForwardOnly"],
 						message: `${topoLabel} promotion is incompatible with menForwardOnly (rectangle only)`
-					});
-				}
-				if (
-					cfg.grid.topology === "graph" &&
-					cfg.movement.promotion.crownedFlyingCapture === true
-				) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["movement", "promotion", "crownedFlyingCapture"],
-						message:
-							"graph promotion is incompatible with crownedFlyingCapture (rectangle | hex_offset only)"
 					});
 				}
 			}

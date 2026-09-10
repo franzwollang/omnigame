@@ -893,9 +893,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<code className="text-[11px]">
 												crownedFlyingCapture
 											</code>{" "}
-											(rectangle | hex_offset) for long-range leap
+											(rectangle | hex_offset | graph) for long-range leap
 											capture (Flying Capture Jump Lite / Hex Flying
-											Capture Jump Lite; graph still deferred). Optional{" "}
+											Capture Jump Lite / Graph Flying Capture Jump Lite).
+											Optional{" "}
 											<code className="text-[11px]">
 												menForwardOnly
 											</code>{" "}

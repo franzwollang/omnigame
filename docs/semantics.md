@@ -219,7 +219,7 @@ delayTurns → pendingPlaces.
 | liberties | placement.captureMode | Go-lite group removal + ko/superko (rectangle von Neumann-4; hex_offset cube-axis-6 — Hex Go Lite; graph explicit-edge — Graph Go Lite) |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; optional `mustLongestCapture` (max chain length); incompatible with `graphReach: hop` |
-| promote | movement.promotion | Transform on reach row/node (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` **or** graph `targetNodes[seat]` (`"row,col"`; mutually exclusive) → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` (rectangle \| hex_offset) / `menForwardOnly` (rectangle + targetRows only) |
+| promote | movement.promotion | Transform on reach row/node (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` **or** graph `targetNodes[seat]` (`"row,col"`; mutually exclusive) → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` (rectangle \| hex_offset \| graph) / `menForwardOnly` (rectangle + targetRows only) |
 
 KoRule: none | point | positional | situational.
 
@@ -242,10 +242,11 @@ KoRule: none | point | positional | situational.
   quiet slides (men keep `movement.range` = 1 under jump; jump leap distance
   unchanged without flying — Flying Kings Jump Lite / Hex Crowned Jump Lite /
   Graph Crowned Jump Lite / Graph Hub Crowned Jump Lite); optional
-  `crownedFlyingCapture` (rectangle | hex_offset) extends crowned jumps along
-  a clear ray within `crownedRange` (empty approach + land beyond immediate
-  past-mid; requires `crownedRange >= 2` — Flying Capture Jump Lite / Hex
-  Flying Capture Jump Lite; graph still deferred); preserve crown on
+  `crownedFlyingCapture` (rectangle | hex_offset | graph) extends crowned jumps
+  along a clear ray within `crownedRange` (empty approach + land beyond
+  immediate past-mid; requires `crownedRange >= 2` — Flying Capture Jump Lite /
+  Hex Flying Capture Jump Lite / Graph Flying Capture Jump Lite; hex: cube-axis;
+  graph: chain-walk); preserve crown on
   move; emit `piecePromoted` (Crowned Kings Jump Lite); optional
   `menForwardOnly` (rectangle + targetRows)
   restricts uncrowned quiet/jump row deltas toward the promotion side
