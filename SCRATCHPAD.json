@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T05:40+00:00",
+  "turn": 94,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M64",
+    "issue": "next-missing-mechanism",
+    "goal": "graph menForwardOnly landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 3c3b M63 tip onto cursor/next-task-progression-30a6",
+    "Landed M64 Graph Forward Men Jump Lite / menForwardOnly on graph",
+    "Edge-distance toward targetRows; targetNodes hubs still deferred"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Bypass graph: row-down can increase edge dist when shortcut exists",
+    "Opening X(4,0)→(2,0) promote; O(4,1)→(3,1); X+ (0,0) wins"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: targetNodes+menForwardOnly, full Go, realtime, simultaneous jump"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M64",
   "blockers": []
 }
