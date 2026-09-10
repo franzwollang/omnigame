@@ -926,8 +926,10 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 											<p className="text-xs text-muted-foreground">
 												hit_miss = Battleship-lite; fog = radius vision around
 												own pieces; flood_reveal = Minesweeper-lite region
-												reveal (needs hazards + clear_hazards); memory_flip =
-												pair matching (needs memory + match_pairs + flip).
+												reveal on rectangle (Chebyshev-8) or hex
+												(cube-axis-6; graph deferred; needs hazards +
+												clear_hazards); memory_flip = pair matching (needs
+												memory + match_pairs + flip).
 											</p>
 											<FormMessage />
 										</FormItem>

@@ -607,12 +607,12 @@ export const zConfig = z
 						"flood_reveal requires direct placement without capture"
 				});
 			}
-			if (hexBoard || graphBoard) {
+			if (graphBoard) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["grid", "topology"],
 					message:
-						"flood_reveal requires rectangle topology (hex/graph deferred)"
+						"flood_reveal requires rectangle or hex_offset topology (graph deferred)"
 				});
 			}
 			if (cfg.grid.wrap === true) {
@@ -1131,10 +1131,11 @@ export const zConfig = z
 			}
 		}
 
-		// Hex foothold: cell + n-in-a-row, or move + reach_row (topology-aware movement).
-		// No gravity/column/tick/capture on hex.
+		// Hex foothold: cell + n-in-a-row, move + reach_row, or flood_reveal +
+		// clear_hazards (cube-axis hazard adjacency). No gravity/column/tick/capture.
 		if (hexBoard) {
 			const hexMove = moveInput && reachRow;
+			const hexFlood = floodReveal && clearHazards;
 			if (hexMove) {
 				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
 					ctx.addIssue({
@@ -1145,13 +1146,15 @@ export const zConfig = z
 					});
 				}
 				// hex_offset sliding range 1..8 on cube axes (M21)
+			} else if (hexFlood) {
+				// flood_reveal on hex_offset: cube-axis-6 counts (M53); graph still deferred
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["objective", "mode"],
 						message:
-							"hex_offset requires objective.mode = 'n_in_a_row' (or move + reach_row)"
+							"hex_offset requires objective.mode = 'n_in_a_row' (or move + reach_row, or flood_reveal + clear_hazards)"
 					});
 				}
 				if (cfg.input.mode !== "cell") {

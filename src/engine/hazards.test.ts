@@ -4,6 +4,7 @@ import {
 	adjacentHazardCount,
 	allSafeRevealed,
 	floodRevealRegion,
+	hazardNeighbors,
 	isMineAt,
 	mineCount,
 	placeHazards
@@ -41,6 +42,49 @@ describe("hazard helpers", () => {
 		expect(adjacentHazardCount(hidden, { row: 0, col: 1 })).toBe(2);
 	});
 
+	it("hex hazardNeighbors uses cube-axis-6, not Chebyshev-8", () => {
+		const mid = { row: 1, col: 1 };
+		const rect = hazardNeighbors(mid, 3, 3, "rectangle");
+		const hex = hazardNeighbors(mid, 3, 3, "hex_offset");
+		expect(rect).toHaveLength(8);
+		expect(hex).toHaveLength(6);
+		// A Chebyshev corner that is not cube-adjacent must not count on hex
+		const rectOnly = rect.filter(
+			(p) => !hex.some((h) => h.row === p.row && h.col === p.col)
+		);
+		expect(rectOnly.length).toBe(2);
+		const cells = Array(9).fill(null) as (null | "mine")[];
+		for (const p of rectOnly) {
+			cells[toIndex(p, 3)] = "mine";
+		}
+		const hidden = { width: 3, height: 3, cells };
+		expect(adjacentHazardCount(hidden, mid, "rectangle")).toBe(2);
+		expect(adjacentHazardCount(hidden, mid, "hex_offset")).toBe(0);
+	});
+
+	it("hex floodRevealRegion expands on cube neighbors only", () => {
+		const cells = Array(9).fill(null);
+		cells[0] = "mine"; // (0,0)
+		const hidden = { width: 3, height: 3, cells };
+		const pub = { width: 3, height: 3, cells: Array(9).fill(null) };
+		const flood = floodRevealRegion(
+			hidden,
+			pub,
+			{ row: 2, col: 2 },
+			"hex_offset"
+		);
+		expect(flood.positions.length).toBeGreaterThan(0);
+		expect(
+			flood.positions.some((p) => p.row === 0 && p.col === 0)
+		).toBe(false);
+		for (let i = 0; i < flood.positions.length; i++) {
+			expect(flood.counts[i]).toBe(
+				adjacentHazardCount(hidden, flood.positions[i]!, "hex_offset")
+			);
+			expect(flood.counts[i]!).toBeLessThanOrEqual(6);
+		}
+	});
+
 	it("floodRevealRegion expands through zeros and stops at numbered frontier", () => {
 		// 3x3 with one mine at corner (0,0)
 		const cells = Array(9).fill(null);
@@ -64,6 +108,146 @@ describe("hazard helpers", () => {
 			) ||
 				flood.positions.some((p) => adjacentHazardCount(hidden, p) > 0)
 		).toBe(true);
+	});
+});
+
+describe("Hex Minesweeper Lite (flood_reveal on hex_offset)", () => {
+	it("validates and compiles the hex-minesweeper-lite preset", () => {
+		const cfg = examplePresets["hex-minesweeper-lite"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { gameConfig } = compileConfig(cfg);
+		expect(gameConfig.observationMode).toBe("flood_reveal");
+		expect(gameConfig.objectiveMode).toBe("clear_hazards");
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.hazards?.count).toBe(8);
+		expect(gameConfig.hazards?.firstRevealSafe).toBe(true);
+	});
+
+	it("schema accepts hex flood_reveal and rejects graph", () => {
+		const hexOk = {
+			...examplePresets["hex-minesweeper-lite"].config
+		};
+		expect(zConfig.safeParse(hexOk).success).toBe(true);
+
+		const graphBad = {
+			...examplePresets["minesweeper-lite"].config,
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph" as const,
+				nodes: [
+					{ row: 0, col: 0 },
+					{ row: 0, col: 1 },
+					{ row: 1, col: 0 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,0", "1,0"]
+				] as [string, string][]
+			}
+		};
+		expect(zConfig.safeParse(graphBad).success).toBe(false);
+	});
+
+	it("mine hit on hex ends with opponent winner", () => {
+		const cfg = zConfig.parse({
+			metadata: { name: "Hex Mine Hit", version: 1 },
+			grid: { width: 3, height: 3, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 2 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 1, firstRevealSafe: false },
+			objective: { mode: "clear_hazards" },
+			tokens: [],
+			placements: [],
+			initial: []
+		});
+		const { gameConfig } = compileConfig(cfg);
+		const state = createInitialState(gameConfig);
+		let minePos = { row: 0, col: 0 };
+		for (let r = 0; r < 3; r++) {
+			for (let c = 0; c < 3; c++) {
+				if (isMineAt(state.hidden!, { row: r, col: c })) {
+					minePos = { row: r, col: c };
+				}
+			}
+		}
+		const kernel = createGameKernel(gameConfig);
+		const step = kernel.stepSync(state, { type: "reveal", position: minePos });
+		expect(step.events.some((e) => e.type === "mineHit")).toBe(true);
+		expect(step.nextState.status).toBe("won");
+		expect(step.nextState.winner).toBe("O");
+		expect(getCell(step.nextState.grid, minePos)).toBe("mine");
+	});
+
+	it("hex flood uses topology-aware counts in cellsRevealed", () => {
+		const cfg = zConfig.parse({
+			metadata: { name: "Hex Flood", version: 1 },
+			grid: { width: 5, height: 5, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 1 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 4, firstRevealSafe: false },
+			objective: { mode: "clear_hazards" },
+			tokens: [],
+			placements: [],
+			initial: []
+		});
+		const { gameConfig } = compileConfig(cfg);
+		const state = createInitialState(gameConfig);
+		let start = { row: 0, col: 0 };
+		let found = false;
+		for (let r = 0; r < 5 && !found; r++) {
+			for (let c = 0; c < 5 && !found; c++) {
+				const p = { row: r, col: c };
+				if (
+					!isMineAt(state.hidden!, p) &&
+					adjacentHazardCount(state.hidden!, p, "hex_offset") === 0
+				) {
+					start = p;
+					found = true;
+				}
+			}
+		}
+		expect(found).toBe(true);
+		const kernel = createGameKernel(gameConfig);
+		const step = kernel.stepSync(state, { type: "reveal", position: start });
+		const revealed = step.events.find((e) => e.type === "cellsRevealed");
+		expect(revealed).toBeDefined();
+		if (revealed && revealed.type === "cellsRevealed") {
+			expect(revealed.positions.length).toBeGreaterThan(1);
+			for (let i = 0; i < revealed.positions.length; i++) {
+				expect(revealed.counts[i]).toBe(
+					adjacentHazardCount(
+						step.nextState.hidden!,
+						revealed.positions[i]!,
+						"hex_offset"
+					)
+				);
+			}
+		}
+	});
+
+	it("GameIR replay matches transcript for hex-minesweeper-lite", () => {
+		const cfg = examplePresets["hex-minesweeper-lite"].config;
+		const { gameConfig, kernel } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{ type: "reveal", position: { row: 0, col: 0 } },
+			{ type: "reveal", position: { row: 5, col: 5 } }
+		];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of actions) {
+			const step = kernel.stepSync(state, action);
+			state = step.nextState;
+		}
+		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replayed.finalState.grid.cells).toEqual(state.grid.cells);
+		expect(replayed.finalState.hidden?.cells).toEqual(state.hidden?.cells);
+		expect(replayed.finalState.moveCount).toBe(state.moveCount);
 	});
 });
 

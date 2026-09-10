@@ -11,10 +11,11 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Flying kings (`promotion.crownedRange` + Flying Kings Jump Lite) landed as
-**M52**. Longest mandatory capture closed as M51; forward-only men as M50;
-crowned promotion as M49; graph jump as M48; hex jump as M47; memory flip as
-M46; mustCapture as M45; flood_reveal as M44. P4 tooling-ci and
+Hex flood_reveal (`hex_offset` + cube-axis-6 hazard adjacency + Hex Minesweeper
+Lite) landed as **M53**. Flying kings (`promotion.crownedRange` + Flying Kings
+Jump Lite) closed as M52; longest mandatory capture as M51; forward-only men as
+M50; crowned promotion as M49; graph jump as M48; hex jump as M47; memory flip
+as M46; mustCapture as M45; rectangle flood_reveal as M44. P4 tooling-ci and
 semantics-doc-refresh already closed (M41–M42; semantics notes continue per
 mechanism).
 
@@ -25,7 +26,8 @@ e.g.:
   reject as recombination)
 - Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
   recombination of reveal)
-- Hex/graph hazard adjacency (only if a new seam appears)
+- Graph hazard adjacency (only if a new seam appears; degree may exceed 0–8
+  counts)
 - Memory bonus-turn-on-match / custom decks (schema field exists; deferred —
   bonusTurnOnMatch is kernel-complete / preset-only)
 - Flying jump capture (long-range leap over enemy — deferred; M52 is quiet
@@ -79,7 +81,8 @@ forward-only men (`promotion.menForwardOnly`; uncrowned row-delta filter;
 crowned unrestricted). **Flying Kings Jump Lite** covers Draughts-lite flying
 kings (`promotion.crownedRange` — crowned quiet slides longer than men; jump
 leaps unchanged). **Minesweeper Lite** covers flood-fill region reveal
-(`flood_reveal` / `clear_hazards` / `hazards`). **Memory Flip Lite** covers
+(`flood_reveal` / `clear_hazards` / `hazards`) on rectangle. **Hex Minesweeper
+Lite** covers hex cube-axis-6 hazard adjacency. **Memory Flip Lite** covers
 tile pair-matching (`memory_flip` / `flip` / `match_pairs` / `memory`). Open
 simultaneous deduction joint UCT covers agent search over
 query/guess(/eliminate) cartesian (fire→move still open if an anchor appears).
@@ -87,4 +90,4 @@ CI green gate: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics
 draft: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
 mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
 promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
-crownedRange in M52).
+crownedRange in M52; hex flood_reveal in M53).

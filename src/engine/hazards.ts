@@ -2,10 +2,14 @@
  * Hazard layout + flood-fill region reveal (Minesweeper-style).
  *
  * Hidden layer holds `"mine"` markers; public grid holds revealed counts
- * (`0`–`8`) or `"mine"` after a hit. Flood expands through zero-count cells
- * and reveals the numbered frontier in one action.
+ * (`0`–`8` rectangle / `0`–`6` hex) or `"mine"` after a hit. Flood expands
+ * through zero-count cells and reveals the numbered frontier in one action.
+ *
+ * Adjacency is topology-aware: Chebyshev-8 on rectangle, cube-axis-6 on
+ * hex_offset. Graph deferred.
  */
 import { mulberry32 } from "@/engine/rng";
+import { neighbors, type GridTopology } from "@/engine/topology";
 import {
 	getCell,
 	setCell,
@@ -23,16 +27,10 @@ export type HazardsConfig = {
 	firstRevealSafe?: boolean;
 };
 
-const NEIGHBOR_DELTAS: ReadonlyArray<readonly [number, number]> = [
-	[-1, -1],
-	[-1, 0],
-	[-1, 1],
-	[0, -1],
-	[0, 1],
-	[1, -1],
-	[1, 0],
-	[1, 1]
-];
+/** Topology stub — neighbors() only reads width/height for rect/hex. */
+function stubGrid(width: number, height: number): Grid {
+	return { width, height, cells: [] };
+}
 
 export function isHazardCount(v: CellValue): v is HazardCount {
 	return typeof v === "number" && v >= 0 && v <= 8 && Number.isInteger(v);
@@ -56,18 +54,20 @@ export function inBounds(
 	);
 }
 
-/** Chebyshev 8-neighbors on a rectangle (no wrap). */
+/**
+ * Hazard-adjacent cells for flood counts / expansion.
+ * Rectangle: Chebyshev 8-neighbors. Hex: six cube-axis neighbors.
+ * Graph (and unknown): empty — flood_reveal forbids graph in schema.
+ */
 export function hazardNeighbors(
 	pos: Position,
 	width: number,
-	height: number
+	height: number,
+	topology: GridTopology = "rectangle"
 ): Position[] {
-	const out: Position[] = [];
-	for (const [dr, dc] of NEIGHBOR_DELTAS) {
-		const next = { row: pos.row + dr, col: pos.col + dc };
-		if (inBounds(next, width, height)) out.push(next);
-	}
-	return out;
+	if (topology === "graph") return [];
+	const topo = topology === "hex_offset" ? "hex_offset" : "rectangle";
+	return neighbors(stubGrid(width, height), pos, topo, undefined, false);
 }
 
 export function isMineAt(hidden: Grid, pos: Position): boolean {
@@ -76,10 +76,16 @@ export function isMineAt(hidden: Grid, pos: Position): boolean {
 
 export function adjacentHazardCount(
 	hidden: Grid,
-	pos: Position
+	pos: Position,
+	topology: GridTopology = "rectangle"
 ): HazardCount {
 	let n = 0;
-	for (const nb of hazardNeighbors(pos, hidden.width, hidden.height)) {
+	for (const nb of hazardNeighbors(
+		pos,
+		hidden.width,
+		hidden.height,
+		topology
+	)) {
 		if (isMineAt(hidden, nb)) n += 1;
 	}
 	return n as HazardCount;
@@ -130,11 +136,13 @@ export type FloodRevealResult = {
 /**
  * Classic Minesweeper flood: expand through zero-count safe cells; include
  * the numbered frontier. Does not reveal mines. Skips already-revealed cells.
+ * Adjacency follows `topology` (rectangle Chebyshev-8 or hex cube-axis-6).
  */
 export function floodRevealRegion(
 	hidden: Grid,
 	publicGrid: Grid,
-	start: Position
+	start: Position,
+	topology: GridTopology = "rectangle"
 ): FloodRevealResult {
 	const positions: Position[] = [];
 	const counts: HazardCount[] = [];
@@ -154,11 +162,16 @@ export function floodRevealRegion(
 
 	while (queue.length > 0) {
 		const cur = queue.shift()!;
-		const count = adjacentHazardCount(hidden, cur);
+		const count = adjacentHazardCount(hidden, cur, topology);
 		positions.push(cur);
 		counts.push(count);
 		if (count !== 0) continue;
-		for (const nb of hazardNeighbors(cur, hidden.width, hidden.height)) {
+		for (const nb of hazardNeighbors(
+			cur,
+			hidden.width,
+			hidden.height,
+			topology
+		)) {
 			const idx = toIndex(nb, hidden.width);
 			if (seen.has(idx)) continue;
 			if (isMineAt(hidden, nb)) continue;

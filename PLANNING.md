@@ -68,10 +68,11 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M50 | Next missing mechanism (forward-only men) | `done` |
 | M51 | Next missing mechanism (longest mandatory capture) | `done` |
 | M52 | Next missing mechanism (flying kings / crownedRange) | `done` |
+| M53 | Next missing mechanism (hex flood_reveal) | `done` |
 
-**Optimizing for this marathon:** M52 flying kings (`crownedRange`) landed. Pick
-**P3 next-missing-mechanism** (smallest new seam; reject recombinations without
-anchor) — without asking which fork.
+**Optimizing for this marathon:** M53 hex flood_reveal (`Hex Minesweeper Lite`)
+landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
+recombinations without anchor) — without asking which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -152,7 +153,9 @@ crowned unrestricted); **Flying Kings Jump Lite** demonstrates
 `promotion.crownedRange` (crowned quiet slides longer than men; jump leaps
 unchanged).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
-`clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals).
+`clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals);
+**Hex Minesweeper Lite** demonstrates the same on `hex_offset` with cube-axis-6
+adjacency (not Chebyshev-8; graph still deferred).
 **Memory:** **Memory Flip Lite** demonstrates `memory_flip` + `flip` +
 `match_pairs` + `memory` deck.
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
@@ -200,7 +203,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; hex-graph promotion; flying jump capture. Flying kings quiet
+scheduler; hex-graph promotion; flying jump capture; graph flood_reveal. Hex
+flood_reveal landed (M53 Hex Minesweeper Lite). Flying kings quiet
 range landed (M52 Flying Kings Jump Lite). Longest mandatory capture landed
 (M51 Mandatory Longest Jump Lite). Forward-only men landed
 (M50 Forward Men Jump Lite). Crowned promotion landed (M49 Crowned Kings
@@ -210,7 +214,7 @@ Jump Race). CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
 Semantics: `docs/semantics.md` (M42; jump in M43; flood_reveal in M44;
 mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in
 M48; promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
-crownedRange in M52).
+crownedRange in M52; hex flood_reveal in M53).
 
 ## Phase 2 exit criteria
 
@@ -788,6 +792,19 @@ crownedRange in M52).
   tests — **done**
 - Out of scope: flying jump capture; hex/graph promotion; simultaneous jump
 - Green gate: ≥667 tests — **done**
+
+### M53 — Hex flood_reveal / cube-axis hazard adjacency
+
+- Schema: `flood_reveal` on `rectangle | hex_offset` (graph still deferred);
+  hex foothold accepts `flood_reveal` + `clear_hazards` — **done**
+- Hazards: `hazardNeighbors` / `adjacentHazardCount` / `floodRevealRegion`
+  topology-aware (Chebyshev-8 vs cube-axis-6); reducer passes topology —
+  **done**
+- Preset `hex-minesweeper-lite` (Hex Minesweeper Lite) + helper / schema /
+  transcript / replay tests — **done**
+- Form observation helper notes hex adjacency — **done**
+- Out of scope: graph flood_reveal; flags/chords; wrap
+- Green gate: ≥674 tests — **done**
 
 ## Sequencing notes
 

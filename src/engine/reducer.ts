@@ -2147,7 +2147,8 @@ function handleReveal(
 		};
 	}
 
-	const flood = floodRevealRegion(hidden, state.grid, pos);
+	const topology = config.topology ?? "rectangle";
+	const flood = floodRevealRegion(hidden, state.grid, pos, topology);
 	const cells = applyReveals(state.grid, flood);
 	const nextGrid = { ...state.grid, cells };
 	const next: GameState = {

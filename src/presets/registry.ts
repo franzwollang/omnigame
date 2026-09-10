@@ -1227,6 +1227,38 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"hex-minesweeper-lite": definePreset({
+		id: "hex-minesweeper-lite",
+		name: "Hex Minesweeper Lite",
+		tags: [
+			"observation",
+			"flood-reveal",
+			"hazards",
+			"hex",
+			"partial-info",
+			"6x6",
+			"mechanism"
+		],
+		description:
+			"Flood-fill reveal on hex_offset: cube-axis-6 adjacency for hazard counts and zero-region expansion (not Chebyshev-8). Mine loses; clear all safe cells draws. Unlocks hex flood_reveal — graph still deferred; no flags/chords.",
+		config: {
+			metadata: { name: "Hex Minesweeper Lite", version: 1 },
+			grid: { width: 6, height: 6, topology: "hex_offset", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 8, firstRevealSafe: true },
+			objective: { mode: "clear_hazards" },
+			tokens: [
+				{ id: "probe-x", label: "X", players: ["X"] },
+				{ id: "probe-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"memory-flip-lite": definePreset({
 		id: "memory-flip-lite",
 		name: "Memory Flip Lite",

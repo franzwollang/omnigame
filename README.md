@@ -65,6 +65,7 @@ These are built from the same shared schema and operators.
 - **Forward Men Jump Lite** (`menForwardOnly` — uncrowned advance toward promo side only)
 - **Flying Kings Jump Lite** (`crownedRange` — crowned quiet slides longer than men)
 - **Minesweeper Lite** (`flood_reveal` + `clear_hazards` + seeded mines)
+- **Hex Minesweeper Lite** (`hex_offset` + `flood_reveal` — cube-axis-6 hazard adjacency)
 - **Memory Flip Lite** (`memory_flip` + `flip` + `match_pairs` — pair matching)
 - **Guess Who Lite** (deduction query/guess + identify_secret)
 - **Guess Who Commit Lite** (`autoEliminate: false` + eliminate + end_turn wrong guess)
@@ -214,8 +215,8 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   `mustLongestCapture` for jump);
   optional promotion (`movement.promotion` — Transform on reach row; optional
   `menForwardOnly` / `crownedRange`)
-- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3 / Simultaneous / Simultaneous And / **Hidden Simultaneous** / **Hidden Simultaneous Commit**); `clear_hazards` (Minesweeper Lite); `match_pairs` (Memory Flip Lite); `none` (open-ended / tick demos)
-- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), `deduction` (public roster + own eliminations / last query / pending commit), `flood_reveal` (shared hazard counts + flood open), or `memory_flip` (shared face-up / matched pair marks); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Minesweeper Lite** / **Memory Flip Lite** / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who Commit Phases Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** / **Simultaneous Guess Who Lite** / **Simultaneous Guess Who Commit Lite** / **Simultaneous Guess Who And Lite** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite** presets
+- **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3 / Simultaneous / Simultaneous And / **Hidden Simultaneous** / **Hidden Simultaneous Commit**); `clear_hazards` (Minesweeper Lite / **Hex Minesweeper Lite**); `match_pairs` (Memory Flip Lite); `none` (open-ended / tick demos)
+- **Observation**: `full` (identity), `hit_miss` (own fleet + public shots), `fog` (radius around own pieces + `visible[]` mask), `deduction` (public roster + own eliminations / last query / pending commit), `flood_reveal` (shared hazard counts + flood open on rectangle Chebyshev-8 or **hex cube-axis-6**), or `memory_flip` (shared face-up / matched pair marks); Battleship-lite / Battleship Place (`fleet.ships`) / Fog Connect Lite / **Minesweeper Lite** / **Hex Minesweeper Lite** / **Memory Flip Lite** / **Guess Who Lite** / **Guess Who Commit Lite** / **Guess Who Commit Phases Lite** / **Guess Who And Lite** / **Guess Who Or Lite** / **Guess Who And3 Lite** / **Simultaneous Guess Who Lite** / **Simultaneous Guess Who Commit Lite** / **Simultaneous Guess Who And Lite** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite** presets
 - **Determinism**: GameIR v0 replays `seed + actions → same state`; Effect RNG helpers exist (`rng.seed` in config / transcript)
 - **Kernel**: sandbox plays presets through `GameKernel.step` (with per-player observations), legal-move overlay, why-illegal reasons, event trace, Replay, and Agent step (random/greedy/hunt/tiny MCTS/UCT)
 - **Compiler**: `src/compiler/` validates, expands macros, normalizes to `GameConfig`, builds the kernel
@@ -514,21 +515,21 @@ capture / Hex Jump Race (M47), graph jump capture / Graph Jump Race (M48),
 crowned promotion / Crowned Kings Jump Lite (M49), forward-only men /
 Forward Men Jump Lite (M50), longest mandatory capture /
 Mandatory Longest Jump Lite (M51), flying kings / crowned quiet range /
-Flying Kings Jump Lite (M52).
+Flying Kings Jump Lite (M52), hex flood_reveal / Hex Minesweeper Lite (M53).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
   fire→move only with anchor; full Go; realtime scheduler; hex-graph
-  promotion; flying jump capture; reject recombinations)
+  promotion; flying jump capture; graph flood_reveal; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
   (recombination without anchor); hex-graph promotion; flying jump
-  capture; memory bonus-turn-on-match / custom decks
+  capture; graph flood_reveal; memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
   mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
   promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
-  crownedRange in M52)
+  crownedRange in M52; hex flood_reveal in M53)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 
