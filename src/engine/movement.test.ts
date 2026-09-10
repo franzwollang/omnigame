@@ -380,12 +380,554 @@ describe("Slide Race (movement.range > 1)", () => {
 		expect(replay.finalState.winner).toBe("X");
 	});
 
-	it("rejects sliding range on hex move configs", () => {
-		const bad = zConfig.safeParse({
-			...examplePresets["hex-step-race"].config,
+	it("accepts sliding range on graph move configs", () => {
+		const ok = zConfig.safeParse({
+			...examplePresets["simultaneous-graph-step-race"].config,
 			movement: { adjacency: "orthogonal" as const, range: 3 }
 		});
+		expect(ok.success).toBe(true);
+	});
+});
+
+describe("Graph Slide Race (movement.range > 1 on graph)", () => {
+	const GRAPH_SLIDE: MovementConfig = { adjacency: "orthogonal", range: 4 };
+
+	it("accepts graph move configs with sliding range", () => {
+		const ok = zConfig.safeParse({
+			...examplePresets["simultaneous-graph-step-race"].config,
+			turn: { mode: "turn" },
+			movement: { adjacency: "orthogonal" as const, range: 4 }
+		});
+		expect(ok.success).toBe(true);
+	});
+
+	it("range 1 matches empty-neighbor destinations", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-slide-race"].config
+		);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 0 };
+		const step1: MovementConfig = { adjacency: "orthogonal", range: 1 };
+		expect(legalDestinations(state.grid, from, step1, board)).toEqual([
+			{ row: 3, col: 0 }
+		]);
+	});
+
+	it("lists multi-cell chain destinations and stops at blockers", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-slide-race"].config
+		);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 0 };
+		const dests = legalDestinations(state.grid, from, GRAPH_SLIDE, board);
+		// X's lane: (4,0)→(3,0)→(2,0)→(1,0)→(0,0); O is on the other lane.
+		expect(dests).toEqual(
+			expect.arrayContaining([
+				{ row: 3, col: 0 },
+				{ row: 2, col: 0 },
+				{ row: 1, col: 0 },
+				{ row: 0, col: 0 }
+			])
+		);
+		expect(dests).toHaveLength(4);
+		expect(
+			canMove(state.grid, from, { row: 0, col: 0 }, "X", GRAPH_SLIDE, board)
+		).toBe(true);
+		// Cross-lane jump has no edge — illegal.
+		expect(
+			canMove(state.grid, from, { row: 0, col: 1 }, "X", GRAPH_SLIDE, board)
+		).toBe(false);
+		expect(
+			canMove(state.grid, from, { row: 3, col: 1 }, "X", GRAPH_SLIDE, board)
+		).toBe(false);
+
+		// Mid-chain blocker: occupy (2,0) → (1,0)/(0,0) unreachable.
+		const blockedCells = state.grid.cells.slice();
+		const idx = 2 * state.grid.width + 0;
+		blockedCells[idx] = "O";
+		const blockedGrid = { ...state.grid, cells: blockedCells };
+		const blockedDests = legalDestinations(
+			blockedGrid,
+			from,
+			GRAPH_SLIDE,
+			board
+		);
+		expect(blockedDests).toEqual([{ row: 3, col: 0 }]);
+		expect(
+			blockedDests.some((p) => p.row === 2 && p.col === 0)
+		).toBe(false);
+		expect(
+			blockedDests.some((p) => p.row === 0 && p.col === 0)
+		).toBe(false);
+	});
+
+	it("stops at junctions (no turning mid-slide)", () => {
+		// Hub graph: (0,1)—(1,1)—{(2,0),(2,2)}. Slide from (0,1) reaches hub
+		// but cannot continue to either spoke (two forward edges).
+		const hubConfig = {
+			...examplePresets["graph-slide-race"].config,
+			grid: {
+				width: 3,
+				height: 3,
+				topology: "graph" as const,
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 2, col: 2, x: 2, y: 2 }
+				],
+				edges: [
+					["0,1", "1,1"],
+					["1,1", "2,0"],
+					["1,1", "2,2"]
+				] as [string, string][]
+			},
+			movement: {
+				adjacency: "orthogonal" as const,
+				range: 4,
+				capture: "none" as const
+			},
+			objective: {
+				mode: "reach_row" as const,
+				targetRows: { X: 2, O: 0 }
+			},
+			initial: [
+				{ row: 0, col: 1, player: "X" as const, visibility: "public" as const },
+				{ row: 2, col: 0, player: "O" as const, visibility: "public" as const }
+			]
+		};
+		const { gameConfig } = compileConfig(hubConfig);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const dests = legalDestinations(
+			state.grid,
+			{ row: 0, col: 1 },
+			GRAPH_SLIDE,
+			board
+		);
+		expect(dests).toEqual([{ row: 1, col: 1 }]);
+		expect(
+			canMove(
+				state.grid,
+				{ row: 0, col: 1 },
+				{ row: 2, col: 2 },
+				"X",
+				GRAPH_SLIDE,
+				board
+			)
+		).toBe(false);
+	});
+
+	it("validates and compiles the graph-slide-race preset", () => {
+		const cfg = examplePresets["graph-slide-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.inputMode).toBe("move");
+		expect(gameConfig.movement?.range).toBe(4);
+		expect(gameConfig.objectiveMode).toBe("reach_row");
+		const state = kernel.initialState(cfg.rng.seed);
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.every((a) => a.type === "move")).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 0
+			)
+		).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 1
+			)
+		).toBe(false);
+	});
+
+	it("X wins by chain-walking to the target row", () => {
+		const cfg = examplePresets["graph-slide-race"].config;
+		const { kernel } = compileConfig(cfg);
+		// One range-4 chain slide reaches row 0 — impossible under range 1.
+		const script: Extract<KernelAction, { type: "move" }>[] = [
+			{ type: "move", from: { row: 4, col: 0 }, to: { row: 0, col: 0 } }
+		];
+
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const player = playerIdOf(state.currentPlayer);
+			expect(
+				kernel.legalActions(state, player).some(
+					(a) =>
+						a.type === "move" &&
+						a.from.row === action.from.row &&
+						a.from.col === action.from.col &&
+						a.to.row === action.to.row &&
+						a.to.col === action.to.col
+				)
+			).toBe(true);
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+
+		const replay = replayActions(
+			compileConfig(cfg).gameConfig,
+			script,
+			cfg.rng.seed
+		);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+	});
+});
+
+describe("Graph Hop Race (movement.graphReach = hop)", () => {
+	const HOP: MovementConfig = {
+		adjacency: "orthogonal",
+		range: 2,
+		graphReach: "hop"
+	};
+	const CHAIN: MovementConfig = {
+		adjacency: "orthogonal",
+		range: 2,
+		graphReach: "chain"
+	};
+
+	it("rejects hop on non-graph topology", () => {
+		const bad = zConfig.safeParse({
+			...examplePresets["step-race"].config,
+			movement: {
+				adjacency: "orthogonal" as const,
+				range: 2,
+				graphReach: "hop" as const
+			}
+		});
 		expect(bad.success).toBe(false);
+	});
+
+	it("accepts hop on graph move configs", () => {
+		const ok = zConfig.safeParse(examplePresets["graph-hop-race"].config);
+		expect(ok.success).toBe(true);
+	});
+
+	it("range 1 hop matches empty-neighbor destinations", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-hop-race"].config
+		);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 0, col: 1 };
+		const step1: MovementConfig = {
+			adjacency: "orthogonal",
+			range: 1,
+			graphReach: "hop"
+		};
+		expect(legalDestinations(state.grid, from, step1, board)).toEqual([
+			{ row: 1, col: 1 }
+		]);
+	});
+
+	it("turns at junctions where chain-walk stops", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-hop-race"].config
+		);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 0, col: 1 };
+		const hopDests = legalDestinations(state.grid, from, HOP, board);
+		expect(hopDests).toEqual(
+			expect.arrayContaining([
+				{ row: 1, col: 1 },
+				{ row: 2, col: 2 }
+			])
+		);
+		// O occupies (2,0) — without replace, not a destination and not traversable.
+		expect(hopDests.some((p) => p.row === 2 && p.col === 0)).toBe(false);
+		expect(hopDests).toHaveLength(2);
+		expect(
+			canMove(state.grid, from, { row: 2, col: 2 }, "X", HOP, board)
+		).toBe(true);
+
+		// Same board under chain-walk: hub only (cannot turn onto spokes).
+		const chainDests = legalDestinations(state.grid, from, CHAIN, board);
+		expect(chainDests).toEqual([{ row: 1, col: 1 }]);
+		expect(
+			canMove(state.grid, from, { row: 2, col: 2 }, "X", CHAIN, board)
+		).toBe(false);
+	});
+
+	it("stops at blockers and can replace-land on enemy within hop range", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["graph-hop-race"].config
+		);
+		const board = {
+			topology: "graph" as const,
+			graph: gameConfig.graph,
+			wrap: false
+		};
+		const state = createInitialState(gameConfig);
+		const from = { row: 0, col: 1 };
+
+		// Block the hub — no destinations beyond.
+		const blockedCells = state.grid.cells.slice();
+		const hubIdx = 1 * state.grid.width + 1;
+		blockedCells[hubIdx] = "O";
+		const blockedGrid = { ...state.grid, cells: blockedCells };
+		expect(legalDestinations(blockedGrid, from, HOP, board)).toEqual([]);
+
+		const replace: MovementConfig = {
+			...HOP,
+			capture: "replace"
+		};
+		const replaceDests = legalDestinations(
+			blockedGrid,
+			from,
+			replace,
+			board
+		);
+		expect(replaceDests).toEqual([{ row: 1, col: 1 }]);
+		// Cannot hop through the enemy onto a spoke.
+		expect(
+			canMove(
+				blockedGrid,
+				from,
+				{ row: 2, col: 2 },
+				"X",
+				replace,
+				board
+			)
+		).toBe(false);
+	});
+
+	it("validates and compiles the graph-hop-race preset", () => {
+		const cfg = examplePresets["graph-hop-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.inputMode).toBe("move");
+		expect(gameConfig.movement?.range).toBe(2);
+		expect(gameConfig.movement?.graphReach).toBe("hop");
+		expect(gameConfig.objectiveMode).toBe("reach_row");
+		const state = kernel.initialState(cfg.rng.seed);
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.every((a) => a.type === "move")).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 2 && a.to.col === 2
+			)
+		).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 2 && a.to.col === 0
+			)
+		).toBe(false);
+	});
+
+	it("X wins by hopping through the hub to the target row", () => {
+		const cfg = examplePresets["graph-hop-race"].config;
+		const { kernel } = compileConfig(cfg);
+		const script: Extract<KernelAction, { type: "move" }>[] = [
+			{ type: "move", from: { row: 0, col: 1 }, to: { row: 2, col: 2 } }
+		];
+
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const player = playerIdOf(state.currentPlayer);
+			expect(
+				kernel.legalActions(state, player).some(
+					(a) =>
+						a.type === "move" &&
+						a.from.row === action.from.row &&
+						a.from.col === action.from.col &&
+						a.to.row === action.to.row &&
+						a.to.col === action.to.col
+				)
+			).toBe(true);
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 2, col: 2 })).toBe("X");
+
+		const replay = replayActions(
+			compileConfig(cfg).gameConfig,
+			script,
+			cfg.rng.seed
+		);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
+	});
+});
+
+describe("Hex Slide Race (movement.range > 1 on hex_offset)", () => {
+	const HEX_SLIDE: MovementConfig = { adjacency: "orthogonal", range: 4 };
+	const HEX_BOARD = { topology: "hex_offset" as const, wrap: false };
+
+	it("accepts hex move configs with sliding range", () => {
+		const ok = zConfig.safeParse({
+			...examplePresets["hex-step-race"].config,
+			movement: { adjacency: "orthogonal" as const, range: 4 }
+		});
+		expect(ok.success).toBe(true);
+	});
+
+	it("lists multi-cell cube-axis destinations and stops at blockers", () => {
+		const { gameConfig } = compileConfig(
+			examplePresets["hex-slide-race"].config
+		);
+		const state = createInitialState(gameConfig);
+		const from = { row: 4, col: 2 };
+		const dests = legalDestinations(state.grid, from, HEX_SLIDE, HEX_BOARD);
+		// Cube-axis rays from (4,2): NE→(0,4), NW→(0,0), E/W along row 4.
+		// O at (0,2) is off-ray (not a cube-axis neighbor chain).
+		expect(dests).toEqual(
+			expect.arrayContaining([
+				{ row: 3, col: 2 },
+				{ row: 2, col: 3 },
+				{ row: 1, col: 3 },
+				{ row: 0, col: 4 },
+				{ row: 3, col: 1 },
+				{ row: 2, col: 1 },
+				{ row: 1, col: 0 },
+				{ row: 0, col: 0 },
+				{ row: 4, col: 3 },
+				{ row: 4, col: 4 },
+				{ row: 4, col: 1 },
+				{ row: 4, col: 0 }
+			])
+		);
+		expect(dests).toHaveLength(12);
+		expect(
+			canMove(state.grid, from, { row: 0, col: 0 }, "X", HEX_SLIDE, HEX_BOARD)
+		).toBe(true);
+		expect(
+			canMove(state.grid, from, { row: 0, col: 4 }, "X", HEX_SLIDE, HEX_BOARD)
+		).toBe(true);
+		// Same offset column is not a cube-axis ray — cannot jump to O.
+		expect(
+			canMove(state.grid, from, { row: 0, col: 2 }, "X", HEX_SLIDE, HEX_BOARD)
+		).toBe(false);
+
+		// Mid-ray blocker on NW path: occupy (2,1) → (1,0)/(0,0) unreachable.
+		const blockedCells = state.grid.cells.slice();
+		const idx = 2 * state.grid.width + 1;
+		blockedCells[idx] = "O";
+		const blockedGrid = { ...state.grid, cells: blockedCells };
+		const blockedDests = legalDestinations(
+			blockedGrid,
+			from,
+			HEX_SLIDE,
+			HEX_BOARD
+		);
+		expect(blockedDests).toEqual(
+			expect.arrayContaining([
+				{ row: 3, col: 1 },
+				{ row: 0, col: 4 }
+			])
+		);
+		expect(
+			blockedDests.some((p) => p.row === 1 && p.col === 0)
+		).toBe(false);
+		expect(
+			blockedDests.some((p) => p.row === 0 && p.col === 0)
+		).toBe(false);
+		expect(
+			blockedDests.some((p) => p.row === 2 && p.col === 1)
+		).toBe(false);
+	});
+
+	it("validates and compiles the hex-slide-race preset", () => {
+		const cfg = examplePresets["hex-slide-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.topology).toBe("hex_offset");
+		expect(gameConfig.inputMode).toBe("move");
+		expect(gameConfig.movement?.range).toBe(4);
+		expect(gameConfig.objectiveMode).toBe("reach_row");
+		const state = kernel.initialState(cfg.rng.seed);
+		const legal = kernel.legalActions(state, 0);
+		expect(legal.every((a) => a.type === "move")).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 0
+			)
+		).toBe(true);
+		expect(
+			legal.some(
+				(a) =>
+					a.type === "move" && a.to.row === 0 && a.to.col === 2
+			)
+		).toBe(false);
+	});
+
+	it("X wins by sliding along a cube axis to the target row", () => {
+		const cfg = examplePresets["hex-slide-race"].config;
+		const { kernel } = compileConfig(cfg);
+		// One range-4 cube-axis slide reaches row 0 — impossible under range 1.
+		const script: Extract<KernelAction, { type: "move" }>[] = [
+			{ type: "move", from: { row: 4, col: 2 }, to: { row: 0, col: 0 } }
+		];
+
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const player = playerIdOf(state.currentPlayer);
+			expect(
+				kernel.legalActions(state, player).some(
+					(a) =>
+						a.type === "move" &&
+						a.from.row === action.from.row &&
+						a.from.col === action.from.col &&
+						a.to.row === action.to.row &&
+						a.to.col === action.to.col
+				)
+			).toBe(true);
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("X");
+		expect(getCell(state.grid, { row: 0, col: 0 })).toBe("X");
+
+		const replay = replayActions(
+			compileConfig(cfg).gameConfig,
+			script,
+			cfg.rng.seed
+		);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("X");
 	});
 });
 
