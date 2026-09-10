@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T02:50-00:00",
+  "turn": 82,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M52",
+    "issue": "next-missing-mechanism",
+    "goal": "crownedRange landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 4985 M51 tip onto cursor/next-task-progression-f416",
+    "Landed M52 promotion.crownedRange + Flying Kings Jump Lite",
+    "Quiet flying only; jump leap distance unchanged"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "effectiveMovement now overrides range for crowned pieces",
+    "Jump-mode quiet slides use eff.range (was hardcoded 1)"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: hex flood, flying jump capture, full Go, realtime; reject recombinations"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M52",
   "blockers": []
 }
