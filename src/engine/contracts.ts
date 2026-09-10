@@ -483,6 +483,7 @@ export const Contracts = {
 	 * Schedule = simultaneous; earlier seat wins same-cell conflicts.
 	 * Sliding paths revalidated sequentially (first pre-round, second after).
 	 * Replace captures apply sequentially (priority can capture before flee).
+	 * Jump mid clears apply sequentially (M82; capture-before-flee at mid).
 	 */
 	ScheduleOrderedResolve: (): FeatureContract => ({
 		id: "ScheduleOrderedResolve",
@@ -494,7 +495,8 @@ export const Contracts = {
 			"sequentialApplyWithinRound",
 			"sameCellConflictFirstSeatWins",
 			"orderedSlideSequentialPathRevalidation",
-			"orderedReplaceSequentialCaptureApply"
+			"orderedReplaceSequentialCaptureApply",
+			"orderedJumpSequentialMidClear"
 		]
 	}),
 	/**

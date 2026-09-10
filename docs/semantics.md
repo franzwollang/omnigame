@@ -226,7 +226,7 @@ delayTurns → pendingPlaces.
 | flip | placement.captureMode | Reversi sandwich along adjacency |
 | liberties | placement.captureMode | Go-lite group removal + ko/superko (rectangle von Neumann-4; hex_offset cube-axis-6 — Hex Go Lite; graph explicit-edge — Graph Go Lite) |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
-| jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat under alternating (`mustContinueFrom`); simultaneous (rectangle + joint) is single-hop per round (no chains); optional `mustCapture`; optional `mustLongestCapture` (max chain length; alternating only); incompatible with `graphReach: hop` |
+| jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat under alternating (`mustContinueFrom`); simultaneous rectangle is single-hop per round (joint vacated-origin mid clear, or ordered sequential mid clear with capture-before-flee at mid); optional `mustCapture`; optional `mustLongestCapture` (max chain length; alternating only); incompatible with `graphReach: hop` |
 | promote | movement.promotion | Transform on reach row/node (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` **or** graph `targetNodes[seat]` (`"row,col"`; mutually exclusive) → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` (rectangle \| hex_offset \| graph) / `menForwardOnly` (rectangle \| hex_offset \| graph; targetRows row-delta or edge-distance to promo row; graph `targetNodes` hub-distance) |
 
 KoRule: none | point | positional | situational.
@@ -237,14 +237,17 @@ KoRule: none | point | positional | situational.
 - range: 1..8 sliding (blocker-aware); range 1 = adjacent step
 - capture jump: rectangle | hex_offset | graph; quiet range 1; jump distance
   always 2 (cube-axis double step on hex; 2-edge leap on graph); alternating
-  chains via mustContinueFrom (not actionsPerTurn); simultaneous (rectangle
-  + joint) single-hop per round with mid clear; optional `mustCapture`
+  chains via mustContinueFrom (not actionsPerTurn); simultaneous (rectangle)
+  single-hop per round with mid clear — joint vacated-origin or ordered
+  sequential (Ordered Simultaneous Jump Race; capture-before-flee at mid;
+  flee-before-jump rejects); optional `mustCapture`
   forbids quiet moves at turn/round start when any jump exists (Mandatory
   Jump Race); optional `mustLongestCapture` (requires `mustCapture`;
   alternating only) keeps only jumps that begin / continue a maximum-length
   capture chain (Mandatory Longest Jump Lite); Graph Jump Race covers
   explicit-edge leaps (incompatible with graphReach hop); Simultaneous Jump
-  Race covers joint simultaneous × jump
+  Race covers joint simultaneous × jump; Ordered Simultaneous Jump Race
+  covers resolveOrder × jump
 - promotion: optional `movement.promotion` (rectangle | hex_offset | graph +
   jump); exactly one of `targetRows` or graph-only `targetNodes`
   (`"row,col"` hub keys — Graph Hub Crowned Jump Lite) + `crownedAdjacency`
@@ -267,7 +270,8 @@ KoRule: none | point | positional | situational.
   the exact hub key; crowned unrestricted)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)
 - simultaneous: canJointSimultaneousMoves (vacated origins) /
-  canOrderedSimultaneousMoves (sequential revalidation)
+  canOrderedSimultaneousMoves (sequential revalidation; jump mid cleared in
+  first-seat simulation; capture-before-flee when jumpMid === second.from)
 
 ### Objectives
 

@@ -1622,6 +1622,8 @@ export type SimultaneousMovePair = MovePair;
  * Ordered replace: enemy destinations may be overwritten; same-dest still
  * gives the cell to the first seat (second does not capture the fresh lander).
  * Priority capture of a fleeing piece leaves second unable to apply.
+ * Ordered jump (M82): sequential single-seat apply clears mid on jump (same
+ * as alternating); capture-before-flee skips the fleer when mid was cleared.
  */
 function applySimultaneousMovePair(
 	grid: Grid,
@@ -1680,6 +1682,7 @@ function applySimultaneousMovePair(
 	const second: Player = first === "X" ? "O" : "X";
 	let next = grid;
 	const applied = { X: false, O: false };
+	const wrapOrBoard = board ?? false;
 
 	const tryApply = (seat: Player) => {
 		const m = moves[seat];
@@ -1692,6 +1695,16 @@ function applySimultaneousMovePair(
 			if (sameDest && applied[first]) return;
 		}
 		let cells = setCell(next, m.from, null);
+		if (
+			capture === "jump" &&
+			movement &&
+			isJumpCapture(next, m.from, m.to, seat, movement, wrapOrBoard)
+		) {
+			const mid = jumpMid(m.from, m.to, movement, wrapOrBoard, next);
+			if (mid) {
+				cells = setCell({ ...next, cells }, mid, null);
+			}
+		}
 		cells = setCell({ ...next, cells }, m.to, seat);
 		next = { ...next, cells };
 		applied[seat] = true;
@@ -1709,9 +1722,10 @@ function applySimultaneousMovePair(
  * is revalidated on the post-prior-step board so same-piece chains work.
  * Joint resolve validates on a vacated-origin board (sliding path integrity,
  * including joint + replace: fleeing blockers clear the ray; stationary
- * capture targets remain). Jump (M81): mid cleared on apply when the prey
- * does not flee; single-hop only (no mustContinueFrom). Ordered resolve
- * validates first seat pre-round, then second after simulating the first
+ * capture targets remain). Jump (M81 joint / M82 ordered): mid cleared on
+ * apply when the prey does not flee (ordered: sequential mid clear);
+ * single-hop only (no mustContinueFrom). Ordered resolve validates first
+ * seat pre-round, then second after simulating the first
  * (sequential path / capture revalidation). Same destination under joint →
  * neither; ordered → first seat wins the cell when both claim it. Ordered
  * replace may overwrite enemies; priority can capture before prey flees.

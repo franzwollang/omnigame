@@ -3922,7 +3922,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Joint simultaneous diagonal jump: X leaps over a stationary O mid to the target row while O steps a second piece. Single-hop per round (no mustContinueFrom chains). Unlocks simultaneous × jump — alternating Jump Race keeps multi-jump chains; Simultaneous Replace Race lands on the enemy rather than leaping over.",
+			"Joint simultaneous diagonal jump: X leaps over a stationary O mid to the target row while O steps a second piece. Single-hop per round (no mustContinueFrom chains). Unlocks simultaneous × jump — Ordered Simultaneous Jump Race covers resolveOrder priority at mid; alternating Jump Race keeps multi-jump chains; Simultaneous Replace Race lands on the enemy rather than leaping over.",
 		config: {
 			metadata: { name: "Simultaneous Jump Race", version: 1 },
 			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
@@ -3956,6 +3956,63 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 2, col: 0, player: "X", visibility: "public" },
 				{ row: 1, col: 1, player: "O", visibility: "public" },
 				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"ordered-simultaneous-jump-race": definePreset({
+		id: "ordered-simultaneous-jump-race",
+		name: "Ordered Simultaneous Jump Race",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"reach-row",
+			"simultaneous",
+			"resolve-order",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"X-first ordered simultaneous diagonal jump: priority order decides capture-before-flee at the mid cell (unlike replace, which contests the destination). Sequential mid clear — not joint vacated-origin. Unlocks ordered simultaneous × jump; joint mid clear is Simultaneous Jump Race; ordered replace is Ordered Simultaneous Replace Race.",
+		config: {
+			metadata: {
+				name: "Ordered Simultaneous Jump Race",
+				version: 1
+			},
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				resolveOrder: "x_first"
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "diagonal", range: 1, capture: "jump" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "ordered-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "ordered-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(2,0) jumps mid O(1,1) → (0,2) wins under x_first; O may try flee (1,1)→(0,0).
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" }
 			]
 		}
 	}),

@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T10:50+00:00",
-  "turn": 111,
+  "updated_at": "2026-09-10T11:10+00:00",
+  "turn": 112,
   "focus": {
-    "milestone": "M81",
+    "milestone": "M82",
     "issue": "next-missing-mechanism",
-    "goal": "Simultaneous Jump Race landed; hand off next genuine P3 seam"
+    "goal": "Ordered Simultaneous Jump Race landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from cab2 M80 tip onto cursor/next-task-progression-a8a3",
-    "Throw-in/CAD probe: no unique board vs ladder/net/sente/approach",
-    "Landed M81 simultaneous jump + simultaneous-jump-race"
+    "Synced from a8a3 M81 tip onto cursor/next-task-progression-bbae",
+    "Landed M82 ordered simultaneous jump + ordered-simultaneous-jump-race",
+    "o_first flee-before-jump illegal (mid empty) — unlike replace dest land"
   ],
   "discoveries": [
-    "Ladder already models snapback continuations for ≤2-lib groups",
-    "Simultaneous×jump seam = mid-clear apply + events, not schema alone"
+    "Ordered jump mid-clear only in sequential tryApply — not joint branch",
+    "Capture-before-flee at mid is the unique ordered×jump seam vs replace"
   ],
   "open_threads": [
-    "Next: ordered/commitReveal/multi-action jump, or unique Go L&D, or realtime"
+    "Next: commitReveal/multi-action jump, or unique Go L&D, or realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M81",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M82",
   "blockers": []
 }

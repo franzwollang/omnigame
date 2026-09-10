@@ -58,6 +58,7 @@ These are built from the same shared schema and operators.
 - **Graph Replace Race** (`graph` + `capture: replace` — chain-walk attrition)
 - **Jump Race** (`movement.capture = jump` — leap over enemy + mustContinueFrom chains)
 - **Simultaneous Jump Race** (joint simultaneous × jump — single-hop mid clear)
+- **Ordered Simultaneous Jump Race** (ordered simultaneous × jump — sequential mid clear / capture-before-flee)
 - **Hex Jump Race** (`hex_offset` + `capture: jump` — cube-axis leap-over chains)
 - **Graph Jump Race** (`graph` + `capture: jump` — 2-edge leap-over chains)
 - **Mandatory Jump Race** (`mustCapture` — quiet moves illegal when any jump exists)
@@ -137,6 +138,7 @@ These are built from the same shared schema and operators.
 - **Ordered Simultaneous Slide Race** (`resolveOrder` + sliding; sequential path revalidation)
 - **Simultaneous Replace Race** (`simultaneous` + `capture: replace`; stationary capture + pieceCaptured)
 - **Simultaneous Jump Race** (`simultaneous` + `capture: jump`; single-hop mid clear + pieceCaptured)
+- **Ordered Simultaneous Jump Race** (`resolveOrder` + `capture: jump`; sequential mid clear + capture-before-flee)
 - **Ordered Simultaneous Replace Race** (`resolveOrder` + replace; capture-before-flee vs flee-before-capture)
 - **Simultaneous Slide Replace Race** (`simultaneous` + slide `range` + `capture: replace`; vacated-origin hybrid)
 - **Simultaneous Slide Replace Flee Race** (joint slide through fleeing blocker on the ray)
@@ -229,7 +231,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   Simultaneous Graph Step Race / **Graph Slide Race** / **Graph Hop Race** /
   **Graph Replace Race**; jump capture (rectangle | hex_offset | graph;
   alternating chains or simultaneous single-hop) — **Jump Race** /
-  **Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
+  **Simultaneous Jump Race** / **Ordered Simultaneous Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
   **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump
   exists; incompatible with `graphReach: hop`); **Mandatory Longest Jump Lite**
   (`mustLongestCapture` keeps only max-length jump chains); optional
@@ -584,12 +586,13 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.netDeath` (M77), Go Lite Loose Net /
 `objective.looseNetDeath` (M78), Go Lite Sente Ladder /
 `objective.senteLadderDeath` (M79), Go Lite Approach Net /
-`objective.approachNetDeath` (M80), Simultaneous Jump Race (M81).
+`objective.approachNetDeath` (M80), Simultaneous Jump Race (M81),
+Ordered Simultaneous Jump Race (M82).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  ordered/commitReveal/multi-action simultaneous jump follow-ons; fuller Go
+  commitReveal/multi-action simultaneous jump follow-ons; fuller Go
   remainder if uniquely expressible; fire→move only with anchor; realtime
   scheduler; reject recombinations)
 - Deferred: fuller Go rules (approach net landed as M80; sente ladder as M79;
@@ -597,7 +600,7 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
   territory+prisoners as M74; ladders as M73;
   mark-dead resume as M72; mark-dead as M71;
   dame fill as M70; Benson as M69); realtime scheduler;
-  fire→move reorder (recombination without anchor); ordered / commitReveal /
+  fire→move reorder (recombination without anchor); commitReveal /
   multi-action / hex-graph simultaneous jump; throw-in / connect-and-die
   (not unique vs ladder family on lite boards); memory bonus-turn-on-match /
   custom decks
@@ -615,7 +618,7 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
   markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
   semeaiDeath in M75; nakadeDeath in M76; netDeath in M77; looseNetDeath in
   M78; senteLadderDeath in M79; approachNetDeath in M80; simultaneous jump in
-  M81)
+  M81; ordered simultaneous jump in M82)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

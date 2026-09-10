@@ -745,15 +745,15 @@ function applyStep(
 		action.type === "simultaneousMove" &&
 		config.movement?.capture === "jump"
 	) {
-		// M81 joint simultaneous jump: pieceCaptured at mid when prey did not flee.
+		// M81 joint / M82 ordered: pieceCaptured at mid when prey did not flee.
 		const resolveOrder = config.resolveOrder ?? "joint";
 		const moves = {
 			X: asMoveList(action.moves.X)[0]!,
 			O: asMoveList(action.moves.O)[0]!
 		};
+		const movement = config.movement;
+		const board = movementBoardFrom(config);
 		if (resolveOrder === "joint") {
-			const movement = config.movement;
-			const board = movementBoardFrom(config);
 			for (const seat of ["X", "O"] as const) {
 				const m = moves[seat];
 				if (
@@ -787,6 +787,43 @@ function applyStep(
 					captured: prior,
 					by: seat
 				});
+			}
+		} else {
+			// Ordered: emit mid captures in apply order when a seat jumps.
+			const first: "X" | "O" = resolveOrder === "x_first" ? "X" : "O";
+			const second: "X" | "O" = first === "X" ? "O" : "X";
+			let sim = state.grid;
+			for (const seat of [first, second] as const) {
+				const m = moves[seat];
+				if (getCell(sim, m.from) !== seat) continue;
+				const dest = getCell(sim, m.to);
+				if (dest !== null) continue;
+				let midPos: Position | null = null;
+				if (
+					isJumpCapture(sim, m.from, m.to, seat, movement, board)
+				) {
+					midPos = jumpMid(m.from, m.to, movement, board, sim);
+					if (midPos) {
+						const prior = getCell(sim, midPos);
+						if (
+							(prior === "X" || prior === "O") &&
+							prior !== seat
+						) {
+							events.push({
+								type: "pieceCaptured",
+								position: midPos,
+								captured: prior,
+								by: seat
+							});
+						}
+					}
+				}
+				let cells = setCell(sim, m.from, null);
+				if (midPos) {
+					cells = setCell({ ...sim, cells }, midPos, null);
+				}
+				cells = setCell({ ...sim, cells }, m.to, seat);
+				sim = { ...sim, cells };
 			}
 		}
 	}

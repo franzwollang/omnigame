@@ -97,12 +97,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M79 | Next missing mechanism (Go Lite Sente Ladder / objective.senteLadderDeath) | `done` |
 | M80 | Next missing mechanism (Go Lite Approach Net / objective.approachNetDeath) | `done` |
 | M81 | Next missing mechanism (joint simultaneous jump / single-hop) | `done` |
+| M82 | Next missing mechanism (ordered simultaneous jump) | `done` |
 
-**Optimizing for this marathon:** M81 Simultaneous Jump Race landed. Pick
-**P3 next-missing-mechanism** (smallest new seam; reject recombinations
-without anchor) — without asking which fork. Large deferred: ordered /
-commitReveal / multi-action / hex-graph simultaneous jump; realtime; fuller
-Go remainder (throw-in / connect-and-die — entangled with ladder family).
+**Optimizing for this marathon:** M82 Ordered Simultaneous Jump Race landed.
+Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
+without anchor) — without asking which fork. Large deferred: commitReveal /
+multi-action / hex-graph simultaneous jump; realtime; fuller Go remainder
+(throw-in / connect-and-die — entangled with ladder family).
 
 ## Marathon runbook (cloud agents)
 
@@ -117,7 +118,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥852** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥875** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -247,7 +248,8 @@ expressible vs ladder/net/sente/approach on lite boards); ordered /
 commitReveal / multi-action / hex-graph simultaneous jump; fire→move
 reorder (only with
 anchor); realtime scheduler. Go Lite Approach Net landed
-(M80). Simultaneous Jump Race landed (M81). Go Lite Sente Ladder landed
+(M80). Simultaneous Jump Race landed (M81). Ordered Simultaneous Jump Race
+landed (M82). Go Lite Sente Ladder landed
 (M79). Go Lite Loose Net landed (M78). Go Lite Net landed
 (M77). Go Lite Nakade landed
 (M76). Go Lite Semeai landed
@@ -1280,10 +1282,29 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Preset `simultaneous-jump-race` (diagonal; X jumps mid → target row; O quiet
   step; raw contrasts vs alternating jump / simultaneous replace) + unit /
   schema / transcript / replay tests — **done**
-- Out of scope: ordered simultaneous jump; commitReveal + jump; multi-action
-  simultaneous jump; mustLongestCapture / chains under simultaneous;
-  hex/graph simultaneous jump ports; throw-in / connect-and-die; realtime
-- Green gate: ≥865 + new cases — **done**
+- Out of scope: commitReveal + jump; multi-action simultaneous jump;
+  mustLongestCapture / chains under simultaneous; hex/graph simultaneous jump
+  ports; throw-in / connect-and-die; realtime
+- Green gate: ≥875 + new cases — **done**
+
+### M82 — Ordered simultaneous jump
+
+- Schema: lift ordered-forbid under simultaneous jump (x_first | o_first);
+  keep commitReveal / multi-action / mustLongestCapture / promotion /
+  hex-graph deferred — **done**
+- Kernel: `canOrderedSimultaneousMoves` mid-aware first-seat simulation +
+  capture-before-flee when `jumpMid === second.from`; ordered
+  `applySimultaneousMovePair` clears mid; ordered `pieceCaptured` at mid —
+  **done**
+- Contracts: `orderedJumpSequentialMidClear` on `ScheduleOrderedResolve` —
+  **done**
+- Preset `ordered-simultaneous-jump-race` (diagonal; x_first capture-before-flee
+  at mid → win; o_first flee-before-jump illegal — unlike replace dest land)
+  + schema / legality / transcript / replay tests — **done**
+- Out of scope: commitReveal + jump; multi-action simultaneous jump;
+  mustLongestCapture / chains under simultaneous; hex/graph simultaneous jump
+  ports; throw-in / connect-and-die; realtime
+- Green gate: ≥875 + new cases — **done**
 
 ## Sequencing notes
 

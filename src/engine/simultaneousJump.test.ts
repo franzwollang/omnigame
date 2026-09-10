@@ -44,7 +44,7 @@ describe("simultaneous jump (M81)", () => {
 		expect(validateConfig(cfg).ok).toBe(false);
 	});
 
-	it("rejects simultaneous jump with ordered resolve", () => {
+	it("accepts simultaneous jump with ordered resolve (M82)", () => {
 		const cfg = {
 			...examplePresets["simultaneous-jump-race"].config,
 			turn: {
@@ -53,7 +53,8 @@ describe("simultaneous jump (M81)", () => {
 				resolveOrder: "x_first" as const
 			}
 		};
-		expect(validateConfig(cfg).ok).toBe(false);
+		expect(validateConfig(cfg).ok).toBe(true);
+		expect(zConfig.safeParse(cfg).success).toBe(true);
 	});
 
 	it("rejects simultaneous jump with mustLongestCapture", () => {

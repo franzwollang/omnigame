@@ -2539,24 +2539,14 @@ export const zConfig = z
 				});
 			}
 			if (cfg.turn.schedule === "simultaneous") {
-				// M81: joint simultaneous single-hop jump on rectangle only.
+				// M81 joint + M82 ordered simultaneous single-hop jump on
+				// rectangle only (commitReveal / multi-action still deferred).
 				if (cfg.grid.topology !== "rectangle") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "capture"],
 						message:
 							"simultaneous jump requires grid.topology = 'rectangle' (hex/graph deferred)"
-					});
-				}
-				if (
-					cfg.turn.resolveOrder != null &&
-					cfg.turn.resolveOrder !== "joint"
-				) {
-					ctx.addIssue({
-						code: z.ZodIssueCode.custom,
-						path: ["turn", "resolveOrder"],
-						message:
-							"simultaneous jump requires resolveOrder = 'joint' (ordered deferred)"
 					});
 				}
 				if (cfg.turn.commitReveal === true) {

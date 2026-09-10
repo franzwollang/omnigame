@@ -1365,6 +1365,9 @@ export function canJointSimultaneousMoves(
  * (apply gives the cell to the first seat).
  * Replace: if first captures the piece second is moving, second is treated as
  * a legal noop (apply will skip them) so priority can capture before flee.
+ * Jump (M82): if first jumps over the piece second is moving (mid ===
+ * second.from), second is a legal noop (capture-before-flee). First-seat
+ * simulation clears the jump mid so flee-before-capture rejects the jump.
  */
 export function canOrderedSimultaneousMoves(
 	grid: Grid,
@@ -1408,7 +1411,7 @@ export function canOrderedSimultaneousMoves(
 		);
 	}
 
-	// Priority capture of the piece second is moving — second becomes a noop.
+	// Priority replace capture of the piece second is moving — second noop.
 	if (
 		config.capture === "replace" &&
 		firstMove.to.row === secondMove.from.row &&
@@ -1418,7 +1421,58 @@ export function canOrderedSimultaneousMoves(
 		if (cellOwner(prior) === second) return true;
 	}
 
+	// Priority jump capture over the piece second is moving — second noop.
+	if (
+		config.capture === "jump" &&
+		isJumpCapture(
+			grid,
+			firstMove.from,
+			firstMove.to,
+			first,
+			config,
+			wrapOrBoard
+		)
+	) {
+		const mid = jumpMid(
+			firstMove.from,
+			firstMove.to,
+			config,
+			wrapOrBoard,
+			grid
+		);
+		if (
+			mid &&
+			mid.row === secondMove.from.row &&
+			mid.col === secondMove.from.col &&
+			cellOwner(getCell(grid, mid)) === second
+		) {
+			return true;
+		}
+	}
+
 	let cells = setCell(grid, firstMove.from, null);
+	if (
+		config.capture === "jump" &&
+		isJumpCapture(
+			grid,
+			firstMove.from,
+			firstMove.to,
+			first,
+			config,
+			wrapOrBoard
+		)
+	) {
+		const mid = jumpMid(
+			firstMove.from,
+			firstMove.to,
+			config,
+			wrapOrBoard,
+			grid
+		);
+		if (mid) {
+			cells = setCell({ ...grid, cells }, mid, null);
+		}
+	}
 	cells = setCell({ ...grid, cells }, firstMove.to, first);
 	const afterFirst: Grid = { ...grid, cells };
 

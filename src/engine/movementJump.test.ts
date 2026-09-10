@@ -269,6 +269,11 @@ describe("movement.capture = jump schema / validateConfig", () => {
 		expect(validateConfig(cfg).ok).toBe(true);
 	});
 
+	it("allows ordered simultaneous jump on rectangle (M82)", () => {
+		const cfg = examplePresets["ordered-simultaneous-jump-race"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+	});
+
 	it("rejects jump under simultaneous on hex", () => {
 		const cfg = {
 			...examplePresets["hex-jump-race"].config,
