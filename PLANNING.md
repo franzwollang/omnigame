@@ -132,7 +132,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥947** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥951** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -1551,7 +1551,7 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
   uniqueness / transcript / replay / contrast tests — **done**
 - Out of scope: generic any-N-cell flag; throw-in / connect-and-die; hex/graph
   nakade ports; realtime
-- Green gate: ≥947 + new cases — **done**
+- Green gate: ≥951 + new cases — **done**
 
 ## Sequencing notes
 
