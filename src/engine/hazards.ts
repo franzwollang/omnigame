@@ -2,14 +2,19 @@
  * Hazard layout + flood-fill region reveal (Minesweeper-style).
  *
  * Hidden layer holds `"mine"` markers; public grid holds revealed counts
- * (`0`–`8` rectangle / `0`–`6` hex) or `"mine"` after a hit. Flood expands
- * through zero-count cells and reveals the numbered frontier in one action.
+ * (`0`–`8` rectangle / `0`–`6` hex / `0`–`8` graph capped by degree) or
+ * `"mine"` after a hit. Flood expands through zero-count cells and reveals
+ * the numbered frontier in one action.
  *
  * Adjacency is topology-aware: Chebyshev-8 on rectangle, cube-axis-6 on
- * hex_offset. Graph deferred.
+ * hex_offset, explicit edges on graph (max degree ≤ 8).
  */
 import { mulberry32 } from "@/engine/rng";
-import { neighbors, type GridTopology } from "@/engine/topology";
+import {
+	neighbors,
+	type GraphTopologyData,
+	type GridTopology
+} from "@/engine/topology";
 import {
 	getCell,
 	setCell,
@@ -57,15 +62,18 @@ export function inBounds(
 /**
  * Hazard-adjacent cells for flood counts / expansion.
  * Rectangle: Chebyshev 8-neighbors. Hex: six cube-axis neighbors.
- * Graph (and unknown): empty — flood_reveal forbids graph in schema.
+ * Graph: explicit undirected edges (`graph.neighborsOf`).
  */
 export function hazardNeighbors(
 	pos: Position,
 	width: number,
 	height: number,
-	topology: GridTopology = "rectangle"
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
 ): Position[] {
-	if (topology === "graph") return [];
+	if (topology === "graph") {
+		return neighbors(stubGrid(width, height), pos, "graph", graph, false);
+	}
 	const topo = topology === "hex_offset" ? "hex_offset" : "rectangle";
 	return neighbors(stubGrid(width, height), pos, topo, undefined, false);
 }
@@ -77,14 +85,16 @@ export function isMineAt(hidden: Grid, pos: Position): boolean {
 export function adjacentHazardCount(
 	hidden: Grid,
 	pos: Position,
-	topology: GridTopology = "rectangle"
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
 ): HazardCount {
 	let n = 0;
 	for (const nb of hazardNeighbors(
 		pos,
 		hidden.width,
 		hidden.height,
-		topology
+		topology,
+		graph
 	)) {
 		if (isMineAt(hidden, nb)) n += 1;
 	}
@@ -94,13 +104,15 @@ export function adjacentHazardCount(
 /**
  * Deterministic mine placement. Avoids `exclude` positions when provided
  * (first-reveal-safe). Uses Fisher–Yates with mulberry32.
+ * When `active` is provided (graph boards), only those cells are candidates.
  */
 export function placeHazards(
 	width: number,
 	height: number,
 	count: number,
 	seed: number,
-	exclude: ReadonlyArray<Position> = []
+	exclude: ReadonlyArray<Position> = [],
+	active?: ReadonlyArray<Position>
 ): CellValue[] {
 	const total = width * height;
 	const blocked = new Set(
@@ -109,8 +121,16 @@ export function placeHazards(
 			.map((p) => toIndex(p, width))
 	);
 	const candidates: number[] = [];
-	for (let i = 0; i < total; i++) {
-		if (!blocked.has(i)) candidates.push(i);
+	if (active) {
+		for (const p of active) {
+			if (!inBounds(p, width, height)) continue;
+			const i = toIndex(p, width);
+			if (!blocked.has(i)) candidates.push(i);
+		}
+	} else {
+		for (let i = 0; i < total; i++) {
+			if (!blocked.has(i)) candidates.push(i);
+		}
 	}
 	const n = Math.min(Math.max(0, count), candidates.length);
 	const rng = mulberry32(seed >>> 0);
@@ -136,18 +156,24 @@ export type FloodRevealResult = {
 /**
  * Classic Minesweeper flood: expand through zero-count safe cells; include
  * the numbered frontier. Does not reveal mines. Skips already-revealed cells.
- * Adjacency follows `topology` (rectangle Chebyshev-8 or hex cube-axis-6).
+ * Adjacency follows `topology` (rectangle / hex / graph edges).
  */
 export function floodRevealRegion(
 	hidden: Grid,
 	publicGrid: Grid,
 	start: Position,
-	topology: GridTopology = "rectangle"
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
 ): FloodRevealResult {
 	const positions: Position[] = [];
 	const counts: HazardCount[] = [];
 	if (!inBounds(start, hidden.width, hidden.height)) {
 		return { positions, counts };
+	}
+	if (topology === "graph" && graph) {
+		if (!graph.neighborsOf.has(`${start.row},${start.col}`)) {
+			return { positions, counts };
+		}
 	}
 	if (isMineAt(hidden, start)) {
 		return { positions, counts };
@@ -162,7 +188,7 @@ export function floodRevealRegion(
 
 	while (queue.length > 0) {
 		const cur = queue.shift()!;
-		const count = adjacentHazardCount(hidden, cur, topology);
+		const count = adjacentHazardCount(hidden, cur, topology, graph);
 		positions.push(cur);
 		counts.push(count);
 		if (count !== 0) continue;
@@ -170,7 +196,8 @@ export function floodRevealRegion(
 			cur,
 			hidden.width,
 			hidden.height,
-			topology
+			topology,
+			graph
 		)) {
 			const idx = toIndex(nb, hidden.width);
 			if (seen.has(idx)) continue;
@@ -198,8 +225,24 @@ export function applyReveals(
 	return cells;
 }
 
-/** True when every non-mine cell has been revealed on the public grid. */
-export function allSafeRevealed(hidden: Grid, publicGrid: Grid): boolean {
+/**
+ * True when every non-mine active cell has been revealed on the public grid.
+ * On graph boards, inactive (non-node) cells are ignored.
+ */
+export function allSafeRevealed(
+	hidden: Grid,
+	publicGrid: Grid,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): boolean {
+	if (topology === "graph" && graph) {
+		for (const pos of graph.active) {
+			if (isMineAt(hidden, pos)) continue;
+			const pub = getCell(publicGrid, pos);
+			if (!isHazardCount(pub)) return false;
+		}
+		return true;
+	}
 	const n = hidden.cells.length;
 	for (let i = 0; i < n; i++) {
 		if (hidden.cells[i] === "mine") continue;

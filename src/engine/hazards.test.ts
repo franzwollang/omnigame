@@ -12,6 +12,7 @@ import {
 import type { KernelAction } from "@/engine/kernel";
 import { createGameKernel } from "@/engine/kernel";
 import { createInitialState } from "@/engine/reducer";
+import { buildGraphTopologyData } from "@/engine/topology";
 import { getCell, toIndex } from "@/engine/types";
 import { examplePresets } from "@/presets/registry";
 import { validateConfig } from "@/engine/validateConfig";
@@ -123,30 +124,16 @@ describe("Hex Minesweeper Lite (flood_reveal on hex_offset)", () => {
 		expect(gameConfig.hazards?.firstRevealSafe).toBe(true);
 	});
 
-	it("schema accepts hex flood_reveal and rejects graph", () => {
+	it("schema accepts hex flood_reveal and graph flood_reveal", () => {
 		const hexOk = {
 			...examplePresets["hex-minesweeper-lite"].config
 		};
 		expect(zConfig.safeParse(hexOk).success).toBe(true);
 
-		const graphBad = {
-			...examplePresets["minesweeper-lite"].config,
-			grid: {
-				width: 3,
-				height: 3,
-				topology: "graph" as const,
-				nodes: [
-					{ row: 0, col: 0 },
-					{ row: 0, col: 1 },
-					{ row: 1, col: 0 }
-				],
-				edges: [
-					["0,0", "0,1"],
-					["0,0", "1,0"]
-				] as [string, string][]
-			}
+		const graphOk = {
+			...examplePresets["graph-minesweeper-lite"].config
 		};
-		expect(zConfig.safeParse(graphBad).success).toBe(false);
+		expect(zConfig.safeParse(graphOk).success).toBe(true);
 	});
 
 	it("mine hit on hex ends with opponent winner", () => {
@@ -238,6 +225,264 @@ describe("Hex Minesweeper Lite (flood_reveal on hex_offset)", () => {
 		const actions: KernelAction[] = [
 			{ type: "reveal", position: { row: 0, col: 0 } },
 			{ type: "reveal", position: { row: 5, col: 5 } }
+		];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of actions) {
+			const step = kernel.stepSync(state, action);
+			state = step.nextState;
+		}
+		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replayed.finalState.grid.cells).toEqual(state.grid.cells);
+		expect(replayed.finalState.hidden?.cells).toEqual(state.hidden?.cells);
+		expect(replayed.finalState.moveCount).toBe(state.moveCount);
+	});
+});
+
+describe("Graph Minesweeper Lite (flood_reveal on graph)", () => {
+	const bridgeGraph = {
+		width: 3,
+		height: 3,
+		topology: "graph" as const,
+		wrap: false,
+		nodes: [
+			{ row: 0, col: 0 },
+			{ row: 0, col: 1 },
+			{ row: 0, col: 2 },
+			{ row: 1, col: 1 },
+			{ row: 2, col: 0 },
+			{ row: 2, col: 2 }
+		],
+		edges: [
+			["0,0", "0,1"],
+			["0,1", "0,2"],
+			["0,1", "1,1"],
+			["1,1", "2,0"],
+			["1,1", "2,2"],
+			["2,0", "2,2"]
+		] as [string, string][]
+	};
+
+	it("validates and compiles the graph-minesweeper-lite preset", () => {
+		const cfg = examplePresets["graph-minesweeper-lite"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { gameConfig } = compileConfig(cfg);
+		expect(gameConfig.observationMode).toBe("flood_reveal");
+		expect(gameConfig.objectiveMode).toBe("clear_hazards");
+		expect(gameConfig.topology).toBe("graph");
+		expect(gameConfig.graph?.active).toHaveLength(10);
+		expect(gameConfig.hazards?.count).toBe(3);
+		expect(gameConfig.hazards?.firstRevealSafe).toBe(true);
+	});
+
+	it("schema accepts graph flood and rejects degree > 8", () => {
+		const ok = {
+			metadata: { name: "Graph Flood Ok", version: 1 },
+			grid: bridgeGraph,
+			turn: { mode: "turn" as const },
+			rng: { seed: 1 },
+			input: { mode: "cell" as const },
+			placement: { mode: "direct" as const, overflow: "reject" as const },
+			observation: { mode: "flood_reveal" as const },
+			hazards: { count: 2, firstRevealSafe: false },
+			objective: { mode: "clear_hazards" as const },
+			tokens: [],
+			placements: [],
+			initial: []
+		};
+		expect(zConfig.safeParse(ok).success).toBe(true);
+
+		// Star with 9 leaves → center degree 9 > 8
+		const hub = { row: 1, col: 1 };
+		const leaves = [
+			{ row: 0, col: 0 },
+			{ row: 0, col: 1 },
+			{ row: 0, col: 2 },
+			{ row: 1, col: 0 },
+			{ row: 1, col: 2 },
+			{ row: 2, col: 0 },
+			{ row: 2, col: 1 },
+			{ row: 2, col: 2 },
+			{ row: 0, col: 3 }
+		];
+		const degreeBad = {
+			...ok,
+			grid: {
+				width: 4,
+				height: 3,
+				topology: "graph" as const,
+				wrap: false,
+				nodes: [hub, ...leaves],
+				edges: leaves.map(
+					(p) =>
+						[`1,1`, `${p.row},${p.col}`] as [string, string]
+				)
+			},
+			hazards: { count: 2, firstRevealSafe: false }
+		};
+		expect(zConfig.safeParse(degreeBad).success).toBe(false);
+	});
+
+	it("graph hazardNeighbors follows edges, not Chebyshev", () => {
+		const graph = buildGraphTopologyData(bridgeGraph.nodes, bridgeGraph.edges);
+		const mid = { row: 1, col: 1 };
+		const graphNbs = hazardNeighbors(mid, 3, 3, "graph", graph);
+		expect(graphNbs).toHaveLength(3); // 0,1 / 2,0 / 2,2
+		const rectNbs = hazardNeighbors(mid, 3, 3, "rectangle");
+		expect(rectNbs).toHaveLength(8);
+		// Chebyshev neighbor (0,0) is NOT an edge neighbor of (1,1)
+		expect(
+			graphNbs.some((p) => p.row === 0 && p.col === 0)
+		).toBe(false);
+		expect(
+			rectNbs.some((p) => p.row === 0 && p.col === 0)
+		).toBe(true);
+
+		const cells = Array(9).fill(null) as (null | "mine")[];
+		cells[toIndex({ row: 0, col: 0 }, 3)] = "mine";
+		const hidden = { width: 3, height: 3, cells };
+		expect(adjacentHazardCount(hidden, mid, "rectangle")).toBe(1);
+		expect(adjacentHazardCount(hidden, mid, "graph", graph)).toBe(0);
+	});
+
+	it("placeHazards on active nodes only", () => {
+		const graph = buildGraphTopologyData(bridgeGraph.nodes, bridgeGraph.edges);
+		const cells = placeHazards(3, 3, 6, 11, [], graph.active);
+		expect(cells.filter((c) => c === "mine")).toHaveLength(6);
+		for (let r = 0; r < 3; r++) {
+			for (let c = 0; c < 3; c++) {
+				const active = graph.active.some(
+					(p) => p.row === r && p.col === c
+				);
+				if (!active) {
+					expect(cells[toIndex({ row: r, col: c }, 3)]).toBeNull();
+				}
+			}
+		}
+	});
+
+	it("mine hit on graph ends with opponent winner", () => {
+		const cfg = zConfig.parse({
+			metadata: { name: "Graph Mine Hit", version: 1 },
+			grid: bridgeGraph,
+			turn: { mode: "turn" },
+			rng: { seed: 2 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 1, firstRevealSafe: false },
+			objective: { mode: "clear_hazards" },
+			tokens: [],
+			placements: [],
+			initial: []
+		});
+		const { gameConfig } = compileConfig(cfg);
+		const state = createInitialState(gameConfig);
+		let minePos = { row: 0, col: 0 };
+		for (const p of gameConfig.graph!.active) {
+			if (isMineAt(state.hidden!, p)) minePos = p;
+		}
+		const kernel = createGameKernel(gameConfig);
+		const step = kernel.stepSync(state, {
+			type: "reveal",
+			position: minePos
+		});
+		expect(step.events.some((e) => e.type === "mineHit")).toBe(true);
+		expect(step.nextState.status).toBe("won");
+		expect(step.nextState.winner).toBe("O");
+		expect(getCell(step.nextState.grid, minePos)).toBe("mine");
+	});
+
+	it("graph flood uses edge-aware counts in cellsRevealed", () => {
+		const cfg = zConfig.parse({
+			metadata: { name: "Graph Flood", version: 1 },
+			grid: bridgeGraph,
+			turn: { mode: "turn" },
+			rng: { seed: 1 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 2, firstRevealSafe: false },
+			objective: { mode: "clear_hazards" },
+			tokens: [],
+			placements: [],
+			initial: []
+		});
+		const { gameConfig } = compileConfig(cfg);
+		const state = createInitialState(gameConfig);
+		const graph = gameConfig.graph!;
+		let start = graph.active[0]!;
+		let found = false;
+		for (const p of graph.active) {
+			if (!isMineAt(state.hidden!, p)) {
+				start = p;
+				found = true;
+				// Prefer a zero-count open if one exists
+				if (
+					adjacentHazardCount(state.hidden!, p, "graph", graph) === 0
+				) {
+					break;
+				}
+			}
+		}
+		expect(found).toBe(true);
+		const kernel = createGameKernel(gameConfig);
+		const step = kernel.stepSync(state, { type: "reveal", position: start });
+		const revealed = step.events.find((e) => e.type === "cellsRevealed");
+		expect(revealed).toBeDefined();
+		if (revealed && revealed.type === "cellsRevealed") {
+			expect(revealed.positions.length).toBeGreaterThan(0);
+			for (let i = 0; i < revealed.positions.length; i++) {
+				expect(revealed.counts[i]).toBe(
+					adjacentHazardCount(
+						step.nextState.hidden!,
+						revealed.positions[i]!,
+						"graph",
+						graph
+					)
+				);
+			}
+		}
+	});
+
+	it("inactive cells are ignored for clear_hazards draw", () => {
+		const cfg = zConfig.parse({
+			metadata: { name: "Graph Clear", version: 1 },
+			grid: bridgeGraph,
+			turn: { mode: "turn" },
+			rng: { seed: 3 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 1, firstRevealSafe: false },
+			objective: { mode: "clear_hazards" },
+			tokens: [],
+			placements: [],
+			initial: []
+		});
+		const { gameConfig } = compileConfig(cfg);
+		let state = createInitialState(gameConfig);
+		const kernel = createGameKernel(gameConfig);
+		const graph = gameConfig.graph!;
+		// Reveal every safe active node
+		for (const p of graph.active) {
+			if (state.status !== "playing") break;
+			if (getCell(state.grid, p) !== null) continue;
+			if (isMineAt(state.hidden!, p)) continue;
+			const step = kernel.stepSync(state, { type: "reveal", position: p });
+			state = step.nextState;
+		}
+		expect(state.status).toBe("draw");
+		expect(
+			allSafeRevealed(state.hidden!, state.grid, "graph", graph)
+		).toBe(true);
+	});
+
+	it("GameIR replay matches transcript for graph-minesweeper-lite", () => {
+		const cfg = examplePresets["graph-minesweeper-lite"].config;
+		const { gameConfig, kernel } = compileConfig(cfg);
+		const actions: KernelAction[] = [
+			{ type: "reveal", position: { row: 0, col: 0 } },
+			{ type: "reveal", position: { row: 2, col: 3 } }
 		];
 		let state = kernel.initialState(cfg.rng.seed);
 		for (const action of actions) {

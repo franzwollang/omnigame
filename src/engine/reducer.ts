@@ -498,6 +498,10 @@ export function createInitialState(config: GameConfig): GameState {
 	if (floodReveal && config.hazards) {
 		const firstSafe = config.hazards.firstRevealSafe === true;
 		if (!firstSafe) {
+			const active =
+				(config.topology ?? "rectangle") === "graph"
+					? config.graph?.active
+					: undefined;
 			base.hidden = {
 				width: config.gridWidth,
 				height: config.gridHeight,
@@ -505,7 +509,9 @@ export function createInitialState(config: GameConfig): GameState {
 					config.gridWidth,
 					config.gridHeight,
 					config.hazards.count,
-					config.seed ?? 0
+					config.seed ?? 0,
+					[],
+					active
 				)
 			};
 		}
@@ -2108,6 +2114,8 @@ function handleReveal(
 	) {
 		return state;
 	}
+	const topology = config.topology ?? "rectangle";
+	if (!isActivePosition(pos, topology, config.graph)) return state;
 	if (getCell(state.grid, pos) !== null) return state;
 
 	let hidden = state.hidden;
@@ -2119,6 +2127,7 @@ function handleReveal(
 		config.hazards.firstRevealSafe === true && state.moveCount === 0;
 	const minesPlaced = hidden.cells.some((c) => c === "mine");
 	if (firstSafe || !minesPlaced) {
+		const active = topology === "graph" ? config.graph?.active : undefined;
 		hidden = {
 			width: config.gridWidth,
 			height: config.gridHeight,
@@ -2127,7 +2136,8 @@ function handleReveal(
 				config.gridHeight,
 				config.hazards.count,
 				config.seed ?? 0,
-				firstSafe ? [pos] : []
+				firstSafe ? [pos] : [],
+				active
 			)
 		};
 	}
@@ -2147,8 +2157,13 @@ function handleReveal(
 		};
 	}
 
-	const topology = config.topology ?? "rectangle";
-	const flood = floodRevealRegion(hidden, state.grid, pos, topology);
+	const flood = floodRevealRegion(
+		hidden,
+		state.grid,
+		pos,
+		topology,
+		config.graph
+	);
 	const cells = applyReveals(state.grid, flood);
 	const nextGrid = { ...state.grid, cells };
 	const next: GameState = {
@@ -2157,7 +2172,7 @@ function handleReveal(
 		grid: nextGrid,
 		moveCount: newMoveCount
 	};
-	if (allSafeRevealed(hidden, nextGrid)) {
+	if (allSafeRevealed(hidden, nextGrid, topology, config.graph)) {
 		return { ...next, status: "draw", winner: null };
 	}
 	const turn = withPhaseOrTurnAdvanced(state, config);

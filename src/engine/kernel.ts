@@ -2367,6 +2367,19 @@ export function explainKernelAction(
 					detail: detailFor("mode_mismatch", action)
 				};
 			}
+			if (
+				!isActivePosition(
+					action.position,
+					config.topology ?? "rectangle",
+					config.graph
+				)
+			) {
+				return {
+					legal: false,
+					reason: "illegal_or_noop",
+					detail: detailFor("illegal_or_noop", action)
+				};
+			}
 			if (getCell(state.grid, action.position) !== null) {
 				return {
 					legal: false,

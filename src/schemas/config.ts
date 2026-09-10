@@ -607,14 +607,6 @@ export const zConfig = z
 						"flood_reveal requires direct placement without capture"
 				});
 			}
-			if (graphBoard) {
-				ctx.addIssue({
-					code: z.ZodIssueCode.custom,
-					path: ["grid", "topology"],
-					message:
-						"flood_reveal requires rectangle or hex_offset topology (graph deferred)"
-				});
-			}
 			if (cfg.grid.wrap === true) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
@@ -623,7 +615,9 @@ export const zConfig = z
 				});
 			}
 			if (hasHazardsBlock) {
-				const cells = cfg.grid.width * cfg.grid.height;
+				const cells = graphBoard
+					? (cfg.grid.nodes?.length ?? 0)
+					: cfg.grid.width * cfg.grid.height;
 				if (cfg.hazards!.count >= cells) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
@@ -631,6 +625,29 @@ export const zConfig = z
 						message:
 							"hazards.count must leave at least one safe cell"
 					});
+				}
+			}
+			// Graph flood: degree capped at 8 so HazardCount 0–8 stays honest
+			if (graphBoard && cfg.grid.nodes && cfg.grid.edges) {
+				const degree = new Map<string, number>();
+				for (const n of cfg.grid.nodes) {
+					degree.set(`${n.row},${n.col}`, 0);
+				}
+				for (const [a, b] of cfg.grid.edges) {
+					if (a === b) continue;
+					if (!degree.has(a) || !degree.has(b)) continue;
+					degree.set(a, (degree.get(a) ?? 0) + 1);
+					degree.set(b, (degree.get(b) ?? 0) + 1);
+				}
+				for (const [key, d] of Array.from(degree.entries())) {
+					if (d > 8) {
+						ctx.addIssue({
+							code: z.ZodIssueCode.custom,
+							path: ["grid", "edges"],
+							message: `flood_reveal on graph requires max degree ≤ 8 (node ${key} has degree ${d})`
+						});
+						break;
+					}
 				}
 			}
 		}
@@ -1147,7 +1164,7 @@ export const zConfig = z
 				}
 				// hex_offset sliding range 1..8 on cube axes (M21)
 			} else if (hexFlood) {
-				// flood_reveal on hex_offset: cube-axis-6 counts (M53); graph still deferred
+				// flood_reveal on hex_offset: cube-axis-6 counts (M53)
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
@@ -1190,7 +1207,8 @@ export const zConfig = z
 			}
 		}
 
-		// Graph foothold: explicit adjacency; cell + n-in-a-row, or move + reach_row.
+		// Graph foothold: explicit adjacency; cell + n-in-a-row, move + reach_row,
+		// or flood_reveal + clear_hazards (edge hazard adjacency; M54).
 		if (graphBoard) {
 			if (!cfg.grid.nodes || cfg.grid.nodes.length < 2) {
 				ctx.addIssue({
@@ -1207,6 +1225,7 @@ export const zConfig = z
 				});
 			}
 			const graphMove = moveInput && reachRow;
+			const graphFlood = floodReveal && clearHazards;
 			if (graphMove) {
 				if (cfg.movement && cfg.movement.adjacency !== "orthogonal") {
 					ctx.addIssue({
@@ -1218,13 +1237,16 @@ export const zConfig = z
 				}
 				// graph chain-walk sliding range 1..8 (M22); replace unlocked (M27);
 				// hop-ball BFS via movement.graphReach = "hop" (M31)
+			} else if (graphFlood) {
+				// flood_reveal on graph: explicit-edge hazard counts (M54);
+				// degree ≤ 8 enforced in flood_reveal block
 			} else {
 				if (cfg.objective.mode !== "n_in_a_row") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["objective", "mode"],
 						message:
-							"graph requires objective.mode = 'n_in_a_row' (or move + reach_row)"
+							"graph requires objective.mode = 'n_in_a_row' (or move + reach_row, or flood_reveal + clear_hazards)"
 					});
 				}
 				if (cfg.input.mode !== "cell") {

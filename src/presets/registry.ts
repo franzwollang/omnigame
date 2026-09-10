@@ -1240,7 +1240,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Flood-fill reveal on hex_offset: cube-axis-6 adjacency for hazard counts and zero-region expansion (not Chebyshev-8). Mine loses; clear all safe cells draws. Unlocks hex flood_reveal — graph still deferred; no flags/chords.",
+			"Flood-fill reveal on hex_offset: cube-axis-6 adjacency for hazard counts and zero-region expansion (not Chebyshev-8). Mine loses; clear all safe cells draws. Unlocks hex flood_reveal — no flags/chords.",
 		config: {
 			metadata: { name: "Hex Minesweeper Lite", version: 1 },
 			grid: { width: 6, height: 6, topology: "hex_offset", wrap: false },
@@ -1250,6 +1250,67 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			placement: { mode: "direct", overflow: "reject" },
 			observation: { mode: "flood_reveal" },
 			hazards: { count: 8, firstRevealSafe: true },
+			objective: { mode: "clear_hazards" },
+			tokens: [
+				{ id: "probe-x", label: "X", players: ["X"] },
+				{ id: "probe-o", label: "O", players: ["O"] }
+			],
+			placements: [],
+			initial: []
+		}
+	}),
+	"graph-minesweeper-lite": definePreset({
+		id: "graph-minesweeper-lite",
+		name: "Graph Minesweeper Lite",
+		tags: [
+			"observation",
+			"flood-reveal",
+			"hazards",
+			"graph",
+			"partial-info",
+			"mechanism"
+		],
+		description:
+			"Flood-fill reveal on an explicit-edge graph: hazard counts and zero-region expansion follow undirected edges (not Chebyshev-8). Mine loses; clear all safe nodes draws. Unlocks graph flood_reveal (max degree ≤ 8) — no flags/chords.",
+		config: {
+			metadata: { name: "Graph Minesweeper Lite", version: 1 },
+			grid: {
+				width: 4,
+				height: 3,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 0, col: 2, x: 2, y: 0 },
+					{ row: 0, col: 3, x: 3, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 1, col: 3, x: 3, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 2, col: 2, x: 2, y: 2 },
+					{ row: 2, col: 3, x: 3, y: 2 },
+					{ row: 1, col: 0, x: 0, y: 1 }
+				],
+				edges: [
+					["0,0", "0,1"],
+					["0,1", "0,2"],
+					["0,2", "0,3"],
+					["0,0", "1,0"],
+					["0,1", "1,1"],
+					["0,3", "1,3"],
+					["1,0", "1,1"],
+					["1,1", "2,1"],
+					["1,3", "2,3"],
+					["2,1", "2,2"],
+					["2,2", "2,3"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "flood_reveal" },
+			hazards: { count: 3, firstRevealSafe: true },
 			objective: { mode: "clear_hazards" },
 			tokens: [
 				{ id: "probe-x", label: "X", players: ["X"] },

@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T02:58-00:00",
-  "turn": 83,
+  "updated_at": "2026-09-10T03:20-00:00",
+  "turn": 84,
   "focus": {
-    "milestone": "M53",
+    "milestone": "M54",
     "issue": "next-missing-mechanism",
-    "goal": "hex flood_reveal landed; hand off next genuine P3 seam"
+    "goal": "graph flood_reveal landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from f416 M52 tip onto cursor/next-task-progression-7529",
-    "Landed M53 hex flood_reveal + Hex Minesweeper Lite",
-    "hazardNeighbors topology-aware; graph still deferred"
+    "Synced from 7529 M53 tip onto cursor/next-planning-phase-task-0665",
+    "Landed M54 graph flood_reveal + Graph Minesweeper Lite",
+    "Active-only mines; degree ≤ 8; allSafeRevealed ignores inactive"
   ],
   "discoveries": [
-    "hex foothold needed flood_reveal+clear_hazards branch (not only n_in_a_row)",
-    "Chebyshev corner mines do not count on hex mid-cell"
+    "placeHazards must restrict to graph.active or inactive cells get mines",
+    "allSafeRevealed must ignore inactive cells or clear_hazards never draws"
   ],
   "open_threads": [
-    "Next: flying jump, graph flood, full Go, realtime; reject recombinations"
+    "Next: flying jump capture, full Go, realtime; reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M53",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M54",
   "blockers": []
 }

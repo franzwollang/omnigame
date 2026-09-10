@@ -263,7 +263,8 @@ lastQuery; commit pending overlay) | flood_reveal (shared counts; hidden mines)
 hazards.{count, firstRevealSafe}; reveal action floods zero-count regions and
 opens numbered frontiers; mineHit → opponent wins; all safe revealed → draw.
 Adjacency: rectangle Chebyshev-8; hex_offset cube-axis-6 (Hex Minesweeper
-Lite); graph deferred. Counts stay in 0–8 cell values (hex max 6).
+Lite); graph explicit edges (Graph Minesweeper Lite; max degree ≤ 8). Counts
+stay in 0–8 cell values (hex max 6).
 
 ### Memory (memory_flip)
 
