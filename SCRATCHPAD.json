@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T04:16+00:00",
+  "turn": 89,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M59",
+    "issue": "next-missing-mechanism",
+    "goal": "graph promotion landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 99f6 M58 tip onto cursor/next-task-progression-3539",
+    "Landed M59 Graph Crowned Jump Lite / promotion on graph",
+    "Schema: graph orthogonal crownedAdjacency; forbid menForward/flying"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Default crownedAdjacency king yields [] legalDests on graph",
+    "Lane graphs reuse targetRows; hub targetNodes still deferred"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: full Go, realtime, hub targetNodes; reject recombinations"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M59",
   "blockers": []
 }
