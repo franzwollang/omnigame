@@ -1879,6 +1879,100 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"graph-crowned-jump-lite": definePreset({
+		id: "graph-crowned-jump-lite",
+		name: "Graph Crowned Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"crowned-range",
+			"reach-row",
+			"graph",
+			"topology",
+			"mechanism"
+		],
+		description:
+			"Lane graph jump race with Transform-lite promotion: land on promo row 2 to crown (X+/O+), then chain-walk with crownedRange 2 to win row 0 — men stay range 1. mustCapture forces the opening leap that promotes (promo row ≠ win row). Unlocks movement.promotion on graph — rectangle/hex Crowned presets cannot express post-crown edge chain-walks; Graph Jump Race leaps without transforming piece type.",
+		config: {
+			metadata: { name: "Graph Crowned Jump Lite", version: 1 },
+			grid: {
+				width: 2,
+				height: 5,
+				topology: "graph",
+				wrap: false,
+				nodes: [
+					{ row: 0, col: 0, x: 0, y: 0 },
+					{ row: 1, col: 0, x: 0, y: 1 },
+					{ row: 2, col: 0, x: 0, y: 2 },
+					{ row: 3, col: 0, x: 0, y: 3 },
+					{ row: 4, col: 0, x: 0, y: 4 },
+					{ row: 0, col: 1, x: 1, y: 0 },
+					{ row: 1, col: 1, x: 1, y: 1 },
+					{ row: 2, col: 1, x: 1, y: 2 },
+					{ row: 3, col: 1, x: 1, y: 3 },
+					{ row: 4, col: 1, x: 1, y: 4 }
+				],
+				edges: [
+					["0,0", "1,0"],
+					["1,0", "2,0"],
+					["2,0", "3,0"],
+					["3,0", "4,0"],
+					["0,1", "1,1"],
+					["1,1", "2,1"],
+					["2,1", "3,1"],
+					["3,1", "4,1"]
+				]
+			},
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "orthogonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					// Promo row ≠ win row so a crowned 2-edge chain walk is playable.
+					targetRows: { X: 2, O: 3 },
+					crownedAdjacency: "orthogonal",
+					crownedRange: 2
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "graph-crowned-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "graph-crowned-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,0) mustCapture-jumps O(3,0)→(2,0): promotes to X+.
+				// Men / crownedRange=1 from (2,0) only reach (1,0); crownedRange=2
+				// reaches (0,0) for the win after O's quiet reply on lane 1.
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "O", visibility: "public" },
+				{ row: 4, col: 1, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"graph-jump-race": definePreset({
 		id: "graph-jump-race",
 		name: "Graph Jump Race",

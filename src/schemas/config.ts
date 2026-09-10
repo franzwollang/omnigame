@@ -155,9 +155,9 @@ export const zConfig = z
 		 * `crownedAdjacency` (default king on rectangle; orthogonal required
 		 * on hex). Optional `menForwardOnly` restricts uncrowned quiet/jump
 		 * moves to the forward row-delta toward the seat's promotion side
-		 * (crowned unrestricted; rectangle only). Rectangle | hex_offset +
-		 * jump for v1 (graph deferred; hex forbids menForwardOnly /
-		 * crownedFlyingCapture).
+		 * (crowned unrestricted; rectangle only). Rectangle | hex_offset |
+		 * graph + jump for v1 (hex/graph forbid menForwardOnly /
+		 * crownedFlyingCapture; graph requires orthogonal crownedAdjacency).
 		 * graph path mode: `graphReach` = `chain` (default; unique-forward
 		 * edge walk, no junction turns) | `hop` (BFS within range; may turn
 		 * at junctions — distinct from fog hop distance).
@@ -183,15 +183,16 @@ export const zConfig = z
 				/** Graph-only: chain-walk (default) or hop-ball BFS. */
 				graphReach: z.enum(["chain", "hop"]).optional(),
 				/**
-				 * Crowned kings / Transform lite (rectangle jump only): land on
-				 * `targetRows[seat]` → promote in place; crowned pieces use
-				 * `crownedAdjacency` for quiet/jump rays. Optional
-				 * `crownedRange` (default 1) gives crowned quiet slides longer
-				 * than men (`movement.range` stays 1). Optional
-				 * `crownedFlyingCapture` extends crowned jump leaps along a
-				 * clear ray within `crownedRange` (empty approach + long land;
-				 * men stay adjacent). Optional `menForwardOnly` restricts
-				 * uncrowned row deltas to the promotion-side advance.
+				 * Crowned kings / Transform lite (rectangle | hex_offset |
+				 * graph jump): land on `targetRows[seat]` → promote in place;
+				 * crowned pieces use `crownedAdjacency` for quiet/jump rays.
+				 * Optional `crownedRange` (default 1) gives crowned quiet
+				 * slides longer than men (`movement.range` stays 1). Optional
+				 * `crownedFlyingCapture` (rectangle) extends crowned jump
+				 * leaps along a clear ray within `crownedRange`. Optional
+				 * `menForwardOnly` (rectangle) restricts uncrowned row deltas
+				 * to the promotion-side advance. Hex/graph require orthogonal
+				 * crownedAdjacency.
 				 */
 				promotion: z
 					.object({
@@ -2284,9 +2285,9 @@ export const zConfig = z
 			}
 		}
 
-		// Piece promotion / crowned kings (Transform lite): rectangle | hex_offset
-		// jump (graph deferred). Hex: orthogonal crowned adjacency only; no
-		// menForwardOnly / crownedFlyingCapture (rectangle Draughts-lite).
+		// Piece promotion / crowned kings (Transform lite): rectangle |
+		// hex_offset | graph + jump. Hex/graph: orthogonal crowned adjacency
+		// only; no menForwardOnly / crownedFlyingCapture (rectangle Draughts).
 		if (cfg.movement?.promotion) {
 			if (cfg.movement.capture !== "jump") {
 				ctx.addIssue({
@@ -2305,40 +2306,43 @@ export const zConfig = z
 			}
 			if (
 				cfg.grid.topology !== "rectangle" &&
-				cfg.grid.topology !== "hex_offset"
+				cfg.grid.topology !== "hex_offset" &&
+				cfg.grid.topology !== "graph"
 			) {
 				ctx.addIssue({
 					code: z.ZodIssueCode.custom,
 					path: ["movement", "promotion"],
 					message:
-						"movement.promotion requires grid.topology = 'rectangle' | 'hex_offset' (graph deferred)"
+						"movement.promotion requires grid.topology = 'rectangle' | 'hex_offset' | 'graph'"
 				});
 			}
-			if (cfg.grid.topology === "hex_offset") {
+			if (
+				cfg.grid.topology === "hex_offset" ||
+				cfg.grid.topology === "graph"
+			) {
+				const topoLabel =
+					cfg.grid.topology === "hex_offset" ? "hex_offset" : "graph";
 				const crownedAdj =
 					cfg.movement.promotion.crownedAdjacency ?? "king";
 				if (crownedAdj !== "orthogonal") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "promotion", "crownedAdjacency"],
-						message:
-							"hex_offset promotion requires crownedAdjacency = 'orthogonal' (diagonal/king deferred on hex)"
+						message: `${topoLabel} promotion requires crownedAdjacency = 'orthogonal' (diagonal/king deferred on ${topoLabel})`
 					});
 				}
 				if (cfg.movement.promotion.menForwardOnly === true) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "promotion", "menForwardOnly"],
-						message:
-							"hex_offset promotion is incompatible with menForwardOnly (rectangle only)"
+						message: `${topoLabel} promotion is incompatible with menForwardOnly (rectangle only)`
 					});
 				}
 				if (cfg.movement.promotion.crownedFlyingCapture === true) {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "promotion", "crownedFlyingCapture"],
-						message:
-							"hex_offset promotion is incompatible with crownedFlyingCapture (rectangle only)"
+						message: `${topoLabel} promotion is incompatible with crownedFlyingCapture (rectangle only)`
 					});
 				}
 			}

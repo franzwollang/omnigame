@@ -218,7 +218,7 @@ delayTurns → pendingPlaces.
 | liberties | placement.captureMode | Go-lite group removal + ko/superko (rectangle von Neumann-4; hex_offset cube-axis-6 — Hex Go Lite; graph explicit-edge — Graph Go Lite) |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; optional `mustLongestCapture` (max chain length); incompatible with `graphReach: hop` |
-| promote | movement.promotion | Transform on reach row (rectangle \| hex_offset jump; graph deferred): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` / `menForwardOnly` (rectangle only) |
+| promote | movement.promotion | Transform on reach row (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` / `menForwardOnly` (rectangle only) |
 
 KoRule: none | point | positional | situational.
 
@@ -234,11 +234,12 @@ KoRule: none | point | positional | situational.
   `mustCapture`) keeps only jumps that begin / continue a maximum-length
   capture chain (Mandatory Longest Jump Lite); Graph Jump Race covers
   explicit-edge leaps (incompatible with graphReach hop)
-- promotion: optional `movement.promotion` (rectangle | hex_offset + jump;
-  graph deferred); `targetRows` + `crownedAdjacency` (hex: orthogonal only);
+- promotion: optional `movement.promotion` (rectangle | hex_offset | graph +
+  jump); `targetRows` + `crownedAdjacency` (hex/graph: orthogonal only);
   optional `crownedRange` (1–8) for crowned quiet slides (men keep
   `movement.range` = 1 under jump; jump leap distance unchanged without
-  flying — Flying Kings Jump Lite / Hex Crowned Jump Lite); optional
+  flying — Flying Kings Jump Lite / Hex Crowned Jump Lite / Graph Crowned
+  Jump Lite); optional
   `crownedFlyingCapture` (rectangle) extends crowned jumps along a clear ray
   within `crownedRange` (empty approach + land beyond immediate past-mid;
   requires `crownedRange >= 2` — Flying Capture Jump Lite); preserve crown on

@@ -10,18 +10,18 @@
  * Optional `mustLongestCapture: true` (requires `mustCapture`) further
  * restricts jump starts / mid-chain branches to those that maximize total
  * pieces captured along the jump tree (Draughts longest-chain rule).
- * Optional `promotion` (rectangle | hex_offset jump; graph deferred): land on
+ * Optional `promotion` (rectangle | hex_offset | graph jump): land on
  * `targetRows[seat]` → crown (`X+`/`O+`); crowned pieces use
- * `crownedAdjacency` (default king on rectangle; orthogonal required on hex)
- * and optional `crownedRange` (quiet slide depth; default men `range`) via
- * `effectiveMovement`. Optional `crownedFlyingCapture` (rectangle only):
- * crowned pieces may leap over an enemy at any distance along a ray (empties
- * before the mid) and land on any empty cell beyond within `crownedRange`
- * (Draughts-lite flying capture); men stay adjacent single-leap. Optional
- * `menForwardOnly` (rectangle only): uncrowned pieces may only quiet-move /
- * jump with row delta toward their promotion side (derived from the two
- * `targetRows`); crowned pieces ignore the filter. Hex_offset:
- * orthogonal cube-axis slides (range 1..8,
+ * `crownedAdjacency` (default king on rectangle; orthogonal required on
+ * hex/graph) and optional `crownedRange` (quiet slide depth; default men
+ * `range`) via `effectiveMovement`. Optional `crownedFlyingCapture`
+ * (rectangle only): crowned pieces may leap over an enemy at any distance
+ * along a ray (empties before the mid) and land on any empty cell beyond
+ * within `crownedRange` (Draughts-lite flying capture); men stay adjacent
+ * single-leap. Optional `menForwardOnly` (rectangle only): uncrowned pieces
+ * may only quiet-move / jump with row delta toward their promotion side
+ * (derived from the two `targetRows`); crowned pieces ignore the filter.
+ * Hex_offset: orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
  * hops along one cube dir). Graph: orthogonal chain-walk along explicit edges
  * (range 1..8; no turning at junctions) **or** hop-ball BFS within range
@@ -913,7 +913,7 @@ export function legalDestinations(
 
 	if (topology === "graph") {
 		// Chain-walk (default) or hop-ball BFS; same blocker/replace as rect/hex.
-		// Jump: quiet slides (eff.range; promotion graph deferred) ∪ leaps.
+		// Jump: quiet slides (eff.range; crowned may use crownedRange) ∪ leaps.
 		if (eff.adjacency !== "orthogonal" || !graph) return [];
 		if (eff.capture === "jump") {
 			const quiet = slideGraphDestinations(

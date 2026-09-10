@@ -74,9 +74,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M56 | Next missing mechanism (hex liberties / Hex Go Lite) | `done` |
 | M57 | Next missing mechanism (graph liberties / Graph Go Lite) | `done` |
 | M58 | Next missing mechanism (hex promotion / Hex Crowned Jump Lite) | `done` |
+| M59 | Next missing mechanism (graph promotion / Graph Crowned Jump Lite) | `done` |
 
-**Optimizing for this marathon:** M58 hex promotion (`Hex Crowned Jump Lite` /
-`movement.promotion` on `hex_offset`) landed. Pick **P3 next-missing-mechanism**
+**Optimizing for this marathon:** M59 graph promotion (`Graph Crowned Jump Lite` /
+`movement.promotion` on `graph`) landed. Pick **P3 next-missing-mechanism**
 (smallest new seam; reject recombinations without anchor) — without asking
 which fork.
 
@@ -93,7 +94,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥716** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥726** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -211,7 +212,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; graph promotion. Hex promotion landed (M58 Hex Crowned Jump Lite).
+scheduler. Graph promotion landed (M59 Graph Crowned Jump Lite). Hex promotion
+landed (M58 Hex Crowned Jump Lite).
 Graph liberties landed (M57 Graph Go Lite). Hex liberties landed
 (M56 Hex Go Lite). Flying jump capture landed (M55 Flying Capture Jump
 Lite). Graph flood_reveal landed (M54 Graph Minesweeper Lite).
@@ -888,6 +890,19 @@ M55; hex liberties in M56).
 - Out of scope: graph promotion; hex flying capture; hex menForwardOnly;
   simultaneous jump
 - Green gate: ≥716 tests — **done**
+
+### M59 — Graph promotion / Graph Crowned Jump Lite
+
+- Schema: `movement.promotion` on `graph` + jump; require
+  `crownedAdjacency = orthogonal`; forbid `menForwardOnly` /
+  `crownedFlyingCapture` — **done**
+- Kernel: graph legalDestinations already honor crowned `crownedRange` when
+  adjacency is orthogonal (default king would yield `[]`) — **done**
+- Preset `graph-crowned-jump-lite` (Graph Crowned Jump Lite) + schema /
+  movement / transcript / replay tests — **done**
+- Out of scope: hub `targetNodes` promotion geometry; graph flying capture;
+  graph menForwardOnly; simultaneous jump
+- Green gate: ≥726 tests — **done**
 
 ## Sequencing notes
 

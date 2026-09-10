@@ -63,6 +63,7 @@ These are built from the same shared schema and operators.
 - **Mandatory Longest Jump Lite** (`mustLongestCapture` — only max-length jump chains)
 - **Crowned Kings Jump Lite** (`movement.promotion` — crown on reach row; king adjacency)
 - **Hex Crowned Jump Lite** (`hex_offset` + `promotion` — cube-axis crown + crownedRange)
+- **Graph Crowned Jump Lite** (`graph` + `promotion` — edge chain-walk crown + crownedRange)
 - **Forward Men Jump Lite** (`menForwardOnly` — uncrowned advance toward promo side only)
 - **Flying Kings Jump Lite** (`crownedRange` — crowned quiet slides longer than men)
 - **Flying Capture Jump Lite** (`crownedFlyingCapture` — crowned long-range leap capture)
@@ -208,11 +209,12 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump
   exists; incompatible with `graphReach: hop`); **Mandatory Longest Jump Lite**
   (`mustLongestCapture` keeps only max-length jump chains); optional
-  `movement.promotion` (rectangle | hex_offset jump; graph deferred) —
+  `movement.promotion` (rectangle | hex_offset | graph jump) —
   **Crowned Kings Jump Lite**
   (Transform lite: land on `targetRows` → `X+`/`O+`; crowned uses
   `crownedAdjacency`) / **Hex Crowned Jump Lite** (hex_offset + orthogonal
-  crownedAdjacency + `crownedRange`) / **Forward Men Jump Lite** (`menForwardOnly`: uncrowned
+  crownedAdjacency + `crownedRange`) / **Graph Crowned Jump Lite** (graph +
+  orthogonal crownedAdjacency + `crownedRange` chain-walk) / **Forward Men Jump Lite** (`menForwardOnly`: uncrowned
   advance toward promotion side only; crowned unrestricted) / **Flying Kings
   Jump Lite** (`crownedRange`: crowned quiet slides longer than men; jump
   leaps unchanged) / **Flying Capture Jump Lite** (`crownedFlyingCapture`:
@@ -232,7 +234,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder
-(only with anchor), realtime scheduler, graph promotion extensions,
+(only with anchor), realtime scheduler, hub-graph `targetNodes` promotion,
 and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
@@ -527,15 +529,15 @@ Flying Kings Jump Lite (M52), hex flood_reveal / Hex Minesweeper Lite (M53),
 graph flood_reveal / Graph Minesweeper Lite (M54), flying jump capture /
 Flying Capture Jump Lite (M55), hex liberties / Hex Go Lite (M56),
 graph liberties / Graph Go Lite (M57), hex promotion / Hex Crowned Jump Lite
-(M58).
+(M58), graph promotion / Graph Crowned Jump Lite (M59).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor; full Go; realtime scheduler; graph
-  promotion; reject recombinations)
+  fire→move only with anchor; full Go; realtime scheduler; hub
+  `targetNodes` promotion; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
-  (recombination without anchor); graph promotion;
+  (recombination without anchor); hub-graph promotion via `targetNodes`;
   memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
@@ -543,7 +545,7 @@ graph liberties / Graph Go Lite (M57), hex promotion / Hex Crowned Jump Lite
   promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
   crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54;
   crownedFlyingCapture in M55; hex liberties in M56; graph liberties in M57;
-  hex promotion in M58)
+  hex promotion in M58; graph promotion in M59)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 

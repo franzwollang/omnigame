@@ -78,7 +78,7 @@ describe("movement.promotion schema", () => {
 		expect(parsed.success).toBe(false);
 	});
 
-	it("rejects promotion on graph", () => {
+	it("rejects graph promotion when crownedAdjacency is king", () => {
 		const base = structuredClone(examplePresets["graph-jump-race"].config);
 		base.movement = {
 			adjacency: "orthogonal",
@@ -91,6 +91,22 @@ describe("movement.promotion schema", () => {
 		};
 		const parsed = zConfig.safeParse(base);
 		expect(parsed.success).toBe(false);
+	});
+
+	it("accepts graph promotion with orthogonal crownedAdjacency", () => {
+		const base = structuredClone(examplePresets["graph-jump-race"].config);
+		base.movement = {
+			adjacency: "orthogonal",
+			range: 1,
+			capture: "jump",
+			promotion: {
+				targetRows: { X: 2, O: 3 },
+				crownedAdjacency: "orthogonal",
+				crownedRange: 2
+			}
+		};
+		const parsed = zConfig.safeParse(base);
+		expect(parsed.success).toBe(true);
 	});
 });
 

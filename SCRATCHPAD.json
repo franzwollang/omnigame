@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T04:10+00:00",
-  "turn": 88,
+  "updated_at": "2026-09-10T04:16+00:00",
+  "turn": 89,
   "focus": {
-    "milestone": "M58",
+    "milestone": "M59",
     "issue": "next-missing-mechanism",
-    "goal": "hex promotion landed; hand off next genuine P3 seam"
+    "goal": "graph promotion landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 1903 M57 tip onto cursor/next-task-progression-99f6",
-    "Landed M58 Hex Crowned Jump Lite / promotion on hex_offset",
-    "Schema: hex orthogonal crownedAdjacency; forbid menForward/flying"
+    "Synced from 99f6 M58 tip onto cursor/next-task-progression-3539",
+    "Landed M59 Graph Crowned Jump Lite / promotion on graph",
+    "Schema: graph orthogonal crownedAdjacency; forbid menForward/flying"
   ],
   "discoveries": [
-    "Default crownedAdjacency king yields [] legalDests on hex",
-    "Hex promo demo needs crownedRange>1 (adjacency already orthogonal)"
+    "Default crownedAdjacency king yields [] legalDests on graph",
+    "Lane graphs reuse targetRows; hub targetNodes still deferred"
   ],
   "open_threads": [
-    "Next: full Go, realtime, graph promo; reject recombinations"
+    "Next: full Go, realtime, hub targetNodes; reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M58",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M59",
   "blockers": []
 }
