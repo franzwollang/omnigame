@@ -756,7 +756,10 @@ function applyStep(
 			config.commitReveal === true &&
 			state.committedMoves &&
 			nextState.committedMoves === undefined &&
-			nextState.moveCount > state.moveCount
+			nextState.moveCount > state.moveCount &&
+			// Abort (illegal joint at reveal) clears commits + ticks moveCount
+			// without applying — same grid ref. Skip capture synthesis (M83/M85).
+			nextState.grid !== state.grid
 		) {
 			const prior = state.committedMoves;
 			const revealing: MovePair = {

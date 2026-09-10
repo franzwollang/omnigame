@@ -3974,7 +3974,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Each seat submits two diagonal hops/steps per simultaneous round; indexed pairs resolve jointly with mid clear per index. Same-piece to→from chains allowed without mustContinueFrom. Unlocks actionsPerTurn > 1 under simultaneous × jump — single-hop is Simultaneous Jump Race; quiet multi-action is Double Simultaneous Step Race; commitReveal multi-jump deferred.",
+			"Each seat submits two diagonal hops/steps per simultaneous round; indexed pairs resolve jointly with mid clear per index. Same-piece to→from chains allowed without mustContinueFrom. Unlocks actionsPerTurn > 1 under simultaneous × jump — single-hop is Simultaneous Jump Race; quiet multi-action is Double Simultaneous Step Race; commitReveal multi-jump is Hidden Double Simultaneous Jump Race.",
 		config: {
 			metadata: {
 				name: "Double Simultaneous Jump Race",
@@ -4034,7 +4034,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Each seat privately commits a diagonal jump or step; board resolves when both have committed. Blind mid-flee contests jump legality at reveal (same joint mid rules as open Simultaneous Jump Race). Unlocks turn.commitReveal under simultaneous × jump — open joint is Simultaneous Jump Race; ordered mid priority is Ordered Simultaneous Jump Race; quiet commitReveal move is Hidden Simultaneous Step Race.",
+			"Each seat privately commits a diagonal jump or step; board resolves when both have committed. Blind mid-flee contests jump legality at reveal (same joint mid rules as open Simultaneous Jump Race). Unlocks turn.commitReveal under simultaneous × jump — open joint is Simultaneous Jump Race; ordered mid priority is Ordered Simultaneous Jump Race; multi-action commitReveal jump is Hidden Double Simultaneous Jump Race; quiet commitReveal move is Hidden Simultaneous Step Race.",
 		config: {
 			metadata: {
 				name: "Hidden Simultaneous Jump Race",
@@ -4075,6 +4075,69 @@ export const examplePresets: Record<string, ExamplePreset> = {
 				{ row: 2, col: 0, player: "X", visibility: "public" },
 				{ row: 1, col: 1, player: "O", visibility: "public" },
 				{ row: 4, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
+	"hidden-double-simultaneous-jump-race": definePreset({
+		id: "hidden-double-simultaneous-jump-race",
+		name: "Hidden Double Simultaneous Jump Race",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"reach-row",
+			"simultaneous",
+			"commitReveal",
+			"actionsPerTurn",
+			"multi-action",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Each seat privately commits two diagonal hops/steps; board resolves when both fill budget. Same-piece to→from chains allowed without mustContinueFrom. Blind mid-flee at any index aborts the reveal (clears commits, board unchanged). Unlocks commitReveal + actionsPerTurn > 1 under simultaneous × jump — open multi-action is Double Simultaneous Jump Race; single-hop hidden is Hidden Simultaneous Jump Race; quiet hidden multi-action is Hidden Double Simultaneous Step Race.",
+		config: {
+			metadata: {
+				name: "Hidden Double Simultaneous Jump Race",
+				version: 1
+			},
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: {
+				mode: "turn",
+				schedule: "simultaneous",
+				actionsPerTurn: 2,
+				commitReveal: true
+			},
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: { adjacency: "diagonal", range: 1, capture: "jump" },
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "hidden-dbl-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "hidden-dbl-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(4,0) commits double-hop mid O(3,1)→(2,2) then mid O(1,3)→(0,4).
+				// O runner (0,0) takes two quiet diagonal steps (not fleeing either mid).
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 3, player: "O", visibility: "public" },
+				{ row: 0, col: 0, player: "O", visibility: "public" }
 			]
 		}
 	}),

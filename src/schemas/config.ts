@@ -2543,7 +2543,8 @@ export const zConfig = z
 			}
 			if (cfg.turn.schedule === "simultaneous") {
 				// M81 joint + M82 ordered + M83 commitReveal + M84 multi-action
-				// simultaneous jump on rectangle only (hex/graph deferred).
+				// + M85 commitReveal multi-action simultaneous jump on rectangle
+				// only (hex/graph deferred).
 				if (cfg.grid.topology !== "rectangle") {
 					ctx.addIssue({
 						code: z.ZodIssueCode.custom,

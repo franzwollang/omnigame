@@ -514,7 +514,8 @@ export const Contracts = {
 		invariants: [
 			"commitBeforeJointResolve",
 			"opponentCommitHiddenUntilReveal",
-			"commitRevealJumpRevealsViaJointMidClear"
+			"commitRevealJumpRevealsViaJointMidClear",
+			"commitRevealMultiActionJumpAccumulatesThenReveals"
 		]
 	}),
 	/**
