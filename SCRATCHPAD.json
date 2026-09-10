@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T10:50+00:00",
+  "turn": 111,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M81",
+    "issue": "next-missing-mechanism",
+    "goal": "Simultaneous Jump Race landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from cab2 M80 tip onto cursor/next-task-progression-a8a3",
+    "Throw-in/CAD probe: no unique board vs ladder/net/sente/approach",
+    "Landed M81 simultaneous jump + simultaneous-jump-race"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Ladder already models snapback continuations for ≤2-lib groups",
+    "Simultaneous×jump seam = mid-clear apply + events, not schema alone"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: ordered/commitReveal/multi-action jump, or unique Go L&D, or realtime"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M81",
   "blockers": []
 }
