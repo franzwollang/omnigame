@@ -1,22 +1,23 @@
 {
-  "updated_at": "2026-08-01T16:20-05:00",
-  "turn": 29,
+  "updated_at": "2026-09-10T09:00+00:00",
+  "turn": 107,
   "focus": {
-    "milestone": "M8",
-    "issue": "sandbox-form-honesty",
-    "goal": "Marathon-ready: P1 form honesty after P0 debt closed"
+    "milestone": "M77",
+    "issue": "next-missing-mechanism",
+    "goal": "Go Lite Net landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Second-pass review; fixed Agent joint-move + schema-forbid sliding×simultaneous",
-    "Phase 2 board + prioritized OPEN_ISSUES marathon queue"
+    "Synced from 9cd8 M76 tip onto cursor/next-task-progression-9be8",
+    "Landed M77 netDeath + go-lite-net",
+    "Exact-3-lib root net search; edge geta flips raw X→O"
   ],
   "discoveries": [
-    "Sandbox Agent step only joint-placed (move presets silent no-op)",
-    "isNoop omitted phase/ko/history fields"
+    "Root libs must be exactly 3 — ≥3 false-positives living masses",
+    "Semeai often overlaps net cages — omit from sibling contrast"
   ],
   "open_threads": [
-    "P1 form honesty; P2 agent-search label/UCT; P3 capture-by-replacement"
+    "Next: deeper L&D, simultaneous jump, realtime"
   ],
-  "next_step": "Cloud: close sandbox-form-honesty then capture-by-replacement mini-spec",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M77",
   "blockers": []
 }
