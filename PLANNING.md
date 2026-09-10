@@ -88,12 +88,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M70 | Next missing mechanism (Go Lite Dame Fill / objective.dameFill) | `done` |
 | M71 | Next missing mechanism (Go Lite Mark Dead / objective.markDead) | `done` |
 | M72 | Next missing mechanism (Go Lite Mark Dead Resume / objective.markDeadResume) | `done` |
+| M73 | Next missing mechanism (Go Lite Ladders / objective.ladderDeath) | `done` |
 
-**Optimizing for this marathon:** M72 Go Lite Mark Dead Resume
-(`objective.markDeadResume` + `rejectMarks`) landed. Pick **P3
+**Optimizing for this marathon:** M73 Go Lite Ladders
+(`objective.ladderDeath`) landed. Pick **P3
 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: simultaneous jump /
-realtime / fuller Go remainder beyond mark-dead resume (semantic L&D).
+realtime / fuller Go remainder beyond ladder-dead lite (deeper semantic L&D).
 
 ## Marathon runbook (cloud agents)
 
@@ -108,7 +109,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥818** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥823** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -233,10 +234,11 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond mark-dead resume (M72; e.g. semantic
-L&D); fire→move
+**Not yet:** fuller Go remainder beyond ladder-dead lite (M73; e.g. deeper
+semantic L&D / nakade / semeai); fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Mark Dead Resume
+anchor); realtime scheduler; simultaneous jump. Go Lite Ladders landed
+(M73). Go Lite Mark Dead Resume
 landed (M72). Go Lite Mark Dead landed
 (M71). Go Lite Dame Fill landed
 (M70). Go Lite Benson landed
@@ -268,7 +270,7 @@ M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
 deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
-markDeadResume in M72).
+markDeadResume in M72; ladderDeath in M73).
 
 ## Phase 2 exit criteria
 
@@ -1120,6 +1122,21 @@ markDeadResume in M72).
 - Out of scope: semantic life-death search; hex/graph mark-dead-resume
   presets; simultaneous jump; realtime
 - Green gate: ≥813 + new cases — **done**
+
+### M73 — Go Lite Ladders / `objective.ladderDeath`
+
+- Schema: optional `objective.ladderDeath` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `isLadderDeadGroup` / `findLadderDeadCells` /
+  `removeLadderDeadStones`; attacker-sente atari-run via
+  `simulateLibertyPlace`; `areaOutcome` applies after optional
+  Benson/deadStones; edge foothold does not save runners; normalize + form
+  switch — **done**
+- Preset `go-lite-ladders` (edge atari X; draw without flag → O with flag) +
+  unit / schema / transcript / replay tests — **done**
+- Out of scope: full L&D / nakade / nets / ko-alive / semeai; hex/graph ladder
+  presets; territory+prisoners; simultaneous jump; realtime
+- Green gate: ≥823 + new cases — **done**
 
 ## Sequencing notes
 

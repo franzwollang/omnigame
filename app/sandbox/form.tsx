@@ -1225,6 +1225,30 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										/>
 										<FormField
 											control={form.control}
+											name="objective.ladderDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Ladder death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove attacker-sente ladder / atari-run
+															groups at scoring (objective.ladderDeath;
+															edge runners included).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
 											name="objective.dameFill"
 											render={({ field }) => (
 												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">

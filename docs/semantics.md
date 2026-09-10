@@ -275,7 +275,9 @@ optional `objective.seki` neutralizes shared-life empty points; optional
 `objective.deadStones` removes interior groups with fewer than 2 true eyes
 before counting; optional `objective.bensonLife` removes interior groups that
 are not Benson-unconditionally alive — vital-region fixed point; supersedes
-`deadStones` when both are set; optional `objective.dameFill` enters a
+`deadStones` when both are set; optional `objective.ladderDeath` removes
+attacker-sente ladder / atari-run groups after optional Benson/deadStones —
+edge foothold does not save runners; optional `objective.dameFill` enters a
 damezukai-lite endgame on the first pass while dame remain — only dame places
 + pass legal until two consecutive passes score; optional `objective.markDead`
   enters a marking phase after two consecutive passes — players toggle opponent

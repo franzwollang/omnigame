@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T07:45+00:00",
-  "turn": 102,
+  "updated_at": "2026-09-10T08:05+00:00",
+  "turn": 103,
   "focus": {
-    "milestone": "M72",
+    "milestone": "M73",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Mark Dead Resume landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Ladders landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 9312 M71 tip onto cursor/next-task-progression-70e0",
-    "Landed M72 markDeadResume + rejectMarks + go-lite-mark-dead-resume",
-    "Dispute clears marking; later double-pass re-enters or scores"
+    "Synced from 70e0 M72 tip onto cursor/next-task-progression-5b0c",
+    "Landed M73 ladderDeath + go-lite-ladders (edge atari → O)",
+    "Ladder runs after Benson/deadStones; edge foothold does not save"
   ],
   "discoveries": [
-    "rejectMarks requires non-empty markedDead; rejecter keeps seat",
-    "endgamePhase preserved across dispute (dameFill-then-mark safe)"
+    "Lite seki detector can cluster atari runners — skip seki exempt for ladders",
+    "Attacker-sente ≤2-lib chase via simulateLibertyPlace"
   ],
   "open_threads": [
-    "Next: semantic L&D, simultaneous jump, realtime — reject recombinations"
+    "Next: deeper L&D, territory+prisoners, simultaneous jump, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M72",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M73",
   "blockers": []
 }

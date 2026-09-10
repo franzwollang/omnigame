@@ -481,7 +481,14 @@ export const zConfig = z
 				 * clear marks, resume placement (dispute → resume lite). Default /
 				 * omit = marking only ends via two-pass confirm.
 				 */
-				markDeadResume: z.boolean().optional()
+				markDeadResume: z.boolean().optional(),
+				/**
+				 * When true, attacker-sente ladder / atari-run groups are removed
+				 * before two-pass area scoring (after optional Benson/deadStones).
+				 * Edge foothold does not save a laddered runner. Default / omit =
+				 * leave stones that M68/M69 keep.
+				 */
+				ladderDeath: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1331,6 +1338,16 @@ export const zConfig = z
 						"objective.markDeadResume is incompatible with turn.schedule = 'simultaneous'"
 				});
 			}
+		}
+
+		// Ladder-dead removal is area_control-only (forced-capture scoring).
+		if (cfg.objective.ladderDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "ladderDeath"],
+				message:
+					"objective.ladderDeath requires objective.mode = 'area_control'"
+			});
 		}
 
 		// Hex foothold: cell + n-in-a-row, move + reach_row, flood_reveal +

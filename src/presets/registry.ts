@@ -5289,6 +5289,84 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-ladders": definePreset({
+		id: "go-lite-ladders",
+		name: "Go Lite Ladders",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"ladder",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with attacker-sente ladder / atari-run removal at scoring (objective.ladderDeath). Seeded edge atari X runner (kept by deadStones/Benson edge foothold): without the flag double-pass draws; with ladderDeath the runner is cleared → O wins. Unlocks forced-capture status beyond static eyes / vital regions.",
+		config: {
+			metadata: { name: "Go Lite Ladders", version: 1 },
+			grid: { width: 6, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", ladderDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Edge atari runner X@(0,2) liberty (1,2) — deadStones/Benson keep (edge).
+				{ row: 0, col: 1, player: "O", visibility: "public" },
+				{ row: 0, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 3, player: "O", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 3, player: "O", visibility: "public" },
+				// Bulky O right (≥3 liberties)
+				{ row: 0, col: 4, player: "O", visibility: "public" },
+				{ row: 0, col: 5, player: "O", visibility: "public" },
+				{ row: 1, col: 4, player: "O", visibility: "public" },
+				{ row: 1, col: 5, player: "O", visibility: "public" },
+				{ row: 2, col: 5, player: "O", visibility: "public" },
+				{ row: 3, col: 4, player: "O", visibility: "public" },
+				{ row: 3, col: 5, player: "O", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" },
+				{ row: 4, col: 5, player: "O", visibility: "public" },
+				{ row: 5, col: 4, player: "O", visibility: "public" },
+				{ row: 5, col: 5, player: "O", visibility: "public" },
+				// Living X mass bottom-left (≥3 liberties) — raw area draws; ladder flips to O
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "X", visibility: "public" },
+				{ row: 3, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 3, player: "X", visibility: "public" },
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 4, col: 1, player: "X", visibility: "public" },
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 4, col: 3, player: "X", visibility: "public" },
+				{ row: 5, col: 0, player: "X", visibility: "public" },
+				{ row: 5, col: 1, player: "X", visibility: "public" },
+				{ row: 5, col: 2, player: "X", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

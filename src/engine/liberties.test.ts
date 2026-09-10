@@ -11,10 +11,13 @@ import {
 	findDameCells,
 	findDeadStoneCells,
 	findGroup,
+	findLadderDeadCells,
+	isLadderDeadGroup,
 	isLegalLibertyPlace,
 	orthogonalNeighbors,
 	removeBensonDeadStones,
 	removeDeadStones,
+	removeLadderDeadStones,
 	removeMarkedDeadStones,
 	scoreArea,
 	areaOutcome,
@@ -685,6 +688,174 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(replay.faithful).toBe(true);
 		expect(replay.finalState.status).toBe("won");
 		expect(replay.finalState.winner).toBe("X");
+	});
+
+	it("validates and compiles the go-lite-ladders preset", () => {
+		const cfg = examplePresets["go-lite-ladders"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.ladderDeath).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.ladderDeath outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; ladderDeath?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", ladderDeath: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("two-eyed interior group is not ladder-dead", () => {
+		// 7×7 O edge ring; interior X with true eyes at (2,2) and (2,4).
+		// O may be 0-lib (artificial seed) — only assert the X group is safe.
+		const cells = Array(49).fill(null) as (string | null)[];
+		const put = (row: number, col: number, p: string) => {
+			cells[row * 7 + col] = p;
+		};
+		for (let row = 0; row < 7; row++) {
+			for (let col = 0; col < 7; col++) {
+				const onRing = row === 0 || row === 6 || col === 0 || col === 6;
+				if (onRing) put(row, col, "O");
+			}
+		}
+		for (const [row, col] of [
+			[1, 1],
+			[1, 2],
+			[1, 3],
+			[1, 4],
+			[1, 5],
+			[2, 1],
+			[2, 3],
+			[2, 5],
+			[3, 1],
+			[3, 2],
+			[3, 3],
+			[3, 4],
+			[3, 5],
+			[4, 1],
+			[4, 2],
+			[4, 3],
+			[4, 4],
+			[4, 5],
+			[5, 1],
+			[5, 2],
+			[5, 3],
+			[5, 4],
+			[5, 5]
+		] as const) {
+			put(row, col, "X");
+		}
+		const alive = gridOf(7, 7, cells);
+		const xGroup = enumerateGroups(alive).find((gr) => gr.color === "X")!;
+		expect(countTrueEyes(alive, xGroup.stones, "X")).toBe(2);
+		expect(isLadderDeadGroup(alive, xGroup.stones, "X")).toBe(false);
+		expect(
+			findLadderDeadCells(alive).every((p) => getCell(alive, p) !== "X")
+		).toBe(true);
+	});
+
+	it("findLadderDeadCells: edge atari runner removed; deadStones/Benson keep it", () => {
+		const cfg = examplePresets["go-lite-ladders"].config;
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const g = state.grid;
+		const runner = { row: 0, col: 2 };
+		expect(getCell(g, runner)).toBe("X");
+		expect(isLadderDeadGroup(g, [runner], "X")).toBe(true);
+		expect(findLadderDeadCells(g)).toEqual([runner]);
+		expect(findDeadStoneCells(g).some((p) => p.row === 0 && p.col === 2)).toBe(
+			false
+		);
+		expect(
+			findBensonDeadStoneCells(g).some((p) => p.row === 0 && p.col === 2)
+		).toBe(false);
+		expect(areaOutcome(g).status).toBe("draw");
+		expect(
+			areaOutcome(g, false, "rectangle", undefined, 0, false, true)
+		).toEqual({
+			status: "draw",
+			winner: null,
+			score: { X: 15, O: 15 }
+		});
+		expect(
+			areaOutcome(g, false, "rectangle", undefined, 0, false, false, true)
+		).toEqual({
+			status: "draw",
+			winner: null,
+			score: { X: 15, O: 15 }
+		});
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				true
+			)
+		).toEqual({
+			status: "won",
+			winner: "O",
+			score: { X: 14, O: 15 }
+		});
+		expect(scoreArea(removeLadderDeadStones(g))).toEqual({ X: 14, O: 15 });
+	});
+
+	it("go-lite-ladders: seeded double-pass O wins; without flag draws; replay faithful", () => {
+		const cfg = examplePresets["go-lite-ladders"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [{ type: "pass" }, { type: "pass" }];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const without = structuredClone(cfg);
+		without.objective = { mode: "area_control" };
+		const baseline = compileConfig(without);
+		let rawState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			rawState = baseline.kernel.stepSync(rawState, action).nextState;
+		}
+		expect(rawState.status).toBe("draw");
+		expect(rawState.winner).toBeNull();
+
+		const asDeadStones = structuredClone(cfg);
+		asDeadStones.objective = { mode: "area_control", deadStones: true };
+		const deadKernel = compileConfig(asDeadStones);
+		let deadState = deadKernel.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			deadState = deadKernel.kernel.stepSync(deadState, action).nextState;
+		}
+		expect(deadState.status).toBe("draw");
+
+		const asBenson = structuredClone(cfg);
+		asBenson.objective = { mode: "area_control", bensonLife: true };
+		const bensonKernel = compileConfig(asBenson);
+		let bensonState = bensonKernel.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			bensonState = bensonKernel.kernel.stepSync(bensonState, action).nextState;
+		}
+		expect(bensonState.status).toBe("draw");
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
 	});
 
 	it("validates and compiles the go-lite-dame-fill preset", () => {

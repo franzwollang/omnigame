@@ -99,6 +99,7 @@ These are built from the same shared schema and operators.
 - **Go Lite Dame Fill** (`objective.dameFill` damezukai-lite endgame; dame-only places after first pass)
 - **Go Lite Mark Dead** (`objective.markDead` interactive dead-stone marking after two-pass)
 - **Go Lite Mark Dead Resume** (`objective.markDeadResume` + `rejectMarks` dispute→resume)
+- **Go Lite Ladders** (`objective.ladderDeath` attacker-sente ladder / atari-run removal at scoring)
 - **Hex Go Lite** (same on hex_offset — six cube-axis liberties)
 - **Graph Go Lite** (same on graph — liberties follow explicit undirected edges)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
@@ -565,7 +566,8 @@ Go Lite Seki / `objective.seki` (M67), Go Lite Dead Stones /
 `objective.deadStones` (M68), Go Lite Benson / `objective.bensonLife` (M69),
 Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.markDead` (M71), Go Lite Mark Dead Resume /
-`objective.markDeadResume` (M72).
+`objective.markDeadResume` (M72), Go Lite Ladders /
+`objective.ladderDeath` (M73).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
@@ -587,7 +589,7 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
   hex menForwardOnly in M63; graph menForwardOnly in M64; hub
   targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
   deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
-  markDeadResume in M72)
+  markDeadResume in M72; ladderDeath in M73)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

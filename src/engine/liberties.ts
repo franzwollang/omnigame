@@ -743,6 +743,197 @@ export function removeBensonDeadStones(
 	return { ...grid, cells };
 }
 
+function parseLibertyKey(k: string): Position {
+	const comma = k.indexOf(",");
+	return {
+		row: Number(k.slice(0, comma)),
+		col: Number(k.slice(comma + 1))
+	};
+}
+
+function libertyPositionsOf(
+	grid: Grid,
+	stones: Position[],
+	wrap: boolean,
+	topology: GridTopology,
+	graph?: GraphTopologyData
+): Position[] {
+	return Array.from(libertySetOf(grid, stones, wrap, topology, graph)).map(
+		parseLibertyKey
+	);
+}
+
+/**
+ * Attacker-sente ladder / atari-run lite (M73): opponent can force-capture
+ * `stones` by filling liberties while the runner stays at ≤1 liberty after
+ * each attacker move. Defender replies considered: play the remaining
+ * liberty, or capture the stone just played when that fill is legal.
+ */
+export function isLadderDeadGroup(
+	grid: Grid,
+	stones: Position[],
+	color: Player,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): boolean {
+	if (stones.length === 0) return false;
+	const attacker: Player = color === "X" ? "O" : "X";
+	const maxDepth = grid.width * grid.height;
+	const originalKeys = stones.map(keyOf);
+
+	const remainingOf = (g: Grid): Position[] => {
+		const out: Position[] = [];
+		for (const k of originalKeys) {
+			const p = parseLibertyKey(k);
+			if (getCell(g, p) === color) out.push(p);
+		}
+		return out;
+	};
+
+	const groupOn = (g: Grid, rem: Position[]): Position[] => {
+		if (rem.length === 0) return [];
+		return findGroup(g, rem[0]!, wrap, topology, graph);
+	};
+
+	const attackerCanCapture = (g: Grid, depth: number): boolean => {
+		if (depth > maxDepth) return false;
+		const rem = remainingOf(g);
+		if (rem.length === 0) return true;
+		const group = groupOn(g, rem);
+		const libs = libertyPositionsOf(g, group, wrap, topology, graph);
+		if (libs.length === 0) return true;
+		if (libs.length > 2) return false;
+
+		const tryFill = (fill: Position): boolean => {
+			const sim = simulateLibertyPlace(
+				g,
+				fill,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) return false;
+			const next: Grid = { ...g, cells: sim.cells };
+			if (remainingOf(next).length === 0) return true;
+			const nextRem = remainingOf(next);
+			const nextGroup = groupOn(next, nextRem);
+			const nextLibs = libertyPositionsOf(
+				next,
+				nextGroup,
+				wrap,
+				topology,
+				graph
+			);
+			// After attacker fill the runner must stay under pressure (≤1 liberty).
+			if (nextLibs.length >= 2) return false;
+			return defenderForced(next, fill, depth + 1);
+		};
+
+		if (libs.length === 1) {
+			return tryFill(libs[0]!);
+		}
+
+		// Exactly two liberties: try either first fill.
+		for (const fill of libs) {
+			if (tryFill(fill)) return true;
+		}
+		return false;
+	};
+
+	const defenderForced = (
+		g: Grid,
+		lastAttack: Position,
+		depth: number
+	): boolean => {
+		if (depth > maxDepth) return false;
+		const rem = remainingOf(g);
+		if (rem.length === 0) return true;
+		const group = groupOn(g, rem);
+		const libs = libertyPositionsOf(g, group, wrap, topology, graph);
+		if (libs.length >= 2) return false;
+		if (libs.length === 0) return true;
+
+		const replyKeys = new Set<string>();
+		for (const p of libs) replyKeys.add(keyOf(p));
+		if (getCell(g, lastAttack) === attacker) {
+			const atkGroup = findGroup(g, lastAttack, wrap, topology, graph);
+			const atkLibs = libertyPositionsOf(
+				g,
+				atkGroup,
+				wrap,
+				topology,
+				graph
+			);
+			if (atkLibs.length === 1) replyKeys.add(keyOf(atkLibs[0]!));
+		}
+
+		let anyLegal = false;
+		for (const rk of Array.from(replyKeys)) {
+			const reply = parseLibertyKey(rk);
+			const sim = simulateLibertyPlace(
+				g,
+				reply,
+				color,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			anyLegal = true;
+			const next: Grid = { ...g, cells: sim.cells };
+			if (!attackerCanCapture(next, depth + 1)) return false;
+		}
+		if (!anyLegal) return attackerCanCapture(g, depth + 1);
+		return true;
+	};
+
+	return attackerCanCapture(grid, 0);
+}
+
+/**
+ * Groups force-capturable by an attacker-sente ladder / atari-run at scoring
+ * (M73). Unlike deadStones/Benson, edge foothold does not save a laddered
+ * runner. Seki exemption is intentionally omitted: the lite seki detector can
+ * cluster true atari/ladder stones with neighbors, and a force-capturable
+ * group is not shared-life.
+ */
+export function findLadderDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const dead: Position[] = [];
+	for (const g of groups) {
+		if (
+			!isLadderDeadGroup(grid, g.stones, g.color, wrap, topology, graph)
+		) {
+			continue;
+		}
+		for (const p of g.stones) dead.push(p);
+	}
+	return dead;
+}
+
+/** Clear ladder-dead stones from a grid copy (M73). */
+export function removeLadderDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findLadderDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
 /**
  * Remove stones whose keys appear in `markedKeys` (`row,col`). Used when
  * interactive dead-stone marking confirms (two passes in markingPhase).
@@ -899,6 +1090,9 @@ export function scoreArea(
  * When `bensonLife` is true, interior groups that are not Benson-
  * unconditionally alive are removed instead (M69; supersedes deadStones
  * when both are set — richer vital-region life).
+ * When `ladderDeath` is true, attacker-sente ladder / atari-run groups are
+ * removed after optional Benson/deadStones clearance (M73; edge runners
+ * included — the seam M68/M69 intentionally keep).
  */
 export function areaOutcome(
 	grid: Grid,
@@ -908,17 +1102,21 @@ export function areaOutcome(
 	komi: number = 0,
 	sekiScoring: boolean = false,
 	deadStones: boolean = false,
-	bensonLife: boolean = false
+	bensonLife: boolean = false,
+	ladderDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
 	score: AreaScore;
 } {
-	const scored = bensonLife
+	let scored = bensonLife
 		? removeBensonDeadStones(grid, wrap, topology, graph)
 		: deadStones
 			? removeDeadStones(grid, wrap, topology, graph)
 			: grid;
+	if (ladderDeath) {
+		scored = removeLadderDeadStones(scored, wrap, topology, graph);
+	}
 	const neutral = sekiScoring
 		? findSekiNeutralCells(scored, wrap, topology, graph)
 		: undefined;

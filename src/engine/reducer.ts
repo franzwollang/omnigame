@@ -211,6 +211,11 @@ export type GameConfig = {
 	 * scoring when any stones are marked — resume placement (dispute lite).
 	 */
 	markDeadResume?: boolean;
+	/**
+	 * When true, two-pass area scoring removes attacker-sente ladder /
+	 * atari-run groups after optional Benson/deadStones clearance (M73).
+	 */
+	ladderDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1218,7 +1223,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.komi ?? 0,
 				config.sekiScoring === true,
 				config.deadStones === true,
-				config.bensonLife === true
+				config.bensonLife === true,
+				config.ladderDeath === true
 			);
 			return {
 				...state,
@@ -1239,7 +1245,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.komi ?? 0,
 			config.sekiScoring === true,
 			config.deadStones === true,
-			config.bensonLife === true
+			config.bensonLife === true,
+			config.ladderDeath === true
 		);
 		return {
 			...state,
