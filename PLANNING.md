@@ -133,7 +133,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥951** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥955** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
