@@ -81,11 +81,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M63 | Next missing mechanism (hex menForwardOnly / Hex Forward Men Jump Lite) | `done` |
 | M64 | Next missing mechanism (graph menForwardOnly / Graph Forward Men Jump Lite) | `done` |
 | M65 | Next missing mechanism (hub targetNodes + menForwardOnly / Graph Hub Forward Men Jump Lite) | `done` |
+| M66 | Next missing mechanism (Go Lite Komi / objective.komi) | `done` |
 
-**Optimizing for this marathon:** M65 hub `targetNodes` + `menForwardOnly`
-(`Graph Hub Forward Men Jump Lite`) landed. Pick **P3 next-missing-mechanism**
-(smallest new seam; reject recombinations without anchor) — without asking
-which fork.
+**Optimizing for this marathon:** M66 Go Lite Komi (`objective.komi`) landed.
+Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
+without anchor) — without asking which fork. Strong next Go slice: **seki**;
+large deferred: simultaneous jump / realtime / full Go bundle.
 
 ## Marathon runbook (cloud agents)
 
@@ -100,7 +101,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥775** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥788** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -225,8 +226,9 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; simultaneous jump. Graph hub menForwardOnly landed (M65 Graph Hub
+**Not yet:** full Go (seki / dead-stone scoring); fire→move reorder (only with
+anchor); realtime scheduler; simultaneous jump. Go Lite Komi landed (M66).
+Graph hub menForwardOnly landed (M65 Graph Hub
 Forward Men Jump Lite). Graph menForwardOnly landed (M64 Graph Forward Men
 Jump Lite). Hex menForwardOnly landed (M63 Hex Forward Men Jump Lite). Graph
 flying capture landed (M62 Graph Flying Capture Jump Lite). Hex flying
@@ -250,7 +252,7 @@ M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
 hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
-in M64; hub targetNodes + menForwardOnly in M65).
+in M64; hub targetNodes + menForwardOnly in M65; komi in M66).
 
 ## Phase 2 exit criteria
 
@@ -1004,6 +1006,18 @@ in M64; hub targetNodes + menForwardOnly in M65).
   schema / hub≠row-delta / transcript / replay tests — **done**
 - Out of scope: simultaneous jump; full Go; realtime
 - Green gate: ≥775 + new cases — **done**
+
+### M66 — Go Lite Komi / `objective.komi`
+
+- Schema: optional `objective.komi` (non-negative ≤100); require
+  `objective.mode = area_control` — **done**
+- Kernel: `areaOutcome` adds komi to O (second-player compensation); pass
+  terminal threads `config.komi`; normalize pass-through — **done**
+- Preset `go-lite-komi` (Go Lite Komi, komi 0.5) + unit / schema /
+  empty double-pass transcript / replay tests; form exposes komi under
+  area_control — **done**
+- Out of scope: seki; dead-stone scoring; simultaneous jump; realtime
+- Green gate: ≥788 + new cases — **done**
 
 ## Sequencing notes
 

@@ -262,8 +262,8 @@ KoRule: none | point | positional | situational.
 ### Objectives
 
 n_in_a_row | reach_row (+ targetRows) | destroy_hidden | connect_or_destroy |
-area_control (two passes → score) | identify_secret | clear_hazards |
-match_pairs | none.
+area_control (two passes → score; optional `objective.komi` added to O) |
+identify_secret | clear_hazards | match_pairs | none.
 
 ### Observation
 

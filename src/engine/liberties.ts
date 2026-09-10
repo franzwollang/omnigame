@@ -373,18 +373,25 @@ export function scoreArea(
 	return score;
 }
 
-/** Winner by area score; draw on tie. */
+/**
+ * Winner by area score; draw on tie.
+ * `komi` (default 0) is added to O's score as second-player compensation
+ * under area_control (Go Lite Komi). Returned `score.O` includes komi.
+ */
 export function areaOutcome(
 	grid: Grid,
 	wrap: boolean = false,
 	topology: GridTopology = "rectangle",
-	graph?: GraphTopologyData
+	graph?: GraphTopologyData,
+	komi: number = 0
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
 	score: AreaScore;
 } {
-	const score = scoreArea(grid, wrap, topology, graph);
+	const raw = scoreArea(grid, wrap, topology, graph);
+	const k = Number.isFinite(komi) && komi > 0 ? komi : 0;
+	const score: AreaScore = { X: raw.X, O: raw.O + k };
 	if (score.X > score.O) return { status: "won", winner: "X", score };
 	if (score.O > score.X) return { status: "won", winner: "O", score };
 	return { status: "draw", winner: null, score };

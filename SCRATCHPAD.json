@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T05:52+00:00",
-  "turn": 95,
+  "updated_at": "2026-09-10T06:07+00:00",
+  "turn": 96,
   "focus": {
-    "milestone": "M65",
+    "milestone": "M66",
     "issue": "next-missing-mechanism",
-    "goal": "hub targetNodes+menForwardOnly landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Komi landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 30a6 M64 tip onto cursor/next-task-progression-7eac",
-    "Landed M65 Graph Hub Forward Men Jump Lite / menForwardOnly+targetNodes",
-    "Hub-distance BFS; same-row decoy blocked; O hub on dangling lane"
+    "Synced from 7eac M65 tip onto cursor/next-task-progression-b6b1",
+    "Landed M66 Go Lite Komi / objective.komi + go-lite-komi preset",
+    "areaOutcome adds komi to O; empty double-pass → O wins"
   ],
   "discoveries": [
-    "Unreachable hub (Infinity) blocks all uncrowned steps — O needs lane hub",
-    "Row-mode allows decoy+hub; hub-mode only hub (1,1)→(2,0) lateral"
+    "Komi is smallest genuine Go scoring seam vs simultaneous jump",
+    "Empty board without komi draws; 0.5 komi awards O"
   ],
   "open_threads": [
-    "Next: full Go, realtime, simultaneous jump — reject recombinations"
+    "Next: seki scoring, simultaneous jump, realtime — reject recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M65",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M66 (prefer seki)",
   "blockers": []
 }

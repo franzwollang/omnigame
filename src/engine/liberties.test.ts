@@ -8,6 +8,7 @@ import {
 	isLegalLibertyPlace,
 	orthogonalNeighbors,
 	scoreArea,
+	areaOutcome,
 	simulateLibertyPlace,
 	situationHash
 } from "@/engine/liberties";
@@ -224,6 +225,81 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(state.positionHistory).toEqual([
 			situationHash(state.grid, state.currentPlayer)
 		]);
+	});
+
+	it("validates and compiles the go-lite-komi preset", () => {
+		const cfg = examplePresets["go-lite-komi"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.komi).toBe(0.5);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.komi outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; komi?: number };
+		};
+		bad.objective = { mode: "n_in_a_row", komi: 0.5 };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("areaOutcome applies komi to O (empty board → O wins)", () => {
+		const g = gridOf(3, 3, Array(9).fill(null));
+		expect(areaOutcome(g).status).toBe("draw");
+		expect(areaOutcome(g, false, "rectangle", undefined, 0.5)).toEqual({
+			status: "won",
+			winner: "O",
+			score: { X: 0, O: 0.5 }
+		});
+	});
+
+	it("areaOutcome: X still wins when ahead by more than komi", () => {
+		let g = gridOf(3, 1, [null, null, null]);
+		g = { ...g, cells: setCell(g, { row: 0, col: 0 }, "X") };
+		g = { ...g, cells: setCell(g, { row: 0, col: 1 }, "X") };
+		// stones X=2 + mono-border empty (0,2) → raw X=3; + komi 0.5 → O=0.5
+		const out = areaOutcome(g, false, "rectangle", undefined, 0.5);
+		expect(out.status).toBe("won");
+		expect(out.winner).toBe("X");
+		expect(out.score).toEqual({ X: 3, O: 0.5 });
+	});
+
+	it("go-lite-komi: empty double-pass awards O; replay faithful", () => {
+		const cfg = examplePresets["go-lite-komi"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const withoutKomi = structuredClone(cfg);
+		withoutKomi.objective = { mode: "area_control" };
+		const baseline = compileConfig(withoutKomi);
+		let drawState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			drawState = baseline.kernel.stepSync(drawState, action).nextState;
+		}
+		expect(drawState.status).toBe("draw");
+		expect(drawState.winner).toBeNull();
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
 	});
 
 	it("rejects capture.ko without liberties mode", () => {

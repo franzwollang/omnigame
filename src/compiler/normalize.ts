@@ -72,6 +72,10 @@ export function flattenToGameConfig(config: Config): GameConfig {
 				}
 			: undefined,
 		objectiveMode: config.objective.mode,
+		komi:
+			typeof config.objective.komi === "number"
+				? config.objective.komi
+				: undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -186,6 +190,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	fogRadius: 1,
 	fogMetric: "chebyshev",
 	objectiveMode: "n_in_a_row",
+	komi: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,

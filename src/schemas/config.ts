@@ -432,7 +432,13 @@ export const zConfig = z
 						O: z.number().int().nonnegative()
 					})
 					.strict()
-					.optional()
+					.optional(),
+				/**
+				 * Second-player (O) scoring compensation under area_control.
+				 * Added to O's area score at two-pass terminal. Omit / 0 = no
+				 * komi (Go Lite default). Typical demo: 0.5 or 6.5.
+				 */
+				komi: z.number().nonnegative().max(100).optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1185,6 +1191,15 @@ export const zConfig = z
 					message: "area_control is incompatible with move input"
 				});
 			}
+		}
+
+		// Komi is area_control-only (second-player scoring offset).
+		if (cfg.objective.komi !== undefined && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "komi"],
+				message: "objective.komi requires objective.mode = 'area_control'"
+			});
 		}
 
 		// Hex foothold: cell + n-in-a-row, move + reach_row, flood_reveal +

@@ -170,6 +170,11 @@ export type GameConfig = {
 		| "clear_hazards"
 		| "match_pairs"
 		| "none";
+	/**
+	 * Second-player (O) area-score compensation when objectiveMode is
+	 * area_control. Added at two-pass terminal scoring. Default 0.
+	 */
+	komi?: number;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1114,7 +1119,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			state.grid,
 			config.gridWrap === true,
 			config.topology ?? "rectangle",
-			config.graph
+			config.graph,
+			config.komi ?? 0
 		);
 		return {
 			...state,

@@ -4867,6 +4867,49 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"go-lite-komi": definePreset({
+		id: "go-lite-komi",
+		name: "Go Lite Komi",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"komi",
+			"mechanism"
+		],
+		description:
+			"Go Lite with second-player komi (objective.komi added to O at two-pass scoring). Empty-board double-pass → O wins by komi; without komi the same script draws. Unlocks scoring compensation — not seki / full Go.",
+		config: {
+			metadata: { name: "Go Lite Komi", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", komi: 0.5 },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: []
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

@@ -1111,6 +1111,47 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										</FormItem>
 									)}
 								/>
+								{form.watch("objective.mode") === "area_control" ? (
+									<FormField
+										control={form.control}
+										name="objective.komi"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Komi (O offset)</FormLabel>
+												<FormControl>
+													<Input
+														type="number"
+														min={0}
+														max={100}
+														step={0.5}
+														value={
+															field.value === undefined ||
+															field.value === null
+																? ""
+																: field.value
+														}
+														onChange={(e) => {
+															const raw = e.target.value;
+															if (raw === "") {
+																field.onChange(undefined);
+																return;
+															}
+															const n = Number(raw);
+															field.onChange(
+																Number.isFinite(n) ? n : undefined
+															);
+														}}
+													/>
+												</FormControl>
+												<p className="text-xs text-muted-foreground">
+													Added to O at two-pass area scoring. Empty =
+													no komi.
+												</p>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+								) : null}
 							</div>
 
 							<div className="space-y-2">
