@@ -11,13 +11,13 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Graph flood_reveal (`graph` + explicit-edge hazard adjacency + Graph
-Minesweeper Lite) landed as **M54**. Hex flood_reveal closed as M53; flying
-kings as M52; longest mandatory capture as M51; forward-only men as M50;
-crowned promotion as M49; graph jump as M48; hex jump as M47; memory flip as
-M46; mustCapture as M45; rectangle flood_reveal as M44. P4 tooling-ci and
-semantics-doc-refresh already closed (M41–M42; semantics notes continue per
-mechanism).
+Flying jump capture (`crownedFlyingCapture` + Flying Capture Jump Lite)
+landed as **M55**. Graph flood_reveal closed as M54; hex flood_reveal as M53;
+flying kings as M52; longest mandatory capture as M51; forward-only men as
+M50; crowned promotion as M49; graph jump as M48; hex jump as M47; memory
+flip as M46; mustCapture as M45; rectangle flood_reveal as M44. P4 tooling-ci
+and semantics-doc-refresh already closed (M41–M42; semantics notes continue
+per mechanism).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -28,8 +28,6 @@ e.g.:
   recombination of reveal)
 - Memory bonus-turn-on-match / custom decks (schema field exists; deferred —
   bonusTurnOnMatch is kernel-complete / preset-only)
-- Flying jump capture (long-range leap over enemy — deferred; M52 is quiet
-  slide only)
 - commitReveal + slide/replace demos (kernel complete — preset-only unless a
   new seam appears)
 - multi-action slide/replace under simultaneous (deferred composition; only if
@@ -78,15 +76,18 @@ rectangle jump only). **Forward Men Jump Lite** covers Checkers-lite
 forward-only men (`promotion.menForwardOnly`; uncrowned row-delta filter;
 crowned unrestricted). **Flying Kings Jump Lite** covers Draughts-lite flying
 kings (`promotion.crownedRange` — crowned quiet slides longer than men; jump
-leaps unchanged). **Minesweeper Lite** covers flood-fill region reveal
-(`flood_reveal` / `clear_hazards` / `hazards`) on rectangle. **Hex Minesweeper
-Lite** covers hex cube-axis-6 hazard adjacency. **Graph Minesweeper Lite**
-covers graph explicit-edge hazard adjacency (max degree ≤ 8). **Memory Flip
-Lite** covers tile pair-matching (`memory_flip` / `flip` / `match_pairs` /
-`memory`). Open simultaneous deduction joint UCT covers agent search over
-query/guess(/eliminate) cartesian (fire→move still open if an anchor appears).
-CI green gate: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics
-draft: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
-mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
-promotion in M49; menForwardOnly in M50; mustLongestCapture in M51;
-crownedRange in M52; hex flood_reveal in M53; graph flood_reveal in M54).
+leaps unchanged without flying capture). **Flying Capture Jump Lite** covers
+Draughts-lite flying jump capture (`promotion.crownedFlyingCapture` — crowned
+ray leap with empty approach + long land). **Minesweeper Lite** covers
+flood-fill region reveal (`flood_reveal` / `clear_hazards` / `hazards`) on
+rectangle. **Hex Minesweeper Lite** covers hex cube-axis-6 hazard adjacency.
+**Graph Minesweeper Lite** covers graph explicit-edge hazard adjacency (max
+degree ≤ 8). **Memory Flip Lite** covers tile pair-matching (`memory_flip` /
+`flip` / `match_pairs` / `memory`). Open simultaneous deduction joint UCT
+covers agent search over query/guess(/eliminate) cartesian (fire→move still
+open if an anchor appears). CI green gate: `.github/workflows/ci.yml` (Node
+20.19 + pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; jump
+in M43; flood_reveal in M44; mustCapture in M45; memory_flip in M46; hex jump
+in M47; graph jump in M48; promotion in M49; menForwardOnly in M50;
+mustLongestCapture in M51; crownedRange in M52; hex flood_reveal in M53; graph
+flood_reveal in M54; crownedFlyingCapture in M55).

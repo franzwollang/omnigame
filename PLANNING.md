@@ -70,10 +70,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M52 | Next missing mechanism (flying kings / crownedRange) | `done` |
 | M53 | Next missing mechanism (hex flood_reveal) | `done` |
 | M54 | Next missing mechanism (graph flood_reveal) | `done` |
+| M55 | Next missing mechanism (flying jump capture) | `done` |
 
-**Optimizing for this marathon:** M54 graph flood_reveal (`Graph Minesweeper
-Lite`) landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
-recombinations without anchor) — without asking which fork.
+**Optimizing for this marathon:** M55 flying jump capture (`Flying Capture
+Jump Lite` / `crownedFlyingCapture`) landed. Pick **P3 next-missing-mechanism**
+(smallest new seam; reject recombinations without anchor) — without asking
+which fork.
 
 ## Marathon runbook (cloud agents)
 
@@ -88,7 +90,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥682** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥690** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -152,11 +154,13 @@ crown on reach row; crowned adjacency); **Forward Men Jump Lite** demonstrates
 `promotion.menForwardOnly` (uncrowned advance toward promo side only;
 crowned unrestricted); **Flying Kings Jump Lite** demonstrates
 `promotion.crownedRange` (crowned quiet slides longer than men; jump leaps
-unchanged).
+unchanged); **Flying Capture Jump Lite** demonstrates
+`promotion.crownedFlyingCapture` (crowned long-range leap capture within
+`crownedRange`).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
 `clear_hazards` + `hazards` (region open + mine-hit / clear-board terminals);
 **Hex Minesweeper Lite** demonstrates the same on `hex_offset` with cube-axis-6
-adjacency (not Chebyshev-8; graph still deferred).
+adjacency; **Graph Minesweeper Lite** on `graph` with explicit-edge adjacency.
 **Memory:** **Memory Flip Lite** demonstrates `memory_flip` + `flip` +
 `match_pairs` + `memory` deck.
 **Deduction:** Guess Who Lite (`input/observation = deduction`,
@@ -204,19 +208,20 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; hex-graph promotion; flying jump capture. Graph flood_reveal
-landed (M54 Graph Minesweeper Lite). Hex flood_reveal landed (M53 Hex
-Minesweeper Lite). Flying kings quiet range landed (M52 Flying Kings Jump
-Lite). Longest mandatory capture landed (M51 Mandatory Longest Jump Lite).
-Forward-only men landed (M50 Forward Men Jump Lite). Crowned promotion
-landed (M49 Crowned Kings Jump Lite). Graph jump landed (M48 Graph Jump
-Race). Hex jump landed (M47 Hex Jump Race). Mandatory jump-at-turn-start
-landed (M45 Mandatory Jump Race). CI: `.github/workflows/ci.yml` (Node
-20.19 + pnpm 10.5.2). Semantics: `docs/semantics.md` (M42; jump in M43;
-flood_reveal in M44; mustCapture in M45; memory_flip in M46; hex jump in
-M47; graph jump in M48; promotion in M49; menForwardOnly in M50;
-mustLongestCapture in M51; crownedRange in M52; hex flood_reveal in M53;
-graph flood_reveal in M54).
+scheduler; hex-graph promotion. Flying jump capture landed (M55 Flying
+Capture Jump Lite). Graph flood_reveal landed (M54 Graph Minesweeper Lite).
+Hex flood_reveal landed (M53 Hex Minesweeper Lite). Flying kings quiet range
+landed (M52 Flying Kings Jump Lite). Longest mandatory capture landed (M51
+Mandatory Longest Jump Lite). Forward-only men landed (M50 Forward Men Jump
+Lite). Crowned promotion landed (M49 Crowned Kings Jump Lite). Graph jump
+landed (M48 Graph Jump Race). Hex jump landed (M47 Hex Jump Race).
+Mandatory jump-at-turn-start landed (M45 Mandatory Jump Race). CI:
+`.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2). Semantics:
+`docs/semantics.md` (M42; jump in M43; flood_reveal in M44; mustCapture in
+M45; memory_flip in M46; hex jump in M47; graph jump in M48; promotion in
+M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
+hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
+M55).
 
 ## Phase 2 exit criteria
 
@@ -821,6 +826,23 @@ graph flood_reveal in M54).
 - Form observation helper notes graph edges — **done**
 - Out of scope: flags/chords; wrap; degree > 8
 - Green gate: ≥682 tests — **done**
+
+### M55 — Flying jump capture / crownedFlyingCapture
+
+- Schema: optional `movement.promotion.crownedFlyingCapture` (bool); requires
+  `crownedRange >= 2`; inherits promotion constraints (rectangle jump,
+  alternating) — **done**
+- Movement: crowned pieces ray-walk empty approach + long land within
+  `crownedRange`; men stay adjacent leaps; `jumpMid` finds unique enemy on
+  ray; chains / mustCapture unchanged — **done**
+- Normalize passes `crownedFlyingCapture`; contract invariant
+  `crownedFlyingCaptureExtendsJumpRays`; form JSON note — **done**
+- Preset `flying-capture-jump-lite` (Flying Capture Jump Lite — mustCapture
+  jump promotes on row 3; mustContinueFrom chain; adjacent land ≠ win;
+  flying land to win row 0) + helper/schema/transcript/replay tests — **done**
+- Out of scope: hex/graph flying capture; simultaneous jump; multi-jump
+  direction-change demos beyond existing chains
+- Green gate: ≥690 tests — **done**
 
 ## Sequencing notes
 

@@ -185,9 +185,10 @@ export const zConfig = z
 				 * `crownedAdjacency` for quiet/jump rays. Optional
 				 * `crownedRange` (default 1) gives crowned quiet slides longer
 				 * than men (`movement.range` stays 1). Optional
-				 * `menForwardOnly` restricts uncrowned row deltas to the
-				 * promotion-side advance. Jump capture stays single-leap
-				 * (flying capture deferred).
+				 * `crownedFlyingCapture` extends crowned jump leaps along a
+				 * clear ray within `crownedRange` (empty approach + long land;
+				 * men stay adjacent). Optional `menForwardOnly` restricts
+				 * uncrowned row deltas to the promotion-side advance.
 				 */
 				promotion: z
 					.object({
@@ -202,10 +203,17 @@ export const zConfig = z
 							.enum(["orthogonal", "diagonal", "king"])
 							.default("king"),
 						/**
-						 * Quiet slide range for crowned pieces (1–8). Men keep
-						 * `movement.range` (= 1 under jump). Default 1.
+						 * Quiet slide / flying-capture ray range for crowned
+						 * pieces (1–8). Men keep `movement.range` (= 1 under
+						 * jump). Default 1. Flying capture requires ≥ 2.
 						 */
 						crownedRange: z.number().int().min(1).max(8).optional(),
+						/**
+						 * Crowned pieces may leap over a non-adjacent enemy and
+						 * land beyond the immediate past-mid cell (ray within
+						 * crownedRange). Men keep adjacent leaps.
+						 */
+						crownedFlyingCapture: z.boolean().optional(),
 						/**
 						 * Uncrowned men may only quiet-move / jump with row delta
 						 * toward their promotion side (from the two targetRows).
@@ -2353,6 +2361,17 @@ export const zConfig = z
 						code: z.ZodIssueCode.custom,
 						path: ["movement", "promotion", "targetRows", player],
 						message: `promotion.targetRows.${player} must be in [0, ${cfg.grid.height - 1}]`
+					});
+				}
+			}
+			if (cfg.movement.promotion.crownedFlyingCapture === true) {
+				const flyRange = cfg.movement.promotion.crownedRange ?? 1;
+				if (flyRange < 2) {
+					ctx.addIssue({
+						code: z.ZodIssueCode.custom,
+						path: ["movement", "promotion", "crownedRange"],
+						message:
+							"promotion.crownedFlyingCapture requires crownedRange >= 2 (ray must fit mid + land)"
 					});
 				}
 			}

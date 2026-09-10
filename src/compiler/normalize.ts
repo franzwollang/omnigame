@@ -121,6 +121,10 @@ export function flattenToGameConfig(config: Config): GameConfig {
 													config.movement.promotion.crownedRange
 											}
 										: {}),
+									...(config.movement.promotion
+										.crownedFlyingCapture === true
+										? { crownedFlyingCapture: true }
+										: {}),
 									...(config.movement.promotion.menForwardOnly === true
 										? { menForwardOnly: true }
 										: {})

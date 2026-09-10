@@ -13,10 +13,13 @@
  * Optional `promotion` (rectangle jump): land on `targetRows[seat]` → crown
  * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king) and
  * optional `crownedRange` (quiet slide depth; default men `range`) via
- * `effectiveMovement`. Jump capture stays single-leap (no flying capture).
- * Optional `menForwardOnly`: uncrowned pieces may only quiet-move / jump
- * with row delta toward their promotion side (derived from the two
- * `targetRows`); crowned pieces ignore the filter. Hex_offset:
+ * `effectiveMovement`. Optional `crownedFlyingCapture`: crowned pieces may
+ * leap over an enemy at any distance along a ray (empties before the mid)
+ * and land on any empty cell beyond within `crownedRange` (Draughts-lite
+ * flying capture); men stay adjacent single-leap. Optional `menForwardOnly`:
+ * uncrowned pieces may only quiet-move / jump with row delta toward their
+ * promotion side (derived from the two `targetRows`); crowned pieces ignore
+ * the filter. Hex_offset:
  * orthogonal cube-axis slides (range 1..8,
  * same blocker/replace rules) and cube-axis jump (enemy mid + empty land two
  * hops along one cube dir). Graph: orthogonal chain-walk along explicit edges
@@ -52,9 +55,16 @@ export type MovementPromotion = {
 	crownedAdjacency?: MovementAdjacency;
 	/**
 	 * Quiet slide range for crowned pieces (1–8). Men keep `config.range`.
-	 * Default: same as men range. Does not extend jump leap distance.
+	 * Default: same as men range. Also caps flying-capture ray length when
+	 * `crownedFlyingCapture` is on.
 	 */
 	crownedRange?: number;
+	/**
+	 * When true, crowned pieces may jump over a non-adjacent enemy (empty
+	 * approach) and/or land beyond the cell immediately past the mid, along
+	 * a clear ray within `crownedRange`. Men keep adjacent leaps.
+	 */
+	crownedFlyingCapture?: boolean;
 	/**
 	 * When true, uncrowned men may only advance toward their promotion side
 	 * (row-delta sign from the two targetRows). Crowned pieces unrestricted.
@@ -93,11 +103,21 @@ export type MovementConfig = {
 	/**
 	 * Crowned kings / Transform lite (rectangle jump): promote on
 	 * `targetRows[seat]`; crowned pieces use `crownedAdjacency` and
-	 * optional `crownedRange`. Optional `menForwardOnly` restricts
-	 * uncrowned quiet/jump row deltas.
+	 * optional `crownedRange` / `crownedFlyingCapture`. Optional
+	 * `menForwardOnly` restricts uncrowned quiet/jump row deltas.
 	 */
 	promotion?: MovementPromotion;
 };
+
+/** True when this piece uses Draughts-lite flying jump capture. */
+export function usesFlyingCapture(
+	config: MovementConfig,
+	cellValue: CellValue
+): boolean {
+	return (
+		config.promotion?.crownedFlyingCapture === true && isCrowned(cellValue)
+	);
+}
 
 export type MovementBoard = {
 	topology?: GridTopology;
@@ -241,12 +261,12 @@ function posKey(p: Position): string {
 }
 
 /**
- * Mid cell for a 2-step jump along one adjacency ray (rectangle), one
- * cube axis (hex_offset), or two graph edges (enemy mid node). Returns
- * null when `to` is not exactly two steps from `from` on a single
- * direction / edge path. Pass `wrapOrBoard` + `grid` for hex (and
- * wrap-aware mid); graph needs `graph` on the board; rectangle still
- * uses raw deltas when board omitted.
+ * Mid cell for a jump: adjacent 2-step leap (rectangle / hex / graph), or
+ * the unique enemy on a flying-capture ray when `crownedFlyingCapture` is
+ * set and `from→to` lies on a clear adjacency ray within `config.range`.
+ * Returns null when no legal mid exists. Pass `wrapOrBoard` + `grid` for
+ * hex/graph/flying (and wrap-aware mid); rectangle adjacent leaps still
+ * use raw deltas when board/grid omitted.
  */
 export function jumpMid(
 	from: Position,
@@ -296,13 +316,46 @@ export function jumpMid(
 			return { row: from.row + dr, col: from.col + dc };
 		}
 	}
+	// Flying capture: unique enemy between from and to on a clear ray.
+	if (
+		config.promotion?.crownedFlyingCapture === true &&
+		grid &&
+		config.capture === "jump"
+	) {
+		const mover = cellOwner(getCell(grid, from));
+		if (mover === null) return null;
+		for (const [dr, dc] of adjacencyDeltas(config.adjacency)) {
+			let enemy: Position | null = null;
+			let cursor: Position = from;
+			for (let i = 1; i <= config.range; i++) {
+				const next = step(grid, cursor, { row: dr, col: dc }, opts.wrap);
+				if (!next) break;
+				cursor = next;
+				if (cursor.row === to.row && cursor.col === to.col) {
+					return enemy;
+				}
+				const occ = getCell(grid, cursor);
+				if (enemy === null) {
+					if (occ === null) continue;
+					if (isEnemyPiece(occ, mover)) {
+						enemy = cursor;
+						continue;
+					}
+					return null;
+				}
+				if (occ !== null) return null;
+			}
+		}
+	}
 	return null;
 }
 
 /**
  * Landing cells reachable by jumping over exactly one enemy to an empty
  * square (rectangle adjacency rays, hex cube-axis double steps, or graph
- * 2-edge leaps). Distinct from replace (land on enemy) and hop-ball
+ * 2-edge leaps). With `crownedFlyingCapture`, crowned rectangle pieces may
+ * approach across empties and land any empty cell beyond the mid within
+ * `crownedRange`. Distinct from replace (land on enemy) and hop-ball
  * (BFS through empties).
  */
 export function jumpDestinations(
@@ -349,6 +402,36 @@ export function jumpDestinations(
 			const land = stepHex(grid, mid, d, opts.wrap);
 			if (!land || getCell(grid, land) !== null) continue;
 			out.push(land);
+		}
+		return out;
+	}
+
+	// Rectangle flying capture (crowned only): ray approach + long land.
+	if (usesFlyingCapture(config, cell)) {
+		for (const [dr, dc] of pieceAdjacencyDeltas(config, cell)) {
+			let enemyMid: Position | null = null;
+			let cursor: Position = from;
+			for (let i = 1; i <= eff.range; i++) {
+				const next = step(
+					grid,
+					cursor,
+					{ row: dr, col: dc },
+					opts.wrap
+				);
+				if (!next) break;
+				cursor = next;
+				const occ = getCell(grid, cursor);
+				if (enemyMid === null) {
+					if (occ === null) continue;
+					if (isEnemyPiece(occ, owner)) {
+						enemyMid = cursor;
+						continue;
+					}
+					break;
+				}
+				if (occ !== null) break;
+				out.push(cursor);
+			}
 		}
 		return out;
 	}
@@ -883,7 +966,8 @@ export function legalDestinations(
 	}
 
 	// Rectangle: jump capture unions quiet slides (men range 1; crowned may
-	// use crownedRange) with single-leap landings (jump distance unchanged).
+	// use crownedRange) with leaps (adjacent, or flying when
+	// crownedFlyingCapture).
 	if (eff.capture === "jump") {
 		const quiet = slideDestinations(
 			grid,

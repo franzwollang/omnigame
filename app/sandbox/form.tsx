@@ -878,7 +878,12 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												crownedRange
 											</code>{" "}
 											for quiet slides longer than men (Flying Kings
-											Jump Lite). Optional{" "}
+											Jump Lite) and optional{" "}
+											<code className="text-[11px]">
+												crownedFlyingCapture
+											</code>{" "}
+											for long-range leap capture (Flying Capture Jump
+											Lite). Optional{" "}
 											<code className="text-[11px]">
 												menForwardOnly
 											</code>{" "}

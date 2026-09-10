@@ -153,6 +153,7 @@ export const Contracts = {
 			"transformOnReachPromotionRow",
 			"crownedUsesCrownedAdjacency",
 			"crownedUsesCrownedRange",
+			"crownedFlyingCaptureExtendsJumpRays",
 			"preserveCrownOnMove",
 			"rectangleJumpOnly",
 			"menForwardOnlyRestrictsUncrowned"

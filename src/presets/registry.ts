@@ -2209,6 +2209,74 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"flying-capture-jump-lite": definePreset({
+		id: "flying-capture-jump-lite",
+		name: "Flying Capture Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"promotion",
+			"crown",
+			"flying",
+			"flying-capture",
+			"crowned-range",
+			"reach-row",
+			"6x6",
+			"mechanism"
+		],
+		description:
+			"Draughts-lite flying jump capture: after crowning, kings may leap over an enemy along a clear diagonal ray and land beyond the immediate past-mid cell (within crownedRange). mustCapture forces the opening leap onto promo row 3 (≠ win row 0); mustContinueFrom then requires a second jump from the crowned piece. Adjacent-only continuation lands at (1,3); flying capture reaches (0,2) for the win. Unlocks promotion.crownedFlyingCapture — Flying Kings Jump Lite extends quiet slides only.",
+		config: {
+			metadata: { name: "Flying Capture Jump Lite", version: 1 },
+			grid: { width: 6, height: 6, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "diagonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				promotion: {
+					targetRows: { X: 3, O: 2 },
+					crownedAdjacency: "diagonal",
+					crownedRange: 4,
+					crownedFlyingCapture: true
+				}
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 5 }
+			},
+			tokens: [
+				{
+					id: "flycap-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "flycap-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// X(5,3) mustCapture-jumps O(4,4)→(3,5): promotes to X+.
+				// mustContinueFrom: O(2,4) is the next mid; adjacent land is
+				// (1,3); crownedFlyingCapture also reaches (0,2) for the win.
+				{ row: 5, col: 3, player: "X", visibility: "public" },
+				{ row: 4, col: 4, player: "O", visibility: "public" },
+				{ row: 2, col: 4, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"hex-replace-race": definePreset({
 		id: "hex-replace-race",
 		name: "Hex Replace Race",
