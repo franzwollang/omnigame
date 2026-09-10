@@ -601,13 +601,24 @@ export const zConfig = z
 				 * When true, interior groups bordering a plus / X-pentomino
 				 * nakade big-eye that would have <2 true eyes after an opponent
 				 * vital fill are removed before two-pass scoring (after optional
-				 * bulky5NakadeDeath; before netDeath / looseNetDeath /
-				 * ladderDeath). Edge foothold + seki clusters kept. Distinct from
-				 * bulky-5 (P) and tetromino nakade tables so the plus big-eye
-				 * stays contrastable. Default / omit = leave Benson/eye
-				 * survivors.
+				 * bulky5NakadeDeath; before vNakadeDeath / netDeath /
+				 * looseNetDeath / ladderDeath). Edge foothold + seki clusters
+				 * kept. Distinct from bulky-5 (P) and tetromino nakade tables so
+				 * the plus big-eye stays contrastable. Default / omit = leave
+				 * Benson/eye survivors.
 				 */
 				plusNakadeDeath: z.boolean().optional(),
+				/**
+				 * When true, interior groups bordering a V-pentomino nakade
+				 * big-eye that would have <2 true eyes after an opponent vital
+				 * fill are removed before two-pass scoring (after optional
+				 * plusNakadeDeath; before netDeath / looseNetDeath /
+				 * ladderDeath). Edge foothold + seki clusters kept. Distinct from
+				 * plus (X) / bulky-5 (P) and tetromino nakade tables so the V
+				 * big-eye stays contrastable (3×3 with a filled 2×2 hole block).
+				 * Default / omit = leave Benson/eye survivors.
+				 */
+				vNakadeDeath: z.boolean().optional(),
 				/**
 				 * When true, groups force-capturable by an attacker-sente net /
 				 * geta (root exactly 3 liberties; every defender liberty
@@ -615,7 +626,8 @@ export const zConfig = z
 				 * re-nets) are removed before two-pass scoring (after optional
 				 * nakadeDeath / lNakadeDeath / squareNakadeDeath /
 				 * pyramidNakadeDeath / twistedNakadeDeath / l4NakadeDeath /
-				 * straight4NakadeDeath / bulky5NakadeDeath / plusNakadeDeath;
+				 * straight4NakadeDeath / bulky5NakadeDeath / plusNakadeDeath /
+				 * vNakadeDeath;
 				 * before looseNetDeath / senteLadderDeath / ladderDeath). Edge
 				 * foothold does not save. Default / omit = leave multi-liberty
 				 * trapped groups on the board.
@@ -1610,6 +1622,14 @@ export const zConfig = z
 				path: ["objective", "plusNakadeDeath"],
 				message:
 					"objective.plusNakadeDeath requires objective.mode = 'area_control'"
+			});
+		}
+		if (cfg.objective.vNakadeDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "vNakadeDeath"],
+				message:
+					"objective.vNakadeDeath requires objective.mode = 'area_control'"
 			});
 		}
 

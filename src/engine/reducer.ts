@@ -285,16 +285,23 @@ export type GameConfig = {
 	 * When true, two-pass area scoring removes interior groups bordering a
 	 * plus / X-pentomino nakade big-eye that would have <2 true eyes after an
 	 * opponent vital fill — after optional bulky5NakadeDeath and before
-	 * netDeath (M93).
+	 * vNakadeDeath / netDeath (M93).
 	 */
 	plusNakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups bordering a
+	 * V-pentomino nakade big-eye that would have <2 true eyes after an
+	 * opponent vital fill — after optional plusNakadeDeath and before
+	 * netDeath (M94).
+	 */
+	vNakadeDeath?: boolean;
 	/**
 	 * When true, two-pass area scoring removes groups force-capturable by an
 	 * attacker-sente tight net / geta (exactly 3 root liberties; every escape
 	 * has a finishing reply) after optional nakadeDeath / lNakadeDeath /
 	 * squareNakadeDeath / pyramidNakadeDeath / twistedNakadeDeath /
 	 * l4NakadeDeath / straight4NakadeDeath / bulky5NakadeDeath /
-	 * plusNakadeDeath and before looseNetDeath / senteLadderDeath /
+	 * plusNakadeDeath / vNakadeDeath and before looseNetDeath / senteLadderDeath /
 	 * ladderDeath (M77).
 	 */
 	netDeath?: boolean;
@@ -1348,7 +1355,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.l4NakadeDeath === true,
 				config.straight4NakadeDeath === true,
 				config.bulky5NakadeDeath === true,
-				config.plusNakadeDeath === true
+				config.plusNakadeDeath === true,
+				config.vNakadeDeath === true
 			);
 			return {
 				...state,
@@ -1386,7 +1394,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.l4NakadeDeath === true,
 			config.straight4NakadeDeath === true,
 			config.bulky5NakadeDeath === true,
-			config.plusNakadeDeath === true
+			config.plusNakadeDeath === true,
+			config.vNakadeDeath === true
 		);
 		return {
 			...state,

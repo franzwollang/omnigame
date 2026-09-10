@@ -116,6 +116,7 @@ These are built from the same shared schema and operators.
 - **Go Lite Straight-4-Nakade** (`objective.straight4NakadeDeath` straight-4 / I-tetromino bulky big-eye vital-fill removal at scoring)
 - **Go Lite Bulky-5-Nakade** (`objective.bulky5NakadeDeath` bulky-5 / P-pentomino big-eye vital-fill removal at scoring)
 - **Go Lite Plus-Nakade** (`objective.plusNakadeDeath` plus / X-pentomino big-eye vital-fill removal at scoring)
+- **Go Lite V-Nakade** (`objective.vNakadeDeath` V-pentomino big-eye vital-fill removal at scoring)
 - **Go Lite Net** (`objective.netDeath` attacker-sente net / geta removal at scoring)
 - **Go Lite Loose Net** (`objective.looseNetDeath` attacker-sente loose net / 4-lib geta removal at scoring)
 - **Go Lite Sente Ladder** (`objective.senteLadderDeath` attacker-first 3-lib → ladder collapse at scoring)
@@ -610,14 +611,17 @@ Go Lite L-Nakade / `objective.lNakadeDeath` (M86), Go Lite Square-Nakade /
 `objective.l4NakadeDeath` (M90), Go Lite Straight-4-Nakade /
 `objective.straight4NakadeDeath` (M91), Go Lite Bulky-5-Nakade /
 `objective.bulky5NakadeDeath` (M92), Go Lite Plus-Nakade /
-`objective.plusNakadeDeath` (M93).
+`objective.plusNakadeDeath` (M93), Go Lite V-Nakade /
+`objective.vNakadeDeath` (M94).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fuller Go remainder if uniquely expressible; realtime scheduler; reject
-  recombinations, topology ports, and generic any-5-cell flags)
-- Deferred: fuller Go rules (plus-nakade landed as M93; bulky-5-nakade landed
+  rabbity-six / other free pentomino if uniquely contrastable; realtime
+  scheduler; reject recombinations, topology ports, and generic any-5-cell
+  flags)
+- Deferred: fuller Go rules (V-nakade landed as M94; plus-nakade landed as M93;
+  bulky-5-nakade landed
   as M92; straight-4-nakade landed as M91; L4-nakade as M90;
   twisted-nakade as M89;
   pyramid-nakade as M88; square-nakade as M87; L-nakade as M86;
@@ -649,7 +653,7 @@ Go Lite L-Nakade / `objective.lNakadeDeath` (M86), Go Lite Square-Nakade /
   jump in M85; lNakadeDeath in M86; squareNakadeDeath in M87;
   pyramidNakadeDeath in M88; twistedNakadeDeath in M89; l4NakadeDeath in M90;
   straight4NakadeDeath in M91; bulky5NakadeDeath in M92; plusNakadeDeath in
-  M93)
+  M93; vNakadeDeath in M94)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

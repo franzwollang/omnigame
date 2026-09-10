@@ -1028,6 +1028,81 @@ export function isPlusNakadeVulnerableRegion(
 }
 
 /**
+ * V-pentomino nakade: exactly five empties in a 3×3 bbox whose four holes form
+ * a filled 2×2 block in one corner (two full adjacent sides); vital = unique
+ * occupied bbox-corner whose two in-region neighbors are not colinear (the V
+ * vertex). Distinct from plus (four corner holes) and bulky-5 (2×3 / 3×2) so
+ * the V big-eye stays contrastable (M94).
+ */
+export function isVNakadeVulnerableRegion(
+	regionCells: Position[]
+): { vital: Position } | null {
+	if (regionCells.length !== 5) return null;
+	if (isBulky5NakadeVulnerableRegion(regionCells)) return null;
+	if (isPlusNakadeVulnerableRegion(regionCells)) return null;
+	let minR = Infinity;
+	let maxR = -Infinity;
+	let minC = Infinity;
+	let maxC = -Infinity;
+	const keys = new Set<string>();
+	for (const p of regionCells) {
+		if (p.row < minR) minR = p.row;
+		if (p.row > maxR) maxR = p.row;
+		if (p.col < minC) minC = p.col;
+		if (p.col > maxC) maxC = p.col;
+		keys.add(`${p.row},${p.col}`);
+	}
+	const h = maxR - minR;
+	const w = maxC - minC;
+	if (!(h === 2 && w === 2)) return null;
+	const missing: Position[] = [];
+	for (let r = minR; r <= maxR; r++) {
+		for (let c = minC; c <= maxC; c++) {
+			if (!keys.has(`${r},${c}`)) missing.push({ row: r, col: c });
+		}
+	}
+	if (missing.length !== 4) return null;
+	let holeMinR = Infinity;
+	let holeMaxR = -Infinity;
+	let holeMinC = Infinity;
+	let holeMaxC = -Infinity;
+	for (const m of missing) {
+		if (m.row < holeMinR) holeMinR = m.row;
+		if (m.row > holeMaxR) holeMaxR = m.row;
+		if (m.col < holeMinC) holeMinC = m.col;
+		if (m.col > holeMaxC) holeMaxC = m.col;
+	}
+	if (holeMaxR - holeMinR !== 1 || holeMaxC - holeMinC !== 1) return null;
+	const holeKeys = new Set(missing.map((m) => `${m.row},${m.col}`));
+	for (let r = holeMinR; r <= holeMaxR; r++) {
+		for (let c = holeMinC; c <= holeMaxC; c++) {
+			if (!holeKeys.has(`${r},${c}`)) return null;
+		}
+	}
+
+	const ortho = (a: Position, b: Position) =>
+		Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
+	const corners: Position[] = [
+		{ row: minR, col: minC },
+		{ row: minR, col: maxC },
+		{ row: maxR, col: minC },
+		{ row: maxR, col: maxC }
+	];
+	const vertices: Position[] = [];
+	for (const corner of corners) {
+		if (!keys.has(`${corner.row},${corner.col}`)) continue;
+		const neighbors = regionCells.filter((q) => ortho(corner, q));
+		if (neighbors.length !== 2) continue;
+		const a = neighbors[0]!;
+		const b = neighbors[1]!;
+		if (a.row === b.row || a.col === b.col) continue;
+		vertices.push(corner);
+	}
+	if (vertices.length !== 1) return null;
+	return { vital: vertices[0]! };
+}
+
+/**
  * Interior groups that border a T1 nakade big-eye and would have fewer than
  * 2 true eyes after an opponent vital fill are dead at scoring (M76). Edge
  * foothold + seki clusters kept (same exemptions as deadStones/Benson).
@@ -1903,6 +1978,104 @@ export function removePlusNakadeDeadStones(
 	graph?: GraphTopologyData
 ): Grid {
 	const dead = findPlusNakadeDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
+ * Interior groups that border a V-pentomino nakade big-eye and would have
+ * fewer than 2 true eyes after an opponent vital fill are dead at scoring
+ * (M94). Same exemptions as plus / bulky-5 / tetromino nakade (edge + seki).
+ * Contrastable with plus (X) / bulky-5 (P) and tetromino nakade / chase family.
+ */
+export function findVNakadeDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const dead: Position[] = [];
+	const deadGroupIds = new Set<number>();
+
+	for (const color of ["X", "O"] as const) {
+		const colorGroups = groups.filter((g) => g.color === color);
+		if (colorGroups.length === 0) continue;
+		const stoneToGroup = new Map<string, number>();
+		for (const g of colorGroups) {
+			for (const p of g.stones) stoneToGroup.set(keyOf(p), g.id);
+		}
+		const regions = findColorOnlyEmptyRegions(
+			grid,
+			color,
+			stoneToGroup,
+			wrap,
+			topology,
+			graph
+		);
+		const attacker: Player = color === "X" ? "O" : "X";
+
+		for (const region of regions) {
+			const nakade = isVNakadeVulnerableRegion(region.cells);
+			if (!nakade) continue;
+			const sim = simulateLibertyPlace(
+				grid,
+				nakade.vital,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			const nextGrid: Grid = { ...grid, cells: sim.cells };
+
+			for (const gid of Array.from(region.adjacentGroupIds)) {
+				if (deadGroupIds.has(gid)) continue;
+				const g = colorGroups.find((x) => x.id === gid);
+				if (!g) continue;
+				if (sekiIds.has(g.id)) continue;
+				if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+
+				const rem = g.stones.filter((p) => getCell(nextGrid, p) === color);
+				if (rem.length === 0) {
+					deadGroupIds.add(gid);
+					for (const p of g.stones) dead.push(p);
+					continue;
+				}
+				const eyes = countTrueEyes(
+					nextGrid,
+					rem,
+					color,
+					wrap,
+					topology,
+					graph
+				);
+				if (eyes >= 2) continue;
+				deadGroupIds.add(gid);
+				for (const p of g.stones) dead.push(p);
+			}
+		}
+	}
+	return dead;
+}
+
+/** Clear V-nakade-dead stones from a grid copy (M94). */
+export function removeVNakadeDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findVNakadeDeadCells(grid, wrap, topology, graph);
 	if (dead.length === 0) return grid;
 	let cells = grid.cells;
 	for (const p of dead) {
@@ -2890,12 +3063,15 @@ export function scoreArea(
  * big-eyes runs after optional straight4NakadeDeath and before
  * plusNakadeDeath / netDeath (M92). When `plusNakadeDeath` is true, the same
  * path for plus / X-pentomino big-eyes runs after optional bulky5NakadeDeath
- * and before netDeath (M93).
+ * and before vNakadeDeath / netDeath (M93). When `vNakadeDeath` is true, the
+ * same path for V-pentomino big-eyes runs after optional plusNakadeDeath and
+ * before netDeath (M94).
  * When `netDeath` is true, groups force-capturable by an attacker-sente tight
  * net / geta (exactly 3 root liberties; every escape has a finishing reply)
  * are removed after optional nakadeDeath / lNakadeDeath / squareNakadeDeath /
  * pyramidNakadeDeath / twistedNakadeDeath / l4NakadeDeath /
- * straight4NakadeDeath / bulky5NakadeDeath / plusNakadeDeath and before
+ * straight4NakadeDeath / bulky5NakadeDeath / plusNakadeDeath / vNakadeDeath
+ * and before
  * looseNetDeath / senteLadderDeath / ladderDeath (M77). When
  * `looseNetDeath` is true, the same search with exactly 4 root liberties
  * runs after netDeath and before senteLadderDeath / ladderDeath (M78). When
@@ -2936,7 +3112,8 @@ export function areaOutcome(
 	l4NakadeDeath: boolean = false,
 	straight4NakadeDeath: boolean = false,
 	bulky5NakadeDeath: boolean = false,
-	plusNakadeDeath: boolean = false
+	plusNakadeDeath: boolean = false,
+	vNakadeDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -2976,6 +3153,9 @@ export function areaOutcome(
 	}
 	if (plusNakadeDeath) {
 		scored = removePlusNakadeDeadStones(scored, wrap, topology, graph);
+	}
+	if (vNakadeDeath) {
+		scored = removeVNakadeDeadStones(scored, wrap, topology, graph);
 	}
 	if (netDeath) {
 		scored = removeNetDeadStones(scored, wrap, topology, graph);

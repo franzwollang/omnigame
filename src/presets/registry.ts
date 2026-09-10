@@ -6679,6 +6679,97 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			})()
 		}
 	}),
+	"go-lite-v-nakade": definePreset({
+		id: "go-lite-v-nakade",
+		name: "Go Lite V-Nakade",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"nakade",
+			"v-nakade",
+			"benson",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with V-pentomino nakade removal at scoring (objective.vNakadeDeath). Seeded interior X shell on 7×7 with one true eye + closed V corridor (Benson-alive; T1/L/square/pyramid/twisted/L4/straight-4/bulky-5/plus nakadeDeath miss; chase family miss) plus living edge O: without the flag (or with bensonLife / prior nakade flags) double-pass awards X; with vNakadeDeath X is cleared → O wins. Unlocks the V big-eye death beyond plus / bulky-5 / tetromino nakade / Benson / chase family (fits the standard 7×7 O-ring).",
+		config: {
+			metadata: { name: "Go Lite V-Nakade", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", vNakadeDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				// Interior X shell (rows/cols 1–5): true eye at (2,4); closed
+				// V-pentomino at (2,2)/(3,2)/(4,2)/(4,3)/(4,4)
+				// (3×3 minus filled 2×2 at top-right; vital = vertex (4,2)).
+				// One true eye (dead under deadStones) but Benson-alive via
+				// eye + V; plus / bulky-5 / tetromino tables miss.
+				const empties = new Set([
+					"2,4",
+					"2,2",
+					"3,2",
+					"4,2",
+					"4,3",
+					"4,4"
+				]);
+				for (let row = 1; row <= 5; row++) {
+					for (let col = 1; col <= 5; col++) {
+						if (!empties.has(`${row},${col}`)) {
+							stones.push({
+								row,
+								col,
+								player: "X",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				for (let row = 0; row < 7; row++) {
+					for (let col = 0; col < 7; col++) {
+						if (row === 0 || row === 6 || col === 0 || col === 6) {
+							stones.push({
+								row,
+								col,
+								player: "O",
+								visibility: "public"
+							});
+						}
+					}
+				}
+				return stones;
+			})()
+		}
+	}),
 	"go-lite-net": definePreset({
 		id: "go-lite-net",
 		name: "Go Lite Net",
