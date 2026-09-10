@@ -5638,6 +5638,90 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			})()
 		}
 	}),
+	"go-lite-net": definePreset({
+		id: "go-lite-net",
+		name: "Go Lite Net",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"net",
+			"geta",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with attacker-sente net / geta removal at scoring (objective.netDeath). Seeded edge X pair (3 liberties) in geta geometry: without the flag (or with ladderDeath / nakadeDeath / deadStones / Benson) double-pass awards X; with netDeath the trapped group is cleared → O wins. Unlocks multi-liberty escape search beyond ladders / nakade / static eyes.",
+		config: {
+			metadata: { name: "Go Lite Net", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", netDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Edge geta victim X@(0,2)/(0,3) — exactly 3 libs
+				// (0,4)/(1,2)/(1,3). deadStones/Benson keep (edge);
+				// ladderDeath skips (not ≤2 libs). Cage O may share a higher
+				// liberty count (semeaiDeath can also clear — omit from
+				// sibling contrast).
+				{ row: 0, col: 0, player: "O", visibility: "public" },
+				{ row: 0, col: 1, player: "O", visibility: "public" },
+				{ row: 0, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 3, player: "X", visibility: "public" },
+				{ row: 0, col: 5, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "O", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 1, col: 4, player: "O", visibility: "public" },
+				{ row: 2, col: 4, player: "O", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" },
+				// Living O bulk bottom-right
+				{ row: 4, col: 5, player: "O", visibility: "public" },
+				{ row: 4, col: 6, player: "O", visibility: "public" },
+				{ row: 5, col: 5, player: "O", visibility: "public" },
+				{ row: 5, col: 6, player: "O", visibility: "public" },
+				{ row: 6, col: 4, player: "O", visibility: "public" },
+				{ row: 6, col: 5, player: "O", visibility: "public" },
+				{ row: 6, col: 6, player: "O", visibility: "public" },
+				// Living X mass mid/bottom-left — raw area awards X by 1
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "X", visibility: "public" },
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 4, col: 1, player: "X", visibility: "public" },
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 5, col: 0, player: "X", visibility: "public" },
+				{ row: 5, col: 1, player: "X", visibility: "public" },
+				{ row: 5, col: 2, player: "X", visibility: "public" },
+				{ row: 5, col: 3, player: "X", visibility: "public" },
+				{ row: 6, col: 0, player: "X", visibility: "public" },
+				{ row: 6, col: 1, player: "X", visibility: "public" },
+				{ row: 6, col: 2, player: "X", visibility: "public" },
+				{ row: 6, col: 3, player: "X", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

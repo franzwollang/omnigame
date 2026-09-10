@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T08:50+00:00",
-  "turn": 106,
+  "updated_at": "2026-09-10T09:00+00:00",
+  "turn": 107,
   "focus": {
-    "milestone": "M76",
+    "milestone": "M77",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Nakade landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Net landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 5cfd M75 tip onto cursor/next-task-progression-9cd8",
-    "Landed M76 nakadeDeath + go-lite-nakade",
-    "Closed 3-corridor + 1 eye: raw/Benson→X, nakade→O"
+    "Synced from 9cd8 M76 tip onto cursor/next-task-progression-9be8",
+    "Landed M77 netDeath + go-lite-net",
+    "Exact-3-lib root net search; edge geta flips raw X→O"
   ],
   "discoveries": [
-    "Open corridor merges with exterior — need sealed T1 eye",
-    "deadStones also clears seed; contrast uses benson/semeai/ladder/seki"
+    "Root libs must be exactly 3 — ≥3 false-positives living masses",
+    "Semeai often overlaps net cages — omit from sibling contrast"
   ],
   "open_threads": [
-    "Next: nets/geta, deeper L&D, simultaneous jump, realtime"
+    "Next: deeper L&D, simultaneous jump, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M76",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M77",
   "blockers": []
 }

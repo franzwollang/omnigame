@@ -92,12 +92,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M74 | Next missing mechanism (Go Lite Territory Prisoners / objective.territoryPrisoners) | `done` |
 | M75 | Next missing mechanism (Go Lite Semeai / objective.semeaiDeath) | `done` |
 | M76 | Next missing mechanism (Go Lite Nakade / objective.nakadeDeath) | `done` |
+| M77 | Next missing mechanism (Go Lite Net / objective.netDeath) | `done` |
 
-**Optimizing for this marathon:** M76 Go Lite Nakade (`objective.nakadeDeath`)
+**Optimizing for this marathon:** M77 Go Lite Net (`objective.netDeath`)
 landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
 recombinations without anchor) — without asking which fork. Large deferred:
-simultaneous jump / realtime / fuller Go remainder beyond nakade (nets /
-deeper L&D).
+simultaneous jump / realtime / fuller Go remainder beyond net (deeper L&D /
+geta variants).
 
 ## Marathon runbook (cloud agents)
 
@@ -112,7 +113,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥836** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥840** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -237,10 +238,11 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond nakade (M76; e.g. nets /
-deeper L&D); fire→move
+**Not yet:** fuller Go remainder beyond net (M77; e.g. deeper L&D);
+fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Nakade landed
+anchor); realtime scheduler; simultaneous jump. Go Lite Net landed
+(M77). Go Lite Nakade landed
 (M76). Go Lite Semeai landed
 (M75). Go Lite Territory Prisoners
 landed (M74). Go Lite Ladders landed
@@ -277,7 +279,7 @@ crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
 deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
 markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
-semeaiDeath in M75; nakadeDeath in M76).
+semeaiDeath in M75; nakadeDeath in M76; netDeath in M77).
 
 ## Phase 2 exit criteria
 
@@ -1189,6 +1191,22 @@ semeaiDeath in M75; nakadeDeath in M76).
 - Out of scope: L / 4+ / bulky nakade table; nets; hex/graph nakade presets;
   simultaneous jump; realtime
 - Green gate: ≥836 + new cases — **done**
+
+### M77 — Go Lite Net / `objective.netDeath`
+
+- Schema: optional `objective.netDeath` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `isNetDeadGroup` / `findNetDeadCells` / `removeNetDeadStones` —
+  root exactly 3 liberties; every defender liberty extension has an attacker
+  liberty-fill reply that captures, ladders, or re-nets; edge does not save;
+  `areaOutcome` after nakadeDeath before ladderDeath; normalize + form
+  switch — **done**
+- Preset `go-lite-net` (edge geta X pair; living X mass + O bulk; raw → X,
+  with flag → O; contrasts vs deadStones / Benson / nakade / ladder / seki) +
+  unit / schema / transcript / replay tests — **done**
+- Out of scope: open 4+ liberty fights; loose nets / throw-ins; hex/graph net
+  presets; simultaneous jump; realtime
+- Green gate: ≥840 + new cases — **done**
 
 ## Sequencing notes
 

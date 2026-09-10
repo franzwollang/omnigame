@@ -103,6 +103,7 @@ These are built from the same shared schema and operators.
 - **Go Lite Territory Prisoners** (`objective.territoryPrisoners` Japanese-style territory + prisoners scoring)
 - **Go Lite Semeai** (`objective.semeaiDeath` capturing-race liberty comparison at scoring)
 - **Go Lite Nakade** (`objective.nakadeDeath` T1 3-straight big-eye vital-fill removal at scoring)
+- **Go Lite Net** (`objective.netDeath` attacker-sente net / geta removal at scoring)
 - **Hex Go Lite** (same on hex_offset — six cube-axis liberties)
 - **Graph Go Lite** (same on graph — liberties follow explicit undirected edges)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
@@ -573,14 +574,15 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.ladderDeath` (M73), Go Lite Territory Prisoners /
 `objective.territoryPrisoners` (M74), Go Lite Semeai /
 `objective.semeaiDeath` (M75), Go Lite Nakade /
-`objective.nakadeDeath` (M76).
+`objective.nakadeDeath` (M76), Go Lite Net /
+`objective.netDeath` (M77).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fuller Go remainder beyond nakade; fire→move only with anchor;
+  fuller Go remainder beyond net; fire→move only with anchor;
   realtime scheduler; simultaneous jump; reject recombinations)
-- Deferred: fuller Go rules (nakade landed as M76; semeai as M75;
+- Deferred: fuller Go rules (net landed as M77; nakade as M76; semeai as M75;
   territory+prisoners as M74; ladders as M73;
   mark-dead resume as M72; mark-dead as M71;
   dame fill as M70; Benson as M69); realtime scheduler;
@@ -598,7 +600,7 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
   targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
   deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
   markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
-  semeaiDeath in M75; nakadeDeath in M76)
+  semeaiDeath in M75; nakadeDeath in M76; netDeath in M77)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

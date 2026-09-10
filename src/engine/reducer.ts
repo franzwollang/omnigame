@@ -232,6 +232,13 @@ export type GameConfig = {
 	 * opponent vital fill (M76).
 	 */
 	nakadeDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes groups force-capturable by an
+	 * attacker-sente net / geta (≥3 root liberties; every escape has a
+	 * finishing reply) after optional nakadeDeath and before ladderDeath
+	 * (M77).
+	 */
+	netDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1247,7 +1254,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.territoryPrisoners === true,
 				state.prisoners ?? { X: 0, O: 0 },
 				config.semeaiDeath === true,
-				config.nakadeDeath === true
+				config.nakadeDeath === true,
+				config.netDeath === true
 			);
 			return {
 				...state,
@@ -1273,7 +1281,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.territoryPrisoners === true,
 			state.prisoners ?? { X: 0, O: 0 },
 			config.semeaiDeath === true,
-			config.nakadeDeath === true
+			config.nakadeDeath === true,
+			config.netDeath === true
 		);
 		return {
 			...state,

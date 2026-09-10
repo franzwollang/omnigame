@@ -11,24 +11,24 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Go Lite Nakade (`go-lite-nakade` / `objective.nakadeDeath`) landed as **M76**.
-Go Lite Semeai closed as M75; Territory Prisoners as M74; Ladders as M73;
-Mark Dead Resume as M72; Mark Dead as M71; Dame Fill as M70; Benson as M69;
-dead stones as M68; seki as M67; komi as M66; hub-graph forward-only men as
-M65; graph forward-only men as M64; hex forward-only men as M63; graph flying
-capture as M62; hex flying capture as M61; hub-graph promotion as M60; graph
-promotion as M59; hex promotion as M58; graph liberties as M57; hex liberties
-as M56; flying jump capture as M55; graph flood_reveal as M54; hex
-flood_reveal as M53; flying kings as M52; longest mandatory capture as M51;
-forward-only men as M50; crowned promotion as M49; graph jump as M48; hex
-jump as M47; memory flip as M46; mustCapture as M45; rectangle flood_reveal as
-M44. P4 tooling-ci and semantics-doc-refresh already closed (M41–M42;
-semantics notes continue per mechanism).
+Go Lite Net (`go-lite-net` / `objective.netDeath`) landed as **M77**.
+Go Lite Nakade closed as M76; Semeai as M75; Territory Prisoners as M74;
+Ladders as M73; Mark Dead Resume as M72; Mark Dead as M71; Dame Fill as M70;
+Benson as M69; dead stones as M68; seki as M67; komi as M66; hub-graph
+forward-only men as M65; graph forward-only men as M64; hex forward-only men
+as M63; graph flying capture as M62; hex flying capture as M61; hub-graph
+promotion as M60; graph promotion as M59; hex promotion as M58; graph
+liberties as M57; hex liberties as M56; flying jump capture as M55; graph
+flood_reveal as M54; hex flood_reveal as M53; flying kings as M52; longest
+mandatory capture as M51; forward-only men as M50; crowned promotion as M49;
+graph jump as M48; hex jump as M47; memory flip as M46; mustCapture as M45;
+rectangle flood_reveal as M44. P4 tooling-ci and semantics-doc-refresh already
+closed (M41–M42; semantics notes continue per mechanism).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
-- Fuller Go remainder beyond nakade (e.g. nets / geta / deeper semantic L&D)
+- Fuller Go remainder beyond net (e.g. deeper semantic L&D / loose nets)
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
 - Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
@@ -43,8 +43,8 @@ e.g.:
 - Realtime / continuous scheduler (large)
 - Simultaneous jump (large composition; deferred)
 - Hex/graph seki, dead-stone, Benson, dame-fill, mark-dead, mark-dead-resume,
-  ladderDeath, territoryPrisoners, semeaiDeath, or nakadeDeath presets
-  (topology ports — only if a new seam appears)
+  ladderDeath, territoryPrisoners, semeaiDeath, nakadeDeath, or netDeath
+  presets (topology ports — only if a new seam appears)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -60,5 +60,5 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 ### deferred-mvp-anchors
 
 Guess Who-like remainder / full Go remain deferred under
-`next-missing-mechanism` (post-nakade; prefer nets / deeper L&D or other
-genuine seams over topology ports).
+`next-missing-mechanism` (post-net; prefer deeper L&D or other genuine seams
+over topology ports).
