@@ -11,22 +11,22 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Go Lite Komi (`go-lite-komi` / `objective.komi` second-player area-score
-offset) landed as **M66**. Hub-graph forward-only men closed as M65; graph
-forward-only men as M64; hex forward-only men as M63; graph flying capture as
-M62; hex flying capture as M61; hub-graph promotion as M60; graph promotion as
-M59; hex promotion as M58; graph liberties as M57; hex liberties as M56; flying
-jump capture as M55; graph flood_reveal as M54; hex flood_reveal as M53; flying
-kings as M52; longest mandatory capture as M51; forward-only men as M50;
-crowned promotion as M49; graph jump as M48; hex jump as M47; memory flip as
-M46; mustCapture as M45; rectangle flood_reveal as M44. P4 tooling-ci and
-semantics-doc-refresh already closed (M41–M42; semantics notes continue per
-mechanism).
+Go Lite Seki (`go-lite-seki` / `objective.seki` shared-life territory
+exclusion) landed as **M67**. Go Lite Komi closed as M66; hub-graph
+forward-only men as M65; graph forward-only men as M64; hex forward-only men
+as M63; graph flying capture as M62; hex flying capture as M61; hub-graph
+promotion as M60; graph promotion as M59; hex promotion as M58; graph
+liberties as M57; hex liberties as M56; flying jump capture as M55; graph
+flood_reveal as M54; hex flood_reveal as M53; flying kings as M52; longest
+mandatory capture as M51; forward-only men as M50; crowned promotion as M49;
+graph jump as M48; hex jump as M47; memory flip as M46; mustCapture as M45;
+rectangle flood_reveal as M44. P4 tooling-ci and semantics-doc-refresh
+already closed (M41–M42; semantics notes continue per mechanism).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
-- Seki / shared-life scoring (next Go slice after komi — genuine scoring class)
+- Dead-stone / pass-alive removal before scoring (next Go slice after seki)
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
 - Flags / chord-click on flood_reveal (only if a new seam appears — otherwise
@@ -38,9 +38,11 @@ e.g.:
 - multi-action slide/replace under simultaneous (deferred composition; only if
   a new seam appears — not a recombination demo)
 - `queryShape: not` (reject unless nested AST / new pruning class)
-- Full Go rules (large; prefer smaller seams first — seki before full bundle)
+- Full Go rules (large; prefer smaller seams first — dead stones before full
+  bundle)
 - Realtime / continuous scheduler (large)
 - Simultaneous jump (large composition; deferred)
+- Hex/graph seki presets (topology ports — only if a new seam appears)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -55,30 +57,30 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 
 ### deferred-mvp-anchors
 
-Full Go remains a candidate under `next-missing-mechanism` (komi landed M66;
-seki still open). Guess Who Lite + Commit Lite + Commit Phases Lite + And Lite
-+ Or Lite + And3 Lite + Simultaneous Guess Who Lite + Simultaneous Guess Who
-Commit Lite + Simultaneous Guess Who And Lite + Hidden Simultaneous Guess Who
-Lite + **Hidden Simultaneous Guess Who Commit Lite** cover query/guess +
-hypothesis eliminate + same-turn query→eliminate + 2-clause AND/OR + N-clause
-AND via `compoundArity` + joint simultaneous query/guess + joint simultaneous
-manual eliminate + joint simultaneous compound AND + hidden commitReveal under
-simultaneous deduction + commitReveal deduction joint UCT + **commitReveal +
-manual eliminate (`commitEliminate`)**. **Hidden Simultaneous Step Race**
-covers commitReveal under simultaneous move / `commitMove`. **Double
-Simultaneous Step Race** covers `actionsPerTurn > 1` under open simultaneous
-move. **Hidden Double Simultaneous Step Race** covers commitReveal +
-`actionsPerTurn > 1` under simultaneous move. Graph Hop Race covers hop-ball
-BFS. **Jump Race** covers leap-over capture + same-seat chains
-(`movement.capture = jump` / `mustContinueFrom`). **Mandatory Jump Race**
-covers Checkers-lite turn-start mandatory capture (`mustCapture`).
-**Mandatory Longest Jump Lite** covers Draughts-lite max-length capture
-(`mustLongestCapture`). **Hex Jump Race** covers jump on `hex_offset`
-(cube-axis). **Graph Jump Race** covers jump on `graph` (2-edge leap-over;
-simultaneous jump still deferred). **Crowned Kings Jump Lite** covers
-Transform-lite promotion (`movement.promotion` / `X+`|`O+` / `piecePromoted`;
-rectangle jump only). **Hex Crowned Jump Lite** covers promotion on
-`hex_offset` (orthogonal crownedAdjacency + `crownedRange`; no
+Full Go remains a candidate under `next-missing-mechanism` (komi M66 + seki
+M67 landed; dead stones still open). Guess Who Lite + Commit Lite + Commit
+Phases Lite + And Lite + Or Lite + And3 Lite + Simultaneous Guess Who Lite +
+Simultaneous Guess Who Commit Lite + Simultaneous Guess Who And Lite + Hidden
+Simultaneous Guess Who Lite + **Hidden Simultaneous Guess Who Commit Lite**
+cover query/guess + hypothesis eliminate + same-turn query→eliminate +
+2-clause AND/OR + N-clause AND via `compoundArity` + joint simultaneous
+query/guess + joint simultaneous manual eliminate + joint simultaneous
+compound AND + hidden commitReveal under simultaneous deduction +
+commitReveal deduction joint UCT + **commitReveal + manual eliminate
+(`commitEliminate`)**. **Hidden Simultaneous Step Race** covers commitReveal
+under simultaneous move / `commitMove`. **Double Simultaneous Step Race**
+covers `actionsPerTurn > 1` under open simultaneous move. **Hidden Double
+Simultaneous Step Race** covers commitReveal + `actionsPerTurn > 1` under
+simultaneous move. Graph Hop Race covers hop-ball BFS. **Jump Race** covers
+leap-over capture + same-seat chains (`movement.capture = jump` /
+`mustContinueFrom`). **Mandatory Jump Race** covers Checkers-lite turn-start
+mandatory capture (`mustCapture`). **Mandatory Longest Jump Lite** covers
+Draughts-lite max-length capture (`mustLongestCapture`). **Hex Jump Race**
+covers jump on `hex_offset` (cube-axis). **Graph Jump Race** covers jump on
+`graph` (2-edge leap-over; simultaneous jump still deferred). **Crowned Kings
+Jump Lite** covers Transform-lite promotion (`movement.promotion` / `X+`|`O+`
+/ `piecePromoted`; rectangle jump only). **Hex Crowned Jump Lite** covers
+promotion on `hex_offset` (orthogonal crownedAdjacency + `crownedRange`; no
 menForwardOnly). **Graph Crowned Jump Lite** covers promotion on `graph` via
 `targetRows` (lane graphs; orthogonal crownedAdjacency + `crownedRange`).
 **Graph Hub Crowned Jump Lite** covers promotion via `targetNodes` (hub vs
@@ -103,8 +105,9 @@ Minesweeper Lite** covers graph explicit-edge hazard adjacency (max degree ≤
 `match_pairs` / `memory`). **Hex Go Lite** covers liberties + area_control on
 `hex_offset` (cube-axis-6). **Graph Go Lite** covers liberties + area_control
 on `graph` (explicit-edge). **Go Lite Komi** covers `objective.komi`
-second-player scoring offset. Open simultaneous deduction joint UCT covers
+second-player scoring offset. **Go Lite Seki** covers `objective.seki`
+shared-life territory exclusion. Open simultaneous deduction joint UCT covers
 agent search over query/guess(/eliminate) cartesian (fire→move still open if
 an anchor appears). CI green gate: `.github/workflows/ci.yml` (Node 20.19 +
-pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M66
-komi).
+pnpm 10.5.2). Semantics draft: `docs/semantics.md` (M42 refresh; through M67
+seki).

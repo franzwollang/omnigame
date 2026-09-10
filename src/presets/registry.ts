@@ -4910,6 +4910,62 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			initial: []
 		}
 	}),
+	"go-lite-seki": definePreset({
+		id: "go-lite-seki",
+		name: "Go Lite Seki",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"seki",
+			"mechanism"
+		],
+		description:
+			"Go Lite with seki-neutral scoring (objective.seki). Seeded mutual-life position: without seki X wins on a mono-border eye; with seki that eye is neutral → draw. Unlocks shared-life scoring — not dead stones / full Go.",
+		config: {
+			metadata: { name: "Go Lite Seki", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", seki: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				{ row: 0, col: 2, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "O", visibility: "public" },
+				{ row: 1, col: 1, player: "X", visibility: "public" },
+				{ row: 1, col: 2, player: "X", visibility: "public" },
+				{ row: 1, col: 3, player: "X", visibility: "public" },
+				{ row: 1, col: 4, player: "O", visibility: "public" },
+				{ row: 2, col: 1, player: "X", visibility: "public" },
+				{ row: 2, col: 3, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "O", visibility: "public" },
+				{ row: 3, col: 2, player: "X", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" },
+				{ row: 4, col: 2, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",

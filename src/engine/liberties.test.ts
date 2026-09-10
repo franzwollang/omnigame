@@ -9,6 +9,7 @@ import {
 	orthogonalNeighbors,
 	scoreArea,
 	areaOutcome,
+	findSekiNeutralCells,
 	simulateLibertyPlace,
 	situationHash
 } from "@/engine/liberties";
@@ -300,6 +301,125 @@ describe("Go Lite (liberties + area_control)", () => {
 		expect(replay.faithful).toBe(true);
 		expect(replay.finalState.status).toBe("won");
 		expect(replay.finalState.winner).toBe("O");
+	});
+
+	it("validates and compiles the go-lite-seki preset", () => {
+		const cfg = examplePresets["go-lite-seki"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.sekiScoring).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.seki outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; seki?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", seki: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("findSekiNeutralCells + scoreArea: seki eye is neutral", () => {
+		// Seeded go-lite-seki layout:
+		// ..O..
+		// OXXXO
+		// .X.X.
+		// .OXO.
+		// ..O..
+		const cells = Array(25).fill(null) as (string | null)[];
+		const put = (row: number, col: number, p: string) => {
+			cells[row * 5 + col] = p;
+		};
+		put(0, 2, "O");
+		put(1, 0, "O");
+		put(1, 1, "X");
+		put(1, 2, "X");
+		put(1, 3, "X");
+		put(1, 4, "O");
+		put(2, 1, "X");
+		put(2, 3, "X");
+		put(3, 1, "O");
+		put(3, 2, "X");
+		put(3, 3, "O");
+		put(4, 2, "O");
+		const g = gridOf(5, 5, cells);
+
+		expect(scoreArea(g)).toEqual({ X: 7, O: 6 });
+		const neutral = findSekiNeutralCells(g);
+		expect(neutral.has("2,2")).toBe(true);
+		expect(scoreArea(g, false, "rectangle", undefined, neutral)).toEqual({
+			X: 6,
+			O: 6
+		});
+		expect(areaOutcome(g).winner).toBe("X");
+		expect(
+			areaOutcome(g, false, "rectangle", undefined, 0, true)
+		).toEqual({
+			status: "draw",
+			winner: null,
+			score: { X: 6, O: 6 }
+		});
+	});
+
+	it("true eye outside seki still counts with sekiScoring", () => {
+		// 3×3 X ring — mono-border center eye; no opponent → not seki
+		let g = gridOf(3, 3, Array(9).fill(null));
+		for (const [row, col] of [
+			[0, 0],
+			[0, 1],
+			[0, 2],
+			[1, 0],
+			[1, 2],
+			[2, 0],
+			[2, 1],
+			[2, 2]
+		] as const) {
+			g = { ...g, cells: setCell(g, { row, col }, "X") };
+		}
+		expect(scoreArea(g)).toEqual({ X: 9, O: 0 });
+		const neutral = findSekiNeutralCells(g);
+		expect(neutral.size).toBe(0);
+		expect(
+			areaOutcome(g, false, "rectangle", undefined, 0, true).score
+		).toEqual({ X: 9, O: 0 });
+	});
+
+	it("go-lite-seki: seeded double-pass draws; without seki X wins; replay faithful", () => {
+		const cfg = examplePresets["go-lite-seki"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [
+			{ type: "pass" },
+			{ type: "pass" }
+		];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("draw");
+		expect(state.winner).toBeNull();
+		expect(state.consecutivePasses).toBe(2);
+
+		const withoutSeki = structuredClone(cfg);
+		withoutSeki.objective = { mode: "area_control" };
+		const baseline = compileConfig(withoutSeki);
+		let winState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			winState = baseline.kernel.stepSync(winState, action).nextState;
+		}
+		expect(winState.status).toBe("won");
+		expect(winState.winner).toBe("X");
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("draw");
+		expect(replay.finalState.winner).toBeNull();
 	});
 
 	it("rejects capture.ko without liberties mode", () => {

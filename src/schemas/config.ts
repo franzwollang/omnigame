@@ -438,7 +438,13 @@ export const zConfig = z
 				 * Added to O's area score at two-pass terminal. Omit / 0 = no
 				 * komi (Go Lite default). Typical demo: 0.5 or 6.5.
 				 */
-				komi: z.number().nonnegative().max(100).optional()
+				komi: z.number().nonnegative().max(100).optional(),
+				/**
+				 * When true, empty intersections in shared-life (seki) clusters
+				 * are neutral at two-pass area scoring (not awarded as
+				 * territory). Default / omit = current Go Lite behavior.
+				 */
+				seki: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1199,6 +1205,15 @@ export const zConfig = z
 				code: z.ZodIssueCode.custom,
 				path: ["objective", "komi"],
 				message: "objective.komi requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Seki scoring is area_control-only (shared-life territory exclusion).
+		if (cfg.objective.seki === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "seki"],
+				message: "objective.seki requires objective.mode = 'area_control'"
 			});
 		}
 

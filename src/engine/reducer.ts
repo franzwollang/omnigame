@@ -175,6 +175,11 @@ export type GameConfig = {
 	 * area_control. Added at two-pass terminal scoring. Default 0.
 	 */
 	komi?: number;
+	/**
+	 * When true, two-pass area scoring treats shared-life (seki) empty
+	 * points as neutral territory. Default false.
+	 */
+	sekiScoring?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1120,7 +1125,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.gridWrap === true,
 			config.topology ?? "rectangle",
 			config.graph,
-			config.komi ?? 0
+			config.komi ?? 0,
+			config.sekiScoring === true
 		);
 		return {
 			...state,

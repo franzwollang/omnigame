@@ -76,6 +76,7 @@ export function flattenToGameConfig(config: Config): GameConfig {
 			typeof config.objective.komi === "number"
 				? config.objective.komi
 				: undefined,
+		sekiScoring: config.objective.seki === true ? true : undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -191,6 +192,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	fogMetric: "chebyshev",
 	objectiveMode: "n_in_a_row",
 	komi: undefined,
+	sekiScoring: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,

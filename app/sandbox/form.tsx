@@ -1112,45 +1112,70 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 									)}
 								/>
 								{form.watch("objective.mode") === "area_control" ? (
-									<FormField
-										control={form.control}
-										name="objective.komi"
-										render={({ field }) => (
-											<FormItem>
-												<FormLabel>Komi (O offset)</FormLabel>
-												<FormControl>
-													<Input
-														type="number"
-														min={0}
-														max={100}
-														step={0.5}
-														value={
-															field.value === undefined ||
-															field.value === null
-																? ""
-																: field.value
-														}
-														onChange={(e) => {
-															const raw = e.target.value;
-															if (raw === "") {
-																field.onChange(undefined);
-																return;
+									<>
+										<FormField
+											control={form.control}
+											name="objective.komi"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>Komi (O offset)</FormLabel>
+													<FormControl>
+														<Input
+															type="number"
+															min={0}
+															max={100}
+															step={0.5}
+															value={
+																field.value === undefined ||
+																field.value === null
+																	? ""
+																	: field.value
 															}
-															const n = Number(raw);
-															field.onChange(
-																Number.isFinite(n) ? n : undefined
-															);
-														}}
-													/>
-												</FormControl>
-												<p className="text-xs text-muted-foreground">
-													Added to O at two-pass area scoring. Empty =
-													no komi.
-												</p>
-												<FormMessage />
-											</FormItem>
-										)}
-									/>
+															onChange={(e) => {
+																const raw = e.target.value;
+																if (raw === "") {
+																	field.onChange(undefined);
+																	return;
+																}
+																const n = Number(raw);
+																field.onChange(
+																	Number.isFinite(n) ? n : undefined
+																);
+															}}
+														/>
+													</FormControl>
+													<p className="text-xs text-muted-foreground">
+														Added to O at two-pass area scoring. Empty =
+														no komi.
+													</p>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="objective.seki"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Seki scoring</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Neutralize shared-life empty points at
+															two-pass scoring (objective.seki).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+									</>
 								) : null}
 							</div>
 

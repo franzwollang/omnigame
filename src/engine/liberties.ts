@@ -299,33 +299,179 @@ export function isLegalLibertyPlace(
 
 export type AreaScore = { X: number; O: number };
 
+export type GroupInfo = {
+	id: number;
+	color: Player;
+	stones: Position[];
+	liberties: Set<string>;
+};
+
+function seedPositionsFor(
+	grid: Grid,
+	topology: GridTopology,
+	graph?: GraphTopologyData
+): Position[] {
+	if (topology === "graph" && graph) return graph.active;
+	const all: Position[] = [];
+	for (let row = 0; row < grid.height; row++) {
+		for (let col = 0; col < grid.width; col++) {
+			all.push({ row, col });
+		}
+	}
+	return all;
+}
+
+function libertySetOf(
+	grid: Grid,
+	group: Position[],
+	wrap: boolean,
+	topology: GridTopology,
+	graph?: GraphTopologyData
+): Set<string> {
+	const libs = new Set<string>();
+	for (const stone of group) {
+		for (const n of libertyNeighbors(grid, stone, wrap, topology, graph)) {
+			if (getCell(grid, n) === null) libs.add(keyOf(n));
+		}
+	}
+	return libs;
+}
+
+/** Enumerate same-color stone groups with their liberty key sets. */
+export function enumerateGroups(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): GroupInfo[] {
+	const groups: GroupInfo[] = [];
+	const seen = new Set<string>();
+	for (const start of seedPositionsFor(grid, topology, graph)) {
+		const k = keyOf(start);
+		if (seen.has(k)) continue;
+		const cell = getCell(grid, start);
+		if (cell !== "X" && cell !== "O") continue;
+		const stones = findGroup(grid, start, wrap, topology, graph);
+		for (const p of stones) seen.add(keyOf(p));
+		groups.push({
+			id: groups.length,
+			color: cell,
+			stones,
+			liberties: libertySetOf(grid, stones, wrap, topology, graph)
+		});
+	}
+	return groups;
+}
+
+/**
+ * Empty cells that must stay neutral under seki scoring (M67).
+ *
+ * Clusters groups that share ≥1 liberty. A mixed-color cluster is seki when
+ * every group has fewer than 2 private liberties (liberties not shared with
+ * any opposite-color group in the cluster). All liberties of seki-cluster
+ * groups are returned as neutral — including mono-border “eyes” that plain
+ * area scoring would award as territory.
+ */
+export function findSekiNeutralCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Set<string> {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const n = groups.length;
+	const parent = groups.map((_, i) => i);
+	const find = (i: number): number => {
+		let x = i;
+		while (parent[x] !== x) {
+			parent[x] = parent[parent[x]!];
+			x = parent[x]!;
+		}
+		return x;
+	};
+	const uni = (a: number, b: number) => {
+		const ra = find(a);
+		const rb = find(b);
+		if (ra !== rb) parent[ra] = rb;
+	};
+
+	for (let i = 0; i < n; i++) {
+		for (let j = i + 1; j < n; j++) {
+			const gi = groups[i]!;
+			const gj = groups[j]!;
+			for (const lib of Array.from(gi.liberties)) {
+				if (gj.liberties.has(lib)) {
+					uni(i, j);
+					break;
+				}
+			}
+		}
+	}
+
+	const clusters = new Map<number, number[]>();
+	for (let i = 0; i < n; i++) {
+		const root = find(i);
+		const list = clusters.get(root);
+		if (list) list.push(i);
+		else clusters.set(root, [i]);
+	}
+
+	const neutral = new Set<string>();
+	for (const ids of Array.from(clusters.values())) {
+		const colors = new Set(ids.map((i) => groups[i]!.color));
+		if (colors.size < 2) continue;
+
+		const oppLibs = (color: Player): Set<string> => {
+			const s = new Set<string>();
+			for (const i of ids) {
+				const g = groups[i]!;
+				if (g.color === color) continue;
+				for (const lib of Array.from(g.liberties)) s.add(lib);
+			}
+			return s;
+		};
+
+		let isSeki = true;
+		for (const i of ids) {
+			const g = groups[i]!;
+			const shared = oppLibs(g.color);
+			let priv = 0;
+			for (const lib of Array.from(g.liberties)) {
+				if (!shared.has(lib)) priv += 1;
+			}
+			if (priv >= 2) {
+				isSeki = false;
+				break;
+			}
+		}
+		if (!isSeki) continue;
+
+		for (const i of ids) {
+			for (const lib of Array.from(groups[i]!.liberties)) neutral.add(lib);
+		}
+	}
+	return neutral;
+}
+
 /**
  * Simplified area scoring: stones + empty regions bordered only by one color.
  * Mixed-border or edge-open empty regions score for neither (dame).
  * On wrap boards, regions never "edge-open" via board boundary.
  * Region flood uses the same liberty adjacency as capture.
  * On graph boards, only active nodes participate (inactive cells ignored).
+ * When `sekiNeutral` is set, mono-border regions that intersect those cells
+ * are not awarded as territory (shared-life / seki scoring).
  */
 export function scoreArea(
 	grid: Grid,
 	wrap: boolean = false,
 	topology: GridTopology = "rectangle",
-	graph?: GraphTopologyData
+	graph?: GraphTopologyData,
+	sekiNeutral?: Set<string>
 ): AreaScore {
 	const score: AreaScore = { X: 0, O: 0 };
 
-	const seedPositions =
-		topology === "graph" && graph
-			? graph.active
-			: (() => {
-					const all: Position[] = [];
-					for (let row = 0; row < grid.height; row++) {
-						for (let col = 0; col < grid.width; col++) {
-							all.push({ row, col });
-						}
-					}
-					return all;
-				})();
+	const seedPositions = seedPositionsFor(grid, topology, graph);
 
 	for (const pos of seedPositions) {
 		const cell = getCell(grid, pos);
@@ -365,6 +511,12 @@ export function scoreArea(
 		}
 
 		if (border.size === 1) {
+			if (
+				sekiNeutral &&
+				region.some((p) => sekiNeutral.has(keyOf(p)))
+			) {
+				continue;
+			}
 			const owner = border.has("X") ? "X" : "O";
 			score[owner] += region.length;
 		}
@@ -377,19 +529,25 @@ export function scoreArea(
  * Winner by area score; draw on tie.
  * `komi` (default 0) is added to O's score as second-player compensation
  * under area_control (Go Lite Komi). Returned `score.O` includes komi.
+ * When `sekiScoring` is true, empty points in shared-life (seki) clusters
+ * are neutral (Go Lite Seki).
  */
 export function areaOutcome(
 	grid: Grid,
 	wrap: boolean = false,
 	topology: GridTopology = "rectangle",
 	graph?: GraphTopologyData,
-	komi: number = 0
+	komi: number = 0,
+	sekiScoring: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
 	score: AreaScore;
 } {
-	const raw = scoreArea(grid, wrap, topology, graph);
+	const neutral = sekiScoring
+		? findSekiNeutralCells(grid, wrap, topology, graph)
+		: undefined;
+	const raw = scoreArea(grid, wrap, topology, graph, neutral);
 	const k = Number.isFinite(komi) && komi > 0 ? komi : 0;
 	const score: AreaScore = { X: raw.X, O: raw.O + k };
 	if (score.X > score.O) return { status: "won", winner: "X", score };

@@ -82,11 +82,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M64 | Next missing mechanism (graph menForwardOnly / Graph Forward Men Jump Lite) | `done` |
 | M65 | Next missing mechanism (hub targetNodes + menForwardOnly / Graph Hub Forward Men Jump Lite) | `done` |
 | M66 | Next missing mechanism (Go Lite Komi / objective.komi) | `done` |
+| M67 | Next missing mechanism (Go Lite Seki / objective.seki) | `done` |
 
-**Optimizing for this marathon:** M66 Go Lite Komi (`objective.komi`) landed.
+**Optimizing for this marathon:** M67 Go Lite Seki (`objective.seki`) landed.
 Pick **P3 next-missing-mechanism** (smallest new seam; reject recombinations
-without anchor) — without asking which fork. Strong next Go slice: **seki**;
-large deferred: simultaneous jump / realtime / full Go bundle.
+without anchor) — without asking which fork. Large deferred: simultaneous jump /
+realtime / full Go remainder (dead stones).
 
 ## Marathon runbook (cloud agents)
 
@@ -252,7 +253,7 @@ M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
 hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
-in M64; hub targetNodes + menForwardOnly in M65; komi in M66).
+in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67).
 
 ## Phase 2 exit criteria
 
@@ -1017,6 +1018,19 @@ in M64; hub targetNodes + menForwardOnly in M65; komi in M66).
   empty double-pass transcript / replay tests; form exposes komi under
   area_control — **done**
 - Out of scope: seki; dead-stone scoring; simultaneous jump; realtime
+- Green gate: ≥788 + new cases — **done**
+
+### M67 — Go Lite Seki / `objective.seki`
+
+- Schema: optional `objective.seki` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `findSekiNeutralCells` + `scoreArea` exclusion; `areaOutcome`
+  threads `sekiScoring`; pass terminal + normalize pass-through — **done**
+- Preset `go-lite-seki` (seeded mutual-life; without seki X wins, with seki
+  draw) + unit / schema / transcript / replay tests; form switch under
+  area_control — **done**
+- Out of scope: dead-stone removal; hex/graph seki presets; groups with
+  ≥2 private liberties; simultaneous jump; realtime
 - Green gate: ≥788 + new cases — **done**
 
 ## Sequencing notes
