@@ -537,13 +537,24 @@ export const zConfig = z
 				 * When true, multi-stone groups with exactly 3 root liberties
 				 * that collapse to a ladder (or immediate capture) under one
 				 * attacker liberty-fill are removed before two-pass scoring
-				 * (after optional looseNetDeath; before ladderDeath).
-				 * Attacker-first polarity — unlike defender-first netDeath.
-				 * Single-stone 3-lib shapes omitted. Edge foothold does not
-				 * save. Default / omit = leave open 3-lib cages that fail
-				 * defender-first nets.
+				 * (after optional looseNetDeath; before approachNetDeath /
+				 * ladderDeath). Attacker-first polarity — unlike defender-first
+				 * netDeath. Single-stone 3-lib shapes omitted. Edge foothold
+				 * does not save. Default / omit = leave open 3-lib cages that
+				 * fail defender-first nets.
 				 */
-				senteLadderDeath: z.boolean().optional()
+				senteLadderDeath: z.boolean().optional(),
+				/**
+				 * When true, multi-stone groups with exactly 3 or 4 root
+				 * liberties that become net/loose-net dead after one attacker
+				 * place on a non-liberty approach cell are removed before
+				 * two-pass scoring (after optional senteLadderDeath; before
+				 * ladderDeath). Distinct from liberty-fill sente ladders and
+				 * from defender-first nets that already succeed without the
+				 * approach. Edge foothold does not save. Default / omit =
+				 * leave approach-closed cages on the board.
+				 */
+				approachNetDeath: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1462,6 +1473,16 @@ export const zConfig = z
 				path: ["objective", "senteLadderDeath"],
 				message:
 					"objective.senteLadderDeath requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Approach-net removal is area_control-only.
+		if (cfg.objective.approachNetDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "approachNetDeath"],
+				message:
+					"objective.approachNetDeath requires objective.mode = 'area_control'"
 			});
 		}
 

@@ -106,6 +106,7 @@ These are built from the same shared schema and operators.
 - **Go Lite Net** (`objective.netDeath` attacker-sente net / geta removal at scoring)
 - **Go Lite Loose Net** (`objective.looseNetDeath` attacker-sente loose net / 4-lib geta removal at scoring)
 - **Go Lite Sente Ladder** (`objective.senteLadderDeath` attacker-first 3-lib → ladder collapse at scoring)
+- **Go Lite Approach Net** (`objective.approachNetDeath` non-liberty approach → net/loose-net collapse at scoring)
 - **Hex Go Lite** (same on hex_offset — six cube-axis liberties)
 - **Graph Go Lite** (same on graph — liberties follow explicit undirected edges)
 - **Go Lite Superko** (positional superko — forbids repeating any prior board position)
@@ -579,15 +580,17 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
 `objective.nakadeDeath` (M76), Go Lite Net /
 `objective.netDeath` (M77), Go Lite Loose Net /
 `objective.looseNetDeath` (M78), Go Lite Sente Ladder /
-`objective.senteLadderDeath` (M79).
+`objective.senteLadderDeath` (M79), Go Lite Approach Net /
+`objective.approachNetDeath` (M80).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fuller Go remainder beyond sente ladder; throw-in nets; fire→move only with
-  anchor; realtime scheduler; simultaneous jump; reject recombinations)
-- Deferred: fuller Go rules (sente ladder landed as M79; loose net as M78; net
-  as M77; nakade as M76; semeai as M75;
+  fuller Go remainder beyond approach nets; throw-in / connect-and-die;
+  fire→move only with anchor; realtime scheduler; simultaneous jump; reject
+  recombinations)
+- Deferred: fuller Go rules (approach net landed as M80; sente ladder as M79;
+  loose net as M78; net as M77; nakade as M76; semeai as M75;
   territory+prisoners as M74; ladders as M73;
   mark-dead resume as M72; mark-dead as M71;
   dame fill as M70; Benson as M69); realtime scheduler;
@@ -606,7 +609,7 @@ Go Lite Dame Fill / `objective.dameFill` (M70), Go Lite Mark Dead /
   deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
   markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
   semeaiDeath in M75; nakadeDeath in M76; netDeath in M77; looseNetDeath in
-  M78; senteLadderDeath in M79)
+  M78; senteLadderDeath in M79; approachNetDeath in M80)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.

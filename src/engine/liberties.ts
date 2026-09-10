@@ -1369,6 +1369,122 @@ export function removeSenteLadderDeadStones(
 }
 
 /**
+ * Approach-move net (M80): multi-stone group with exactly 3 or 4 root liberties
+ * that is not already net / loose-net / sente-ladder / ladder dead, but becomes
+ * net-dead or loose-net-dead after one attacker place on a cell that is **not**
+ * a current liberty (an approach / kakari that closes the cage). Distinct from
+ * senteLadderDeath (liberty-fill → ladder) and from defender-first nets that
+ * already succeed without the approach. Edge foothold does not save.
+ */
+export function isApproachNetDeadGroup(
+	grid: Grid,
+	stones: Position[],
+	color: Player,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): boolean {
+	if (stones.length < 2) return false;
+	const rootLibs = libertyPositionsOf(grid, stones, wrap, topology, graph);
+	if (rootLibs.length !== 3 && rootLibs.length !== 4) return false;
+	if (isLadderDeadGroup(grid, stones, color, wrap, topology, graph)) {
+		return false;
+	}
+	if (isNetDeadGroup(grid, stones, color, wrap, topology, graph)) {
+		return false;
+	}
+	if (isLooseNetDeadGroup(grid, stones, color, wrap, topology, graph)) {
+		return false;
+	}
+	if (isSenteLadderDeadGroup(grid, stones, color, wrap, topology, graph)) {
+		return false;
+	}
+
+	const attacker: Player = color === "X" ? "O" : "X";
+	const libKeys = new Set(rootLibs.map(keyOf));
+	const originalKeys = stones.map(keyOf);
+
+	for (let row = 0; row < grid.height; row++) {
+		for (let col = 0; col < grid.width; col++) {
+			const A: Position = { row, col };
+			const ak = keyOf(A);
+			if (libKeys.has(ak)) continue;
+			if (getCell(grid, A) !== null) continue;
+			if (!isActivePosition(A, topology, graph)) continue;
+			const sim = simulateLibertyPlace(
+				grid,
+				A,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			const next: Grid = { ...grid, cells: sim.cells };
+			const rem: Position[] = [];
+			for (const k of originalKeys) {
+				const p = parseLibertyKey(k);
+				if (getCell(next, p) === color) rem.push(p);
+			}
+			if (rem.length === 0) continue;
+			if (
+				isNetDeadGroup(next, rem, color, wrap, topology, graph) ||
+				isLooseNetDeadGroup(next, rem, color, wrap, topology, graph)
+			) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Groups force-capturable by an approach-move net at scoring (M80). Root
+ * exactly 3 or 4 liberties. Edge foothold does not save.
+ */
+export function findApproachNetDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const dead: Position[] = [];
+	for (const g of groups) {
+		if (
+			!isApproachNetDeadGroup(
+				grid,
+				g.stones,
+				g.color,
+				wrap,
+				topology,
+				graph
+			)
+		) {
+			continue;
+		}
+		for (const p of g.stones) dead.push(p);
+	}
+	return dead;
+}
+
+/** Clear approach-net-dead stones from a grid copy (M80). */
+export function removeApproachNetDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findApproachNetDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
  * Capturing-race (semeai) lite (M75): a group is dead when it shares ≥1 liberty
  * with an opposing group that has strictly more liberties. Equal counts against
  * all shared opponents keep both sides (seki-like). Unlike ladderDeath, this is
@@ -1617,7 +1733,10 @@ export function scoreArea(
  * (or capture) under one attacker liberty-fill are removed after optional
  * looseNetDeath and before ladderDeath (M79; attacker-first polarity vs
  * defender-first netDeath; single-stone 3-lib shapes omitted). When
- * `territoryPrisoners` is true, score is territory + prisoners
+ * `approachNetDeath` is true, multi-stone groups with exactly 3 or 4 root
+ * liberties that become net/loose-net dead after one non-liberty approach
+ * place are removed after optional senteLadderDeath and before ladderDeath
+ * (M80). When `territoryPrisoners` is true, score is territory + prisoners
  * (Japanese lite) instead of stones + territory (M74); `prisoners` tallies
  * captures in play.
  */
@@ -1637,7 +1756,8 @@ export function areaOutcome(
 	nakadeDeath: boolean = false,
 	netDeath: boolean = false,
 	looseNetDeath: boolean = false,
-	senteLadderDeath: boolean = false
+	senteLadderDeath: boolean = false,
+	approachNetDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -1662,6 +1782,9 @@ export function areaOutcome(
 	}
 	if (senteLadderDeath) {
 		scored = removeSenteLadderDeadStones(scored, wrap, topology, graph);
+	}
+	if (approachNetDeath) {
+		scored = removeApproachNetDeadStones(scored, wrap, topology, graph);
 	}
 	if (ladderDeath) {
 		scored = removeLadderDeadStones(scored, wrap, topology, graph);

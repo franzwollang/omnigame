@@ -16,12 +16,14 @@ import {
 	findNetDeadCells,
 	findLooseNetDeadCells,
 	findSenteLadderDeadCells,
+	findApproachNetDeadCells,
 	findSemeaiDeadCells,
 	isLadderDeadGroup,
 	isNakadeVulnerableRegion,
 	isNetDeadGroup,
 	isLooseNetDeadGroup,
 	isSenteLadderDeadGroup,
+	isApproachNetDeadGroup,
 	isLegalLibertyPlace,
 	orthogonalNeighbors,
 	removeBensonDeadStones,
@@ -31,6 +33,7 @@ import {
 	removeNetDeadStones,
 	removeLooseNetDeadStones,
 	removeSenteLadderDeadStones,
+	removeApproachNetDeadStones,
 	removeSemeaiDeadStones,
 	removeMarkedDeadStones,
 	scoreArea,
@@ -1690,6 +1693,199 @@ describe("Go Lite (liberties + area_control)", () => {
 			{ nakadeDeath: true },
 			{ netDeath: true },
 			{ looseNetDeath: true },
+			{ ladderDeath: true },
+			{ seki: true }
+		] as const) {
+			const alt = structuredClone(cfg);
+			alt.objective = { mode: "area_control", ...flag };
+			const altKernel = compileConfig(alt);
+			let altState = altKernel.kernel.initialState(cfg.rng.seed);
+			for (const action of script) {
+				altState = altKernel.kernel.stepSync(altState, action).nextState;
+			}
+			expect(altState.winner).toBe("X");
+		}
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
+	});
+
+	it("validates and compiles the go-lite-approach-net preset", () => {
+		const cfg = examplePresets["go-lite-approach-net"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.approachNetDeath).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.approachNetDeath outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; approachNetDeath?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", approachNetDeath: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("findApproachNetDeadCells: open loose cage clears 4-lib X; siblings skip", () => {
+		const cfg = examplePresets["go-lite-approach-net"].config;
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const g = state.grid;
+		const netX = enumerateGroups(g).find(
+			(gr) => gr.color === "X" && gr.stones.some((p) => p.row === 0)
+		)!;
+		expect(netX.liberties.size).toBe(4);
+		expect(isLadderDeadGroup(g, netX.stones, "X")).toBe(false);
+		expect(isNetDeadGroup(g, netX.stones, "X")).toBe(false);
+		expect(isLooseNetDeadGroup(g, netX.stones, "X")).toBe(false);
+		expect(isSenteLadderDeadGroup(g, netX.stones, "X")).toBe(false);
+		expect(isApproachNetDeadGroup(g, netX.stones, "X")).toBe(true);
+		expect(findNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findLadderDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findNetDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findLooseNetDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(findSenteLadderDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(
+			findDeadStoneCells(g).every(
+				(p) => !(p.row === 0 && (p.col === 2 || p.col === 3))
+			)
+		).toBe(true);
+		expect(
+			findBensonDeadStoneCells(g).every(
+				(p) => !(p.row === 0 && (p.col === 2 || p.col === 3))
+			)
+		).toBe(true);
+		const dead = findApproachNetDeadCells(g);
+		expect(dead.length).toBe(netX.stones.length);
+		expect(dead.every((p) => getCell(g, p) === "X")).toBe(true);
+		// Approach O@(1,4) completes loose net (documents non-liberty place).
+		const approach = simulateLibertyPlace(g, { row: 1, col: 4 }, "O");
+		expect(approach).not.toBeNull();
+		const next = { ...g, cells: approach!.cells };
+		expect(isLooseNetDeadGroup(next, netX.stones, "X")).toBe(true);
+		expect(areaOutcome(g).winner).toBe("X");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				false,
+				false,
+				false,
+				true
+			).winner
+		).toBe("O");
+		// Sibling flags alone do not flip.
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				false,
+				true,
+				false,
+				false
+			).winner
+		).toBe("X");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				false,
+				false,
+				true,
+				false
+			).winner
+		).toBe("X");
+		const living = enumerateGroups(g).find(
+			(gr) =>
+				gr.color === "X" && !gr.stones.some((p) => p.row === 0 && p.col <= 3)
+		)!;
+		expect(living.liberties.size).toBeGreaterThanOrEqual(4);
+		expect(isApproachNetDeadGroup(g, living.stones, "X")).toBe(false);
+		const cleared = scoreArea(removeApproachNetDeadStones(g));
+		expect(cleared.O).toBeGreaterThan(cleared.X);
+	});
+
+	it("go-lite-approach-net: seeded double-pass O wins; without flag X wins; contrasts; replay faithful", () => {
+		const cfg = examplePresets["go-lite-approach-net"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [{ type: "pass" }, { type: "pass" }];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const without = structuredClone(cfg);
+		without.objective = { mode: "area_control" };
+		const baseline = compileConfig(without);
+		let rawState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			rawState = baseline.kernel.stepSync(rawState, action).nextState;
+		}
+		expect(rawState.status).toBe("won");
+		expect(rawState.winner).toBe("X");
+
+		for (const flag of [
+			{ deadStones: true },
+			{ bensonLife: true },
+			{ nakadeDeath: true },
+			{ netDeath: true },
+			{ looseNetDeath: true },
+			{ senteLadderDeath: true },
 			{ ladderDeath: true },
 			{ seki: true }
 		] as const) {

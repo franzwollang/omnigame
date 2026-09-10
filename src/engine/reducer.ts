@@ -250,10 +250,18 @@ export type GameConfig = {
 	 * When true, two-pass area scoring removes multi-stone groups with
 	 * exactly 3 root liberties that collapse to a ladder (or capture) under
 	 * one attacker liberty-fill — after optional looseNetDeath and before
-	 * ladderDeath (M79). Attacker-first polarity vs defender-first netDeath.
-	 * Single-stone 3-lib shapes omitted.
+	 * approachNetDeath / ladderDeath (M79). Attacker-first polarity vs
+	 * defender-first netDeath. Single-stone 3-lib shapes omitted.
 	 */
 	senteLadderDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes multi-stone groups with
+	 * exactly 3 or 4 root liberties that become net/loose-net dead after one
+	 * non-liberty approach place — after optional senteLadderDeath and before
+	 * ladderDeath (M80). Distinct from liberty-fill sente ladders and from
+	 * defender-first nets that already succeed without the approach.
+	 */
+	approachNetDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1272,7 +1280,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				config.nakadeDeath === true,
 				config.netDeath === true,
 				config.looseNetDeath === true,
-				config.senteLadderDeath === true
+				config.senteLadderDeath === true,
+				config.approachNetDeath === true
 			);
 			return {
 				...state,
@@ -1301,7 +1310,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.nakadeDeath === true,
 			config.netDeath === true,
 			config.looseNetDeath === true,
-			config.senteLadderDeath === true
+			config.senteLadderDeath === true,
+			config.approachNetDeath === true
 		);
 		return {
 			...state,

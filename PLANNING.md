@@ -95,12 +95,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M77 | Next missing mechanism (Go Lite Net / objective.netDeath) | `done` |
 | M78 | Next missing mechanism (Go Lite Loose Net / objective.looseNetDeath) | `done` |
 | M79 | Next missing mechanism (Go Lite Sente Ladder / objective.senteLadderDeath) | `done` |
+| M80 | Next missing mechanism (Go Lite Approach Net / objective.approachNetDeath) | `done` |
 
-**Optimizing for this marathon:** M79 Go Lite Sente Ladder
-(`objective.senteLadderDeath`) landed. Pick **P3 next-missing-mechanism**
+**Optimizing for this marathon:** M80 Go Lite Approach Net
+(`objective.approachNetDeath`) landed. Pick **P3 next-missing-mechanism**
 (smallest new seam; reject recombinations without anchor) — without asking
 which fork. Large deferred: simultaneous jump / realtime / fuller Go remainder
-beyond sente ladder (throw-in nets / deeper L&D).
+beyond approach nets (throw-in / connect-and-die).
 
 ## Marathon runbook (cloud agents)
 
@@ -115,7 +116,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥848** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥852** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -240,10 +241,11 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** fuller Go remainder beyond sente ladder (M79; e.g. throw-in /
-deeper L&D); fire→move
+**Not yet:** fuller Go remainder beyond approach net (M80; e.g. throw-in /
+connect-and-die); fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Sente Ladder landed
+anchor); realtime scheduler; simultaneous jump. Go Lite Approach Net landed
+(M80). Go Lite Sente Ladder landed
 (M79). Go Lite Loose Net landed (M78). Go Lite Net landed
 (M77). Go Lite Nakade landed
 (M76). Go Lite Semeai landed
@@ -283,7 +285,7 @@ in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
 deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
 markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
 semeaiDeath in M75; nakadeDeath in M76; netDeath in M77; looseNetDeath in
-M78; senteLadderDeath in M79).
+M78; senteLadderDeath in M79; approachNetDeath in M80).
 
 ## Phase 2 exit criteria
 
@@ -1245,6 +1247,23 @@ M78; senteLadderDeath in M79).
   off-liberty approach generator; connect-and-die; root-4 sente-to-ladder;
   hex/graph ports; simultaneous jump; realtime
 - Green gate: ≥848 + new cases — **done**
+
+### M80 — Go Lite Approach Net / `objective.approachNetDeath`
+
+- Schema: optional `objective.approachNetDeath` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `isApproachNetDeadGroup` / `findApproachNetDeadCells` /
+  `removeApproachNetDeadStones` — root exactly 3 or 4 liberties; multi-stone
+  (≥2); not already net/loose/sente/ladder dead; some non-liberty approach
+  place makes net or loose-net dead; edge does not save; `areaOutcome` after
+  senteLadderDeath before ladderDeath; normalize + form switch — **done**
+- Preset `go-lite-approach-net` (open loose cage vs go-lite-loose-net; drop
+  O@(1,4); add O@(3,6); approach completes loose net; raw → X, with flag → O;
+  contrasts vs net/loose/sente/ladder / nakade / deadStones / Benson / seki)
+  + unit / schema / transcript / replay tests — **done**
+- Out of scope: throw-in / snapback / connect-and-die; hex/graph approach-net
+  presets; simultaneous jump; realtime
+- Green gate: ≥852 + new cases — **done**
 
 ## Sequencing notes
 

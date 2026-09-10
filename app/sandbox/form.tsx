@@ -1372,6 +1372,31 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 										/>
 										<FormField
 											control={form.control}
+											name="objective.approachNetDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Approach-net death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove 3–4 liberty groups that become
+															net/loose-net dead after one non-liberty
+															approach place
+															(objective.approachNetDeath).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
 											name="objective.territoryPrisoners"
 											render={({ field }) => (
 												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">

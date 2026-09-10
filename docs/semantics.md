@@ -295,8 +295,12 @@ senteLadderDeath / ladderDeath; edge does not save); optional
 `objective.senteLadderDeath` removes multi-stone groups with exactly 3 root
 liberties that collapse to a ladder (or capture) under one attacker
 liberty-fill (attacker-first polarity vs defender-first netDeath; after
-looseNetDeath, before ladderDeath; single-stone 3-lib shapes omitted; edge
-does not save); optional `objective.territoryPrisoners`
+looseNetDeath, before approachNetDeath / ladderDeath; single-stone 3-lib
+shapes omitted; edge does not save); optional `objective.approachNetDeath`
+removes multi-stone groups with exactly 3 or 4 root liberties that become
+net/loose-net dead after one non-liberty approach place (after optional
+senteLadderDeath, before ladderDeath; edge does not save); optional
+`objective.territoryPrisoners`
 scores empty territory + stones captured in play instead of stones +
 territory (Japanese lite); optional `objective.dameFill` enters a
 damezukai-lite endgame on the first pass while dame remain — only dame places

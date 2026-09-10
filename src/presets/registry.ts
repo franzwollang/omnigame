@@ -5889,6 +5889,88 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"go-lite-approach-net": definePreset({
+		id: "go-lite-approach-net",
+		name: "Go Lite Approach Net",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"net",
+			"approach",
+			"geta",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with approach-move net removal at scoring (objective.approachNetDeath). Seeded open loose-net edge X pair (exactly 4 liberties): defender-first looseNetDeath / netDeath / senteLadderDeath miss, but one non-liberty approach (e.g. O@(1,4)) completes a loose net. Without the flag double-pass awards X; with approachNetDeath the trapped group is cleared → O wins. Unlocks approach/kakari cage-closing beyond liberty-fill sente and defender-first nets.",
+		config: {
+			metadata: { name: "Go Lite Approach Net", version: 1 },
+			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", approachNetDeath: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Open loose net vs go-lite-loose-net: drop O@(1,4) so
+				// defender-first looseNetDeath fails; approach O@(1,4) (or
+				// (2,2)/(2,3)) completes the cage. Victim X@(0,2)/(0,3) has
+				// exactly 4 libs. Add O@(3,6) so raw area awards X by 1 and
+				// clearance flips to O. Living X keeps X@(3,2) (≥5 libs).
+				// Omit semeai contrast on the victim.
+				{ row: 0, col: 0, player: "O", visibility: "public" },
+				{ row: 0, col: 2, player: "X", visibility: "public" },
+				{ row: 0, col: 3, player: "X", visibility: "public" },
+				{ row: 0, col: 5, player: "O", visibility: "public" },
+				{ row: 1, col: 0, player: "O", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 2, col: 4, player: "O", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" },
+				{ row: 3, col: 6, player: "O", visibility: "public" },
+				{ row: 4, col: 5, player: "O", visibility: "public" },
+				{ row: 4, col: 6, player: "O", visibility: "public" },
+				{ row: 5, col: 5, player: "O", visibility: "public" },
+				{ row: 5, col: 6, player: "O", visibility: "public" },
+				{ row: 6, col: 4, player: "O", visibility: "public" },
+				{ row: 6, col: 5, player: "O", visibility: "public" },
+				{ row: 6, col: 6, player: "O", visibility: "public" },
+				{ row: 2, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 0, player: "X", visibility: "public" },
+				{ row: 3, col: 1, player: "X", visibility: "public" },
+				{ row: 3, col: 2, player: "X", visibility: "public" },
+				{ row: 4, col: 0, player: "X", visibility: "public" },
+				{ row: 4, col: 1, player: "X", visibility: "public" },
+				{ row: 4, col: 2, player: "X", visibility: "public" },
+				{ row: 5, col: 0, player: "X", visibility: "public" },
+				{ row: 5, col: 1, player: "X", visibility: "public" },
+				{ row: 5, col: 2, player: "X", visibility: "public" },
+				{ row: 6, col: 0, player: "X", visibility: "public" },
+				{ row: 6, col: 1, player: "X", visibility: "public" },
+				{ row: 6, col: 2, player: "X", visibility: "public" }
+			]
+		}
+	}),
 	"go-lite-superko": definePreset({
 		id: "go-lite-superko",
 		name: "Go Lite Superko",
