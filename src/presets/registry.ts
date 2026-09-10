@@ -4977,7 +4977,7 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			"mechanism"
 		],
 		description:
-			"Go Lite with pass-alive lite dead-stone removal (objective.deadStones). Seeded thin O ring + interior X: without removal X leads on area; with removal interior X (<2 true eyes, not on edge) is cleared → O wins. Unlocks scoring corpse removal — not full Go / Benson search.",
+			"Go Lite with pass-alive lite dead-stone removal (objective.deadStones). Seeded thin O ring + interior X: without removal X leads on area; with removal interior X (<2 true eyes, not on edge) is cleared → O wins. Unlocks scoring corpse removal — Benson vital-region life is Go Lite Benson (objective.bensonLife).",
 		config: {
 			metadata: { name: "Go Lite Dead Stones", version: 1 },
 			grid: { width: 7, height: 7, topology: "rectangle", wrap: false },
@@ -5033,6 +5033,82 @@ export const examplePresets: Record<string, ExamplePreset> = {
 							});
 						}
 					}
+				}
+				return stones;
+			})()
+		}
+	}),
+	"go-lite-benson": definePreset({
+		id: "go-lite-benson",
+		name: "Go Lite Benson",
+		tags: [
+			"liberties",
+			"territory",
+			"area-control",
+			"benson",
+			"dead-stones",
+			"mechanism"
+		],
+		description:
+			"Go Lite with Benson unconditional life at scoring (objective.bensonLife). Seeded dual one-eyed X groups sharing a vital corridor: each has only 1 true eye (dead under deadStones) but both are Benson-alive via the shared region → kept and X wins. Unlocks vital-region life beyond per-group eye count.",
+		config: {
+			metadata: { name: "Go Lite Benson", version: 1 },
+			grid: { width: 9, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "cell" },
+			placement: {
+				mode: "direct",
+				capture: { enabled: true, mode: "liberties", ko: true },
+				overflow: "reject"
+			},
+			observation: { mode: "full" },
+			objective: { mode: "area_control", bensonLife: true },
+			tokens: [
+				{
+					id: "stone-x",
+					label: "●",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "stone-o",
+					label: "○",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: (() => {
+				const stones: Array<{
+					row: number;
+					col: number;
+					player: "X" | "O";
+					visibility: "public";
+				}> = [];
+				// Dual one-eyed X blocks sharing a 3-cell corridor (cols 1–3 / 5–7;
+				// eyes at (2,2) and (2,6); shared vital region col 4). Interior so
+				// deadStones would clear both; Benson keeps both.
+				const cells: Array<[number, number]> = [
+					[1, 1],
+					[1, 2],
+					[1, 3],
+					[2, 1],
+					[2, 3],
+					[3, 1],
+					[3, 2],
+					[3, 3],
+					[1, 5],
+					[1, 6],
+					[1, 7],
+					[2, 5],
+					[2, 7],
+					[3, 5],
+					[3, 6],
+					[3, 7]
+				];
+				for (const [row, col] of cells) {
+					stones.push({ row, col, player: "X", visibility: "public" });
 				}
 				return stones;
 			})()

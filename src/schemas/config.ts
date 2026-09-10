@@ -451,7 +451,15 @@ export const zConfig = z
 				 * Edge-touching groups and seki clusters are kept. Default /
 				 * omit = leave all stones on the board at score.
 				 */
-				deadStones: z.boolean().optional()
+				deadStones: z.boolean().optional(),
+				/**
+				 * When true, interior groups that are not Benson-
+				 * unconditionally alive (vital-region fixed point) are removed
+				 * before two-pass area scoring. Supersedes deadStones when both
+				 * are set. Edge foothold + seki clusters kept. Default / omit =
+				 * leave stones (or use deadStones lite if that flag is on).
+				 */
+				bensonLife: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1231,6 +1239,16 @@ export const zConfig = z
 				path: ["objective", "deadStones"],
 				message:
 					"objective.deadStones requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Benson unconditional life is area_control-only (vital-region scoring).
+		if (cfg.objective.bensonLife === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "bensonLife"],
+				message:
+					"objective.bensonLife requires objective.mode = 'area_control'"
 			});
 		}
 

@@ -1198,6 +1198,31 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 												</FormItem>
 											)}
 										/>
+										<FormField
+											control={form.control}
+											name="objective.bensonLife"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Benson life</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove interior groups that are not
+															Benson-unconditionally alive
+															(objective.bensonLife; supersedes
+															deadStones).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
 									</>
 								) : null}
 							</div>

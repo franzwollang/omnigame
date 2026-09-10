@@ -265,7 +265,9 @@ n_in_a_row | reach_row (+ targetRows) | destroy_hidden | connect_or_destroy |
 area_control (two passes → score; optional `objective.komi` added to O;
 optional `objective.seki` neutralizes shared-life empty points; optional
 `objective.deadStones` removes interior groups with fewer than 2 true eyes
-before counting) |
+before counting; optional `objective.bensonLife` removes interior groups that
+are not Benson-unconditionally alive — vital-region fixed point; supersedes
+`deadStones` when both are set) |
 identify_secret | clear_hazards | match_pairs | none.
 
 ### Observation

@@ -84,11 +84,12 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M66 | Next missing mechanism (Go Lite Komi / objective.komi) | `done` |
 | M67 | Next missing mechanism (Go Lite Seki / objective.seki) | `done` |
 | M68 | Next missing mechanism (Go Lite Dead Stones / objective.deadStones) | `done` |
+| M69 | Next missing mechanism (Go Lite Benson / objective.bensonLife) | `done` |
 
-**Optimizing for this marathon:** M68 Go Lite Dead Stones (`objective.deadStones`)
+**Optimizing for this marathon:** M69 Go Lite Benson (`objective.bensonLife`)
 landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
 recombinations without anchor) — without asking which fork. Large deferred:
-simultaneous jump / realtime / full Go remainder.
+simultaneous jump / realtime / fuller Go remainder beyond Benson.
 
 ## Marathon runbook (cloud agents)
 
@@ -228,9 +229,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 `identify_secret`, …). Range 2–8 unlocked for rectangle, hex, and graph
 (chain-walk or hop-ball).
 
-**Not yet:** full Go remainder (richer life/death beyond M68 lite); fire→move
+**Not yet:** fuller Go remainder beyond Benson (M69); fire→move
 reorder (only with
-anchor); realtime scheduler; simultaneous jump. Go Lite Dead Stones landed
+anchor); realtime scheduler; simultaneous jump. Go Lite Benson landed
+(M69). Go Lite Dead Stones landed
 (M68). Go Lite Seki landed (M67). Go Lite Komi landed (M66).
 Graph hub menForwardOnly landed (M65 Graph Hub
 Forward Men Jump Lite). Graph menForwardOnly landed (M64 Graph Forward Men
@@ -257,7 +259,7 @@ hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
-deadStones in M68).
+deadStones in M68; bensonLife in M69).
 
 ## Phase 2 exit criteria
 
@@ -1049,6 +1051,21 @@ deadStones in M68).
   form switch under area_control — **done**
 - Out of scope: full Benson search; multi-eye shared sets beyond per-group
   true eyes; hex/graph dead-stone presets; simultaneous jump; realtime
+- Green gate: ≥798 + new cases — **done**
+
+### M69 — Go Lite Benson / `objective.bensonLife`
+
+- Schema: optional `objective.bensonLife` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `findBensonAliveGroupIds` / `findBensonDeadStoneCells` /
+  `removeBensonDeadStones` (vital-region fixed point; edge foothold + seki
+  kept); `areaOutcome` threads flag (supersedes `deadStones` when both set);
+  normalize pass-through — **done**
+- Preset `go-lite-benson` (dual one-eyed X groups sharing a corridor; deadStones
+  draws, Benson X wins) + unit / schema / transcript / replay tests; form
+  switch under area_control — **done**
+- Out of scope: fuller Go / semantic life-death search; hex/graph Benson
+  presets; simultaneous jump; realtime
 - Green gate: ≥798 + new cases — **done**
 
 ## Sequencing notes

@@ -576,6 +576,173 @@ export function removeDeadStones(
 	return { ...grid, cells };
 }
 
+type BensonRegion = {
+	adjacentGroupIds: Set<number>;
+};
+
+/**
+ * Empty regions whose border stones are exclusively `color` (no opponent).
+ * Used as candidate vital regions for Benson unconditional life (M69).
+ */
+function findColorOnlyEmptyRegions(
+	grid: Grid,
+	color: Player,
+	stoneToGroup: Map<string, number>,
+	wrap: boolean,
+	topology: GridTopology,
+	graph?: GraphTopologyData
+): BensonRegion[] {
+	const regions: BensonRegion[] = [];
+	const visited = new Set<string>();
+	for (const start of seedPositionsFor(grid, topology, graph)) {
+		const sk = keyOf(start);
+		if (visited.has(sk)) continue;
+		if (getCell(grid, start) !== null) {
+			visited.add(sk);
+			continue;
+		}
+
+		const adjacentGroupIds = new Set<number>();
+		const border = new Set<Player>();
+		const stack: Position[] = [start];
+		visited.add(sk);
+
+		while (stack.length > 0) {
+			const cur = stack.pop()!;
+			for (const n of libertyNeighbors(grid, cur, wrap, topology, graph)) {
+				const nk = keyOf(n);
+				const val = getCell(grid, n);
+				if (val === null) {
+					if (!visited.has(nk)) {
+						visited.add(nk);
+						stack.push(n);
+					}
+				} else if (val === "X" || val === "O") {
+					border.add(val);
+					if (val === color) {
+						const gid = stoneToGroup.get(nk);
+						if (gid !== undefined) adjacentGroupIds.add(gid);
+					}
+				}
+			}
+		}
+
+		if (border.size === 1 && border.has(color) && adjacentGroupIds.size > 0) {
+			regions.push({ adjacentGroupIds });
+		}
+	}
+	return regions;
+}
+
+/**
+ * Benson unconditional life for one color: iterative vital-region fixed point.
+ * A chain set is unconditionally alive when every remaining chain has ≥2
+ * regions that border only remaining chains of that color (M69).
+ */
+export function findBensonAliveGroupIds(
+	grid: Grid,
+	color: Player,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Set<number> {
+	const groups = enumerateGroups(grid, wrap, topology, graph).filter(
+		(g) => g.color === color
+	);
+	if (groups.length === 0) return new Set();
+
+	const stoneToGroup = new Map<string, number>();
+	for (const g of groups) {
+		for (const p of g.stones) stoneToGroup.set(keyOf(p), g.id);
+	}
+
+	let X = new Set(groups.map((g) => g.id));
+	let R = findColorOnlyEmptyRegions(
+		grid,
+		color,
+		stoneToGroup,
+		wrap,
+		topology,
+		graph
+	);
+
+	for (;;) {
+		const Xnew = new Set<number>();
+		for (const gid of Array.from(X)) {
+			let vital = 0;
+			for (const region of R) {
+				if (region.adjacentGroupIds.has(gid)) vital += 1;
+			}
+			if (vital >= 2) Xnew.add(gid);
+		}
+
+		const Rnew = R.filter((region) => {
+			for (const gid of Array.from(region.adjacentGroupIds)) {
+				if (!Xnew.has(gid)) return false;
+			}
+			return region.adjacentGroupIds.size > 0;
+		});
+
+		const sameX =
+			Xnew.size === X.size && Array.from(Xnew).every((id) => X.has(id));
+		const sameR =
+			Rnew.length === R.length &&
+			Rnew.every((region, i) => region === R[i]);
+		if (sameX && sameR) return Xnew;
+
+		X = Xnew;
+		R = Rnew;
+		if (X.size === 0) return X;
+	}
+}
+
+/**
+ * Interior groups that are not Benson-unconditionally alive are dead at
+ * scoring (M69). Edge foothold and seki clusters are kept — same as M68.
+ */
+export function findBensonDeadStoneCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const alive = new Set<number>([
+		...Array.from(findBensonAliveGroupIds(grid, "X", wrap, topology, graph)),
+		...Array.from(findBensonAliveGroupIds(grid, "O", wrap, topology, graph))
+	]);
+
+	const dead: Position[] = [];
+	for (const g of groups) {
+		if (sekiIds.has(g.id)) continue;
+		if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+		if (alive.has(g.id)) continue;
+		for (const p of g.stones) dead.push(p);
+	}
+	return dead;
+}
+
+/** Clear Benson-dead stones from a grid copy (M69). */
+export function removeBensonDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findBensonDeadStoneCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
 /**
  * Simplified area scoring: stones + empty regions bordered only by one color.
  * Mixed-border or edge-open empty regions score for neither (dame).
@@ -656,6 +823,9 @@ export function scoreArea(
  * are neutral (Go Lite Seki).
  * When `deadStones` is true, interior groups with fewer than 2 true eyes are
  * removed before scoring (pass-alive lite; seki clusters exempt) (M68).
+ * When `bensonLife` is true, interior groups that are not Benson-
+ * unconditionally alive are removed instead (M69; supersedes deadStones
+ * when both are set — richer vital-region life).
  */
 export function areaOutcome(
 	grid: Grid,
@@ -664,15 +834,18 @@ export function areaOutcome(
 	graph?: GraphTopologyData,
 	komi: number = 0,
 	sekiScoring: boolean = false,
-	deadStones: boolean = false
+	deadStones: boolean = false,
+	bensonLife: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
 	score: AreaScore;
 } {
-	const scored = deadStones
-		? removeDeadStones(grid, wrap, topology, graph)
-		: grid;
+	const scored = bensonLife
+		? removeBensonDeadStones(grid, wrap, topology, graph)
+		: deadStones
+			? removeDeadStones(grid, wrap, topology, graph)
+			: grid;
 	const neutral = sekiScoring
 		? findSekiNeutralCells(scored, wrap, topology, graph)
 		: undefined;

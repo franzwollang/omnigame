@@ -185,6 +185,12 @@ export type GameConfig = {
 	 * than 2 true eyes before counting (pass-alive lite). Default false.
 	 */
 	deadStones?: boolean;
+	/**
+	 * When true, two-pass area scoring removes interior groups that are not
+	 * Benson-unconditionally alive (vital-region fixed point). Supersedes
+	 * deadStones when both are set. Default false.
+	 */
+	bensonLife?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1132,7 +1138,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			config.graph,
 			config.komi ?? 0,
 			config.sekiScoring === true,
-			config.deadStones === true
+			config.deadStones === true,
+			config.bensonLife === true
 		);
 		return {
 			...state,
