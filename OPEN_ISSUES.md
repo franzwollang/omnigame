@@ -11,41 +11,40 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Go Lite Rabbity-Six-Nakade (`go-lite-rabbity6-nakade` /
-`objective.rabbitySixNakadeDeath` filled 2×3 hexomino big-eye vital-fill
-removal at scoring; Benson-alive / T1-miss / L-miss / square-miss /
-pyramid-miss / twisted-miss / L4-miss / straight-4-miss / bulky-5-miss /
-plus-miss / V-miss / chase-miss unique board on 9×9) landed as **M95**.
-Go Lite V-Nakade closed as M94; Plus-Nakade as M93; Bulky-5-Nakade as M92;
-Straight-4-Nakade as M91; L4-Nakade as M90; Twisted-Nakade as M89;
-Pyramid-Nakade as M88; Square-Nakade as M87; L-Nakade as M86; Hidden Double
-Simultaneous Jump Race as M85; Double Simultaneous Jump Race as M84; Hidden
-Simultaneous Jump Race as M83; Ordered Simultaneous Jump Race as M82;
-Simultaneous Jump Race as M81; Go Lite Approach Net as M80; Sente Ladder as
-M79; Loose Net as M78; Net as M77; Nakade as M76; Semeai as M75; Territory
-Prisoners as M74; Ladders as M73; Mark Dead Resume as M72; Mark Dead as M71;
-Dame Fill as M70; Benson as M69; dead stones as M68; seki as M67; komi as
-M66; hub-graph forward-only men as M65; graph forward-only men as M64; hex
-forward-only men as M63; graph flying capture as M62; hex flying capture as
-M61; hub-graph promotion as M60; graph promotion as M59; hex promotion as
+Go Lite U-Nakade (`go-lite-u-nakade` / `objective.uNakadeDeath` U-pentomino
+2×3 minus edge-middle big-eye vital-fill removal at scoring; Benson-alive /
+T1-miss / L-miss / square-miss / pyramid-miss / twisted-miss / L4-miss /
+straight-4-miss / bulky-5-miss / plus-miss / V-miss / rabbity-six-miss /
+chase-miss unique board on 9×9) landed as **M96**.
+Go Lite Rabbity-Six-Nakade closed as M95; V-Nakade as M94; Plus-Nakade as M93;
+Bulky-5-Nakade as M92; Straight-4-Nakade as M91; L4-Nakade as M90;
+Twisted-Nakade as M89; Pyramid-Nakade as M88; Square-Nakade as M87; L-Nakade as
+M86; Hidden Double Simultaneous Jump Race as M85; Double Simultaneous Jump
+Race as M84; Hidden Simultaneous Jump Race as M83; Ordered Simultaneous Jump
+Race as M82; Simultaneous Jump Race as M81; Go Lite Approach Net as M80;
+Sente Ladder as M79; Loose Net as M78; Net as M77; Nakade as M76; Semeai as
+M75; Territory Prisoners as M74; Ladders as M73; Mark Dead Resume as M72; Mark
+Dead as M71; Dame Fill as M70; Benson as M69; dead stones as M68; seki as M67;
+komi as M66; hub-graph forward-only men as M65; graph forward-only men as M64;
+hex forward-only men as M63; graph flying capture as M62; hex flying capture
+as M61; hub-graph promotion as M60; graph promotion as M59; hex promotion as
 M58; graph liberties as M57; hex liberties as M56; flying jump capture as
-M55; graph flood_reveal as M54; hex flood_reveal as M53; flying kings as
-M52; longest mandatory capture as M51; forward-only men as M50; crowned
-promotion as M49; graph jump as M48; hex jump as M47; memory flip as M46;
-mustCapture as M45; rectangle flood_reveal as M44. P4 tooling-ci and
-semantics-doc-refresh already closed (M41–M42; semantics notes continue per
-mechanism).
+M55; graph flood_reveal as M54; hex flood_reveal as M53; flying kings as M52;
+longest mandatory capture as M51; forward-only men as M50; crowned promotion
+as M49; graph jump as M48; hex jump as M47; memory flip as M46; mustCapture as
+M45; rectangle flood_reveal as M44. P4 tooling-ci and semantics-doc-refresh
+already closed (M41–M42; semantics notes continue per mechanism).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
 
-- Other free pentomino nakade shapes (U/T/F/Z/…) — only if uniquely
-  contrastable vs V / plus / bulky-5 / rabbity-six (reject generic any-N-cell
-  flag; many are 9×9-only)
+- Other free pentomino nakade shapes (T/F/Z/W/…) — only if uniquely
+  contrastable vs U / V / plus / bulky-5 / rabbity-six (reject generic any-N-
+  cell flag; many are 9×9-only)
 - Other hexomino nakade (L6 / flower-6 / …) — only if uniquely contrastable
 - Fuller Go remainder (throw-in / snapback / connect-and-die) — only if a
   board uniquely escapes ladder/net/sente/approach/nakade family (prior probe
-  did not; also escape rabbity-six / V / plus / bulky-5 / straight-4 / L4 /
+  did not; also escape U / rabbity-six / V / plus / bulky-5 / straight-4 / L4 /
   twisted / pyramid / square / L now)
 - fire→move phase reorder (only if a new seam / anchor appears — otherwise
   reject as recombination)
@@ -65,8 +64,9 @@ e.g.:
   ladderDeath, territoryPrisoners, semeaiDeath, nakadeDeath, lNakadeDeath,
   squareNakadeDeath, pyramidNakadeDeath, twistedNakadeDeath, l4NakadeDeath,
   straight4NakadeDeath, bulky5NakadeDeath, plusNakadeDeath, vNakadeDeath,
-  rabbitySixNakadeDeath, netDeath, looseNetDeath, senteLadderDeath, or
-  approachNetDeath presets (topology ports — only if a new seam appears)
+  rabbitySixNakadeDeath, uNakadeDeath, netDeath, looseNetDeath,
+  senteLadderDeath, or approachNetDeath presets (topology ports — only if a
+  new seam appears)
 
 **Acceptance:** schema + kernel + preset + tests; mechanism-first (do not
 exhaust `references/` or recombine covered primitives).
@@ -82,5 +82,5 @@ Further ports only for **new** mechanisms — not exhausting `references/`.
 ### deferred-mvp-anchors
 
 Guess Who-like remainder / full Go remain deferred under
-`next-missing-mechanism` (post-rabbity-six; prefer another uniquely
-contrastable seam or realtime — not topology ports).
+`next-missing-mechanism` (post-U-nakade; prefer another uniquely contrastable
+seam or realtime — not topology ports).

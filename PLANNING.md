@@ -111,8 +111,9 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M93 | Next missing mechanism (Go Lite Plus-Nakade / objective.plusNakadeDeath) | `done` |
 | M94 | Next missing mechanism (Go Lite V-Nakade / objective.vNakadeDeath) | `done` |
 | M95 | Next missing mechanism (Go Lite Rabbity-Six-Nakade / objective.rabbitySixNakadeDeath) | `done` |
+| M96 | Next missing mechanism (Go Lite U-Nakade / objective.uNakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M95 Go Lite Rabbity-Six-Nakade landed. Pick
+**Optimizing for this marathon:** M96 Go Lite U-Nakade landed. Pick
 **P3 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork. Large deferred: hex-graph simultaneous
 jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
@@ -266,7 +267,8 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 expressible vs ladder/net/sente/approach/nakade family on lite boards);
 hex-graph simultaneous jump ports; fire→move reorder (only with
 anchor); realtime scheduler; remaining free-pentomino / hexomino nakade
-(only if uniquely contrastable). Go Lite Rabbity-Six-Nakade landed (M95). Go
+(only if uniquely contrastable). Go Lite U-Nakade landed (M96). Go Lite
+Rabbity-Six-Nakade landed (M95). Go
 Lite V-Nakade landed (M94). Go Lite
 Plus-Nakade landed (M93). Go Lite
 Bulky-5-Nakade landed (M92). Go Lite Straight-4-Nakade landed (M91). Go Lite
@@ -1545,9 +1547,25 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Kernel: `isRabbitySixNakadeVulnerableRegion` (filled 2×3 / 3×2 bbox; vital =
   lex-first deg-3 long-side center) + `findRabbitySixNakadeDeadCells` /
   `removeRabbitySixNakadeDeadStones`; `areaOutcome` after optional
-  vNakadeDeath, before netDeath — **done**
+  vNakadeDeath, before uNakadeDeath / netDeath — **done**
 - Preset `go-lite-rabbity6-nakade` (9×9 O-ring + interior X shell; eye + 2×3
   corridor; Benson-alive / T1–V miss / chase-miss; flag → O) + schema /
+  uniqueness / transcript / replay / contrast tests — **done**
+- Out of scope: generic any-N-cell flag; throw-in / connect-and-die; hex/graph
+  nakade ports; realtime
+- Green gate: ≥951 + new cases — **done**
+
+### M96 — Go Lite U-Nakade / U-pentomino (2×3 minus edge-middle)
+
+- Schema: `objective.uNakadeDeath` boolean (area_control-only); distinct from
+  bulky-5 (corner hole) and other pentomino / tetromino / hexomino tables —
+  **done**
+- Kernel: `isUNakadeVulnerableRegion` (2×3 / 3×2 bbox minus edge-middle; vital =
+  opposite long-edge mid cell) + `findUNakadeDeadCells` /
+  `removeUNakadeDeadStones`; `areaOutcome` after optional
+  rabbitySixNakadeDeath, before netDeath — **done**
+- Preset `go-lite-u-nakade` (9×9 O-ring + interior X shell; eye + U corridor;
+  Benson-alive / T1–rabbity-six miss / chase-miss; flag → O) + schema /
   uniqueness / transcript / replay / contrast tests — **done**
 - Out of scope: generic any-N-cell flag; throw-in / connect-and-die; hex/graph
   nakade ports; realtime

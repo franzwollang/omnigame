@@ -349,14 +349,19 @@ stays contrastable);
 optional `objective.rabbitySixNakadeDeath` removes interior groups bordering a
 rabbity-six (filled 2×3 / 3×2 hexomino) nakade big-eye that would have <2 true
 eyes after an opponent vital fill (after optional vNakadeDeath, before
-netDeath; edge + seki exempt; first 6-cell nakade class; distinct from V /
-plus / bulky-5 and tetromino tables);
+uNakadeDeath / netDeath; edge + seki exempt; first 6-cell nakade class; distinct
+from V / plus / bulky-5 and tetromino tables);
+optional `objective.uNakadeDeath` removes interior groups bordering a
+U-pentomino (2×3 / 3×2 minus edge-middle) nakade big-eye that would have <2 true
+eyes after an opponent vital fill (after optional rabbitySixNakadeDeath, before
+netDeath; edge + seki exempt; distinct from bulky-5 corner-hole and other
+pentomino / tetromino / hexomino tables);
 optional `objective.netDeath`
 removes groups force-capturable by an attacker-sente tight net / geta (root
 exactly 3 liberties; every escape has a finishing reply; after nakadeDeath /
 lNakadeDeath / squareNakadeDeath / pyramidNakadeDeath / twistedNakadeDeath /
 l4NakadeDeath / straight4NakadeDeath / bulky5NakadeDeath / plusNakadeDeath /
-vNakadeDeath / rabbitySixNakadeDeath,
+vNakadeDeath / rabbitySixNakadeDeath / uNakadeDeath,
 before looseNetDeath /
 senteLadderDeath / ladderDeath; edge
 does not save); optional `objective.looseNetDeath` removes

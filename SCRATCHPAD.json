@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T14:20:00Z",
-  "turn": 125,
+  "updated_at": "2026-09-10T14:30:00Z",
+  "turn": 126,
   "focus": {
-    "milestone": "M95",
+    "milestone": "M96",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Rabbity-Six-Nakade landed; hand off next genuine P3 seam"
+    "goal": "Go Lite U-Nakade landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from ed42 M94 tip onto cursor/next-task-progression-4659",
-    "Landed M95 objective.rabbitySixNakadeDeath + go-lite-rabbity6-nakade",
-    "Rabbity-six unique on 9x9; vital = lex-first deg-3 center"
+    "Synced from 4659 M95 tip onto cursor/next-task-progression-241f",
+    "Landed M96 objective.uNakadeDeath + go-lite-u-nakade",
+    "U unique on 9x9; vital = opposite edge-middle"
   ],
   "discoveries": [
-    "Filled 2x3 hexomino is first 6-cell nakade class",
-    "U / other pentominoes remain candidates if uniquely contrastable"
+    "U = 2x3 minus edge-middle; bulky-5 is corner hole",
+    "Degree sig: two deg-1 prongs + three deg-2 base"
   ],
   "open_threads": [
     "Next: unique pentomino/hexomino or realtime; not topology ports"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M95",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M96",
   "blockers": []
 }
