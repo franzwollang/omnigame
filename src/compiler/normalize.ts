@@ -88,6 +88,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 			config.objective.territoryPrisoners === true ? true : undefined,
 		semeaiDeath: config.objective.semeaiDeath === true ? true : undefined,
 		nakadeDeath: config.objective.nakadeDeath === true ? true : undefined,
+		lNakadeDeath:
+			config.objective.lNakadeDeath === true ? true : undefined,
 		netDeath: config.objective.netDeath === true ? true : undefined,
 		looseNetDeath:
 			config.objective.looseNetDeath === true ? true : undefined,
@@ -220,6 +222,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	territoryPrisoners: undefined,
 	semeaiDeath: undefined,
 	nakadeDeath: undefined,
+	lNakadeDeath: undefined,
 	netDeath: undefined,
 	looseNetDeath: undefined,
 	senteLadderDeath: undefined,

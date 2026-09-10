@@ -640,8 +640,8 @@ function findColorOnlyEmptyRegions(
 
 /**
  * Classic 3-point straight nakade (T1): mono-border empty region of exactly
- * three cells in an orthogonal line; vital = middle. L / 4+ / bulky shapes
- * deferred (M76).
+ * three cells in an orthogonal line; vital = middle. L (bent-3) is M86
+ * `lNakadeDeath`; 4+ / bulky shapes still deferred.
  */
 export function isNakadeVulnerableRegion(
 	regionCells: Position[]
@@ -662,6 +662,34 @@ export function isNakadeVulnerableRegion(
 		return { vital: b };
 	}
 	return null;
+}
+
+/**
+ * Bent-3 (L) nakade: three orthogonally connected empties that are not
+ * colinear; vital = unique elbow (degree 2 in the induced region). Square-4 /
+ * bulky shapes deferred (M86).
+ */
+export function isLNakadeVulnerableRegion(
+	regionCells: Position[]
+): { vital: Position } | null {
+	if (regionCells.length !== 3) return null;
+	// Straight T1 is `nakadeDeath`'s job — keep flags contrastable.
+	if (isNakadeVulnerableRegion(regionCells)) return null;
+	const ortho = (a: Position, b: Position) =>
+		Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
+	const degrees = regionCells.map((p, i) =>
+		regionCells.reduce(
+			(d, q, j) => (i !== j && ortho(p, q) ? d + 1 : d),
+			0
+		)
+	);
+	if (degrees.some((d) => d === 0)) return null;
+	const elbows = degrees
+		.map((d, i) => (d === 2 ? i : -1))
+		.filter((i) => i >= 0);
+	if (elbows.length !== 1) return null;
+	if (degrees.filter((d) => d === 1).length !== 2) return null;
+	return { vital: regionCells[elbows[0]!]! };
 }
 
 /**
@@ -755,6 +783,104 @@ export function removeNakadeDeadStones(
 	graph?: GraphTopologyData
 ): Grid {
 	const dead = findNakadeDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
+ * Interior groups that border a bent-3 (L) nakade big-eye and would have
+ * fewer than 2 true eyes after an opponent vital fill are dead at scoring
+ * (M86). Same exemptions as T1 nakade (edge + seki). Contrastable with
+ * `nakadeDeath` (straight-only).
+ */
+export function findLNakadeDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const sekiIds = new Set<number>();
+	for (const cluster of findSekiClusters(grid, wrap, topology, graph)) {
+		for (const g of cluster) sekiIds.add(g.id);
+	}
+
+	const dead: Position[] = [];
+	const deadGroupIds = new Set<number>();
+
+	for (const color of ["X", "O"] as const) {
+		const colorGroups = groups.filter((g) => g.color === color);
+		if (colorGroups.length === 0) continue;
+		const stoneToGroup = new Map<string, number>();
+		for (const g of colorGroups) {
+			for (const p of g.stones) stoneToGroup.set(keyOf(p), g.id);
+		}
+		const regions = findColorOnlyEmptyRegions(
+			grid,
+			color,
+			stoneToGroup,
+			wrap,
+			topology,
+			graph
+		);
+		const attacker: Player = color === "X" ? "O" : "X";
+
+		for (const region of regions) {
+			const nakade = isLNakadeVulnerableRegion(region.cells);
+			if (!nakade) continue;
+			const sim = simulateLibertyPlace(
+				grid,
+				nakade.vital,
+				attacker,
+				wrap,
+				topology,
+				graph
+			);
+			if (!sim) continue;
+			const nextGrid: Grid = { ...grid, cells: sim.cells };
+
+			for (const gid of Array.from(region.adjacentGroupIds)) {
+				if (deadGroupIds.has(gid)) continue;
+				const g = colorGroups.find((x) => x.id === gid);
+				if (!g) continue;
+				if (sekiIds.has(g.id)) continue;
+				if (groupTouchesEdge(grid, g.stones, topology, graph)) continue;
+
+				const rem = g.stones.filter((p) => getCell(nextGrid, p) === color);
+				if (rem.length === 0) {
+					deadGroupIds.add(gid);
+					for (const p of g.stones) dead.push(p);
+					continue;
+				}
+				const eyes = countTrueEyes(
+					nextGrid,
+					rem,
+					color,
+					wrap,
+					topology,
+					graph
+				);
+				if (eyes >= 2) continue;
+				deadGroupIds.add(gid);
+				for (const p of g.stones) dead.push(p);
+			}
+		}
+	}
+	return dead;
+}
+
+/** Clear L-nakade-dead stones from a grid copy (M86). */
+export function removeLNakadeDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findLNakadeDeadCells(grid, wrap, topology, graph);
 	if (dead.length === 0) return grid;
 	let cells = grid.cells;
 	for (const p of dead) {
@@ -1722,23 +1848,26 @@ export function scoreArea(
  * Benson/deadStones and before nakadeDeath / ladderDeath (M75).
  * When `nakadeDeath` is true, interior groups bordering a T1 (3-straight)
  * nakade big-eye that would have <2 true eyes after an opponent vital fill
- * are removed after optional semeaiDeath and before netDeath / ladderDeath
- * (M76). When `netDeath` is true, groups force-capturable by an attacker-sente
- * tight net / geta (exactly 3 root liberties; every escape has a finishing
- * reply) are removed after optional nakadeDeath and before looseNetDeath /
- * senteLadderDeath / ladderDeath (M77). When `looseNetDeath` is true, the same
- * search with exactly 4 root liberties runs after netDeath and before
- * senteLadderDeath / ladderDeath (M78). When `senteLadderDeath` is true,
- * multi-stone groups with exactly 3 root liberties that collapse to a ladder
- * (or capture) under one attacker liberty-fill are removed after optional
- * looseNetDeath and before ladderDeath (M79; attacker-first polarity vs
- * defender-first netDeath; single-stone 3-lib shapes omitted). When
- * `approachNetDeath` is true, multi-stone groups with exactly 3 or 4 root
- * liberties that become net/loose-net dead after one non-liberty approach
- * place are removed after optional senteLadderDeath and before ladderDeath
- * (M80). When `territoryPrisoners` is true, score is territory + prisoners
- * (Japanese lite) instead of stones + territory (M74); `prisoners` tallies
- * captures in play.
+ * are removed after optional semeaiDeath and before lNakadeDeath / netDeath /
+ * ladderDeath (M76). When `lNakadeDeath` is true, the same vital-fill path
+ * for bent-3 (L) big-eyes runs after optional nakadeDeath and before
+ * netDeath (M86). When `netDeath` is true, groups force-capturable by an
+ * attacker-sente tight net / geta (exactly 3 root liberties; every escape
+ * has a finishing reply) are removed after optional nakadeDeath /
+ * lNakadeDeath and before looseNetDeath / senteLadderDeath / ladderDeath
+ * (M77). When `looseNetDeath` is true, the same search with exactly 4 root
+ * liberties runs after netDeath and before senteLadderDeath / ladderDeath
+ * (M78). When `senteLadderDeath` is true, multi-stone groups with exactly 3
+ * root liberties that collapse to a ladder (or capture) under one attacker
+ * liberty-fill are removed after optional looseNetDeath and before
+ * ladderDeath (M79; attacker-first polarity vs defender-first netDeath;
+ * single-stone 3-lib shapes omitted). When `approachNetDeath` is true,
+ * multi-stone groups with exactly 3 or 4 root liberties that become
+ * net/loose-net dead after one non-liberty approach place are removed after
+ * optional senteLadderDeath and before ladderDeath (M80). When
+ * `territoryPrisoners` is true, score is territory + prisoners (Japanese
+ * lite) instead of stones + territory (M74); `prisoners` tallies captures
+ * in play.
  */
 export function areaOutcome(
 	grid: Grid,
@@ -1757,7 +1886,8 @@ export function areaOutcome(
 	netDeath: boolean = false,
 	looseNetDeath: boolean = false,
 	senteLadderDeath: boolean = false,
-	approachNetDeath: boolean = false
+	approachNetDeath: boolean = false,
+	lNakadeDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -1773,6 +1903,9 @@ export function areaOutcome(
 	}
 	if (nakadeDeath) {
 		scored = removeNakadeDeadStones(scored, wrap, topology, graph);
+	}
+	if (lNakadeDeath) {
+		scored = removeLNakadeDeadStones(scored, wrap, topology, graph);
 	}
 	if (netDeath) {
 		scored = removeNetDeadStones(scored, wrap, topology, graph);

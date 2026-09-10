@@ -298,12 +298,16 @@ liberty (after Benson/deadStones, before nakadeDeath / netDeath /
 looseNetDeath / ladderDeath; equal
 counts kept); optional `objective.nakadeDeath` removes interior groups
 bordering a T1 (3-straight) nakade big-eye that would have <2 true eyes after
-an opponent vital fill (after semeaiDeath, before netDeath / looseNetDeath /
-senteLadderDeath / ladderDeath; edge + seki
-exempt); optional `objective.netDeath` removes groups force-capturable by an
-attacker-sente tight net / geta (root exactly 3 liberties; every escape has a
-finishing reply; after nakadeDeath, before looseNetDeath / senteLadderDeath /
-ladderDeath; edge does not save); optional `objective.looseNetDeath` removes
+an opponent vital fill (after semeaiDeath, before lNakadeDeath / netDeath /
+looseNetDeath / senteLadderDeath / ladderDeath; edge + seki
+exempt); optional `objective.lNakadeDeath` removes interior groups bordering
+a bent-3 (L) nakade big-eye that would have <2 true eyes after an opponent
+vital fill (after optional nakadeDeath, before netDeath; edge + seki exempt;
+distinct from T1 so shapes stay contrastable); optional `objective.netDeath`
+removes groups force-capturable by an attacker-sente tight net / geta (root
+exactly 3 liberties; every escape has a finishing reply; after nakadeDeath /
+lNakadeDeath, before looseNetDeath / senteLadderDeath / ladderDeath; edge
+does not save); optional `objective.looseNetDeath` removes
 groups force-capturable by an attacker-sente loose net (root exactly 4
 liberties; same escape/reply search as netDeath; after netDeath, before
 senteLadderDeath / ladderDeath; edge does not save); optional

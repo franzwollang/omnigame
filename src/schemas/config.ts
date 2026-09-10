@@ -520,13 +520,24 @@ export const zConfig = z
 				 */
 				nakadeDeath: z.boolean().optional(),
 				/**
+				 * When true, interior groups bordering a bent-3 (L) nakade
+				 * big-eye that would have <2 true eyes after an opponent vital
+				 * fill are removed before two-pass scoring (after optional
+				 * nakadeDeath; before netDeath / looseNetDeath / ladderDeath).
+				 * Edge foothold + seki clusters kept. Distinct from
+				 * nakadeDeath (T1 straight-only) so the two shapes can be
+				 * contrasted. Default / omit = leave Benson/eye survivors.
+				 */
+				lNakadeDeath: z.boolean().optional(),
+				/**
 				 * When true, groups force-capturable by an attacker-sente net /
 				 * geta (root exactly 3 liberties; every defender liberty
 				 * extension has an attacker reply that captures, ladders, or
 				 * re-nets) are removed before two-pass scoring (after optional
-				 * nakadeDeath; before looseNetDeath / senteLadderDeath /
-				 * ladderDeath). Edge foothold does not save. Default / omit =
-				 * leave multi-liberty trapped groups on the board.
+				 * nakadeDeath / lNakadeDeath; before looseNetDeath /
+				 * senteLadderDeath / ladderDeath). Edge foothold does not save.
+				 * Default / omit = leave multi-liberty trapped groups on the
+				 * board.
 				 */
 				netDeath: z.boolean().optional(),
 				/**
@@ -1448,6 +1459,16 @@ export const zConfig = z
 				path: ["objective", "nakadeDeath"],
 				message:
 					"objective.nakadeDeath requires objective.mode = 'area_control'"
+			});
+		}
+
+		// L-nakade (bent-3 big-eye) removal is area_control-only.
+		if (cfg.objective.lNakadeDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "lNakadeDeath"],
+				message:
+					"objective.lNakadeDeath requires objective.mode = 'area_control'"
 			});
 		}
 

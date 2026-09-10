@@ -101,12 +101,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M83 | Next missing mechanism (commitReveal simultaneous jump) | `done` |
 | M84 | Next missing mechanism (multi-action simultaneous jump) | `done` |
 | M85 | Next missing mechanism (commitReveal multi-action jump) | `done` |
+| M86 | Next missing mechanism (Go Lite L-Nakade / objective.lNakadeDeath) | `done` |
 
-**Optimizing for this marathon:** M85 Hidden Double Simultaneous Jump Race
-landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
-recombinations without anchor) — without asking which fork. Large deferred:
-hex-graph simultaneous jump; realtime; fuller Go remainder (throw-in /
-connect-and-die — entangled with ladder family).
+**Optimizing for this marathon:** M86 Go Lite L-Nakade landed. Pick **P3
+next-missing-mechanism** (smallest new seam; reject recombinations without
+anchor) — without asking which fork. Large deferred: hex-graph simultaneous
+jump; realtime; fuller Go remainder (throw-in / connect-and-die — entangled
+with ladder family); square-4 / bulky nakade.
 
 ## Marathon runbook (cloud agents)
 
@@ -121,7 +122,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥911** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥915** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -252,9 +253,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** fuller Go remainder (throw-in / connect-and-die — not uniquely
-expressible vs ladder/net/sente/approach on lite boards); hex-graph
-simultaneous jump ports; fire→move reorder (only with
-anchor); realtime scheduler. Hidden Double Simultaneous Jump Race landed
+expressible vs ladder/net/sente/approach on lite boards); square-4 / bulky
+nakade; hex-graph simultaneous jump ports; fire→move reorder (only with
+anchor); realtime scheduler. Go Lite L-Nakade landed (M86). Hidden Double
+Simultaneous Jump Race landed
 (M85). Double Simultaneous Jump Race landed
 (M84). Hidden Simultaneous Jump Race landed
 (M83). Ordered Simultaneous Jump Race landed (M82). Simultaneous Jump Race
@@ -1369,6 +1371,20 @@ M78; senteLadderDeath in M79; approachNetDeath in M80).
 - Out of scope: mustLongestCapture / chains under simultaneous; hex/graph
   simultaneous jump ports; throw-in / connect-and-die; realtime
 - Green gate: ≥911 + new cases — **done**
+
+### M86 — Go Lite L-Nakade / bent-3
+
+- Schema: `objective.lNakadeDeath` boolean (area_control-only); distinct from
+  T1 `nakadeDeath` so shapes stay contrastable — **done**
+- Kernel: `isLNakadeVulnerableRegion` (3 connected empties, not colinear;
+  vital = elbow) + `findLNakadeDeadCells` / `removeLNakadeDeadStones`;
+  `areaOutcome` after optional nakadeDeath, before netDeath — **done**
+- Preset `go-lite-l-nakade` (7×7 O-ring + interior X shell; eye + L corridor;
+  Benson-alive / T1-miss / chase-miss; flag → O) + schema / uniqueness /
+  transcript / replay / contrast tests — **done**
+- Out of scope: square-4 / bulky nakade; throw-in / connect-and-die; hex/graph
+  nakade ports; realtime
+- Green gate: ≥915 + new cases — **done**
 
 ## Sequencing notes
 

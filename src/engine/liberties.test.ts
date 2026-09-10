@@ -13,6 +13,7 @@ import {
 	findGroup,
 	findLadderDeadCells,
 	findNakadeDeadCells,
+	findLNakadeDeadCells,
 	findNetDeadCells,
 	findLooseNetDeadCells,
 	findSenteLadderDeadCells,
@@ -20,6 +21,7 @@ import {
 	findSemeaiDeadCells,
 	isLadderDeadGroup,
 	isNakadeVulnerableRegion,
+	isLNakadeVulnerableRegion,
 	isNetDeadGroup,
 	isLooseNetDeadGroup,
 	isSenteLadderDeadGroup,
@@ -30,6 +32,7 @@ import {
 	removeDeadStones,
 	removeLadderDeadStones,
 	removeNakadeDeadStones,
+	removeLNakadeDeadStones,
 	removeNetDeadStones,
 	removeLooseNetDeadStones,
 	removeSenteLadderDeadStones,
@@ -1205,6 +1208,189 @@ describe("Go Lite (liberties + area_control)", () => {
 		for (const flag of [
 			{ bensonLife: true },
 			{ semeaiDeath: true },
+			{ ladderDeath: true },
+			{ seki: true }
+		] as const) {
+			const alt = structuredClone(cfg);
+			alt.objective = { mode: "area_control", ...flag };
+			const altKernel = compileConfig(alt);
+			let altState = altKernel.kernel.initialState(cfg.rng.seed);
+			for (const action of script) {
+				altState = altKernel.kernel.stepSync(altState, action).nextState;
+			}
+			expect(altState.winner).toBe("X");
+		}
+
+		const replay = replayActions(gameConfig, script, cfg.rng.seed);
+		expect(replay.faithful).toBe(true);
+		expect(replay.finalState.status).toBe("won");
+		expect(replay.finalState.winner).toBe("O");
+	});
+
+	it("validates and compiles the go-lite-l-nakade preset", () => {
+		const cfg = examplePresets["go-lite-l-nakade"].config;
+		expect(validateConfig(cfg).ok).toBe(true);
+		const { kernel, gameConfig } = compileConfig(cfg);
+		expect(gameConfig.objectiveMode).toBe("area_control");
+		expect(gameConfig.lNakadeDeath).toBe(true);
+		expect(gameConfig.captureMode).toBe("liberties");
+		const state = kernel.initialState(cfg.rng.seed);
+		expect(kernel.legalActions(state, 0).some((a) => a.type === "pass")).toBe(
+			true
+		);
+	});
+
+	it("rejects objective.lNakadeDeath outside area_control", () => {
+		const bad = structuredClone(examplePresets["tic-tac-toe"].config) as {
+			objective: { mode: string; lNakadeDeath?: boolean };
+		};
+		bad.objective = { mode: "n_in_a_row", lNakadeDeath: true };
+		expect(validateConfig(bad as never).ok).toBe(false);
+	});
+
+	it("findLNakadeDeadCells: L corridor clears Benson-alive one-eyed shell; T1 misses", () => {
+		const cfg = examplePresets["go-lite-l-nakade"].config;
+		const { kernel } = compileConfig(cfg);
+		const state = kernel.initialState(cfg.rng.seed);
+		const g = state.grid;
+		const xGroups = enumerateGroups(g).filter((gr) => gr.color === "X");
+		expect(xGroups.length).toBe(1);
+		expect(countTrueEyes(g, xGroups[0]!.stones, "X")).toBe(1);
+		expect(findBensonAliveGroupIds(g, "X").size).toBe(1);
+		expect(findDeadStoneCells(g).length).toBe(xGroups[0]!.stones.length);
+		expect(findSemeaiDeadCells(g).length).toBe(0);
+		expect(findNakadeDeadCells(g).every((p) => getCell(g, p) !== "X")).toBe(
+			true
+		);
+		expect(
+			findNetDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findLooseNetDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findSenteLadderDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			findApproachNetDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		// Edge O may be ladder-tagged; X shell must not be.
+		expect(
+			findLadderDeadCells(g).every((p) => getCell(g, p) !== "X")
+		).toBe(true);
+		expect(
+			isLNakadeVulnerableRegion([
+				{ row: 3, col: 4 },
+				{ row: 4, col: 4 },
+				{ row: 4, col: 3 }
+			])
+		).toEqual({ vital: { row: 4, col: 4 } });
+		expect(
+			isNakadeVulnerableRegion([
+				{ row: 3, col: 4 },
+				{ row: 4, col: 4 },
+				{ row: 4, col: 3 }
+			])
+		).toBeNull();
+		const dead = findLNakadeDeadCells(g);
+		expect(dead.length).toBe(xGroups[0]!.stones.length);
+		expect(dead.every((p) => getCell(g, p) === "X")).toBe(true);
+		expect(areaOutcome(g).winner).toBe("X");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				false,
+				false,
+				false,
+				false,
+				false,
+				true
+			).winner
+		).toBe("O");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				true
+			).winner
+		).toBe("X");
+		expect(
+			areaOutcome(
+				g,
+				false,
+				"rectangle",
+				undefined,
+				0,
+				false,
+				false,
+				false,
+				false,
+				false,
+				{ X: 0, O: 0 },
+				false,
+				true
+			).winner
+		).toBe("X");
+		const cleared = scoreArea(removeLNakadeDeadStones(g));
+		expect(cleared.O).toBeGreaterThan(cleared.X);
+		// Straight T1 is not L.
+		expect(
+			isLNakadeVulnerableRegion([
+				{ row: 2, col: 4 },
+				{ row: 3, col: 4 },
+				{ row: 4, col: 4 }
+			])
+		).toBeNull();
+	});
+
+	it("go-lite-l-nakade: seeded double-pass O wins; without flag X wins; contrasts; replay faithful", () => {
+		const cfg = examplePresets["go-lite-l-nakade"].config;
+		const { kernel, gameConfig } = compileConfig(cfg);
+		const script: KernelAction[] = [{ type: "pass" }, { type: "pass" }];
+		let state = kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			const result = kernel.stepSync(state, action);
+			expect(result.events[0]?.type).toBe("actionApplied");
+			state = result.nextState;
+		}
+		expect(state.status).toBe("won");
+		expect(state.winner).toBe("O");
+		expect(state.consecutivePasses).toBe(2);
+
+		const without = structuredClone(cfg);
+		without.objective = { mode: "area_control" };
+		const baseline = compileConfig(without);
+		let rawState = baseline.kernel.initialState(cfg.rng.seed);
+		for (const action of script) {
+			rawState = baseline.kernel.stepSync(rawState, action).nextState;
+		}
+		expect(rawState.status).toBe("won");
+		expect(rawState.winner).toBe("X");
+
+		for (const flag of [
+			{ bensonLife: true },
+			{ nakadeDeath: true },
+			{ semeaiDeath: true },
+			{ netDeath: true },
+			{ looseNetDeath: true },
+			{ senteLadderDeath: true },
+			{ approachNetDeath: true },
 			{ ladderDeath: true },
 			{ seki: true }
 		] as const) {
