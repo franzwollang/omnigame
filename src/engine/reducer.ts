@@ -234,11 +234,17 @@ export type GameConfig = {
 	nakadeDeath?: boolean;
 	/**
 	 * When true, two-pass area scoring removes groups force-capturable by an
-	 * attacker-sente net / geta (≥3 root liberties; every escape has a
-	 * finishing reply) after optional nakadeDeath and before ladderDeath
-	 * (M77).
+	 * attacker-sente tight net / geta (exactly 3 root liberties; every escape
+	 * has a finishing reply) after optional nakadeDeath and before
+	 * looseNetDeath / ladderDeath (M77).
 	 */
 	netDeath?: boolean;
+	/**
+	 * When true, two-pass area scoring removes groups force-capturable by an
+	 * attacker-sente loose net (exactly 4 root liberties; same search as
+	 * netDeath) after optional netDeath and before ladderDeath (M78).
+	 */
+	looseNetDeath?: boolean;
 	/** Classic alternating turns, discrete global tick (Life), or simultaneous joint place. */
 	turnSchedule?: "alternating" | "manual_tick" | "simultaneous";
 	/**
@@ -1255,7 +1261,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 				state.prisoners ?? { X: 0, O: 0 },
 				config.semeaiDeath === true,
 				config.nakadeDeath === true,
-				config.netDeath === true
+				config.netDeath === true,
+				config.looseNetDeath === true
 			);
 			return {
 				...state,
@@ -1282,7 +1289,8 @@ function handlePass(state: GameState, config: GameConfig): GameState {
 			state.prisoners ?? { X: 0, O: 0 },
 			config.semeaiDeath === true,
 			config.nakadeDeath === true,
-			config.netDeath === true
+			config.netDeath === true,
+			config.looseNetDeath === true
 		);
 		return {
 			...state,

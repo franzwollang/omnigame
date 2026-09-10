@@ -93,12 +93,13 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M75 | Next missing mechanism (Go Lite Semeai / objective.semeaiDeath) | `done` |
 | M76 | Next missing mechanism (Go Lite Nakade / objective.nakadeDeath) | `done` |
 | M77 | Next missing mechanism (Go Lite Net / objective.netDeath) | `done` |
+| M78 | Next missing mechanism (Go Lite Loose Net / objective.looseNetDeath) | `done` |
 
-**Optimizing for this marathon:** M77 Go Lite Net (`objective.netDeath`)
-landed. Pick **P3 next-missing-mechanism** (smallest new seam; reject
-recombinations without anchor) — without asking which fork. Large deferred:
-simultaneous jump / realtime / fuller Go remainder beyond net (deeper L&D /
-geta variants).
+**Optimizing for this marathon:** M78 Go Lite Loose Net
+(`objective.looseNetDeath`) landed. Pick **P3 next-missing-mechanism**
+(smallest new seam; reject recombinations without anchor) — without asking
+which fork. Large deferred: simultaneous jump / realtime / fuller Go remainder
+beyond loose net (throw-in nets / deeper L&D).
 
 ## Marathon runbook (cloud agents)
 
@@ -113,7 +114,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥840** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥844** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -279,7 +280,8 @@ crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
 in M64; hub targetNodes + menForwardOnly in M65; komi in M66; seki in M67;
 deadStones in M68; bensonLife in M69; dameFill in M70; markDead in M71;
 markDeadResume in M72; ladderDeath in M73; territoryPrisoners in M74;
-semeaiDeath in M75; nakadeDeath in M76; netDeath in M77).
+semeaiDeath in M75; nakadeDeath in M76; netDeath in M77; looseNetDeath in
+M78).
 
 ## Phase 2 exit criteria
 
@@ -1207,6 +1209,22 @@ semeaiDeath in M75; nakadeDeath in M76; netDeath in M77).
 - Out of scope: open 4+ liberty fights; loose nets / throw-ins; hex/graph net
   presets; simultaneous jump; realtime
 - Green gate: ≥840 + new cases — **done**
+
+### M78 — Go Lite Loose Net / `objective.looseNetDeath`
+
+- Schema: optional `objective.looseNetDeath` boolean; require
+  `objective.mode = area_control` — **done**
+- Kernel: `isLooseNetDeadGroup` / `findLooseNetDeadCells` /
+  `removeLooseNetDeadStones` — root exactly 4 liberties; same escape/reply
+  search as netDeath; edge does not save; `areaOutcome` after netDeath before
+  ladderDeath; normalize + form switch — **done**
+- Preset `go-lite-loose-net` (edge loose geta X pair; living X mass + O bulk;
+  raw → X, with flag → O; contrasts vs netDeath / deadStones / Benson /
+  nakade / ladder / seki) + unit / schema / transcript / replay tests —
+  **done**
+- Out of scope: throw-in / approach-move nets; open 5+ liberty fights;
+  hex/graph loose-net presets; simultaneous jump; realtime
+- Green gate: ≥844 + new cases — **done**
 
 ## Sequencing notes
 

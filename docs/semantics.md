@@ -279,13 +279,19 @@ are not Benson-unconditionally alive — vital-region fixed point; supersedes
 attacker-sente ladder / atari-run groups after optional Benson/deadStones —
 edge foothold does not save runners; optional `objective.semeaiDeath` removes
 groups that lose a capturing race against a higher-liberty opponent sharing a
-liberty (after Benson/deadStones, before nakadeDeath / netDeath / ladderDeath; equal
+liberty (after Benson/deadStones, before nakadeDeath / netDeath /
+looseNetDeath / ladderDeath; equal
 counts kept); optional `objective.nakadeDeath` removes interior groups
 bordering a T1 (3-straight) nakade big-eye that would have <2 true eyes after
-an opponent vital fill (after semeaiDeath, before netDeath / ladderDeath; edge + seki
+an opponent vital fill (after semeaiDeath, before netDeath / looseNetDeath /
+ladderDeath; edge + seki
 exempt); optional `objective.netDeath` removes groups force-capturable by an
-attacker-sente net / geta (root exactly 3 liberties; every escape has a finishing
-reply; after nakadeDeath, before ladderDeath; edge does not save); optional `objective.territoryPrisoners`
+attacker-sente tight net / geta (root exactly 3 liberties; every escape has a
+finishing reply; after nakadeDeath, before looseNetDeath / ladderDeath; edge
+does not save); optional `objective.looseNetDeath` removes groups
+force-capturable by an attacker-sente loose net (root exactly 4 liberties;
+same escape/reply search as netDeath; after netDeath, before ladderDeath; edge
+does not save); optional `objective.territoryPrisoners`
 scores empty territory + stones captured in play instead of stones +
 territory (Japanese lite); optional `objective.dameFill` enters a
 damezukai-lite endgame on the first pass while dame remain — only dame places

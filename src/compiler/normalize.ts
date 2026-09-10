@@ -89,6 +89,8 @@ export function flattenToGameConfig(config: Config): GameConfig {
 		semeaiDeath: config.objective.semeaiDeath === true ? true : undefined,
 		nakadeDeath: config.objective.nakadeDeath === true ? true : undefined,
 		netDeath: config.objective.netDeath === true ? true : undefined,
+		looseNetDeath:
+			config.objective.looseNetDeath === true ? true : undefined,
 		turnSchedule: config.turn.schedule,
 		actionsPerTurn: config.turn.actionsPerTurn ?? 1,
 		delayTurns: config.placement.delayTurns ?? 0,
@@ -215,6 +217,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
 	semeaiDeath: undefined,
 	nakadeDeath: undefined,
 	netDeath: undefined,
+	looseNetDeath: undefined,
 	turnSchedule: "alternating",
 	actionsPerTurn: 1,
 	delayTurns: 0,

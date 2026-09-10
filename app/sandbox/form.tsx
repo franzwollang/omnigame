@@ -1303,10 +1303,35 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 													<div className="space-y-0.5">
 														<FormLabel>Net death</FormLabel>
 														<p className="text-xs text-muted-foreground">
-															Remove groups force-capturable by a net /
-															geta (≥3 liberties; every escape fails under
-															attacker sente) at scoring
-															(objective.netDeath).
+															Remove groups force-capturable by a tight
+															net / geta (exactly 3 liberties; every
+															escape fails under attacker sente) at
+															scoring (objective.netDeath).
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) =>
+																field.onChange(v ? true : undefined)
+															}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="objective.looseNetDeath"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Loose net death</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Remove groups force-capturable by a loose
+															net (exactly 4 liberties; same sente
+															search as netDeath) at scoring
+															(objective.looseNetDeath).
 														</p>
 													</div>
 													<FormControl>

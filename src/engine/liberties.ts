@@ -1064,11 +1064,12 @@ export function removeLadderDeadStones(
 }
 
 /**
- * Attacker-sente net / geta lite (M77): opponent can force-capture `stones`
- * even though the group starts with exactly 3 liberties (ladderDeath domain
- * is ≤2; open 4+ fights are out of lite scope). Every legal defender liberty
- * extension has an attacker liberty-fill reply that either captures, leaves
- * a ladder, or re-nets. Edge foothold does not save (parity with ladderDeath).
+ * Attacker-sente net / geta search (M77/M78): opponent can force-capture
+ * `stones` when the group starts with exactly `rootLibertyExact` liberties
+ * (ladderDeath domain is ≤2). Every legal defender liberty extension has an
+ * attacker liberty-fill reply that either captures, leaves a ladder, or
+ * re-nets. Edge foothold does not save (parity with ladderDeath).
+ * M77 tight net: rootLibertyExact = 3; M78 loose net: 4.
  */
 export function isNetDeadGroup(
 	grid: Grid,
@@ -1076,7 +1077,8 @@ export function isNetDeadGroup(
 	color: Player,
 	wrap: boolean = false,
 	topology: GridTopology = "rectangle",
-	graph?: GraphTopologyData
+	graph?: GraphTopologyData,
+	rootLibertyExact: number = 3
 ): boolean {
 	if (stones.length === 0) return true;
 	const attacker: Player = color === "X" ? "O" : "X";
@@ -1142,18 +1144,17 @@ export function isNetDeadGroup(
 		g: Grid,
 		rem: Position[],
 		depth: number,
-		exactThree: boolean
+		exactRoot: number | false
 	): boolean => {
 		if (depth > maxDepth) return false;
 		const group = groupOn(g, rem);
 		const libs = libertyPositionsOf(g, group, wrap, topology, graph);
-		if (exactThree) {
-			if (libs.length !== 3) return false;
+		if (exactRoot !== false) {
+			if (libs.length !== exactRoot) return false;
 		} else if (libs.length < 3) {
 			return false;
 		}
 
-		let anyLegal = false;
 		for (const escape of libs) {
 			const sim = simulateLibertyPlace(
 				g,
@@ -1164,7 +1165,6 @@ export function isNetDeadGroup(
 				graph
 			);
 			if (!sim) continue;
-			anyLegal = true;
 			const next: Grid = { ...g, cells: sim.cells };
 			const nextRem = remainingOf(next);
 			if (nextRem.length === 0) continue;
@@ -1175,16 +1175,33 @@ export function isNetDeadGroup(
 	};
 
 	const rootLibs = libertyPositionsOf(grid, stones, wrap, topology, graph);
-	// Root must be a multi-liberty net (exactly 3) — not ladder (≤2) and not
-	// open running fights (4+), which are out of M77 lite scope.
-	if (rootLibs.length !== 3) return false;
-	return netDeadFrom(grid, stones, 0, true);
+	// Root must match the mechanism's liberty gate (3 = tight net / M77;
+	// 4 = loose net / M78). Not ladder (≤2); open fights above the gate
+	// stay out of that mechanism's lite scope.
+	if (rootLibs.length !== rootLibertyExact) return false;
+	return netDeadFrom(grid, stones, 0, rootLibertyExact);
+}
+
+/**
+ * Attacker-sente loose net (M78): same search as `isNetDeadGroup`, but root
+ * must have exactly 4 liberties (tight net covers exactly 3).
+ */
+export function isLooseNetDeadGroup(
+	grid: Grid,
+	stones: Position[],
+	color: Player,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): boolean {
+	return isNetDeadGroup(grid, stones, color, wrap, topology, graph, 4);
 }
 
 /**
  * Groups force-capturable by an attacker-sente net / geta at scoring (M77).
- * Root groups must have ≥3 liberties (ladderDeath covers ≤2). Edge foothold
- * does not save. Seki exemption omitted for the same reason as ladderDeath.
+ * Root groups must have exactly 3 liberties (ladderDeath covers ≤2; loose
+ * net covers 4). Edge foothold does not save. Seki exemption omitted for the
+ * same reason as ladderDeath.
  */
 export function findNetDeadCells(
 	grid: Grid,
@@ -1211,6 +1228,45 @@ export function removeNetDeadStones(
 	graph?: GraphTopologyData
 ): Grid {
 	const dead = findNetDeadCells(grid, wrap, topology, graph);
+	if (dead.length === 0) return grid;
+	let cells = grid.cells;
+	for (const p of dead) {
+		cells = setCell({ ...grid, cells }, p, null);
+	}
+	return { ...grid, cells };
+}
+
+/**
+ * Groups force-capturable by an attacker-sente loose net at scoring (M78).
+ * Root groups must have exactly 4 liberties. Edge foothold does not save.
+ */
+export function findLooseNetDeadCells(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Position[] {
+	const groups = enumerateGroups(grid, wrap, topology, graph);
+	const dead: Position[] = [];
+	for (const g of groups) {
+		if (
+			!isLooseNetDeadGroup(grid, g.stones, g.color, wrap, topology, graph)
+		) {
+			continue;
+		}
+		for (const p of g.stones) dead.push(p);
+	}
+	return dead;
+}
+
+/** Clear loose-net-dead stones from a grid copy (M78). */
+export function removeLooseNetDeadStones(
+	grid: Grid,
+	wrap: boolean = false,
+	topology: GridTopology = "rectangle",
+	graph?: GraphTopologyData
+): Grid {
+	const dead = findLooseNetDeadCells(grid, wrap, topology, graph);
 	if (dead.length === 0) return grid;
 	let cells = grid.cells;
 	for (const p of dead) {
@@ -1459,8 +1515,10 @@ export function scoreArea(
  * nakade big-eye that would have <2 true eyes after an opponent vital fill
  * are removed after optional semeaiDeath and before netDeath / ladderDeath
  * (M76). When `netDeath` is true, groups force-capturable by an attacker-sente
- * net / geta (≥3 root liberties; every escape has a finishing reply) are
- * removed after optional nakadeDeath and before ladderDeath (M77).
+ * tight net / geta (exactly 3 root liberties; every escape has a finishing
+ * reply) are removed after optional nakadeDeath and before looseNetDeath /
+ * ladderDeath (M77). When `looseNetDeath` is true, the same search with
+ * exactly 4 root liberties runs after netDeath and before ladderDeath (M78).
  * When `territoryPrisoners` is true, score is territory + prisoners (Japanese
  * lite) instead of stones + territory (M74); `prisoners` tallies captures in
  * play.
@@ -1479,7 +1537,8 @@ export function areaOutcome(
 	prisoners: AreaScore = { X: 0, O: 0 },
 	semeaiDeath: boolean = false,
 	nakadeDeath: boolean = false,
-	netDeath: boolean = false
+	netDeath: boolean = false,
+	looseNetDeath: boolean = false
 ): {
 	status: "won" | "draw";
 	winner: Player | null;
@@ -1498,6 +1557,9 @@ export function areaOutcome(
 	}
 	if (netDeath) {
 		scored = removeNetDeadStones(scored, wrap, topology, graph);
+	}
+	if (looseNetDeath) {
+		scored = removeLooseNetDeadStones(scored, wrap, topology, graph);
 	}
 	if (ladderDeath) {
 		scored = removeLadderDeadStones(scored, wrap, topology, graph);

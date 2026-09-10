@@ -509,20 +509,29 @@ export const zConfig = z
 				 * When true, interior groups bordering a T1 (3-straight) nakade
 				 * big-eye that would have <2 true eyes after an opponent vital
 				 * fill are removed before two-pass scoring (after optional
-				 * semeaiDeath; before netDeath / ladderDeath). Edge foothold +
-				 * seki clusters kept. Default / omit = leave Benson/eye
-				 * survivors.
+				 * semeaiDeath; before netDeath / looseNetDeath / ladderDeath).
+				 * Edge foothold + seki clusters kept. Default / omit = leave
+				 * Benson/eye survivors.
 				 */
 				nakadeDeath: z.boolean().optional(),
 				/**
 				 * When true, groups force-capturable by an attacker-sente net /
-				 * geta (root ≥3 liberties; every defender liberty extension has
-				 * an attacker reply that captures, ladders, or re-nets) are
-				 * removed before two-pass scoring (after optional nakadeDeath;
-				 * before ladderDeath). Edge foothold does not save. Default /
-				 * omit = leave multi-liberty trapped groups on the board.
+				 * geta (root exactly 3 liberties; every defender liberty
+				 * extension has an attacker reply that captures, ladders, or
+				 * re-nets) are removed before two-pass scoring (after optional
+				 * nakadeDeath; before looseNetDeath / ladderDeath). Edge
+				 * foothold does not save. Default / omit = leave multi-liberty
+				 * trapped groups on the board.
 				 */
-				netDeath: z.boolean().optional()
+				netDeath: z.boolean().optional(),
+				/**
+				 * When true, groups force-capturable by an attacker-sente loose
+				 * net (root exactly 4 liberties; same escape/reply search as
+				 * netDeath) are removed before two-pass scoring (after optional
+				 * netDeath; before ladderDeath). Edge foothold does not save.
+				 * Default / omit = leave 4-liberty trapped groups on the board.
+				 */
+				looseNetDeath: z.boolean().optional()
 			})
 			.strict()
 			.default({ mode: "n_in_a_row" as const }),
@@ -1421,6 +1430,16 @@ export const zConfig = z
 				path: ["objective", "netDeath"],
 				message:
 					"objective.netDeath requires objective.mode = 'area_control'"
+			});
+		}
+
+		// Loose net removal is area_control-only.
+		if (cfg.objective.looseNetDeath === true && !areaControl) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				path: ["objective", "looseNetDeath"],
+				message:
+					"objective.looseNetDeath requires objective.mode = 'area_control'"
 			});
 		}
 

@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-09-10T09:00+00:00",
-  "turn": 107,
+  "updated_at": "2026-09-10T09:25+00:00",
+  "turn": 108,
   "focus": {
-    "milestone": "M77",
+    "milestone": "M78",
     "issue": "next-missing-mechanism",
-    "goal": "Go Lite Net landed; hand off next genuine P3 seam"
+    "goal": "Go Lite Loose Net landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Synced from 9cd8 M76 tip onto cursor/next-task-progression-9be8",
-    "Landed M77 netDeath + go-lite-net",
-    "Exact-3-lib root net search; edge geta flips raw X→O"
+    "Synced from 9be8 M77 tip onto cursor/next-task-progression-cacd",
+    "Landed M78 looseNetDeath + go-lite-loose-net",
+    "Root exactly 4 libs; netDeath contrast keeps X"
   ],
   "discoveries": [
-    "Root libs must be exactly 3 — ≥3 false-positives living masses",
-    "Semeai often overlaps net cages — omit from sibling contrast"
+    "Living mass must not also be 4-lib — add X@(3,2) for 5 libs",
+    "Drop O@(0,1) vs tight geta opens 4th victim liberty"
   ],
   "open_threads": [
-    "Next: deeper L&D, simultaneous jump, realtime"
+    "Next: throw-in nets, connect-and-die, simultaneous jump, realtime"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M77",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M78",
   "blockers": []
 }
