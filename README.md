@@ -625,7 +625,8 @@ Double Simultaneous Jump Race (M84), Hidden Double Simultaneous Jump Race (M85).
   semeaiDeath in M75; nakadeDeath in M76; netDeath in M77; looseNetDeath in
   M78; senteLadderDeath in M79; approachNetDeath in M80; simultaneous jump in
   M81; ordered simultaneous jump in M82; commitReveal simultaneous jump in
-  M83)
+  M83; multi-action simultaneous jump in M84; commitReveal multi-action
+  jump in M85)
 
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
