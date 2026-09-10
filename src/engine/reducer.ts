@@ -53,6 +53,8 @@ import {
 	effectiveMovement,
 	hasAnyJumpCapture,
 	isJumpCapture,
+	isMaximalJumpContinuation,
+	isMaximalJumpStart,
 	jumpDestinations,
 	jumpMid,
 	movementBoardFrom,
@@ -1868,6 +1870,19 @@ function handleMove(
 		) {
 			return state;
 		}
+		if (
+			movement.mustLongestCapture === true &&
+			!isMaximalJumpContinuation(
+				state.grid,
+				from,
+				to,
+				state.currentPlayer,
+				movement,
+				movementBoardFrom(config)
+			)
+		) {
+			return state;
+		}
 	} else if (
 		movement.capture === "jump" &&
 		movement.mustCapture === true &&
@@ -1887,6 +1902,28 @@ function handleMove(
 		)
 	) {
 		// Turn-start mandatory capture: quiet moves illegal while any jump exists.
+		return state;
+	} else if (
+		movement.capture === "jump" &&
+		movement.mustLongestCapture === true &&
+		isJumpCapture(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		) &&
+		!isMaximalJumpStart(
+			state.grid,
+			from,
+			to,
+			state.currentPlayer,
+			movement,
+			movementBoardFrom(config)
+		)
+	) {
+		// Turn-start longest-chain: shorter jump trees are illegal.
 		return state;
 	}
 

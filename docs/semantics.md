@@ -217,7 +217,7 @@ delayTurns → pendingPlaces.
 | flip | placement.captureMode | Reversi sandwich along adjacency |
 | liberties | placement.captureMode | Go-lite group removal + ko/superko |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
-| jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; incompatible with `graphReach: hop` |
+| jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; optional `mustLongestCapture` (max chain length); incompatible with `graphReach: hop` |
 | promote | movement.promotion | Transform on reach row (rectangle jump only): land on `targetRows[seat]` → CrownMark; crowned uses `crownedAdjacency` (default king) via `effectiveMovement`; optional `menForwardOnly` |
 
 KoRule: none | point | positional | situational.
@@ -230,8 +230,10 @@ KoRule: none | point | positional | situational.
   range 1; jump distance always 2 (cube-axis double step on hex; 2-edge
   leap on graph); chains via mustContinueFrom (not actionsPerTurn);
   optional `mustCapture` forbids quiet moves at turn start when any jump
-  exists (Mandatory Jump Race); Graph Jump Race covers explicit-edge leaps
-  (incompatible with graphReach hop)
+  exists (Mandatory Jump Race); optional `mustLongestCapture` (requires
+  `mustCapture`) keeps only jumps that begin / continue a maximum-length
+  capture chain (Mandatory Longest Jump Lite); Graph Jump Race covers
+  explicit-edge leaps (incompatible with graphReach hop)
 - promotion: optional `movement.promotion` (rectangle + jump only);
   `targetRows` + `crownedAdjacency`; preserve crown on move; emit
   `piecePromoted` (Crowned Kings Jump Lite); optional `menForwardOnly`

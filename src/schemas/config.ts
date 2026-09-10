@@ -145,8 +145,11 @@ export const zConfig = z
 		 * from the landing cell keep the same seat (`mustContinueFrom`
 		 * chain). Optional `mustCapture: true` forbids quiet moves at turn
 		 * start when any jump exists (Checkers-lite mandatory capture).
-		 * Distinct from replace and hop-ball. Incompatible with
-		 * `graphReach: "hop"` (jump has fixed 2-edge semantics).
+		 * Optional `mustLongestCapture: true` (requires `mustCapture`) keeps
+		 * only jumps that begin / continue a maximum-length capture chain
+		 * (Draughts longest-chain rule). Distinct from replace and hop-ball.
+		 * Incompatible with `graphReach: "hop"` (jump has fixed 2-edge
+		 * semantics).
 		 * Optional `promotion`: Transform lite — uncrowned pieces that land
 		 * on `targetRows[seat]` become crowned (`X+`/`O+`) and thereafter use
 		 * `crownedAdjacency` (default king). Optional `menForwardOnly` restricts
@@ -168,6 +171,12 @@ export const zConfig = z
 				 * the acting seat has any available jump. Mid-chain unchanged.
 				 */
 				mustCapture: z.boolean().optional(),
+				/**
+				 * Jump-only; requires mustCapture. Restricts legal jumps to
+				 * those that maximize total captures along the jump tree
+				 * (turn-start across all pieces; mid-chain among continuations).
+				 */
+				mustLongestCapture: z.boolean().optional(),
 				/** Graph-only: chain-walk (default) or hop-ball BFS. */
 				graphReach: z.enum(["chain", "hop"]).optional(),
 				/**
@@ -2202,6 +2211,24 @@ export const zConfig = z
 				message:
 					"movement.mustCapture requires movement.capture = 'jump'"
 			});
+		}
+
+		if (cfg.movement?.mustLongestCapture === true) {
+			if (cfg.movement.capture !== "jump") {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "mustLongestCapture"],
+					message:
+						"movement.mustLongestCapture requires movement.capture = 'jump'"
+				});
+			} else if (cfg.movement.mustCapture !== true) {
+				ctx.addIssue({
+					code: z.ZodIssueCode.custom,
+					path: ["movement", "mustLongestCapture"],
+					message:
+						"movement.mustLongestCapture requires movement.mustCapture = true"
+				});
+			}
 		}
 
 		// Piece promotion / crowned kings (Transform lite): rectangle jump only

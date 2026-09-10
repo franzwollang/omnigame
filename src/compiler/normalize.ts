@@ -95,6 +95,9 @@ export function flattenToGameConfig(config: Config): GameConfig {
 					...(config.movement.mustCapture === true
 						? { mustCapture: true }
 						: {}),
+					...(config.movement.mustLongestCapture === true
+						? { mustLongestCapture: true }
+						: {}),
 					...(config.movement.graphReach
 						? { graphReach: config.movement.graphReach }
 						: {}),

@@ -66,9 +66,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M48 | Next missing mechanism (graph jump capture) | `done` |
 | M49 | Next missing mechanism (crowned promotion / Transform lite) | `done` |
 | M50 | Next missing mechanism (forward-only men) | `done` |
+| M51 | Next missing mechanism (longest mandatory capture) | `done` |
 
-**Optimizing for this marathon:** M50 forward-only men landed. Pick **P3
-next-missing-mechanism** (smallest new seam; reject recombinations without
+**Optimizing for this marathon:** M51 longest mandatory capture landed. Pick
+**P3 next-missing-mechanism** (smallest new seam; reject recombinations without
 anchor) — without asking which fork.
 
 ## Marathon runbook (cloud agents)
@@ -97,7 +98,7 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ### Task selection (no user ask)
 
 1. Work the highest unfinished **P3** item in `OPEN_ISSUES.md`
-   (P0–P2 / M8–M50 closed).  
+   (P0–P2 / M8–M51 closed).  
 2. Start **P3** `next-missing-mechanism` — smallest new seam; reject
    recombinations without an anchor.  
 3. If blocked on environment only, fix tooling and continue — do not invent
@@ -134,15 +135,17 @@ delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 ## What exists today (summary)
 
 Kernel + compiler + GameIR + library explorer + agents (random/greedy/hunt/MCTS/UCT).
-**Movement:** form exposes `adjacency` / `range` / `capture` / `mustCapture`;
+**Movement:** form exposes `adjacency` / `range` / `capture` / `mustCapture` /
+`mustLongestCapture`;
 Replace Race / **Hex Replace Race** / **Graph Replace Race** demonstrate
 `capture = replace` on rectangle | hex_offset | graph; **Jump Race** /
 **Mandatory Jump Race** demonstrate `capture = jump` on rectangle;
-**Hex Jump Race** demonstrates `capture = jump` on hex_offset (cube-axis
-leap-over + `mustContinueFrom` chains); **Graph Jump Race** demonstrates
-`capture = jump` on graph (2-edge leap-over + chains); **Crowned Kings Jump
-Lite** demonstrates `movement.promotion` (Transform lite — crown on reach
-row; crowned adjacency); **Forward Men Jump Lite** demonstrates
+**Mandatory Longest Jump Lite** demonstrates `mustLongestCapture` (Draughts-lite
+max-length chain pruning); **Hex Jump Race** demonstrates `capture = jump` on
+hex_offset (cube-axis leap-over + `mustContinueFrom` chains); **Graph Jump Race**
+demonstrates `capture = jump` on graph (2-edge leap-over + chains);
+**Crowned Kings Jump Lite** demonstrates `movement.promotion` (Transform lite —
+crown on reach row; crowned adjacency); **Forward Men Jump Lite** demonstrates
 `promotion.menForwardOnly` (uncrowned advance toward promo side only;
 crowned unrestricted).
 **Flood reveal:** **Minesweeper Lite** demonstrates `flood_reveal` +
@@ -194,14 +197,15 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; longest-chain / hex-graph promotion. Forward-only men landed
+scheduler; hex-graph promotion. Longest mandatory capture landed
+(M51 Mandatory Longest Jump Lite). Forward-only men landed
 (M50 Forward Men Jump Lite). Crowned promotion landed (M49 Crowned Kings
 Jump Lite). Graph jump landed (M48 Graph Jump Race). Hex jump landed
 (M47 Hex Jump Race). Mandatory jump-at-turn-start landed (M45 Mandatory
 Jump Race). CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2).
 Semantics: `docs/semantics.md` (M42; jump in M43; flood_reveal in M44;
 mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in
-M48; promotion in M49; menForwardOnly in M50).
+M48; promotion in M49; menForwardOnly in M50; mustLongestCapture in M51).
 
 ## Phase 2 exit criteria
 
@@ -745,6 +749,23 @@ M48; promotion in M49; menForwardOnly in M50).
   transcript/replay + helper tests — **done**
 - Out of scope: longest-chain mandatory; hex/graph promotion; simultaneous
 - Green gate: ≥649 tests — **done**
+
+### M51 — Longest mandatory capture (Draughts-lite)
+
+- Schema: optional `movement.mustLongestCapture` (boolean); requires
+  `capture = jump` and `mustCapture = true`; same jump topology /
+  incompatibility rules — **done**
+- Movement: `maxJumpChainFrom` / `jumpChainLengthThrough` /
+  `globalMaxJumpCaptures` / `isMaximalJumpStart` /
+  `isMaximalJumpContinuation` (DFS over simulated jump clears) — **done**
+- Kernel/reducer: turn-start prune non-max chains; mid-chain prune shorter
+  remaining branches; contract invariant
+  `mustLongestCapturePrunesShorterChains` — **done**
+- Normalize + form switch; preset `mandatory-longest-jump-lite`
+  (Mandatory Longest Jump Lite — 1-capture vs 2-capture opening; only
+  longest legal) + helper/schema/transcript/replay tests — **done**
+- Out of scope: hex/graph promotion; simultaneous jump; flying kings
+- Green gate: ≥649 + new longest-capture tests — **done**
 
 ## Sequencing notes
 

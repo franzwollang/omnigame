@@ -41,6 +41,8 @@ import {
 	canMove,
 	effectiveMovement,
 	hasAnyJumpCapture,
+	isMaximalJumpContinuation,
+	isMaximalJumpStart,
 	jumpDestinations,
 	jumpMid,
 	legalDestinations,
@@ -1059,6 +1061,19 @@ function collectJumpChainActions(
 		board,
 		actingPlayer
 	)) {
+		if (
+			movement.mustLongestCapture === true &&
+			!isMaximalJumpContinuation(
+				state.grid,
+				chainFrom,
+				to,
+				actingPlayer,
+				movement,
+				board
+			)
+		) {
+			continue;
+		}
 		actions.push({ type: "move", from: chainFrom, to });
 	}
 	return actions;
@@ -1494,6 +1509,7 @@ function collectLegalActions(
 			movement.capture === "jump" &&
 			movement.mustCapture === true &&
 			hasAnyJumpCapture(state.grid, state.currentPlayer, movement, board);
+		const forceLongest = forceJumps && movement.mustLongestCapture === true;
 		for (const from of allActivePositions(
 			state.grid,
 			config.topology ?? "rectangle",
@@ -1510,6 +1526,19 @@ function collectLegalActions(
 					)
 				: legalDestinations(state.grid, from, movement, board);
 			for (const to of dests) {
+				if (
+					forceLongest &&
+					!isMaximalJumpStart(
+						state.grid,
+						from,
+						to,
+						state.currentPlayer,
+						movement,
+						board
+					)
+				) {
+					continue;
+				}
 				if (
 					forceJumps ||
 					canMove(state.grid, from, to, state.currentPlayer, movement, board)

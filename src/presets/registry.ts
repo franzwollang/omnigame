@@ -1855,6 +1855,69 @@ export const examplePresets: Record<string, ExamplePreset> = {
 			]
 		}
 	}),
+	"mandatory-longest-jump-lite": definePreset({
+		id: "mandatory-longest-jump-lite",
+		name: "Mandatory Longest Jump Lite",
+		tags: [
+			"move",
+			"capture",
+			"jump",
+			"must-capture",
+			"must-longest",
+			"chain",
+			"reach-row",
+			"5x5",
+			"mechanism"
+		],
+		description:
+			"Draughts-lite longest mandatory capture: mustCapture forbids quiet moves, and mustLongestCapture keeps only jumps that begin a maximum-length chain. Opening X has a 1-capture jump from (3,0) and a 2-capture chain from (4,4) — only the longer start is legal. Mid-chain branches also prefer max remaining captures. Unlocks movement.mustLongestCapture — mustCapture alone still allows shorter jumps.",
+		config: {
+			metadata: { name: "Mandatory Longest Jump Lite", version: 1 },
+			grid: { width: 5, height: 5, topology: "rectangle", wrap: false },
+			turn: { mode: "turn" },
+			rng: { seed: 42 },
+			input: { mode: "move" },
+			movement: {
+				adjacency: "diagonal",
+				range: 1,
+				capture: "jump",
+				mustCapture: true,
+				mustLongestCapture: true
+			},
+			placement: { mode: "direct", overflow: "reject" },
+			observation: { mode: "full" },
+			objective: {
+				mode: "reach_row",
+				targetRows: { X: 0, O: 4 }
+			},
+			tokens: [
+				{
+					id: "longest-jumper-x",
+					label: "X",
+					players: ["X"],
+					asset: { type: "image", url: "/assets/tokens/x.png" }
+				},
+				{
+					id: "longest-jumper-o",
+					label: "O",
+					players: ["O"],
+					asset: { type: "image", url: "/assets/tokens/o.png" }
+				}
+			],
+			placements: [],
+			initial: [
+				// Short: X(3,0) jumps O(2,1)→(1,2) — length 1 only.
+				// Long: X(4,4) jumps O(3,3)→(2,2), then O(1,1)→(0,0) wins.
+				// mustCapture alone would allow both starts; mustLongest keeps only the 2-chain.
+				{ row: 3, col: 0, player: "X", visibility: "public" },
+				{ row: 2, col: 1, player: "O", visibility: "public" },
+				{ row: 4, col: 4, player: "X", visibility: "public" },
+				{ row: 3, col: 3, player: "O", visibility: "public" },
+				{ row: 1, col: 1, player: "O", visibility: "public" },
+				{ row: 4, col: 0, player: "O", visibility: "public" }
+			]
+		}
+	}),
 	"crowned-jump-race": definePreset({
 		id: "crowned-jump-race",
 		name: "Crowned Kings Jump Lite",

@@ -139,6 +139,7 @@ export const Contracts = {
 			"mandatoryChainWhenFurtherJumpsExist",
 			"mustContinueFromRestrictsLegality",
 			"mustCaptureForbidsQuietWhenJumpExists",
+			"mustLongestCapturePrunesShorterChains",
 			"alternatingOnlyNoSimultaneous"
 		]
 	}),

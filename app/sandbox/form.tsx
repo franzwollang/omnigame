@@ -748,6 +748,11 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 																	undefined,
 																	{ shouldDirty: true }
 																);
+																form.setValue(
+																	"movement.mustLongestCapture",
+																	undefined,
+																	{ shouldDirty: true }
+																);
 															}
 														}}
 														disabled={
@@ -804,6 +809,41 @@ export default function SandboxForm<T extends FieldValues>({ form }: Props<T>) {
 															quiet (non-jump) moves are illegal at turn
 															start. Mid-chain jumps still use
 															mustContinueFrom.
+														</p>
+													</div>
+													<FormControl>
+														<Switch
+															checked={field.value === true}
+															onCheckedChange={(v) => {
+																ensureMovement();
+																field.onChange(v);
+																if (!v) {
+																	form.setValue(
+																		"movement.mustLongestCapture",
+																		undefined,
+																		{ shouldDirty: true }
+																	);
+																}
+															}}
+														/>
+													</FormControl>
+												</FormItem>
+											)}
+										/>
+									)}
+									{captureValue === "jump" &&
+										form.watch("movement.mustCapture") === true && (
+										<FormField
+											control={form.control}
+											name="movement.mustLongestCapture"
+											render={({ field }) => (
+												<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+													<div className="space-y-0.5">
+														<FormLabel>Must longest capture</FormLabel>
+														<p className="text-xs text-muted-foreground">
+															Among available jumps, only those that begin
+															(or continue) a maximum-length capture chain
+															are legal. Requires must capture.
 														</p>
 													</div>
 													<FormControl>

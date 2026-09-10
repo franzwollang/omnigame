@@ -7,6 +7,9 @@
  * quiet moves stay range 1). Optional `mustCapture: true` (jump only) forbids
  * quiet moves at turn start when any jump exists for the acting seat
  * (Checkers-lite mandatory capture; mid-chain still uses `mustContinueFrom`).
+ * Optional `mustLongestCapture: true` (requires `mustCapture`) further
+ * restricts jump starts / mid-chain branches to those that maximize total
+ * pieces captured along the jump tree (Draughts longest-chain rule).
  * Optional `promotion` (rectangle jump): land on `targetRows[seat]` → crown
  * (`X+`/`O+`); crowned pieces use `crownedAdjacency` (default king) via
  * `effectiveMovement`. Optional `menForwardOnly`: uncrowned pieces may only
@@ -67,6 +70,13 @@ export type MovementConfig = {
 	 * piece. Mid-chain `mustContinueFrom` is unchanged. Default false.
 	 */
 	mustCapture?: boolean;
+	/**
+	 * When true with `mustCapture`, only jumps that begin (or continue) a
+	 * maximum-length capture chain are legal. Turn start: compare chain
+	 * lengths across all owned pieces; mid-chain: compare remaining captures
+	 * among continuations from `mustContinueFrom`. Default false.
+	 */
+	mustLongestCapture?: boolean;
 	/**
 	 * Graph-only path mode. `chain` = unique-forward edge walk (no junction
 	 * turns). `hop` = BFS within range (may turn at junctions). Ignored on
@@ -405,6 +415,151 @@ export function hasAnyJumpCapture(
 		}
 	}
 	return false;
+}
+
+/** Simulate one jump: clear origin + mid enemy, land piece at `to`. */
+function applyJumpSim(
+	grid: Grid,
+	from: Position,
+	to: Position,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard,
+	player: Player
+): Grid | null {
+	if (!isJumpCapture(grid, from, to, player, config, wrapOrBoard)) return null;
+	const cell = getCell(grid, from);
+	const eff = effectiveMovement(config, cell);
+	const mid = jumpMid(from, to, eff, wrapOrBoard, grid);
+	if (!mid) return null;
+	let cells = setCell(grid, from, null);
+	cells = setCell({ ...grid, cells }, mid, null);
+	cells = setCell({ ...grid, cells }, to, cell);
+	return { ...grid, cells };
+}
+
+/**
+ * Maximum number of captures reachable by a jump tree starting at `from`
+ * (0 when no jump exists). Pure DFS over `jumpDestinations` with simulated
+ * clears — used by `mustLongestCapture`.
+ */
+export function maxJumpChainFrom(
+	grid: Grid,
+	from: Position,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false,
+	player?: Player
+): number {
+	if (config.capture !== "jump") return 0;
+	const cell = getCell(grid, from);
+	const owner = player ?? cellOwner(cell);
+	if (owner === null) return 0;
+	if (player != null && cellOwner(cell) !== player) return 0;
+	const dests = jumpDestinations(grid, from, config, wrapOrBoard, owner);
+	if (dests.length === 0) return 0;
+	let best = 0;
+	for (const to of dests) {
+		const next = applyJumpSim(grid, from, to, config, wrapOrBoard, owner);
+		if (!next) continue;
+		best = Math.max(
+			best,
+			1 + maxJumpChainFrom(next, to, config, wrapOrBoard, owner)
+		);
+	}
+	return best;
+}
+
+/**
+ * Capture count of the chain that begins with the specific jump `from→to`
+ * (1 + max remaining after that leap). 0 when the leap is illegal.
+ */
+export function jumpChainLengthThrough(
+	grid: Grid,
+	from: Position,
+	to: Position,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false,
+	player?: Player
+): number {
+	const cell = getCell(grid, from);
+	const owner = player ?? cellOwner(cell);
+	if (owner === null) return 0;
+	const next = applyJumpSim(grid, from, to, config, wrapOrBoard, owner);
+	if (!next) return 0;
+	return 1 + maxJumpChainFrom(next, to, config, wrapOrBoard, owner);
+}
+
+/**
+ * Global maximum jump-chain length over all pieces owned by `player`.
+ * 0 when the seat has no jumps.
+ */
+export function globalMaxJumpCaptures(
+	grid: Grid,
+	player: Player,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false
+): number {
+	if (config.capture !== "jump") return 0;
+	let best = 0;
+	for (let row = 0; row < grid.height; row++) {
+		for (let col = 0; col < grid.width; col++) {
+			const from = { row, col };
+			if (cellOwner(getCell(grid, from)) !== player) continue;
+			best = Math.max(
+				best,
+				maxJumpChainFrom(grid, from, config, wrapOrBoard, player)
+			);
+		}
+	}
+	return best;
+}
+
+/**
+ * True when `from→to` is a maximal-length jump under `mustLongestCapture`
+ * turn-start rules (chain length equals the seat-wide maximum).
+ */
+export function isMaximalJumpStart(
+	grid: Grid,
+	from: Position,
+	to: Position,
+	player: Player,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false
+): boolean {
+	if (config.mustLongestCapture !== true) return true;
+	const global = globalMaxJumpCaptures(grid, player, config, wrapOrBoard);
+	if (global <= 0) return true;
+	return (
+		jumpChainLengthThrough(grid, from, to, config, wrapOrBoard, player) ===
+		global
+	);
+}
+
+/**
+ * True when mid-chain continuation `from→to` maximizes remaining captures
+ * among jumps from `from` (Draughts longest-branch rule).
+ */
+export function isMaximalJumpContinuation(
+	grid: Grid,
+	from: Position,
+	to: Position,
+	player: Player,
+	config: MovementConfig,
+	wrapOrBoard: boolean | MovementBoard = false
+): boolean {
+	if (config.mustLongestCapture !== true) return true;
+	const dests = jumpDestinations(grid, from, config, wrapOrBoard, player);
+	if (dests.length === 0) return false;
+	let maxRem = 0;
+	for (const d of dests) {
+		maxRem = Math.max(
+			maxRem,
+			jumpChainLengthThrough(grid, from, d, config, wrapOrBoard, player)
+		);
+	}
+	return (
+		jumpChainLengthThrough(grid, from, to, config, wrapOrBoard, player) ===
+		maxRem
+	);
 }
 
 /**

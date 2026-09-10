@@ -1,23 +1,23 @@
 {
-  "updated_at": "2026-08-02T12:50-00:00",
-  "turn": 80,
+  "updated_at": "2026-09-10T02:40-00:00",
+  "turn": 81,
   "focus": {
-    "milestone": "M50",
+    "milestone": "M51",
     "issue": "next-missing-mechanism",
-    "goal": "forward-only men landed; hand off next genuine P3 seam"
+    "goal": "mustLongestCapture landed; hand off next genuine P3 seam"
   },
   "recent": [
-    "Landed M50 menForwardOnly + Forward Men Jump Lite; ≥649 green",
-    "Uncrowned forward row-delta filter; crowned ignores; promo≠win",
-    "O spare piece above promo row so forward reply exists"
+    "Synced from 73cf M50 tip onto cursor/next-task-progression-4985",
+    "Landed M51 mustLongestCapture + Mandatory Longest Jump Lite",
+    "Opening prunes 1-capture vs 2-capture; mid-chain max remaining"
   ],
   "discoveries": [
-    "manForwardRowSign from relative targetRows; equal rows → X−1/O+1",
-    "Men past promo row have no quiet forward — place spare on approach side"
+    "mustLongestCapture requires mustCapture; DFS via applyJumpSim clears",
+    "Short vs long pieces must not share jump-adjacent victims"
   ],
   "open_threads": [
-    "Next: longest-chain, hex-graph promo, full Go, realtime; reject fire→move"
+    "Next: hex-graph promo, full Go, realtime; reject fire→move recombinations"
   ],
-  "next_step": "Pick smallest genuine next-missing-mechanism after M50",
+  "next_step": "Pick smallest genuine next-missing-mechanism after M51",
   "blockers": []
 }

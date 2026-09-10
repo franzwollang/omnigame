@@ -60,6 +60,7 @@ These are built from the same shared schema and operators.
 - **Hex Jump Race** (`hex_offset` + `capture: jump` — cube-axis leap-over chains)
 - **Graph Jump Race** (`graph` + `capture: jump` — 2-edge leap-over chains)
 - **Mandatory Jump Race** (`mustCapture` — quiet moves illegal when any jump exists)
+- **Mandatory Longest Jump Lite** (`mustLongestCapture` — only max-length jump chains)
 - **Crowned Kings Jump Lite** (`movement.promotion` — crown on reach row; king adjacency)
 - **Forward Men Jump Lite** (`menForwardOnly` — uncrowned advance toward promo side only)
 - **Minesweeper Lite** (`flood_reveal` + `clear_hazards` + seeded mines)
@@ -198,14 +199,16 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
   **Graph Replace Race**; jump capture (rectangle | hex_offset | graph +
   alternating) — **Jump Race** / **Hex Jump Race** / **Graph Jump Race** /
   **Mandatory Jump Race** (`mustCapture` forbids quiet moves when any jump
-  exists; incompatible with `graphReach: hop`); optional `movement.promotion`
-  (rectangle jump) — **Crowned Kings Jump Lite** (Transform lite: land on
-  `targetRows` → `X+`/`O+`; crowned uses `crownedAdjacency`) /
-  **Forward Men Jump Lite** (`menForwardOnly`: uncrowned advance toward
-  promotion side only; crowned unrestricted)
+  exists; incompatible with `graphReach: hop`); **Mandatory Longest Jump Lite**
+  (`mustLongestCapture` keeps only max-length jump chains); optional
+  `movement.promotion` (rectangle jump) — **Crowned Kings Jump Lite**
+  (Transform lite: land on `targetRows` → `X+`/`O+`; crowned uses
+  `crownedAdjacency`) / **Forward Men Jump Lite** (`menForwardOnly`: uncrowned
+  advance toward promotion side only; crowned unrestricted)
 - **Scheduler**: `turn.schedule = "manual_tick"` + `scheduler.rules = "life_b3s23"` → `{ type: "tick" }` (Life Lite); `turn.actionsPerTurn` multi-step budget on alternating rectangle | hex_offset | graph (Double Move TTT / Hex / Graph) or multi-action budget under simultaneous place (Double-Place Simultaneous TTT / Hex / Graph) **or open simultaneous move** (Double Simultaneous Step Race; range 1, no replace) **or commitReveal simultaneous move** (Hidden Double Simultaneous Step Race); `turn.schedule = "simultaneous"` joint place on rectangle | hex_offset | graph (Simultaneous TTT / Hex / Graph Connect Lite) or joint move/slide on rectangle | hex_offset | graph (Simultaneous Step Race / Slide Race / Hex / Graph); `turn.resolveOrder = x_first | o_first` ordered same-cell / same-destination priority **and** ordered sliding path revalidation **and** ordered replace sequential capture incl. slide+replace (Ordered Simultaneous TTT / Ordered Simultaneous Slide Race / Ordered Simultaneous Replace Race / Ordered Simultaneous Slide Replace Race); `turn.commitReveal` hidden commits until both seats commit (Hidden Simultaneous TTT / **Hidden Simultaneous Step Race** / **Hidden Double Simultaneous Step Race** / **Hidden Simultaneous Guess Who Lite** / **Hidden Simultaneous Guess Who Commit Lite**); `turn.phases` in-turn place→move (Place & Move Lite), place→fire (Place & Fire Lite), or place→move→fire + `connect_or_destroy` (Place, Move & Fire Lite), or move→fire (Move & Fire Lite), or query→eliminate (Guess Who Commit Phases Lite)
 - **Effects**: optional capture toggles (Capture / Flip Demo); move replace /
-  jump capture (`movement.capture`; optional `mustCapture` for jump);
+  jump capture (`movement.capture`; optional `mustCapture` /
+  `mustLongestCapture` for jump);
   optional promotion (`movement.promotion` — Transform on reach row; optional
   `menForwardOnly`)
 - **Objectives**: n-in-a-row (rectangle or hex axes); `destroy_hidden` (hit/miss); `reach_row` (Step Race family); `identify_secret` (Guess Who Lite / Commit / Commit Phases / And / Or / And3 / Simultaneous / Simultaneous And / **Hidden Simultaneous** / **Hidden Simultaneous Commit**); `clear_hazards` (Minesweeper Lite); `match_pairs` (Memory Flip Lite); `none` (open-ended / tick demos)
@@ -217,7 +220,7 @@ OmniGame is actively evolving toward the “spec → compiler → kernel + IR”
 - **Library explorer**: `src/library/` samples configs (incl. graph), scores playability (compile → opening → random + greedy probes), share links (`?find=` / `?librarySeed=`), sandbox Library modal loads finds
 
 What’s **roadmap**, not fully realized yet: full Go rules, fire→move reorder
-(only with anchor), realtime scheduler, longest-chain / hex-graph promotion
+(only with anchor), realtime scheduler, hex-graph promotion
 extensions, and a larger set of reusable operators/constraints.
 
 ## Technical vision (expanded)
@@ -506,20 +509,21 @@ Minesweeper Lite (M44), mandatory jump-at-turn-start / Mandatory Jump Race
 (M45), memory flip / tile pair-matching / Memory Flip Lite (M46), hex jump
 capture / Hex Jump Race (M47), graph jump capture / Graph Jump Race (M48),
 crowned promotion / Crowned Kings Jump Lite (M49), forward-only men /
-Forward Men Jump Lite (M50).
+Forward Men Jump Lite (M50), longest mandatory capture /
+Mandatory Longest Jump Lite (M51).
 
 **Open (Phase 2 — see `OPEN_ISSUES.md`):**
 
 - **Next:** pick smallest new seam under `next-missing-mechanism` (e.g.
-  fire→move only with anchor; full Go; realtime scheduler; reject
-  recombinations)
+  fire→move only with anchor; full Go; realtime scheduler; hex-graph
+  promotion; reject recombinations)
 - Deferred: full Go rules; realtime scheduler; fire→move reorder
-  (recombination without anchor); longest-chain / hex-graph promotion;
+  (recombination without anchor); hex-graph promotion;
   memory bonus-turn-on-match / custom decks
 - CI: `.github/workflows/ci.yml` (Node 20.19 + pnpm 10.5.2; typecheck + test)
 - Semantics: `docs/semantics.md` (M42 refresh; jump in M43; flood_reveal in M44;
   mustCapture in M45; memory_flip in M46; hex jump in M47; graph jump in M48;
-  promotion in M49; menForwardOnly in M50)
+  promotion in M49; menForwardOnly in M50; mustLongestCapture in M51)
 Future features include richer schema-driven UI, camera modes, and 3D once the 2D
 path stays stable.
 
