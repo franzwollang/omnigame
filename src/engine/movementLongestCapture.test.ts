@@ -151,7 +151,12 @@ describe("Mandatory Longest Jump Lite (mustLongestCapture)", () => {
 		// Without mustLongestCapture, both jumps are legal under mustCapture.
 		const mustOnlyCfg = {
 			...cfg,
-			movement: { ...MUST_ONLY }
+			movement: {
+				adjacency: "diagonal" as const,
+				range: 1,
+				capture: "jump" as const,
+				mustCapture: true
+			}
 		};
 		const { kernel: mustKernel } = compileConfig(mustOnlyCfg);
 		const mustLegal = mustKernel.legalActions(state, 0);
@@ -190,7 +195,7 @@ describe("Mandatory Longest Jump Lite (mustLongestCapture)", () => {
 
 	it("transcript: longest chain promotes to win row", () => {
 		const cfg = examplePresets["mandatory-longest-jump-lite"].config;
-		const { kernel } = compileConfig(cfg);
+		const { kernel, gameConfig } = compileConfig(cfg);
 		let cur = kernel.initialState(cfg.rng.seed);
 
 		const first: KernelAction = {
@@ -199,8 +204,17 @@ describe("Mandatory Longest Jump Lite (mustLongestCapture)", () => {
 			to: { row: 2, col: 2 }
 		};
 		const r1 = kernel.stepSync(cur, first);
-		expect(r1.events.some((e) => e.type === "pieceMoved")).toBe(true);
-		expect(r1.events.some((e) => e.type === "pieceCaptured")).toBe(true);
+		expect(r1.events.some((e) => e.type === "ignored")).toBe(false);
+		expect(
+			r1.events.some(
+				(e) =>
+					e.type === "pieceCaptured" &&
+					e.position.row === 3 &&
+					e.position.col === 3 &&
+					e.captured === "O" &&
+					e.by === "X"
+			)
+		).toBe(true);
 		cur = r1.nextState;
 		expect(cur.mustContinueFrom).toEqual({ row: 2, col: 2 });
 		expect(cur.currentPlayer).toBe("X");
@@ -235,18 +249,23 @@ describe("Mandatory Longest Jump Lite (mustLongestCapture)", () => {
 		expect(cur.winner).toBe("X");
 		expect(getCell(cur.grid, { row: 0, col: 0 })).toBe("X");
 		expect(getCell(cur.grid, { row: 1, col: 1 })).toBeNull();
+
+		const actions: KernelAction[] = [first, second];
+		const replayed = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(replayed.finalState.status).toBe("won");
+		expect(replayed.finalState.winner).toBe("X");
 	});
 
 	it("replays the winning longest-chain transcript", () => {
 		const cfg = examplePresets["mandatory-longest-jump-lite"].config;
-		const { kernel } = compileConfig(cfg);
+		const { gameConfig } = compileConfig(cfg);
 		const actions: KernelAction[] = [
 			{ type: "move", from: { row: 4, col: 4 }, to: { row: 2, col: 2 } },
 			{ type: "move", from: { row: 2, col: 2 }, to: { row: 0, col: 0 } }
 		];
-		const final = replayActions(kernel, cfg.rng.seed, actions);
-		expect(final.status).toBe("won");
-		expect(final.winner).toBe("X");
+		const final = replayActions(gameConfig, actions, cfg.rng.seed);
+		expect(final.finalState.status).toBe("won");
+		expect(final.finalState.winner).toBe("X");
 	});
 
 	it("lists both short and long jump destinations without longest filter", () => {

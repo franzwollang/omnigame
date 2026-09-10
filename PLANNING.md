@@ -85,7 +85,7 @@ pnpm typecheck
 pnpm test
 ```
 
-Optional: `pnpm lint`, `pnpm build`. Baseline: **≥649** Vitest tests (do not
+Optional: `pnpm lint`, `pnpm build`. Baseline: **≥658** Vitest tests (do not
 delete or weaken tests — see `.cursor/rules/testing-integrity.mdc`).
 
 ### Read order (cold start)
@@ -765,7 +765,7 @@ M48; promotion in M49; menForwardOnly in M50; mustLongestCapture in M51).
   (Mandatory Longest Jump Lite — 1-capture vs 2-capture opening; only
   longest legal) + helper/schema/transcript/replay tests — **done**
 - Out of scope: hex/graph promotion; simultaneous jump; flying kings
-- Green gate: ≥649 + new longest-capture tests — **done**
+- Green gate: ≥658 tests — **done**
 
 ## Sequencing notes
 
