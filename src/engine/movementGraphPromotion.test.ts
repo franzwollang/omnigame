@@ -59,7 +59,7 @@ describe("graph movement.promotion schema", () => {
 		expect(parsed.success).toBe(true);
 	});
 
-	it("rejects graph targetNodes + menForwardOnly (hubs deferred)", () => {
+	it("accepts graph targetNodes + menForwardOnly (hub forward)", () => {
 		const base = structuredClone(
 			examplePresets["graph-hub-crowned-jump-lite"].config
 		);
@@ -71,7 +71,7 @@ describe("graph movement.promotion schema", () => {
 			}
 		};
 		const parsed = zConfig.safeParse(base);
-		expect(parsed.success).toBe(false);
+		expect(parsed.success).toBe(true);
 	});
 
 	it("accepts graph promotion with crownedFlyingCapture when crownedRange >= 2", () => {

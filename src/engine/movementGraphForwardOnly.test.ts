@@ -80,7 +80,7 @@ describe("graph promotion.menForwardOnly schema", () => {
 		}
 	});
 
-	it("still rejects targetNodes + menForwardOnly (hubs deferred)", () => {
+	it("accepts targetNodes + menForwardOnly on graph (hub forward)", () => {
 		const base = structuredClone(
 			examplePresets["graph-hub-crowned-jump-lite"].config
 		);
@@ -92,7 +92,14 @@ describe("graph promotion.menForwardOnly schema", () => {
 			}
 		};
 		const parsed = zConfig.safeParse(base);
-		expect(parsed.success).toBe(false);
+		expect(parsed.success).toBe(true);
+		if (parsed.success) {
+			expect(parsed.data.movement?.promotion?.menForwardOnly).toBe(true);
+			expect(parsed.data.movement?.promotion?.targetNodes).toEqual({
+				X: "2,1",
+				O: "2,0"
+			});
+		}
 	});
 });
 
@@ -115,7 +122,7 @@ describe("graph edge-distance forward helpers", () => {
 				{ row: 4, col: 0 },
 				{ row: 3, col: 0 },
 				"X",
-				{ X: 2, O: 3 },
+				{ targetRows: { X: 2, O: 3 } },
 				LANE_GRAPH
 			)
 		).toBe(true);
@@ -124,7 +131,7 @@ describe("graph edge-distance forward helpers", () => {
 				{ row: 3, col: 0 },
 				{ row: 4, col: 0 },
 				"X",
-				{ X: 2, O: 3 },
+				{ targetRows: { X: 2, O: 3 } },
 				LANE_GRAPH
 			)
 		).toBe(false);
@@ -160,7 +167,7 @@ describe("graph edge-distance forward helpers", () => {
 				{ row: 2, col: 0 },
 				{ row: 1, col: 0 },
 				"X",
-				{ X: 0, O: 2 },
+				{ targetRows: { X: 0, O: 2 } },
 				bypass
 			)
 		).toBe(false);
@@ -169,7 +176,7 @@ describe("graph edge-distance forward helpers", () => {
 				{ row: 2, col: 0 },
 				{ row: 0, col: 1 },
 				"X",
-				{ X: 0, O: 2 },
+				{ targetRows: { X: 0, O: 2 } },
 				bypass
 			)
 		).toBe(true);

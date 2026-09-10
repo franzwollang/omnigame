@@ -11,17 +11,17 @@ pick the smallest new seam; reject recombinations without an anchor.
 
 ### P3 — next-missing-mechanism
 
-Graph forward-only men (`Graph Forward Men Jump Lite` /
-`promotion.menForwardOnly` on `graph` via edge-distance to `targetRows`)
-landed as **M64**. Hex forward-only men closed as M63; graph flying capture
-as M62; hex flying capture as M61; hub-graph promotion as M60; graph
-promotion as M59; hex promotion as M58; graph liberties as M57; hex
-liberties as M56; flying jump capture as M55; graph flood_reveal as M54; hex
-flood_reveal as M53; flying kings as M52; longest mandatory capture as M51;
-forward-only men as M50; crowned promotion as M49; graph jump as M48; hex
-jump as M47; memory flip as M46; mustCapture as M45; rectangle flood_reveal
-as M44. P4 tooling-ci and semantics-doc-refresh already closed (M41–M42;
-semantics notes continue per mechanism).
+Hub-graph forward-only men (`Graph Hub Forward Men Jump Lite` /
+`promotion.menForwardOnly` + `promotion.targetNodes` via edge-distance to the
+exact hub key) landed as **M65**. Graph forward-only men closed as M64; hex
+forward-only men as M63; graph flying capture as M62; hex flying capture as
+M61; hub-graph promotion as M60; graph promotion as M59; hex promotion as M58;
+graph liberties as M57; hex liberties as M56; flying jump capture as M55; graph
+flood_reveal as M54; hex flood_reveal as M53; flying kings as M52; longest
+mandatory capture as M51; forward-only men as M50; crowned promotion as M49;
+graph jump as M48; hex jump as M47; memory flip as M46; mustCapture as M45;
+rectangle flood_reveal as M44. P4 tooling-ci and semantics-doc-refresh already
+closed (M41–M42; semantics notes continue per mechanism).
 
 Pick the smallest remaining new seam that existing primitives cannot express,
 e.g.:
@@ -37,8 +37,6 @@ e.g.:
 - multi-action slide/replace under simultaneous (deferred composition; only if
   a new seam appears — not a recombination demo)
 - `queryShape: not` (reject unless nested AST / new pruning class)
-- `targetNodes` + `menForwardOnly` (hub-distance forward geometry — separate
-  from row-target edge-distance closed in M64)
 - Full Go rules (large; prefer smaller seams first)
 - Realtime / continuous scheduler (large)
 - Simultaneous jump (large composition; deferred)
@@ -87,11 +85,12 @@ same-row decoy; graph-only). **Forward Men Jump Lite** covers Checkers-lite
 forward-only men (`promotion.menForwardOnly`; uncrowned row-delta filter;
 crowned unrestricted). **Hex Forward Men Jump Lite** covers the same on
 `hex_offset` (cube-axis lands filtered by offset-row sign). **Graph Forward
-Men Jump Lite** covers the same on `graph` (edge-distance toward promo row;
-`targetNodes` hubs still deferred). **Flying Kings Jump Lite** covers
-Draughts-lite flying kings (`promotion.crownedRange` — crowned quiet slides
-longer than men; jump leaps unchanged without flying capture). **Flying
-Capture Jump Lite** covers Draughts-lite flying jump capture
+Men Jump Lite** covers the same on `graph` (edge-distance toward promo row).
+**Graph Hub Forward Men Jump Lite** covers the same on `graph` via hub-key
+edge-distance (`targetNodes`; same-row decoy blocked). **Flying Kings Jump
+Lite** covers Draughts-lite flying kings (`promotion.crownedRange` — crowned
+quiet slides longer than men; jump leaps unchanged without flying capture).
+**Flying Capture Jump Lite** covers Draughts-lite flying jump capture
 (`promotion.crownedFlyingCapture` — crowned ray leap with empty approach +
 long land). **Hex Flying Capture Jump Lite** covers the same on `hex_offset`
 (cube-axis flying leap). **Graph Flying Capture Jump Lite** covers the same
@@ -113,4 +112,4 @@ graph flood_reveal in M54; crownedFlyingCapture in M55; hex liberties in M56;
 graph liberties in M57; hex promotion in M58; graph promotion in M59; hub
 `targetNodes` promotion in M60; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
-in M64).
+in M64; hub targetNodes + menForwardOnly in M65).

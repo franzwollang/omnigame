@@ -219,7 +219,7 @@ delayTurns → pendingPlaces.
 | liberties | placement.captureMode | Go-lite group removal + ko/superko (rectangle von Neumann-4; hex_offset cube-axis-6 — Hex Go Lite; graph explicit-edge — Graph Go Lite) |
 | replace | movement.capture = replace | Move onto enemy → clear then land |
 | jump | movement.capture = jump | Leap over adjacent enemy to empty beyond (rect rays, hex cube-axis, or graph 2-edge); mid cleared; further jumps keep seat (`mustContinueFrom`); optional `mustCapture`; optional `mustLongestCapture` (max chain length); incompatible with `graphReach: hop` |
-| promote | movement.promotion | Transform on reach row/node (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` **or** graph `targetNodes[seat]` (`"row,col"`; mutually exclusive) → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` (rectangle \| hex_offset \| graph) / `menForwardOnly` (rectangle \| hex_offset \| graph + targetRows; graph: edge-distance to promo row; targetNodes hubs deferred) |
+| promote | movement.promotion | Transform on reach row/node (rectangle \| hex_offset \| graph jump): land on `targetRows[seat]` **or** graph `targetNodes[seat]` (`"row,col"`; mutually exclusive) → CrownMark; crowned uses `crownedAdjacency` (default king on rectangle; orthogonal required on hex/graph) and optional `crownedRange` (quiet slide depth) via `effectiveMovement`; optional `crownedFlyingCapture` (rectangle \| hex_offset \| graph) / `menForwardOnly` (rectangle \| hex_offset \| graph; targetRows row-delta or edge-distance to promo row; graph `targetNodes` hub-distance) |
 
 KoRule: none | point | positional | situational.
 
@@ -248,12 +248,13 @@ KoRule: none | point | positional | situational.
   Hex Flying Capture Jump Lite / Graph Flying Capture Jump Lite; hex: cube-axis;
   graph: chain-walk); preserve crown on
   move; emit `piecePromoted` (Crowned Kings Jump Lite); optional
-  `menForwardOnly` (rectangle | hex_offset | graph + targetRows) restricts
+  `menForwardOnly` (rectangle | hex_offset | graph) restricts
   uncrowned quiet/jump toward the promotion side (Forward Men Jump Lite /
-  Hex Forward Men Jump Lite / Graph Forward Men Jump Lite; hex filters
-  cube-axis lands by offset-row sign; graph: strict decrease in shortest-path
-  edge distance to any node on `targetRows[seat]`; crowned unrestricted;
-  `targetNodes` hubs + menForwardOnly deferred)
+  Hex Forward Men Jump Lite / Graph Forward Men Jump Lite /
+  Graph Hub Forward Men Jump Lite; hex filters cube-axis lands by offset-row
+  sign; graph `targetRows`: strict decrease in shortest-path edge distance to
+  any node on `targetRows[seat]`; graph `targetNodes`: strict decrease toward
+  the exact hub key; crowned unrestricted)
 - graphReach: chain (unique-forward edge walk) | hop (BFS within range)
 - simultaneous: canJointSimultaneousMoves (vacated origins) /
   canOrderedSimultaneousMoves (sequential revalidation)

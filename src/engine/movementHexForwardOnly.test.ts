@@ -68,7 +68,7 @@ describe("hex promotion.menForwardOnly schema", () => {
 		expect(parsed.success).toBe(true);
 	});
 
-	it("still rejects graph targetNodes + menForwardOnly", () => {
+	it("accepts graph targetNodes + menForwardOnly (hub forward closed M65)", () => {
 		const base = structuredClone(
 			examplePresets["graph-hub-crowned-jump-lite"].config
 		);
@@ -80,7 +80,7 @@ describe("hex promotion.menForwardOnly schema", () => {
 			}
 		};
 		const parsed = zConfig.safeParse(base);
-		expect(parsed.success).toBe(false);
+		expect(parsed.success).toBe(true);
 	});
 });
 

@@ -80,9 +80,10 @@ Vision / non-goals: `README.md`. Formal composition draft: `docs/semantics.md`
 | M62 | Next missing mechanism (graph flying capture / Graph Flying Capture Jump Lite) | `done` |
 | M63 | Next missing mechanism (hex menForwardOnly / Hex Forward Men Jump Lite) | `done` |
 | M64 | Next missing mechanism (graph menForwardOnly / Graph Forward Men Jump Lite) | `done` |
+| M65 | Next missing mechanism (hub targetNodes + menForwardOnly / Graph Hub Forward Men Jump Lite) | `done` |
 
-**Optimizing for this marathon:** M64 graph `menForwardOnly`
-(`Graph Forward Men Jump Lite`) landed. Pick **P3 next-missing-mechanism**
+**Optimizing for this marathon:** M65 hub `targetNodes` + `menForwardOnly`
+(`Graph Hub Forward Men Jump Lite`) landed. Pick **P3 next-missing-mechanism**
 (smallest new seam; reject recombinations without anchor) — without asking
 which fork.
 
@@ -164,7 +165,10 @@ crown on reach row; crowned adjacency); **Hex Crowned Jump Lite** /
 `targetRows`; **Graph Hub Crowned Jump Lite** demonstrates
 `promotion.targetNodes` (hub vs same-row decoy); **Forward Men Jump Lite** demonstrates
 `promotion.menForwardOnly` (uncrowned advance toward promo side only;
-crowned unrestricted); **Flying Kings Jump Lite** demonstrates
+crowned unrestricted); **Hex Forward Men Jump Lite** / **Graph Forward Men
+Jump Lite** / **Graph Hub Forward Men Jump Lite** demonstrate topology-aware
+forward filters (hex offset-row; graph row edge-distance; graph hub-key
+edge-distance); **Flying Kings Jump Lite** demonstrates
 `promotion.crownedRange` (crowned quiet slides longer than men; jump leaps
 unchanged); **Flying Capture Jump Lite** demonstrates
 `promotion.crownedFlyingCapture` (crowned long-range leap capture within
@@ -222,10 +226,10 @@ graph nodes/edges, `initial`, `placement.capture`, `deduction.*` /
 (chain-walk or hop-ball).
 
 **Not yet:** full Go; fire→move reorder (only with anchor); realtime
-scheduler; `targetNodes` + menForwardOnly (hub-distance forward). Graph
-menForwardOnly landed (M64 Graph Forward Men Jump Lite). Hex
-menForwardOnly landed (M63 Hex Forward Men Jump Lite). Graph flying capture
-landed (M62 Graph Flying Capture Jump Lite). Hex flying
+scheduler; simultaneous jump. Graph hub menForwardOnly landed (M65 Graph Hub
+Forward Men Jump Lite). Graph menForwardOnly landed (M64 Graph Forward Men
+Jump Lite). Hex menForwardOnly landed (M63 Hex Forward Men Jump Lite). Graph
+flying capture landed (M62 Graph Flying Capture Jump Lite). Hex flying
 capture landed (M61 Hex Flying Capture Jump Lite). Hub-graph promotion
 landed (M60 Graph Hub Crowned Jump Lite).
 Graph promotion landed (M59 Graph Crowned Jump Lite). Hex promotion
@@ -246,7 +250,7 @@ M49; menForwardOnly in M50; mustLongestCapture in M51; crownedRange in M52;
 hex flood_reveal in M53; graph flood_reveal in M54; crownedFlyingCapture in
 M55; hex liberties in M56; hex crownedFlyingCapture in M61; graph
 crownedFlyingCapture in M62; hex menForwardOnly in M63; graph menForwardOnly
-in M64).
+in M64; hub targetNodes + menForwardOnly in M65).
 
 ## Phase 2 exit criteria
 
@@ -987,6 +991,19 @@ in M64).
 - Out of scope: targetNodes + menForwardOnly; simultaneous jump; full Go;
   realtime
 - Green gate: ≥775 tests — **done**
+
+### M65 — Hub targetNodes + menForwardOnly / Graph Hub Forward Men Jump Lite
+
+- Schema: allow `menForwardOnly` on `graph` + jump promotion + `targetNodes`
+  (rectangle | hex_offset still require `targetRows`) — **done**
+- Kernel: `graphMinEdgeDistToTargetNode` + `isForwardGraphStep` hub branch;
+  `filterMenForwardDestinations` applies when only `targetNodes` is set;
+  strict hub-distance decrease (same-row decoy blocked; row-mode still
+  allows both) — **done**
+- Preset `graph-hub-forward-men-jump-lite` (Graph Hub Forward Men Jump Lite) +
+  schema / hub≠row-delta / transcript / replay tests — **done**
+- Out of scope: simultaneous jump; full Go; realtime
+- Green gate: ≥775 + new cases — **done**
 
 ## Sequencing notes
 
